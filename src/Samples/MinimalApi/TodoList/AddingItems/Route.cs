@@ -10,14 +10,21 @@ public static class Route
             CancellationToken cancellationToken
         ) =>
         {
-            var result = await command.Execute(eventStore, cancellationToken);
-
-            return Results.Ok(new
+            try
             {
-                command.Id,
-                command.Item,
-                result.StreamVersion
-            });
+                var result = await command.Execute(eventStore, cancellationToken);
+
+                return Results.Ok(new
+                {
+                    command.Id,
+                    command.Item,
+                    result.StreamVersion
+                });
+            }
+            catch (ItemAlreadyAddedException)
+            {
+                return Results.Conflict();
+            }
         }).WithName("Add Todo List Item").WithOpenApi();
 
         return builder;

@@ -7,7 +7,7 @@ public class TodoListView : IState
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
-    public List<string> Todos { get; set; } = [];
+    public List<string> Items { get; set; } = [];
 
     public void Apply(object @event)
     {
@@ -30,6 +30,6 @@ public class TodoListView : IState
 
     private void Apply(TodoListItemAdded e)
     {
-        Todos.Add(e.Item);
+        Items.Add(e.Item);
     }
 }
