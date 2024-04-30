@@ -1,7 +1,7 @@
 using Beckett.Events;
 using UUIDNext;
 
-namespace Beckett.Database.Types;
+namespace Beckett.Storage.Postgres.Types;
 
 public class NewStreamEvent
 {
@@ -18,7 +18,7 @@ public class NewStreamEvent
 
         return new NewStreamEvent
         {
-            Id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql),
+            Id = Uuid.NewDatabaseFriendly(Database.PostgreSql),
             Type = result.TypeName,
             Data = result.Data,
             Metadata = result.Metadata

@@ -1,59 +1,22 @@
-using Beckett.Database;
-using Beckett.Database.Queries;
-using Beckett.Database.Types;
-using Beckett.Events;
+using Beckett.Storage;
 
 namespace Beckett;
 
-public class EventStore(BeckettOptions beckettOptions, IDataSource dataSource) : IEventStore
+public class EventStore(IStorageProvider storageProvider) : IEventStore
 {
-    public async Task<IAppendResult> AppendToStream(
+    public Task<IAppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> events,
         CancellationToken cancellationToken
     )
     {
-        await using var connection = dataSource.CreateConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        //TODO - populate metadata from tracing
-        var metadata = new Dictionary<string, object>();
-
-        var newStreamEvents = events.Select(x => NewStreamEvent.From(x, metadata)).ToArray();
-
-        var streamVersion = await AppendToStreamQuery.Execute(
-            connection,
-            streamName,
-            expectedVersion.Value,
-            newStreamEvents,
-            beckettOptions.Subscriptions.UseNotifications,
-            cancellationToken
-        );
-
-        return new AppendResult(streamVersion);
+        return storageProvider.AppendToStream(streamName, expectedVersion, events, cancellationToken);
     }
 
-    public async Task<IReadResult> ReadStream(string streamName, ReadOptions options,
+    public Task<IReadResult> ReadStream(string streamName, ReadOptions options,
         CancellationToken cancellationToken)
     {
-        await using var connection = dataSource.CreateConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        var streamEvents = await ReadStreamQuery.Execute(
-            connection,
-            streamName,
-            options,
-            cancellationToken
-        );
-
-        //TODO update query to always return actual stream version regardless of read options supplied
-        var streamVersion = streamEvents.Count == 0 ? 0 : streamEvents[^1].StreamPosition;
-
-        var events = streamEvents.Select(EventSerializer.Deserialize).ToList();
-
-        return new ReadResult(events, streamVersion);
+        return storageProvider.ReadStream(streamName, options, cancellationToken);
     }
 }

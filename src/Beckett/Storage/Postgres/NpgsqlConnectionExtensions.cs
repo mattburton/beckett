@@ -1,8 +1,8 @@
 using Npgsql;
 
-namespace Beckett.Database;
+namespace Beckett.Storage.Postgres;
 
-public static class ConnectionExtensions
+public static class NpgsqlConnectionExtensions
 {
     public static async Task<bool> TryAdvisoryLock(
         this NpgsqlConnection connection,
@@ -19,7 +19,7 @@ public static class ConnectionExtensions
         return result is not false;
     }
 
-    public static async Task<bool> AdvisoryUnlock(
+    public static async Task AdvisoryUnlock(
         this NpgsqlConnection connection,
         long advisoryLockId,
         CancellationToken cancellationToken
@@ -29,8 +29,6 @@ public static class ConnectionExtensions
 
         command.CommandText = $"select pg_advisory_unlock({advisoryLockId});";
 
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-
-        return result is not false;
+        await command.ExecuteScalarAsync(cancellationToken);
     }
 }

@@ -31,6 +31,7 @@
 
     <ItemGroup>
       <EmbeddedResource Include="Database\Migrations\*.sql" />
+      <EmbeddedResource Include="Storage\Postgres\Migrations\001.sql" />
     </ItemGroup>
 
     <ItemGroup>

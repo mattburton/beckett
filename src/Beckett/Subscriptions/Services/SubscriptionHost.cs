@@ -1,12 +1,12 @@
-using Beckett.Database;
+using Beckett.Storage;
 using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Subscriptions.Services;
 
 public class SubscriptionHost(
     BeckettOptions options,
-    INotificationListener listener,
-    SubscriptionStreamProcessor processor
+    IStorageProvider storageProvider,
+    ISubscriptionStreamProcessor processor
 ) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -15,14 +15,7 @@ public class SubscriptionHost(
 
         var tasks = new List<Task>();
 
-        if (options.Subscriptions.UseNotifications)
-        {
-            tasks.Add(listener.Listen(
-                "beckett:poll",
-                (_, _) => processor.StartPolling(stoppingToken),
-                stoppingToken
-            ));
-        }
+        tasks.AddRange(storageProvider.GetSubscriptionHostTasks(processor, stoppingToken));
 
         tasks.Add(PollingAgent.Run(options, processor, stoppingToken));
 

@@ -1,14 +1,14 @@
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
-namespace Beckett.Database;
+namespace Beckett.Storage.Postgres;
 
-public interface INotificationListener
+public interface IPostgresNotificationListener
 {
     Task Listen(string channel, NotificationEventHandler eventHandler, CancellationToken cancellationToken);
 }
 
-public class NotificationListener(BeckettOptions options, ILogger<NotificationListener> logger) : INotificationListener
+public class PostgresNotificationListener(BeckettOptions options, ILogger<PostgresNotificationListener> logger) : IPostgresNotificationListener
 {
     public async Task Listen(string channel, NotificationEventHandler eventHandler, CancellationToken cancellationToken)
     {
@@ -16,7 +16,7 @@ public class NotificationListener(BeckettOptions options, ILogger<NotificationLi
         {
             try
             {
-                await using var connection = new NpgsqlConnection(options.Database.ListenerConnectionString);
+                await using var connection = new NpgsqlConnection(options.Postgres.ListenerConnectionString);
 
                 connection.Notification += eventHandler;
 

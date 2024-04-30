@@ -1,28 +1,33 @@
 using System.Text;
 using Npgsql;
 
-namespace Beckett.Database;
+namespace Beckett.Storage.Postgres;
 
-public static class Migrator
+public static class PostgresMigrator
 {
-    public static async Task Execute(DatabaseOptions options, CancellationToken cancellationToken)
+    public static async Task Execute(
+        string connectionString,
+        string schema,
+        int advisoryLockId,
+        CancellationToken cancellationToken
+    )
     {
-        await using var connection = new NpgsqlConnection(options.MigrationConnectionString);
+        await using var connection = new NpgsqlConnection(connectionString);
 
         await connection.OpenAsync(cancellationToken);
 
-        if (!await connection.TryAdvisoryLock(options.MigrationAdvisoryLockId, cancellationToken))
+        if (!await connection.TryAdvisoryLock(advisoryLockId, cancellationToken))
         {
             return;
         }
 
-        await EnsureSchemaIsCreated(options, connection, cancellationToken);
+        await EnsureSchemaIsCreated(connection, schema, cancellationToken);
 
         await EnsureMigrationsTableIsCreated(connection, cancellationToken);
 
         await ApplyMigrations(connection, cancellationToken);
 
-        await connection.AdvisoryUnlock(options.MigrationAdvisoryLockId, cancellationToken);
+        await connection.AdvisoryUnlock(advisoryLockId, cancellationToken);
     }
 
     private static async Task ApplyMigrations(
@@ -57,7 +62,7 @@ public static class Migrator
         applyCommand.CommandText = script;
 
         await applyCommand.ExecuteNonQueryAsync(cancellationToken);
-        
+
         await using var recordCommand = connection.CreateCommand();
 
         recordCommand.CommandText = "insert into migrations (name) values ($1);";
@@ -108,20 +113,20 @@ public static class Migrator
     }
 
     private static async Task EnsureSchemaIsCreated(
-        DatabaseOptions options,
         NpgsqlConnection connection,
+        string schema,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
 
-        command.CommandText = $"create schema if not exists \"{options.Schema}\";";
+        command.CommandText = $"create schema if not exists \"{schema}\";";
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static IEnumerable<(string Name, string Script)> LoadMigrations()
     {
-        var assembly = typeof(Migrator).Assembly;
+        var assembly = typeof(PostgresMigrator).Assembly;
 
         return assembly.GetManifestResourceNames()
             .Where(x => x.EndsWith(".sql"))

@@ -1,26 +1,22 @@
-using Beckett.Database;
-using Beckett.Database.Queries;
+using Beckett.Storage;
 using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Subscriptions.Services;
 
-public class ConfigureSubscriptions(IDataSource dataSource) : BackgroundService
+public class ConfigureSubscriptions(IStorageProvider storageProvider) : IHostedService
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await using var connection = dataSource.CreateConnection();
-
-        await connection.OpenAsync(stoppingToken);
-
         foreach (var subscription in SubscriptionRegistry.All())
         {
-            await AddOrUpdateSubscriptionQuery.Execute(
-                connection,
+            await storageProvider.AddOrUpdateSubscription(
                 subscription.Name,
                 subscription.EventTypes,
                 subscription.StartingPosition == StartingPosition.Earliest,
-                stoppingToken
+                cancellationToken
             );
         }
     }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

@@ -6,7 +6,6 @@ public class SubscriptionOptions
     public int BatchSize { get; set; } = 500;
     public int Concurrency { get; set; } = 20;
     public int BufferSize { get; set; } = 10000;
-    public bool UseNotifications { get; set; } = true;
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(10);
 
     public void AddSubscription<THandler, TEvent>(

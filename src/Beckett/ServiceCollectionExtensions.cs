@@ -1,5 +1,5 @@
-using Beckett.Database;
 using Beckett.Events;
+using Beckett.Storage.Postgres;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(options);
 
-        services.AddDatabaseSupport(options);
+        services.AddPostgresSupport(options);
 
         services.AddEventSupport(options);
 

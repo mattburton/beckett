@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
-using Beckett.Database;
-using Beckett.Database.Queries;
-using Beckett.Events;
+using Beckett.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -10,10 +8,10 @@ namespace Beckett.Subscriptions;
 
 public class SubscriptionStreamProcessor(
     BeckettOptions options,
-    IDataSource dataSource,
+    IStorageProvider storageProvider,
     IServiceProvider serviceProvider,
     ILogger<SubscriptionStreamProcessor> logger
-)
+) : ISubscriptionStreamProcessor
 {
     private BufferBlock<SubscriptionStream> _workQueue = null!;
     private ActionBlock<SubscriptionStream> _worker = null!;
@@ -71,17 +69,12 @@ public class SubscriptionStreamProcessor(
         {
             try
             {
-                await using var connection = dataSource.CreateConnection();
-
-                await connection.OpenAsync(cancellationToken);
-
-                var results = await GetSubscriptionStreamsToProcessQuery.Execute(
-                    connection,
+                var subscriptionStreams = await storageProvider.GetSubscriptionStreamsToProcess(
                     options.Subscriptions.BatchSize,
                     cancellationToken
                 );
 
-                if (results.Count == 0)
+                if (subscriptionStreams.Count == 0)
                 {
                     if (_pendingEvents)
                     {
@@ -93,13 +86,8 @@ public class SubscriptionStreamProcessor(
                     break;
                 }
 
-                foreach (var result in results)
+                foreach (var subscriptionStream in subscriptionStreams)
                 {
-                    var subscriptionStream = new SubscriptionStream(
-                        result.SubscriptionName,
-                        result.StreamName
-                    );
-
                     subscriptionStream.EnsureSubscriptionTypeIsValid();
 
                     await _worker.SendAsync(subscriptionStream, cancellationToken);
@@ -124,39 +112,30 @@ public class SubscriptionStreamProcessor(
             return;
         }
 
-        await using var connection = dataSource.CreateConnection();
+        await storageProvider.ProcessSubscriptionStream(
+            subscription,
+            subscriptionStream,
+            ProcessSubscriptionStreamCallback,
+            cancellationToken
+        );
+    }
 
-        await connection.OpenAsync(cancellationToken);
-
-        var advisoryLockId = subscriptionStream.ToAdvisoryLockId();
-
-        var locked = await connection.TryAdvisoryLock(advisoryLockId, cancellationToken);
-
-        if (!locked)
-        {
-            return;
-        }
-
+    private async Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
+        Subscription subscription,
+        SubscriptionStream subscriptionStream,
+        IReadOnlyList<EventContext> events,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            var subscriptionStreamEvents = await ReadSubscriptionStreamQuery.Execute(
-                connection,
-                subscriptionStream.SubscriptionName,
-                subscriptionStream.StreamName,
-                options.Subscriptions.BatchSize,
-                cancellationToken
-            );
-
-            long streamPosition = 0;
-
-            foreach (var streamEvent in subscriptionStreamEvents)
+            if (events.Count == 0)
             {
-                streamPosition = streamEvent.StreamPosition;
+                return new ProcessSubscriptionStreamResult.NoEvents();
+            }
 
-                //TODO - setup tracing from metadata
-                var (type, @event, _) = EventSerializer.DeserializeAll(streamEvent);
-
-                if (!subscription.SubscribedToEvent(type))
+            foreach (var @event in events)
+            {
+                if (!subscription.SubscribedToEvent(@event.Type))
                 {
                     continue;
                 }
@@ -167,41 +146,25 @@ public class SubscriptionStreamProcessor(
 
                 try
                 {
-                    await subscription.Handler(handler, @event, cancellationToken);
+                    await subscription.Handler!(handler, @event.Data, cancellationToken);
                 }
                 catch(Exception e)
                 {
                     logger.LogError(
                         e,
                         "Error dispatching event {EventType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [ID: {EventId}]",
-                        streamEvent.Type,
+                        @event.Type,
                         subscriptionStream.SubscriptionName,
                         subscriptionStream.StreamName,
                         subscription.Type,
-                        streamEvent.Id
+                        @event.Id
                     );
 
-                    await RecordCheckpointQuery.Execute(
-                        connection,
-                        subscriptionStream.SubscriptionName,
-                        subscriptionStream.StreamName,
-                        streamPosition,
-                        true,
-                        cancellationToken
-                    );
-
-                    break;
+                    return new ProcessSubscriptionStreamResult.Blocked(@event.StreamPosition);
                 }
             }
 
-            await RecordCheckpointQuery.Execute(
-                connection,
-                subscriptionStream.SubscriptionName,
-                subscriptionStream.StreamName,
-                streamPosition,
-                false,
-                cancellationToken
-            );
+            return new ProcessSubscriptionStreamResult.Success(events[^1].StreamPosition);
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -210,10 +173,8 @@ public class SubscriptionStreamProcessor(
         catch (Exception e)
         {
             logger.LogError(e, "Unhandled exception processing subscription stream");
-        }
-        finally
-        {
-            await connection.AdvisoryUnlock(advisoryLockId, cancellationToken);
+
+            return new ProcessSubscriptionStreamResult.Error();
         }
     }
 }

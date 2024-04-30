@@ -157,10 +157,9 @@ begin
 end;
 $$;
 
---TODO: support expected version, return actual stream version regardless of filters
+--TODO: return actual stream version regardless of filters
 create function read_stream(
   _stream_name text,
-  _expected_version bigint default null,
   _starting_stream_position bigint default null,
   _ending_global_position bigint default null,
   _count integer default null,

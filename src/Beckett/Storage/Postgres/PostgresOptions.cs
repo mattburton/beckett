@@ -1,15 +1,19 @@
 using Npgsql;
 
-namespace Beckett.Database;
+namespace Beckett.Storage.Postgres;
 
-public class DatabaseOptions
+public class PostgresOptions
 {
+    internal bool Enabled { get; set; }
+    internal string ConnectionString { get; private set; } = null!;
+    internal string Schema { get; private set; } = "event_store";
+
     internal bool RunMigrationsAtStartup { get; private set; }
     internal string MigrationConnectionString { get; private set; } = null!;
-    internal string ConnectionString { get; private set; } = null!;
-    internal string ListenerConnectionString { get; private set; } = null!;
-    internal string Schema { get; private set; } = "event_store";
     internal int MigrationAdvisoryLockId { get; private set; }
+
+    internal bool EnableNotifications { get; set; }
+    internal string ListenerConnectionString { get; private set; } = null!;
 
     public void UseSchema(string schema)
     {
@@ -28,8 +32,17 @@ public class DatabaseOptions
         };
 
         ConnectionString = builder.ConnectionString;
+    }
 
-        builder.KeepAlive = 10;
+    public void UseNotifications()
+    {
+        EnableNotifications = true;
+
+        var builder = new NpgsqlConnectionStringBuilder(ConnectionString)
+        {
+            SearchPath = Schema,
+            KeepAlive = 10
+        };
 
         ListenerConnectionString = builder.ConnectionString;
     }

@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
             return;
         }
 
-        services.AddSingleton<SubscriptionStreamProcessor>();
+        services.AddSingleton<ISubscriptionStreamProcessor, SubscriptionStreamProcessor>();
 
         services.AddHostedService<ConfigureSubscriptions>();
 

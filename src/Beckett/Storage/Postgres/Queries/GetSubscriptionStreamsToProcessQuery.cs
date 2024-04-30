@@ -2,7 +2,7 @@ using Beckett.Subscriptions;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Database.Queries;
+namespace Beckett.Storage.Postgres.Queries;
 
 public static class GetSubscriptionStreamsToProcessQuery
 {

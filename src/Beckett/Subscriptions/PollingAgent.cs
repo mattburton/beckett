@@ -2,7 +2,7 @@ namespace Beckett.Subscriptions;
 
 public static class PollingAgent
 {
-    public static async Task Run(BeckettOptions options, SubscriptionStreamProcessor processor, CancellationToken cancellationToken)
+    public static async Task Run(BeckettOptions options, ISubscriptionStreamProcessor processor, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {

@@ -1,8 +1,8 @@
-using Beckett.Database.Types;
+using Beckett.Storage.Postgres.Types;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Database.Queries;
+namespace Beckett.Storage.Postgres.Queries;
 
 public static class ReadStreamQuery
 {
@@ -32,24 +32,20 @@ public static class ReadStreamQuery
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
 
         await command.PrepareAsync(cancellationToken);
 
         command.Parameters[0].Value = streamName;
-        command.Parameters[1].Value = options.ExpectedStreamVersion.HasValue
-            ? options.ExpectedStreamVersion.Value
-            : DBNull.Value;
-        command.Parameters[2].Value = options.StartingStreamPosition.HasValue
+        command.Parameters[1].Value = options.StartingStreamPosition.HasValue
             ? options.StartingStreamPosition.Value
             : DBNull.Value;
-        command.Parameters[3].Value = options.EndingGlobalPosition.HasValue
+        command.Parameters[2].Value = options.EndingGlobalPosition.HasValue
             ? options.EndingGlobalPosition.Value
             : DBNull.Value;
-        command.Parameters[4].Value = options.Count.HasValue ? options.Count.Value : DBNull.Value;
-        command.Parameters[5].Value = options.ReadForwards.GetValueOrDefault(true);
+        command.Parameters[3].Value = options.Count.HasValue ? options.Count.Value : DBNull.Value;
+        command.Parameters[4].Value = options.ReadForwards.GetValueOrDefault(true);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

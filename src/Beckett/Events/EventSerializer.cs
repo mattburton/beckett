@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Beckett.Database.Types;
+using Beckett.Storage.Postgres.Types;
 
 namespace Beckett.Events;
 

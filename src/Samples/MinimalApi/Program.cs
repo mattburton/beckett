@@ -6,11 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddBeckett(options =>
 {
-    options.UseAssemblies(typeof(Program).Assembly);
-
-    options.Database.UseConnectionString("Server=localhost;Database=postgres;User Id=postgres;Password=password;");
-    options.Database.UseSchema("event_store");
-    options.Database.AutoMigrate();
+    options.UsePostgres(configuration =>
+    {
+        configuration.UseConnectionString("Server=localhost;Database=postgres;User Id=postgres;Password=password;");
+        configuration.UseNotifications();
+        configuration.AutoMigrate();
+    });
 });
 
 builder.Services.Configure<JsonOptions>(options =>

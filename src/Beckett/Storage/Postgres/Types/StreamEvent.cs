@@ -1,6 +1,6 @@
 using Npgsql;
 
-namespace Beckett.Database.Types;
+namespace Beckett.Storage.Postgres.Types;
 
 public class StreamEvent
 {
