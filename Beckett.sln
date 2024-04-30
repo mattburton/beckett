@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beckett", "src\Beckett\Beckett.csproj", "{7E81AEFB-09EB-4049-8B64-952DD67C7BCF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{A75ADB60-FDB3-48B5-82AA-FE7032842EF5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinimalApi", "src\Samples\MinimalApi\MinimalApi.csproj", "{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7E81AEFB-09EB-4049-8B64-952DD67C7BCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E81AEFB-09EB-4049-8B64-952DD67C7BCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E81AEFB-09EB-4049-8B64-952DD67C7BCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E81AEFB-09EB-4049-8B64-952DD67C7BCF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}
+	EndGlobalSection
+EndGlobal

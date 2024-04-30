@@ -1,0 +1,9 @@
+.DS_Store
+.env
+*.DotSettings.user
+
+.idea/
+.vs/
+.vscode/
+bin/
+obj/

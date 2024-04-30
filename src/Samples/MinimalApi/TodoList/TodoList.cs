@@ -1,0 +1,35 @@
+using MinimalApi.TodoList.AddingItems;
+using MinimalApi.TodoList.CreatingLists;
+
+namespace MinimalApi.TodoList;
+
+public class TodoList : IState
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public List<string> Todos { get; set; } = [];
+
+    public void Apply(object @event)
+    {
+        switch (@event)
+        {
+            case TodoListCreated e:
+                Apply(e);
+                break;
+            case TodoListItemAdded e:
+                Apply(e);
+                break;
+        }
+    }
+
+    private void Apply(TodoListCreated e)
+    {
+        Id = e.TodoListId;
+        Name = e.Name;
+    }
+
+    private void Apply(TodoListItemAdded e)
+    {
+        Todos.Add(e.Item);
+    }
+}
