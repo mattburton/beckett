@@ -23,7 +23,24 @@ public class EventStore(IEventStorage storage) : IEventStore
         CancellationToken cancellationToken
     )
     {
-        return storage.AppendToStream(streamName, expectedVersion, events, cancellationToken);
+        //TODO - populate from activity source
+        var metadata = new Dictionary<string, object>();
+
+        var eventsToAppend = new List<EventEnvelope>();
+
+        foreach (var @event in events)
+        {
+            if (@event is ScheduledEvent scheduledEvent)
+            {
+                eventsToAppend.Add(new EventEnvelope(scheduledEvent.Event, metadata, scheduledEvent.DeliverAt));
+
+                continue;
+            }
+
+            eventsToAppend.Add(new EventEnvelope(@event, metadata, null));
+        }
+
+        return storage.AppendToStream(streamName, expectedVersion, eventsToAppend, cancellationToken);
     }
 
     public Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken)

@@ -22,7 +22,9 @@ public class BackgroundService(
 
         var tasks = new List<Task>();
 
-        tasks.AddRange(subscriptionStorage.ConfigureServiceHost(subscriptionProcessor, stoppingToken));
+        tasks.AddRange(eventStorage.ConfigureBackgroundService(stoppingToken));
+
+        tasks.AddRange(subscriptionStorage.ConfigureBackgroundService(subscriptionProcessor, stoppingToken));
 
         tasks.Add(ContinuousPolling(subscriptionProcessor, options, stoppingToken));
 

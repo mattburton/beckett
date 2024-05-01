@@ -37,6 +37,8 @@ public static class PostgresMigrator
 
         await ApplyMigrations(connection, schema, cancellationToken);
 
+        await connection.ReloadTypesAsync();
+
         await connection.AdvisoryUnlock(advisoryLockId, cancellationToken);
     }
 
@@ -153,6 +155,8 @@ public static class PostgresMigrator
     {
         using var reader = new StreamReader(stream, Encoding.UTF8, true);
 
-        return reader.ReadToEnd().Replace("__schema__", schema);
+        var script = reader.ReadToEnd().Replace("__schema__", schema);
+
+        return script;
     }
 }

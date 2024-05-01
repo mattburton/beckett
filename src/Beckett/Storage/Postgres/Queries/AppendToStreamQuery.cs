@@ -34,11 +34,11 @@ public static class AppendToStreamQuery
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 
-        if (result is long streamVersion)
+        return result switch
         {
-            return streamVersion;
-        }
-
-        throw new InvalidOperationException($"Unexpected result from append_to_stream function: {result}");
+            long streamVersion => streamVersion,
+            DBNull => -1,
+            _ => throw new InvalidOperationException($"Unexpected result from append_to_stream function: {result}")
+        };
     }
 }

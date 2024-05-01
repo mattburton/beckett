@@ -64,6 +64,32 @@ public class SubscriptionProcessor(
         _poller = PollWhileEventsAvailable(cancellationToken);
     }
 
+    public async Task ProcessSubscriptionStreamAtPosition(
+        string subscriptionName,
+        string streamName,
+        long streamPosition,
+        CancellationToken cancellationToken
+    )
+    {
+        var subscription = SubscriptionRegistry.GetSubscription(subscriptionName);
+
+        if (subscription.Handler == null)
+        {
+            throw new Exception($"Unknown subscription: {subscriptionName}");
+        }
+
+        var subscriptionStream = new SubscriptionStream(subscriptionName, streamName);
+
+        await subscriptionStorage.ProcessSubscriptionStream(
+            subscription,
+            subscriptionStream,
+            streamPosition,
+            1,
+            ProcessSubscriptionStreamCallback,
+            cancellationToken
+        );
+    }
+
     private async Task PollWhileEventsAvailable(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -94,6 +120,10 @@ public class SubscriptionProcessor(
                     await _consumer.SendAsync(subscriptionStream, cancellationToken);
                 }
             }
+            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (NpgsqlException e)
             {
                 logger.LogError(e, "Database error - will retry in 10 seconds");
@@ -122,6 +152,7 @@ public class SubscriptionProcessor(
         await subscriptionStorage.ProcessSubscriptionStream(
             subscription,
             subscriptionStream,
+            null,
             options.Subscriptions.BatchSize,
             ProcessSubscriptionStreamCallback,
             cancellationToken
@@ -171,7 +202,7 @@ public class SubscriptionProcessor(
                         @event.Id
                     );
 
-                    return new ProcessSubscriptionStreamResult.Blocked(@event.StreamPosition);
+                    return new ProcessSubscriptionStreamResult.Blocked(@event.StreamPosition, e);
                 }
             }
 

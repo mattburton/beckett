@@ -15,7 +15,10 @@ public static class GetSubscriptionStreamsToProcessQuery
     {
         await using var command = connection.CreateCommand();
 
-        command.CommandText = $"select subscription_name, stream_name from {schema}.get_subscription_streams_to_process($1);";
+        command.CommandText = $@"
+            select subscription_name, stream_name
+            from {schema}.get_subscription_streams_to_process($1);
+        ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 

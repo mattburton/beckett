@@ -1,4 +1,5 @@
 using System.Reflection;
+using Beckett.Events;
 using Beckett.Storage.Postgres;
 using Beckett.Subscriptions;
 
@@ -9,6 +10,7 @@ public class BeckettOptions
     internal Assembly[] Assemblies { get; private set; } = AppDomain.CurrentDomain.GetAssemblies();
     internal PostgresOptions Postgres { get; } = new();
 
+    public EventOptions Events { get; } = new();
     public SubscriptionOptions Subscriptions { get; } = new();
 
     public void UseAssemblies(params Assembly[] assemblies)

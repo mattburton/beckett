@@ -13,7 +13,7 @@ public interface ISubscriptionStorage
         CancellationToken cancellationToken
     );
 
-    IEnumerable<Task> ConfigureServiceHost(ISubscriptionProcessor processor, CancellationToken stoppingToken);
+    IEnumerable<Task> ConfigureBackgroundService(ISubscriptionProcessor processor, CancellationToken stoppingToken);
 
     Task<IReadOnlyList<SubscriptionStream>> GetSubscriptionStreamsToProcess(
         int batchSize,
@@ -23,6 +23,7 @@ public interface ISubscriptionStorage
     Task ProcessSubscriptionStream(
         Subscription subscription,
         SubscriptionStream subscriptionStream,
+        long? fromStreamPosition,
         int batchSize,
         ProcessSubscriptionStreamCallback callback,
         CancellationToken cancellationToken
@@ -44,7 +45,7 @@ public abstract record ProcessSubscriptionStreamResult
 
     public record Success(long StreamPosition) : ProcessSubscriptionStreamResult;
 
-    public record Blocked(long StreamPosition) : ProcessSubscriptionStreamResult;
+    public record Blocked(long StreamPosition, Exception Exception) : ProcessSubscriptionStreamResult;
 
     public record Error : ProcessSubscriptionStreamResult;
 }

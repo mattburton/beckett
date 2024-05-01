@@ -8,6 +8,11 @@ public class TodoListItemAddedHandler
     {
         Console.WriteLine($"Item was added to list: {e.Item} [List: {e.TodoListId}]");
 
+        if (e.Item == "Error")
+        {
+            throw new Exception("Error");
+        }
+
         return Task.CompletedTask;
     }
 }

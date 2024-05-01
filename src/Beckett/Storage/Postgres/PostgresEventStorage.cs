@@ -1,11 +1,16 @@
 using Beckett.Events;
 using Beckett.Storage.Postgres.Queries;
 using Beckett.Storage.Postgres.Types;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-public class PostgresEventStorage(BeckettOptions beckett, IPostgresDatabase database) : IEventStorage
+public class PostgresEventStorage(
+    BeckettOptions beckett,
+    IPostgresDatabase database,
+    ILogger<PostgresEventStorage> logger
+) : IEventStorage
 {
     public async Task Initialize(CancellationToken cancellationToken)
     {
@@ -31,7 +36,7 @@ public class PostgresEventStorage(BeckettOptions beckett, IPostgresDatabase data
     public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
-        IEnumerable<object> events,
+        IEnumerable<EventEnvelope> events,
         CancellationToken cancellationToken
     )
     {
@@ -39,10 +44,7 @@ public class PostgresEventStorage(BeckettOptions beckett, IPostgresDatabase data
 
         await connection.OpenAsync(cancellationToken);
 
-        //TODO - populate metadata from tracing
-        var metadata = new Dictionary<string, object>();
-
-        var newStreamEvents = events.Select(x => NewStreamEvent.From(x, metadata)).ToArray();
+        var newStreamEvents = events.Select(x => NewStreamEvent.From(x.Event, x.Metadata, x.DeliverAt)).ToArray();
 
         var streamVersion = await AppendToStreamQuery.Execute(
             connection,
@@ -55,6 +57,43 @@ public class PostgresEventStorage(BeckettOptions beckett, IPostgresDatabase data
         );
 
         return new AppendResult(streamVersion);
+    }
+
+    public IEnumerable<Task> ConfigureBackgroundService(CancellationToken stoppingToken)
+    {
+        yield return DeliverScheduledEvents(stoppingToken);
+    }
+
+    public async Task DeliverScheduledEvents(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await using var connection = database.CreateConnection();
+
+                await connection.OpenAsync(cancellationToken);
+
+                await DeliverScheduledEventsQuery.Execute(
+                    connection,
+                    beckett.Postgres.Schema,
+                    beckett.Postgres.EnableNotifications,
+                    cancellationToken
+                );
+
+                await Task.Delay(beckett.Events.ScheduledEventPollingInterval, cancellationToken);
+            }
+            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Database error - will try in 10 seconds");
+
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            }
+        }
     }
 
     public async Task<ReadResult> ReadStream(

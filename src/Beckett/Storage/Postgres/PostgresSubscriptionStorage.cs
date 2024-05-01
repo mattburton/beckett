@@ -1,5 +1,6 @@
 using Beckett.Events;
 using Beckett.Storage.Postgres.Queries;
+using Beckett.Storage.Postgres.Types;
 using Beckett.Subscriptions;
 using Npgsql;
 
@@ -49,7 +50,7 @@ public class PostgresSubscriptionStorage(
         );
     }
 
-    public IEnumerable<Task> ConfigureServiceHost(ISubscriptionProcessor processor, CancellationToken stoppingToken)
+    public IEnumerable<Task> ConfigureBackgroundService(ISubscriptionProcessor processor, CancellationToken stoppingToken)
     {
         if (beckett.Postgres.EnableNotifications)
         {
@@ -81,6 +82,7 @@ public class PostgresSubscriptionStorage(
     public async Task ProcessSubscriptionStream(
         Subscription subscription,
         SubscriptionStream subscriptionStream,
+        long? fromStreamPosition,
         int batchSize,
         ProcessSubscriptionStreamCallback callback,
         CancellationToken cancellationToken
@@ -101,14 +103,33 @@ public class PostgresSubscriptionStorage(
 
         try
         {
-            var subscriptionStreamEvents = await ReadSubscriptionStreamQuery.Execute(
-                connection,
-                beckett.Postgres.Schema,
-                subscriptionStream.SubscriptionName,
-                subscriptionStream.StreamName,
-                batchSize,
-                cancellationToken
-            );
+            IReadOnlyList<StreamEvent> subscriptionStreamEvents;
+
+            if (fromStreamPosition == null)
+            {
+                subscriptionStreamEvents = await ReadSubscriptionStreamQuery.Execute(
+                    connection,
+                    beckett.Postgres.Schema,
+                    subscriptionStream.SubscriptionName,
+                    subscriptionStream.StreamName,
+                    batchSize,
+                    cancellationToken
+                );
+            }
+            else
+            {
+                subscriptionStreamEvents = await ReadStreamQuery.Execute(
+                    connection,
+                    beckett.Postgres.Schema,
+                    subscriptionStream.StreamName,
+                    new ReadOptions
+                    {
+                        StartingStreamPosition = fromStreamPosition.Value,
+                        Count = batchSize
+                    },
+                    cancellationToken
+                );
+            }
 
             var events = new List<EventData>();
 
@@ -129,6 +150,11 @@ public class PostgresSubscriptionStorage(
             }
 
             var result = await callback(subscription, subscriptionStream, events, cancellationToken);
+
+            if (fromStreamPosition.HasValue && result is ProcessSubscriptionStreamResult.Blocked blockedAtPosition)
+            {
+                throw blockedAtPosition.Exception;
+            }
 
             switch (result)
             {

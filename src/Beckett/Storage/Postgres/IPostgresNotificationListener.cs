@@ -1,3 +1,4 @@
+using System.Data;
 using System.Timers;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -79,6 +80,11 @@ public class PostgresNotificationListener(
     {
         return (_, _) =>
         {
+            if (connection.FullState == (ConnectionState.Open | ConnectionState.Fetching))
+            {
+                return;
+            }
+
             using var command = connection.CreateCommand();
 
             command.CommandText = "select true;";
