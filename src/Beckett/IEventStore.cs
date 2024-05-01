@@ -1,15 +1,35 @@
+using Beckett.Events;
+
 namespace Beckett;
 
 public interface IEventStore
 {
-    Task<IAppendResult> AppendToStream(
+    Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> events,
         CancellationToken cancellationToken
     );
 
-    Task<IReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
+    Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
+}
+
+public class EventStore(IEventStorage storage) : IEventStore
+{
+    public Task<AppendResult> AppendToStream(
+        string streamName,
+        ExpectedVersion expectedVersion,
+        IEnumerable<object> events,
+        CancellationToken cancellationToken
+    )
+    {
+        return storage.AppendToStream(streamName, expectedVersion, events, cancellationToken);
+    }
+
+    public Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken)
+    {
+        return storage.ReadStream(streamName, options, cancellationToken);
+    }
 }
 
 public readonly record struct ExpectedVersion(long Value)
@@ -29,21 +49,17 @@ public class ReadOptions
     public bool? ReadForwards { get; set; }
 }
 
-public interface IAppendResult
+public readonly struct AppendResult(long streamVersion)
 {
-    long StreamVersion { get; }
+    public long StreamVersion { get; } = streamVersion;
 }
 
-internal record AppendResult(long StreamVersion) : IAppendResult;
-
-public interface IReadResult
+public readonly struct ReadResult(IReadOnlyList<object> events, long streamVersion)
 {
-    IReadOnlyList<object> Events { get; }
-    long StreamVersion { get; }
+    public IReadOnlyList<object> Events { get; } = events;
+    public long StreamVersion { get; } = streamVersion;
 
-    bool IsEmpty => Events.Count == 0;
+    public bool IsEmpty => Events.Count == 0;
 
-    TState ProjectTo<TState>() where TState : IState, new() => Events.ProjectTo<TState>();
+    public TState ProjectTo<TState>() where TState : IState, new() => Events.ProjectTo<TState>();
 }
-
-internal record ReadResult(IReadOnlyList<object> Events, long StreamVersion) : IReadResult;

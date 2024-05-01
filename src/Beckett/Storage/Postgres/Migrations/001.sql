@@ -139,9 +139,9 @@ begin
     from append_events
   ),
   record_subscription_streams as (
-    insert into event_store.subscription_streams (subscription_name, stream_name, stream_position)
+    insert into subscription_streams (subscription_name, stream_name, stream_position)
     select s.name, _stream_name, v.stream_version
-    from new_stream_version v, event_store.subscriptions s
+    from new_stream_version v, subscriptions s
     inner join append_events e on e.type = any (s.event_types)
     on conflict (subscription_name, stream_name) do update
       set stream_position = excluded.stream_position

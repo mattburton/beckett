@@ -1,15 +1,14 @@
 using Beckett.Events;
 using Beckett.Storage.Postgres.Queries;
-using Beckett.Storage.Postgres.Types;
 using Beckett.Subscriptions;
 
 namespace Beckett.Storage.Postgres;
 
-public class PostgresStorageProvider(
+public class PostgresSubscriptionStorage(
     BeckettOptions beckettOptions,
     IPostgresDatabase database,
     IPostgresNotificationListener listener
-) : IStorageProvider
+) : ISubscriptionStorage
 {
     public async Task AddOrUpdateSubscription(string subscriptionName, string[] eventTypes, bool startFromBeginning,
         CancellationToken cancellationToken)
@@ -27,37 +26,13 @@ public class PostgresStorageProvider(
         );
     }
 
-    public async Task<IAppendResult> AppendToStream(string streamName, ExpectedVersion expectedVersion,
-        IEnumerable<object> events, CancellationToken cancellationToken)
-    {
-        await using var connection = database.CreateConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        //TODO - populate metadata from tracing
-        var metadata = new Dictionary<string, object>();
-
-        var newStreamEvents = events.Select(x => NewStreamEvent.From(x, metadata)).ToArray();
-
-        var streamVersion = await AppendToStreamQuery.Execute(
-            connection,
-            streamName,
-            expectedVersion.Value,
-            newStreamEvents,
-            beckettOptions.Postgres.EnableNotifications,
-            cancellationToken
-        );
-
-        return new AppendResult(streamVersion);
-    }
-
-    public IEnumerable<Task> GetSubscriptionHostTasks(ISubscriptionStreamProcessor processor, CancellationToken stoppingToken)
+    public IEnumerable<Task> ConfigureSubscriptionHost(ISubscriptionProcessor processor, CancellationToken stoppingToken)
     {
         if (beckettOptions.Postgres.EnableNotifications)
         {
             yield return listener.Listen(
                 "beckett:poll",
-                (_, _) => processor.StartPolling(stoppingToken),
+                (_, _) => processor.Poll(stoppingToken),
                 stoppingToken
             );
         }
@@ -74,7 +49,7 @@ public class PostgresStorageProvider(
 
         return await GetSubscriptionStreamsToProcessQuery.Execute(
             connection,
-            beckettOptions.Subscriptions.BatchSize,
+            batchSize,
             cancellationToken
         );
     }
@@ -82,6 +57,7 @@ public class PostgresStorageProvider(
     public async Task ProcessSubscriptionStream(
         Subscription subscription,
         SubscriptionStream subscriptionStream,
+        int batchSize,
         ProcessSubscriptionStreamCallback callback,
         CancellationToken cancellationToken
     )
@@ -105,17 +81,17 @@ public class PostgresStorageProvider(
                 connection,
                 subscriptionStream.SubscriptionName,
                 subscriptionStream.StreamName,
-                beckettOptions.Subscriptions.BatchSize,
+                batchSize,
                 cancellationToken
             );
 
-            var events = new List<EventContext>();
+            var events = new List<IEventData>();
 
             foreach (var subscriptionStreamEvent in subscriptionStreamEvents)
             {
-                var (type, data, metadata) = EventSerializer.DeserializeAll(subscriptionStreamEvent);
+                var (type, data, metadata) = PostgresEventDeserializer.DeserializeAll(subscriptionStreamEvent);
 
-                events.Add(new EventContext(
+                events.Add(new EventData(
                     subscriptionStreamEvent.Id,
                     subscriptionStreamEvent.StreamName,
                     subscriptionStreamEvent.StreamPosition,
@@ -157,39 +133,5 @@ public class PostgresStorageProvider(
         {
             await connection.AdvisoryUnlock(advisoryLockId, cancellationToken);
         }
-    }
-
-    public async Task<IReadResult> ReadStream(string streamName, ReadOptions options,
-        CancellationToken cancellationToken)
-    {
-        await using var connection = database.CreateConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        var streamEvents = await ReadStreamQuery.Execute(
-            connection,
-            streamName,
-            options,
-            cancellationToken
-        );
-
-        //TODO update query to always return actual stream version regardless of read options supplied
-        var streamVersion = streamEvents.Count == 0 ? 0 : streamEvents[^1].StreamPosition;
-
-        var events = streamEvents.Select(EventSerializer.Deserialize).ToList();
-
-        return new ReadResult(events, streamVersion);
-    }
-
-    public Task<IReadResult> ReadSubscriptionStream(SubscriptionStream subscriptionStream, int batchSize,
-        CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task RecordCheckpoint(SubscriptionStream subscriptionStream, long checkpoint, bool blocked,
-        CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
     }
 }

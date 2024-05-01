@@ -6,7 +6,7 @@ public class PostgresOptions
 {
     internal bool Enabled { get; set; }
     internal string ConnectionString { get; private set; } = null!;
-    internal string Schema { get; private set; } = "event_store";
+    internal string Schema { get; private set; } = "beckett";
 
     internal bool RunMigrationsAtStartup { get; private set; }
     internal string MigrationConnectionString { get; private set; } = null!;
@@ -62,7 +62,7 @@ public class PostgresOptions
         }
 
         MigrationConnectionString = ConnectionString ??
-            throw new ArgumentException("Please configure the connection string prior in order to run migrations");
+            throw new ArgumentException("You must supply a connection string to use when migrating the database");
 
         MigrationAdvisoryLockId = advisoryLockId switch
         {

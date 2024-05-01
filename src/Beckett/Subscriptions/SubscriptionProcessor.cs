@@ -1,26 +1,26 @@
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
-using Beckett.Storage;
+using Beckett.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionStreamProcessor(
+public class SubscriptionProcessor(
     BeckettOptions options,
-    IStorageProvider storageProvider,
+    ISubscriptionStorage subscriptionStorage,
     IServiceProvider serviceProvider,
-    ILogger<SubscriptionStreamProcessor> logger
-) : ISubscriptionStreamProcessor
+    ILogger<SubscriptionProcessor> logger
+) : ISubscriptionProcessor
 {
-    private BufferBlock<SubscriptionStream> _workQueue = null!;
-    private ActionBlock<SubscriptionStream> _worker = null!;
+    private BufferBlock<SubscriptionStream> _queue = null!;
+    private ActionBlock<SubscriptionStream> _consumer = null!;
     private Task _poller = Task.CompletedTask;
     private bool _pendingEvents;
 
     public void Initialize(CancellationToken stoppingToken)
     {
-        _workQueue = new BufferBlock<SubscriptionStream>(
+        _queue = new BufferBlock<SubscriptionStream>(
             new DataflowBlockOptions
             {
                 BoundedCapacity = options.Subscriptions.BufferSize,
@@ -30,7 +30,7 @@ public class SubscriptionStreamProcessor(
 
         var concurrency = Debugger.IsAttached ? 1 : options.Subscriptions.Concurrency;
 
-        _worker = new ActionBlock<SubscriptionStream>(
+        _consumer = new ActionBlock<SubscriptionStream>(
             subscriptionStream => ProcessSubscriptionStream(subscriptionStream, stoppingToken),
             new ExecutionDataflowBlockOptions
             {
@@ -42,8 +42,8 @@ public class SubscriptionStreamProcessor(
             }
         );
 
-        _workQueue.LinkTo(
-            _worker,
+        _queue.LinkTo(
+            _consumer,
             new DataflowLinkOptions
             {
                 PropagateCompletion = true
@@ -51,7 +51,7 @@ public class SubscriptionStreamProcessor(
         );
     }
 
-    public void StartPolling(CancellationToken cancellationToken)
+    public void Poll(CancellationToken cancellationToken)
     {
         if (!_poller.IsCompleted)
         {
@@ -60,16 +60,16 @@ public class SubscriptionStreamProcessor(
             return;
         }
 
-        _poller = Poll(cancellationToken);
+        _poller = PollWhileEventsAvailable(cancellationToken);
     }
 
-    public async Task Poll(CancellationToken cancellationToken)
+    private async Task PollWhileEventsAvailable(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var subscriptionStreams = await storageProvider.GetSubscriptionStreamsToProcess(
+                var subscriptionStreams = await subscriptionStorage.GetSubscriptionStreamsToProcess(
                     options.Subscriptions.BatchSize,
                     cancellationToken
                 );
@@ -90,7 +90,7 @@ public class SubscriptionStreamProcessor(
                 {
                     subscriptionStream.EnsureSubscriptionTypeIsValid();
 
-                    await _worker.SendAsync(subscriptionStream, cancellationToken);
+                    await _consumer.SendAsync(subscriptionStream, cancellationToken);
                 }
             }
             catch (Exception e)
@@ -112,9 +112,10 @@ public class SubscriptionStreamProcessor(
             return;
         }
 
-        await storageProvider.ProcessSubscriptionStream(
+        await subscriptionStorage.ProcessSubscriptionStream(
             subscription,
             subscriptionStream,
+            options.Subscriptions.BatchSize,
             ProcessSubscriptionStreamCallback,
             cancellationToken
         );
@@ -123,7 +124,7 @@ public class SubscriptionStreamProcessor(
     private async Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
         Subscription subscription,
         SubscriptionStream subscriptionStream,
-        IReadOnlyList<EventContext> events,
+        IReadOnlyList<IEventData> events,
         CancellationToken cancellationToken)
     {
         try
@@ -142,11 +143,14 @@ public class SubscriptionStreamProcessor(
 
                 using var scope = serviceProvider.CreateScope();
 
+                var context = @event.WithServices(scope);
+
+                //TODO - support handlers that accept the event context as an argument
                 var handler = scope.ServiceProvider.GetRequiredService(subscription.Type);
 
                 try
                 {
-                    await subscription.Handler!(handler, @event.Data, cancellationToken);
+                    await subscription.Handler!(handler, context.Data, cancellationToken);
                 }
                 catch(Exception e)
                 {

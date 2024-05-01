@@ -2,7 +2,7 @@ namespace MinimalApi.TodoList.AddingItems;
 
 public record AddTodoListItem(Guid Id, string Item)
 {
-    public async Task<IAppendResult> Execute(IEventStore eventStore, CancellationToken cancellationToken)
+    public async Task<AppendResult> Execute(IEventStore eventStore, CancellationToken cancellationToken)
     {
         var stream = await eventStore.ReadStream(StreamName.For<TodoList>(Id), cancellationToken);
 

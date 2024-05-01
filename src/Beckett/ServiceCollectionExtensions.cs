@@ -23,7 +23,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSubscriptionSupport(options);
 
-        services.AddTransient<IEventStore, EventStore>();
+        services.AddSingleton<IEventStore, EventStore>();
     }
 
     private static void RunConfigurators(IServiceCollection services, BeckettOptions options)

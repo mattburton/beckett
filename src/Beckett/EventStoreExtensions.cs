@@ -2,7 +2,7 @@ namespace Beckett;
 
 public static class EventStoreExtensions
 {
-    public static Task<IAppendResult> AppendToStream(
+    public static Task<AppendResult> AppendToStream(
         this IEventStore eventStore,
         string streamName,
         ExpectedVersion expectedVersion,
@@ -13,7 +13,7 @@ public static class EventStoreExtensions
         return eventStore.AppendToStream(streamName, expectedVersion, [@event], cancellationToken);
     }
 
-    public static Task<IReadResult> ReadStream(
+    public static Task<ReadResult> ReadStream(
         this IEventStore eventStore,
         string streamName,
         CancellationToken cancellationToken

@@ -1,15 +1,14 @@
-using Beckett.Storage;
 using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Subscriptions.Services;
 
-public class ConfigureSubscriptions(IStorageProvider storageProvider) : IHostedService
+public class ConfigureSubscriptions(ISubscriptionStorage subscriptionStorage) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         foreach (var subscription in SubscriptionRegistry.All())
         {
-            await storageProvider.AddOrUpdateSubscription(
+            await subscriptionStorage.AddOrUpdateSubscription(
                 subscription.Name,
                 subscription.EventTypes,
                 subscription.StartingPosition == StartingPosition.Earliest,

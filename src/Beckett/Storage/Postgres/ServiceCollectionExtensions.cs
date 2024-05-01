@@ -1,4 +1,6 @@
+using Beckett.Events;
 using Beckett.Storage.Postgres.Services;
+using Beckett.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Storage.Postgres;
@@ -14,9 +16,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPostgresDatabase, PostgresDatabase>();
 
+        services.AddSingleton<IEventStorage, PostgresEventStorage>();
+
         services.AddSingleton<IPostgresNotificationListener, PostgresNotificationListener>();
 
-        services.AddSingleton<IStorageProvider, PostgresStorageProvider>();
+        services.AddSingleton<ISubscriptionStorage, PostgresSubscriptionStorage>();
 
         if (options.Postgres.RunMigrationsAtStartup)
         {

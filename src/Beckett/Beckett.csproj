@@ -8,7 +8,7 @@
 
     <PropertyGroup>
         <PackageId>Beckett</PackageId>
-        <PackageVersion>0.0.2</PackageVersion>
+        <PackageVersion>0.0.3</PackageVersion>
         <Authors>Matt Burton</Authors>
         <Description>Event sourcing library</Description>
         <PackageProjectUrl>https://github.com/mattburton/beckett</PackageProjectUrl>
@@ -30,8 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Include="Database\Migrations\*.sql" />
-      <EmbeddedResource Include="Storage\Postgres\Migrations\001.sql" />
+      <EmbeddedResource Include="**\*.sql" />
     </ItemGroup>
 
     <ItemGroup>
