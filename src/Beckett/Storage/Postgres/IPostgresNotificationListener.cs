@@ -41,8 +41,23 @@ internal class PostgresNotificationListener(
 
                     while (true)
                     {
-                        await connection.WaitAsync(cancellationToken);
+                        try
+                        {
+                            await connection.WaitAsync(cancellationToken);
+                        }
+                        catch (NpgsqlException e)
+                        {
+                            logger.LogError(e, "Database error - will retry in 10 seconds");
+
+                            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                        }
                     }
+                }
+                catch (NpgsqlException e)
+                {
+                    logger.LogError(e, "Database error - will retry in 10 seconds");
+
+                    await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
                 }
                 finally
                 {

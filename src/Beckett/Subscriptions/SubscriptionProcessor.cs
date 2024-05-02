@@ -3,6 +3,7 @@ using System.Threading.Tasks.Dataflow;
 using Beckett.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Beckett.Subscriptions;
 
@@ -92,6 +93,12 @@ internal class SubscriptionProcessor(
 
                     await _consumer.SendAsync(subscriptionStream, cancellationToken);
                 }
+            }
+            catch (NpgsqlException e)
+            {
+                logger.LogError(e, "Database error - will retry in 10 seconds");
+
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             }
             catch (Exception e)
             {
