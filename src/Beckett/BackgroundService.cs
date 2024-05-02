@@ -3,7 +3,7 @@ using Beckett.Subscriptions;
 
 namespace Beckett;
 
-internal class BackgroundService(
+public class BackgroundService(
     BeckettOptions options,
     IEventStorage eventStorage,
     ISubscriptionStorage subscriptionStorage,

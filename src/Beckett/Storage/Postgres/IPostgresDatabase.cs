@@ -3,12 +3,12 @@ using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-internal interface IPostgresDatabase
+public interface IPostgresDatabase
 {
     NpgsqlConnection CreateConnection();
 }
 
-internal class PostgresDatabase : IPostgresDatabase
+public class PostgresDatabase : IPostgresDatabase
 {
     private readonly NpgsqlDataSource _dataSource;
 

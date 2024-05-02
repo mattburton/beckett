@@ -4,12 +4,12 @@ using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-internal interface IPostgresNotificationListener
+public interface IPostgresNotificationListener
 {
     Task Listen(string channel, NotificationEventHandler eventHandler, CancellationToken cancellationToken);
 }
 
-internal class PostgresNotificationListener(
+public class PostgresNotificationListener(
     BeckettOptions options,
     IPostgresDatabase database,
     ILogger<PostgresNotificationListener> logger

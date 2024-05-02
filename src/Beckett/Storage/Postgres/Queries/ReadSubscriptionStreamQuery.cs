@@ -4,7 +4,7 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-internal static class ReadSubscriptionStreamQuery
+public static class ReadSubscriptionStreamQuery
 {
     public static async Task<IReadOnlyList<StreamEvent>> Execute(
         NpgsqlConnection connection,

@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Storage.Postgres;
 
-internal static class ServiceCollectionExtensions
+public static class ServiceCollectionExtensions
 {
     public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
     {

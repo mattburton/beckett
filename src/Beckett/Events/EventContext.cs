@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Events;
 
-internal readonly record struct EventContext(
+public readonly record struct EventContext(
     Guid Id,
     string StreamName,
     long StreamPosition,

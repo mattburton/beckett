@@ -7,7 +7,7 @@ using Npgsql;
 
 namespace Beckett.Subscriptions;
 
-internal class SubscriptionProcessor(
+public class SubscriptionProcessor(
     BeckettOptions options,
     ISubscriptionStorage subscriptionStorage,
     IServiceProvider serviceProvider,

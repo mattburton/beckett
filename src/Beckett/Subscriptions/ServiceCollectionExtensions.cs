@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Subscriptions;
 
-internal static class ServiceCollectionExtensions
+public static class ServiceCollectionExtensions
 {
     public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
     {

@@ -3,7 +3,7 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-internal static class RecordCheckpointQuery
+public static class RecordCheckpointQuery
 {
     public static async Task Execute(
         NpgsqlConnection connection,

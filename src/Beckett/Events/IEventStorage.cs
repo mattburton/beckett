@@ -1,6 +1,6 @@
 namespace Beckett.Events;
 
-internal interface IEventStorage
+public interface IEventStorage
 {
     Task Initialize(CancellationToken cancellationToken);
 

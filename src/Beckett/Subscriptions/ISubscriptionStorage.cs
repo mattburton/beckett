@@ -2,7 +2,7 @@ using Beckett.Events;
 
 namespace Beckett.Subscriptions;
 
-internal interface ISubscriptionStorage
+public interface ISubscriptionStorage
 {
     Task Initialize(CancellationToken cancellationToken);
 
@@ -29,14 +29,14 @@ internal interface ISubscriptionStorage
     );
 }
 
-internal delegate Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
+public delegate Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
     Subscription subscription,
     SubscriptionStream subscriptionStream,
     IReadOnlyList<EventData> events,
     CancellationToken cancellationToken
 );
 
-internal abstract record ProcessSubscriptionStreamResult
+public abstract record ProcessSubscriptionStreamResult
 {
     public record NoEvents : ProcessSubscriptionStreamResult;
 

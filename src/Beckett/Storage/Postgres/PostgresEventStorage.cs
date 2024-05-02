@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-internal class PostgresEventStorage(BeckettOptions beckett, IPostgresDatabase database) : IEventStorage
+public class PostgresEventStorage(BeckettOptions beckett, IPostgresDatabase database) : IEventStorage
 {
     public async Task Initialize(CancellationToken cancellationToken)
     {

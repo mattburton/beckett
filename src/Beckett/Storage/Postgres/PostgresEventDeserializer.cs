@@ -4,7 +4,7 @@ using Beckett.Storage.Postgres.Types;
 
 namespace Beckett.Storage.Postgres;
 
-internal static class PostgresEventDeserializer
+public static class PostgresEventDeserializer
 {
     public static object Deserialize(StreamEvent @event)
     {

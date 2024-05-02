@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-internal class PostgresSubscriptionStorage(
+public class PostgresSubscriptionStorage(
     BeckettOptions beckett,
     IPostgresDatabase database,
     IPostgresNotificationListener listener

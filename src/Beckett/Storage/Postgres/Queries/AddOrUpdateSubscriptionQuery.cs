@@ -3,7 +3,7 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-internal static class AddOrUpdateSubscriptionQuery
+public static class AddOrUpdateSubscriptionQuery
 {
     public static async Task Execute(
         NpgsqlConnection connection,

@@ -19,7 +19,7 @@ public static class PostgresMigrator
         await Execute(connection, schema, advisoryLockId, cancellationToken);
     }
 
-    internal static async Task Execute(
+    public static async Task Execute(
         NpgsqlConnection connection,
         string schema,
         int advisoryLockId,

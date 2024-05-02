@@ -3,7 +3,7 @@ using UUIDNext;
 
 namespace Beckett.Storage.Postgres.Types;
 
-internal class NewStreamEvent
+public class NewStreamEvent
 {
     public Guid Id { get; init; }
     public string Type { get; init; } = null!;

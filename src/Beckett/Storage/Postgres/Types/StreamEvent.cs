@@ -2,7 +2,7 @@ using Npgsql;
 
 namespace Beckett.Storage.Postgres.Types;
 
-internal class StreamEvent
+public class StreamEvent
 {
     public Guid Id { get; init; }
     public string StreamName { get; init; } = null!;
