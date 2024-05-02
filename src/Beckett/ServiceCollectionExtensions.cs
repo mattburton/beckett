@@ -7,7 +7,7 @@ namespace Beckett;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddBeckett(this IServiceCollection services, Action<BeckettOptions> configure)
+    public static IServiceCollection AddBeckett(this IServiceCollection services, Action<BeckettOptions> configure)
     {
         var options = new BeckettOptions();
 
@@ -26,6 +26,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEventStore, EventStore>();
 
         services.AddHostedService<BackgroundService>();
+
+        return services;
     }
 
     private static void RunConfigurators(IServiceCollection services, BeckettOptions options)
