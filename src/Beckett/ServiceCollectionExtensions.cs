@@ -24,6 +24,8 @@ public static class ServiceCollectionExtensions
         services.AddSubscriptionSupport(options);
 
         services.AddSingleton<IEventStore, EventStore>();
+
+        services.AddHostedService<BackgroundService>();
     }
 
     private static void RunConfigurators(IServiceCollection services, BeckettOptions options)

@@ -4,16 +4,19 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-public static class ReadStreamQuery
+internal static class ReadStreamQuery
 {
     public static async Task<IReadOnlyList<StreamEvent>> Execute(
         NpgsqlConnection connection,
+        string schema,
         string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
     )
     {
-        const string sql = @"
+        await using var command = connection.CreateCommand();
+
+        command.CommandText = $@"
             select id,
                    stream_name,
                    stream_position,
@@ -22,12 +25,8 @@ public static class ReadStreamQuery
                    data,
                    metadata,
                    timestamp
-            from read_stream($1, $2, $3, $4, $5);
+            from {schema}.read_stream($1, $2, $3, $4, $5);
         ";
-
-        await using var command = connection.CreateCommand();
-
-        command.CommandText = sql;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });

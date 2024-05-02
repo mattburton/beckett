@@ -3,14 +3,14 @@ using UUIDNext;
 
 namespace Beckett.Storage.Postgres.Types;
 
-public class NewStreamEvent
+internal class NewStreamEvent
 {
-    public const string DataTypeName = "new_stream_event[]";
-
     public Guid Id { get; init; }
     public string Type { get; init; } = null!;
     public string Data { get; init; } = null!;
     public string Metadata { get; init; } = null!;
+
+    public static string DataTypeNameFor(string schema) => $"{schema}.new_stream_event[]";
 
     public static NewStreamEvent From(object @event, Dictionary<string, object> metadata)
     {

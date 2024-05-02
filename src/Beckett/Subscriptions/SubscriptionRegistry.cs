@@ -2,7 +2,7 @@ using Beckett.Events;
 
 namespace Beckett.Subscriptions;
 
-public static class SubscriptionRegistry
+internal static class SubscriptionRegistry
 {
     private static readonly Dictionary<string, Subscription> Subscriptions = new();
     private static readonly Dictionary<string, Type> NameTypeMap = new();

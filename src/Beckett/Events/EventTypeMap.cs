@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 
 namespace Beckett.Events;
 
-public static class EventTypeMap
+internal static class EventTypeMap
 {
     private static readonly ConcurrentDictionary<string, Type?> NameToTypeMap = new();
     private static readonly ConcurrentDictionary<Type, string> TypeToNameMap = new();

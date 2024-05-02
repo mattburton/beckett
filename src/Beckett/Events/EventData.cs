@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Events;
 
-public readonly record struct EventData(
+internal readonly record struct EventData(
     Guid Id,
     string StreamName,
     long StreamPosition,
@@ -11,11 +11,11 @@ public readonly record struct EventData(
     object Data,
     IDictionary<string, object> Metadata,
     DateTimeOffset Timestamp
-) : IEventData;
+);
 
-public static class EventContextDataExtensions
+internal static class EventDataExtensions
 {
-    public static IEventContext WithServices(this IEventData data, IServiceScope scope) => new EventContext(
+    public static IEventContext WithServices(this EventData data, IServiceScope scope) => new EventContext(
         data.Id,
         data.StreamName,
         data.StreamPosition,

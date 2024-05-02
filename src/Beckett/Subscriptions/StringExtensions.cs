@@ -1,6 +1,6 @@
 namespace Beckett.Subscriptions;
 
-public static class StringExtensions
+internal static class StringExtensions
 {
     /**
      * Adapted from https://andrewlock.net/why-is-string-gethashcode-different-each-time-i-run-my-program-in-net-core/

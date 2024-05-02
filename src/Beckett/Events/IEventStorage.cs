@@ -1,7 +1,9 @@
 namespace Beckett.Events;
 
-public interface IEventStorage
+internal interface IEventStorage
 {
+    Task Initialize(CancellationToken cancellationToken);
+
     Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,

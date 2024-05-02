@@ -1,6 +1,6 @@
 namespace Beckett.Subscriptions;
 
-public interface ISubscriptionProcessor
+internal interface ISubscriptionProcessor
 {
     void Initialize(CancellationToken stoppingToken);
     void Poll(CancellationToken cancellationToken);

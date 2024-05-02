@@ -4,17 +4,20 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-public static class ReadSubscriptionStreamQuery
+internal static class ReadSubscriptionStreamQuery
 {
     public static async Task<IReadOnlyList<StreamEvent>> Execute(
         NpgsqlConnection connection,
+        string schema,
         string subscriptionName,
         string streamName,
         int batchSize,
         CancellationToken cancellationToken
     )
     {
-        const string sql = @"
+        await using var command = connection.CreateCommand();
+
+        command.CommandText = $@"
             select id,
                    stream_name,
                    stream_position,
@@ -23,12 +26,8 @@ public static class ReadSubscriptionStreamQuery
                    data,
                    metadata,
                    timestamp
-            from read_subscription_stream($1, $2, $3);
+            from {schema}.read_subscription_stream($1, $2, $3);
         ";
-
-        await using var command = connection.CreateCommand();
-
-        command.CommandText = sql;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

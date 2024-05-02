@@ -1,11 +1,33 @@
 using Beckett.Events;
 using Beckett.Storage.Postgres.Queries;
 using Beckett.Storage.Postgres.Types;
+using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-public class PostgresEventStorage(BeckettOptions beckettOptions, IPostgresDatabase database) : IEventStorage
+internal class PostgresEventStorage(BeckettOptions beckett, IPostgresDatabase database) : IEventStorage
 {
+    public async Task Initialize(CancellationToken cancellationToken)
+    {
+        if (!beckett.Postgres.RunMigrationsAtStartup)
+        {
+            return;
+        }
+
+        await using var connection = beckett.Postgres.MigrationConnectionString == null
+            ? database.CreateConnection()
+            : new NpgsqlConnection(beckett.Postgres.MigrationConnectionString);
+
+        await connection.OpenAsync(cancellationToken);
+
+        await PostgresMigrator.Execute(
+            connection,
+            beckett.Postgres.Schema,
+            beckett.Postgres.MigrationAdvisoryLockId,
+            cancellationToken
+        );
+    }
+
     public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
@@ -24,18 +46,22 @@ public class PostgresEventStorage(BeckettOptions beckettOptions, IPostgresDataba
 
         var streamVersion = await AppendToStreamQuery.Execute(
             connection,
+            beckett.Postgres.Schema,
             streamName,
             expectedVersion.Value,
             newStreamEvents,
-            beckettOptions.Postgres.EnableNotifications,
+            beckett.Postgres.EnableNotifications,
             cancellationToken
         );
 
         return new AppendResult(streamVersion);
     }
 
-    public async Task<ReadResult> ReadStream(string streamName, ReadOptions options,
-        CancellationToken cancellationToken)
+    public async Task<ReadResult> ReadStream(
+        string streamName,
+        ReadOptions options,
+        CancellationToken cancellationToken
+    )
     {
         await using var connection = database.CreateConnection();
 
@@ -43,6 +69,7 @@ public class PostgresEventStorage(BeckettOptions beckettOptions, IPostgresDataba
 
         var streamEvents = await ReadStreamQuery.Execute(
             connection,
+            beckett.Postgres.Schema,
             streamName,
             options,
             cancellationToken

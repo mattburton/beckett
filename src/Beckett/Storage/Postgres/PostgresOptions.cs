@@ -4,22 +4,29 @@ namespace Beckett.Storage.Postgres;
 
 public class PostgresOptions
 {
+    public const string DefaultSchema = "beckett";
+
     internal bool Enabled { get; set; }
-    internal string ConnectionString { get; private set; } = null!;
-    internal string Schema { get; private set; } = "beckett";
+    internal NpgsqlDataSource? DataSource { get; private set; }
+    internal string Schema { get; private set; } = DefaultSchema;
 
     internal bool RunMigrationsAtStartup { get; private set; }
-    internal string MigrationConnectionString { get; private set; } = null!;
+    internal string? MigrationConnectionString { get; private set; }
     internal int MigrationAdvisoryLockId { get; private set; }
 
-    internal bool EnableNotifications { get; set; }
-    internal string ListenerConnectionString { get; private set; } = null!;
+    internal bool EnableNotifications { get; private set; }
+    internal TimeSpan ListenerKeepAlive { get; private set; } = TimeSpan.FromSeconds(10);
 
     public void UseSchema(string schema)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schema);
 
         Schema = schema;
+    }
+
+    public void UseDataSource(NpgsqlDataSource dataSource)
+    {
+        DataSource = dataSource;
     }
 
     public void UseConnectionString(string connectionString)
@@ -31,38 +38,25 @@ public class PostgresOptions
             SearchPath = Schema
         };
 
-        ConnectionString = builder.ConnectionString;
+        DataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).Build();
     }
 
-    public void UseNotifications()
+    public void UseNotifications(TimeSpan? keepAlive = null)
     {
         EnableNotifications = true;
 
-        var builder = new NpgsqlConnectionStringBuilder(ConnectionString)
+        if (keepAlive != null)
         {
-            SearchPath = Schema,
-            KeepAlive = 10
-        };
-
-        ListenerConnectionString = builder.ConnectionString;
+            ListenerKeepAlive = keepAlive.Value;
+        }
     }
 
     public void AutoMigrate(string? connectionString = null, int? advisoryLockId = null)
     {
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            var builder = new NpgsqlConnectionStringBuilder(connectionString)
-            {
-                SearchPath = Schema
-            };
-
-            MigrationConnectionString = builder.ConnectionString;
-
-            return;
+            MigrationConnectionString = connectionString;
         }
-
-        MigrationConnectionString = ConnectionString ??
-            throw new ArgumentException("You must supply a connection string to use when migrating the database");
 
         MigrationAdvisoryLockId = advisoryLockId switch
         {

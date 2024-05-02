@@ -3,21 +3,20 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-public static class AddOrUpdateSubscriptionQuery
+internal static class AddOrUpdateSubscriptionQuery
 {
     public static async Task Execute(
         NpgsqlConnection connection,
+        string schema,
         string subscriptionName,
         string[] eventTypes,
         bool startFromBeginning,
         CancellationToken cancellationToken
     )
     {
-        const string sql = "select add_or_update_subscription($1, $2, $3);";
-
         await using var command = connection.CreateCommand();
 
-        command.CommandText = sql;
+        command.CommandText = $"select {schema}.add_or_update_subscription($1, $2, $3);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });

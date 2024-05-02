@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace Beckett.Events;
 
-public static class EventTypeProvider
+internal static class EventTypeProvider
 {
     private static Type[] _types = [];
 

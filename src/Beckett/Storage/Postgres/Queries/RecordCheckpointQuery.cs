@@ -3,10 +3,11 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-public static class RecordCheckpointQuery
+internal static class RecordCheckpointQuery
 {
     public static async Task Execute(
         NpgsqlConnection connection,
+        string schema,
         string subscriptionName,
         string streamName,
         long checkpoint,
@@ -14,11 +15,9 @@ public static class RecordCheckpointQuery
         CancellationToken cancellationToken
     )
     {
-        const string sql = "select record_checkpoint($1, $2, $3, $4);";
-
         await using var command = connection.CreateCommand();
 
-        command.CommandText = sql;
+        command.CommandText = $"select {schema}.record_checkpoint($1, $2, $3, $4);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

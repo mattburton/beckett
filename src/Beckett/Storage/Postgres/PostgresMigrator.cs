@@ -16,6 +16,16 @@ public static class PostgresMigrator
 
         await connection.OpenAsync(cancellationToken);
 
+        await Execute(connection, schema, advisoryLockId, cancellationToken);
+    }
+
+    internal static async Task Execute(
+        NpgsqlConnection connection,
+        string schema,
+        int advisoryLockId,
+        CancellationToken cancellationToken
+    )
+    {
         if (!await connection.TryAdvisoryLock(advisoryLockId, cancellationToken))
         {
             return;
@@ -23,32 +33,34 @@ public static class PostgresMigrator
 
         await EnsureSchemaIsCreated(connection, schema, cancellationToken);
 
-        await EnsureMigrationsTableIsCreated(connection, cancellationToken);
+        await EnsureMigrationsTableIsCreated(connection, schema, cancellationToken);
 
-        await ApplyMigrations(connection, cancellationToken);
+        await ApplyMigrations(connection, schema, cancellationToken);
 
         await connection.AdvisoryUnlock(advisoryLockId, cancellationToken);
     }
 
     private static async Task ApplyMigrations(
         NpgsqlConnection connection,
+        string schema,
         CancellationToken cancellationToken
     )
     {
-        var appliedMigrations = await GetAppliedMigrations(connection, cancellationToken);
+        var appliedMigrations = await GetAppliedMigrations(connection, schema, cancellationToken);
 
-        foreach (var migration in LoadMigrations())
+        foreach (var migration in LoadMigrations(schema))
         {
             if (appliedMigrations.Contains(migration.Name))
             {
                 continue;
             }
 
-            await ApplyMigration(migration.Name, migration.Script, connection, cancellationToken);
+            await ApplyMigration(schema, migration.Name, migration.Script, connection, cancellationToken);
         }
     }
 
     private static async Task ApplyMigration(
+        string schema,
         string name,
         string script,
         NpgsqlConnection connection,
@@ -65,7 +77,7 @@ public static class PostgresMigrator
 
         await using var recordCommand = connection.CreateCommand();
 
-        recordCommand.CommandText = "insert into migrations (name) values ($1);";
+        recordCommand.CommandText = $"insert into {schema}.migrations (name) values ($1);";
 
         recordCommand.Parameters.Add(new NpgsqlParameter<string> { Value = name });
 
@@ -76,12 +88,13 @@ public static class PostgresMigrator
 
     private static async Task<List<string>> GetAppliedMigrations(
         NpgsqlConnection connection,
+        string schema,
         CancellationToken cancellationToken
     )
     {
         await using var command = connection.CreateCommand();
 
-        command.CommandText = "select name from migrations;";
+        command.CommandText = $"select name from {schema}.migrations;";
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -97,12 +110,14 @@ public static class PostgresMigrator
 
     private static async Task EnsureMigrationsTableIsCreated(
         NpgsqlConnection connection,
-        CancellationToken cancellationToken)
+        string schema,
+        CancellationToken cancellationToken
+    )
     {
         await using var command = connection.CreateCommand();
 
-        command.CommandText = @"
-            create table if not exists migrations
+        command.CommandText = $@"
+            create table if not exists {schema}.migrations
             (
               name text not null primary key,
               timestamp timestamp with time zone default now() not null
@@ -124,20 +139,20 @@ public static class PostgresMigrator
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static IEnumerable<(string Name, string Script)> LoadMigrations()
+    private static IEnumerable<(string Name, string Script)> LoadMigrations(string schema)
     {
         var assembly = typeof(PostgresMigrator).Assembly;
 
         return assembly.GetManifestResourceNames()
             .Where(x => x.EndsWith(".sql"))
-            .Select(x => (Name: x, Script: LoadMigration(assembly.GetManifestResourceStream(x)!)))
+            .Select(x => (Name: x, Script: LoadMigration(assembly.GetManifestResourceStream(x)!, schema)))
             .OrderBy(x => x.Name);
     }
 
-    private static string LoadMigration(Stream stream)
+    private static string LoadMigration(Stream stream, string schema)
     {
         using var reader = new StreamReader(stream, Encoding.UTF8, true);
 
-        return reader.ReadToEnd();
+        return reader.ReadToEnd().Replace("__schema__", schema);
     }
 }

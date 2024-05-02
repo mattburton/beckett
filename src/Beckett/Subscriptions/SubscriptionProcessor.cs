@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionProcessor(
+internal class SubscriptionProcessor(
     BeckettOptions options,
     ISubscriptionStorage subscriptionStorage,
     IServiceProvider serviceProvider,
@@ -124,7 +124,7 @@ public class SubscriptionProcessor(
     private async Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
         Subscription subscription,
         SubscriptionStream subscriptionStream,
-        IReadOnlyList<IEventData> events,
+        IReadOnlyList<EventData> events,
         CancellationToken cancellationToken)
     {
         try

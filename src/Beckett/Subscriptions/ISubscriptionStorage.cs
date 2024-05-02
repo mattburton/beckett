@@ -1,7 +1,11 @@
+using Beckett.Events;
+
 namespace Beckett.Subscriptions;
 
-public interface ISubscriptionStorage
+internal interface ISubscriptionStorage
 {
+    Task Initialize(CancellationToken cancellationToken);
+
     Task AddOrUpdateSubscription(
         string subscriptionName,
         string[] eventTypes,
@@ -9,7 +13,7 @@ public interface ISubscriptionStorage
         CancellationToken cancellationToken
     );
 
-    IEnumerable<Task> ConfigureSubscriptionHost(ISubscriptionProcessor processor, CancellationToken stoppingToken);
+    IEnumerable<Task> ConfigureServiceHost(ISubscriptionProcessor processor, CancellationToken stoppingToken);
 
     Task<IReadOnlyList<SubscriptionStream>> GetSubscriptionStreamsToProcess(
         int batchSize,
@@ -25,14 +29,14 @@ public interface ISubscriptionStorage
     );
 }
 
-public delegate Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
+internal delegate Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
     Subscription subscription,
     SubscriptionStream subscriptionStream,
-    IReadOnlyList<IEventData> events,
+    IReadOnlyList<EventData> events,
     CancellationToken cancellationToken
 );
 
-public abstract record ProcessSubscriptionStreamResult
+internal abstract record ProcessSubscriptionStreamResult
 {
     public record NoEvents : ProcessSubscriptionStreamResult;
 

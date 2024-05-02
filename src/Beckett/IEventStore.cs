@@ -14,7 +14,7 @@ public interface IEventStore
     Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
 }
 
-public class EventStore(IEventStorage storage) : IEventStore
+internal class EventStore(IEventStorage storage) : IEventStore
 {
     public Task<AppendResult> AppendToStream(
         string streamName,

@@ -4,19 +4,18 @@ using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-public static class GetSubscriptionStreamsToProcessQuery
+internal static class GetSubscriptionStreamsToProcessQuery
 {
     public static async Task<IReadOnlyList<SubscriptionStream>> Execute(
         NpgsqlConnection connection,
+        string schema,
         int batchSize,
         CancellationToken cancellationToken
     )
     {
-        const string sql = "select subscription_name, stream_name from get_subscription_streams_to_process($1);";
-
         await using var command = connection.CreateCommand();
 
-        command.CommandText = sql;
+        command.CommandText = $"select subscription_name, stream_name from {schema}.get_subscription_streams_to_process($1);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 

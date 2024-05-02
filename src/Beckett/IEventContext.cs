@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett;
 
-public interface IEventData
+public interface IEventContext
 {
     Guid Id { get; init; }
     string StreamName { get; init; }
@@ -12,9 +12,5 @@ public interface IEventData
     object Data { get; init; }
     IDictionary<string, object> Metadata { get; init; }
     DateTimeOffset Timestamp { get; init; }
-}
-
-public interface IEventContext : IEventData
-{
     IServiceScope Services { get; init; }
 }

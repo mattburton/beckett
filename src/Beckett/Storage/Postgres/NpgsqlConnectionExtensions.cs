@@ -2,7 +2,7 @@ using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-public static class NpgsqlConnectionExtensions
+internal static class NpgsqlConnectionExtensions
 {
     public static async Task<bool> TryAdvisoryLock(
         this NpgsqlConnection connection,

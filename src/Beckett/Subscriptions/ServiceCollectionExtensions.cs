@@ -1,9 +1,8 @@
-using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Subscriptions;
 
-public static class ServiceCollectionExtensions
+internal static class ServiceCollectionExtensions
 {
     public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
     {
@@ -13,9 +12,5 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ISubscriptionProcessor, SubscriptionProcessor>();
-
-        services.AddHostedService<ConfigureSubscriptions>();
-
-        services.AddHostedService<SubscriptionHost>();
     }
 }
