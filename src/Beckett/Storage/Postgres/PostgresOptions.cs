@@ -38,7 +38,7 @@ public class PostgresOptions
             SearchPath = Schema
         };
 
-        DataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).Build();
+        DataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).AddBeckett().Build();
     }
 
     public void UseNotifications(TimeSpan? keepAlive = null)
