@@ -1,5 +1,3 @@
-using Beckett.Events;
-
 namespace Beckett.Subscriptions;
 
 public interface ISubscriptionStorage
@@ -23,15 +21,19 @@ public interface ISubscriptionStorage
         SubscriptionStream subscriptionStream,
         long? fromStreamPosition,
         int batchSize,
+        bool retryOnError,
         ProcessSubscriptionStreamCallback callback,
         CancellationToken cancellationToken
     );
+
+    Task UnblockCheckpoint(SubscriptionStream subscriptionStream, CancellationToken cancellationToken);
 }
 
 public delegate Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
     Subscription subscription,
     SubscriptionStream subscriptionStream,
-    IReadOnlyList<EventData> events,
+    IReadOnlyList<IEventContext> events,
+    bool retryOnError,
     CancellationToken cancellationToken
 );
 

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Beckett;
 
 public interface IEventContext
@@ -12,5 +10,4 @@ public interface IEventContext
     object Data { get; init; }
     IDictionary<string, object> Metadata { get; init; }
     DateTimeOffset Timestamp { get; init; }
-    IServiceScope Services { get; init; }
 }

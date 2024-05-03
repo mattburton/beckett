@@ -4,11 +4,11 @@ namespace MinimalApi.TodoList.Notifications.WhenListCreated;
 
 public class Configuration : IConfigureBeckett
 {
-    public void Configure(IServiceCollection services, BeckettOptions beckett)
+    public void Configure(IServiceCollection services, BeckettOptions options)
     {
         services.AddScoped<TodoListCreatedHandler>();
 
-        beckett.Subscriptions.AddSubscription<TodoListCreatedHandler, TodoListCreated>(
+        options.Subscriptions.AddSubscription<TodoListCreatedHandler, TodoListCreated>(
             nameof(TodoListCreatedHandler),
             (handler, @event, token) => handler.Handle(@event, token)
         );

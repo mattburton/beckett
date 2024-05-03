@@ -11,8 +11,7 @@ public static class AppendToStreamQuery
         string schema,
         string streamName,
         long expectedVersion,
-        NewStreamEvent[] events,
-        bool sendPollingNotification,
+        NewEvent[] events,
         CancellationToken cancellationToken
     )
     {
@@ -20,19 +19,17 @@ public static class AppendToStreamQuery
         {
             await using var command = connection.CreateCommand();
 
-            command.CommandText = $"select {schema}.append_to_stream($1, $2, $3, $4);";
+            command.CommandText = $"select {schema}.append_to_stream($1, $2, $3);";
 
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-            command.Parameters.Add(new NpgsqlParameter { DataTypeName = NewStreamEvent.DataTypeNameFor(schema) });
-            command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
+            command.Parameters.Add(new NpgsqlParameter { DataTypeName = NewEvent.DataTypeNameFor(schema) });
 
             await command.PrepareAsync(cancellationToken);
 
             command.Parameters[0].Value = streamName;
             command.Parameters[1].Value = expectedVersion;
             command.Parameters[2].Value = events;
-            command.Parameters[3].Value = sendPollingNotification;
 
             var result = await command.ExecuteScalarAsync(cancellationToken);
 

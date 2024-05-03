@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "scripts": {
+    "reset": "docker-compose down -v && docker-compose up -d",
+    "start": "dotnet run --project src/Samples/MinimalApi/MinimalApi.csproj"
+  }
+}

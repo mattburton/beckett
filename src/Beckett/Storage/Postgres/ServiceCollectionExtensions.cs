@@ -1,4 +1,5 @@
 using Beckett.Events;
+using Beckett.Events.Scheduling;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -7,16 +8,16 @@ namespace Beckett.Storage.Postgres;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions beckett)
+    public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
     {
-        if (!beckett.Postgres.Enabled)
+        if (!options.Postgres.Enabled)
         {
             return;
         }
 
         services.AddSingleton<IPostgresDatabase>(provider =>
         {
-            var dataSource = beckett.Postgres.DataSource ?? provider.GetService<NpgsqlDataSource>();
+            var dataSource = options.Postgres.DataSource ?? provider.GetService<NpgsqlDataSource>();
             if (dataSource is null)
             {
                 throw new InvalidOperationException(
@@ -27,6 +28,10 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<IEventStorage, PostgresEventStorage>();
+
+        services.AddSingleton<IPostgresEventStorage, PostgresEventStorage>();
+
+        services.AddSingleton<IScheduledEventStorage, PostgresScheduledEventStorage>();
 
         services.AddSingleton<IPostgresNotificationListener, PostgresNotificationListener>();
 

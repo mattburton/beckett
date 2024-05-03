@@ -6,7 +6,7 @@ using Beckett.Subscriptions;
 namespace Beckett.Storage.Postgres;
 
 public class PostgresSubscriptionStorage(
-    BeckettOptions beckett,
+    BeckettOptions options,
     IPostgresDatabase database,
     IPostgresNotificationListener listener
 ) : ISubscriptionStorage
@@ -20,7 +20,7 @@ public class PostgresSubscriptionStorage(
 
         await AddOrUpdateSubscriptionQuery.Execute(
             connection,
-            beckett.Postgres.Schema,
+            options.Postgres.Schema,
             subscriptionName,
             eventTypes,
             startFromBeginning,
@@ -30,7 +30,7 @@ public class PostgresSubscriptionStorage(
 
     public IEnumerable<Task> ConfigureBackgroundService(ISubscriptionProcessor processor, CancellationToken stoppingToken)
     {
-        if (beckett.Postgres.EnableNotifications)
+        if (options.Postgres.EnableNotifications)
         {
             yield return listener.Listen(
                 "beckett:poll",
@@ -51,7 +51,7 @@ public class PostgresSubscriptionStorage(
 
         return await GetSubscriptionStreamsToProcessQuery.Execute(
             connection,
-            beckett.Postgres.Schema,
+            options.Postgres.Schema,
             batchSize,
             cancellationToken
         );
@@ -62,6 +62,7 @@ public class PostgresSubscriptionStorage(
         SubscriptionStream subscriptionStream,
         long? fromStreamPosition,
         int batchSize,
+        bool retryOnError,
         ProcessSubscriptionStreamCallback callback,
         CancellationToken cancellationToken
     )
@@ -87,7 +88,7 @@ public class PostgresSubscriptionStorage(
             {
                 subscriptionStreamEvents = await ReadSubscriptionStreamQuery.Execute(
                     connection,
-                    beckett.Postgres.Schema,
+                    options.Postgres.Schema,
                     subscriptionStream.SubscriptionName,
                     subscriptionStream.StreamName,
                     batchSize,
@@ -98,7 +99,7 @@ public class PostgresSubscriptionStorage(
             {
                 subscriptionStreamEvents = await ReadStreamQuery.Execute(
                     connection,
-                    beckett.Postgres.Schema,
+                    options.Postgres.Schema,
                     subscriptionStream.StreamName,
                     new ReadOptions
                     {
@@ -109,13 +110,13 @@ public class PostgresSubscriptionStorage(
                 );
             }
 
-            var events = new List<EventData>();
+            var events = new List<IEventContext>();
 
             foreach (var subscriptionStreamEvent in subscriptionStreamEvents)
             {
-                var (type, data, metadata) = PostgresEventDeserializer.DeserializeAll(subscriptionStreamEvent);
+                var (type, data, metadata) = PostgresEventDeserializer.DeserializeAll(subscriptionStreamEvent, options);
 
-                events.Add(new EventData(
+                events.Add(new EventContext(
                     subscriptionStreamEvent.Id,
                     subscriptionStreamEvent.StreamName,
                     subscriptionStreamEvent.StreamPosition,
@@ -127,9 +128,15 @@ public class PostgresSubscriptionStorage(
                 ));
             }
 
-            var result = await callback(subscription, subscriptionStream, events, cancellationToken);
+            var result = await callback(
+                subscription,
+                subscriptionStream,
+                events,
+                retryOnError,
+                cancellationToken
+            );
 
-            if (fromStreamPosition.HasValue && result is ProcessSubscriptionStreamResult.Blocked blockedAtPosition)
+            if (!retryOnError && result is ProcessSubscriptionStreamResult.Blocked blockedAtPosition)
             {
                 throw blockedAtPosition.Exception;
             }
@@ -139,7 +146,7 @@ public class PostgresSubscriptionStorage(
                 case ProcessSubscriptionStreamResult.Success success:
                     await RecordCheckpointQuery.Execute(
                         connection,
-                        beckett.Postgres.Schema,
+                        options.Postgres.Schema,
                         subscriptionStream.SubscriptionName,
                         subscriptionStream.StreamName,
                         success.StreamPosition,
@@ -150,7 +157,7 @@ public class PostgresSubscriptionStorage(
                 case ProcessSubscriptionStreamResult.Blocked blocked:
                     await RecordCheckpointQuery.Execute(
                         connection,
-                        beckett.Postgres.Schema,
+                        options.Postgres.Schema,
                         subscriptionStream.SubscriptionName,
                         subscriptionStream.StreamName,
                         blocked.StreamPosition,
@@ -164,5 +171,20 @@ public class PostgresSubscriptionStorage(
         {
             await connection.AdvisoryUnlock(advisoryLockId, cancellationToken);
         }
+    }
+
+    public async Task UnblockCheckpoint(SubscriptionStream subscriptionStream, CancellationToken cancellationToken)
+    {
+        await using var connection = database.CreateConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
+        await UnblockCheckpointQuery.Execute(
+            connection,
+            options.Postgres.Schema,
+            subscriptionStream.SubscriptionName,
+            subscriptionStream.StreamName,
+            cancellationToken
+        );
     }
 }

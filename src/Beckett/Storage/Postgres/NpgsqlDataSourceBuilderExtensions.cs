@@ -7,7 +7,8 @@ public static class NpgsqlDataSourceBuilderExtensions
 {
     public static NpgsqlDataSourceBuilder AddBeckett(this NpgsqlDataSourceBuilder builder, string schema = PostgresOptions.DefaultSchema)
     {
-        builder.MapComposite<NewStreamEvent>($"{schema}.new_stream_event");
+        builder.MapComposite<NewEvent>($"{schema}.new_event");
+        builder.MapComposite<NewScheduledEvent>($"{schema}.new_scheduled_event");
 
         return builder;
     }

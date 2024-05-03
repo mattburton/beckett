@@ -4,12 +4,14 @@ namespace Beckett.Subscriptions;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions beckett)
+    public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
     {
-        if (!beckett.Subscriptions.Enabled)
+        if (!options.Subscriptions.Enabled)
         {
             return;
         }
+
+        services.AddSingleton<ISubscriptionRegistry>(options.Subscriptions.Registry);
 
         services.AddSingleton<ISubscriptionProcessor, SubscriptionProcessor>();
     }

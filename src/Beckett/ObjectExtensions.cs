@@ -1,4 +1,5 @@
 using Beckett.Events;
+using Beckett.Events.Scheduling;
 
 namespace Beckett;
 
@@ -18,6 +19,11 @@ public static class ObjectExtensions
             throw new InvalidOperationException("When scheduling an event the delivery time must be in the future");
         }
 
-        return new ScheduledEvent(@event, deliverAt);
+        return new ScheduledEventWrapper(@event, deliverAt);
+    }
+
+    public static object WithMetadata(this object @event, Dictionary<string, object> metadata)
+    {
+        return new MetadataEventWrapper(@event, metadata);
     }
 }

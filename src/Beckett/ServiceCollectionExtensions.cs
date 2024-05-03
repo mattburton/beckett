@@ -1,3 +1,4 @@
+using System.Reflection;
 using Beckett.Events;
 using Beckett.Storage.Postgres;
 using Beckett.Subscriptions;
@@ -9,39 +10,50 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddBeckett(this IServiceCollection services, Action<BeckettOptions> configure)
     {
-        var beckett = new BeckettOptions();
+        var options = new BeckettOptions();
 
-        configure(beckett);
+        configure(options);
 
-        RunConfigurators(services, beckett);
+        RunConfigurators(services, options);
 
-        services.AddSingleton(beckett);
+        services.AddSingleton(options);
 
-        services.AddPostgresSupport(beckett);
+        services.AddPostgresSupport(options);
 
-        services.AddEventSupport(beckett);
+        services.AddEventSupport(options);
 
-        services.AddSubscriptionSupport(beckett);
+        services.AddSubscriptionSupport(options);
 
         services.AddSingleton<IEventStore, EventStore>();
 
-        services.AddHostedService<BackgroundService>();
+        services.AddHostedService<ServiceHost>();
 
         return services;
     }
 
-    private static void RunConfigurators(IServiceCollection services, BeckettOptions beckett)
+    private static void RunConfigurators(IServiceCollection services, BeckettOptions options)
     {
         var configuratorType = typeof(IConfigureBeckett);
 
-        var configurators = beckett.GetAssemblyTypes()
+        var configurators = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(x =>
+            {
+                try
+                {
+                    return x.GetTypes();
+                }
+                catch (ReflectionTypeLoadException)
+                {
+                    return Array.Empty<Type>();
+                }
+            })
             .Where(x => x.GetInterfaces().Any(i => i == configuratorType))
             .Select(Activator.CreateInstance)
             .Cast<IConfigureBeckett>();
 
         foreach (var configurator in configurators)
         {
-            configurator.Configure(services, beckett);
+            configurator.Configure(services, options);
         }
     }
 }

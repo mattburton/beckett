@@ -2,12 +2,12 @@ using Beckett.Events;
 
 namespace Beckett.Subscriptions;
 
-public static class SubscriptionRegistry
+public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionRegistry
 {
-    private static readonly Dictionary<string, Subscription> Subscriptions = new();
-    private static readonly Dictionary<string, Type> NameTypeMap = new();
+    private readonly Dictionary<string, Subscription> _subscriptions = new();
+    private readonly Dictionary<string, Type> _nameTypeMap = new();
 
-    public static void AddSubscription<THandler, TEvent>(
+    public void AddSubscription<THandler, TEvent>(
         string name,
         Func<THandler, TEvent, CancellationToken, Task> handler,
         Action<Subscription>? configure = null
@@ -15,7 +15,7 @@ public static class SubscriptionRegistry
     {
         var handlerType = typeof(THandler);
 
-        if (!NameTypeMap.TryAdd(name, handlerType))
+        if (!_nameTypeMap.TryAdd(name, handlerType))
         {
             throw new Exception($"There is already a subscription with the name {name}");
         }
@@ -33,22 +33,22 @@ public static class SubscriptionRegistry
 
         configuration.Handler = (h, e, t) => handler((THandler)h, (TEvent)e, t);
 
-        Subscriptions.Add(name, configuration);
+        _subscriptions.Add(name, configuration);
     }
 
-    public static IEnumerable<(string Name, string[] EventTypes, StartingPosition StartingPosition)> All()
+    public IEnumerable<(string Name, string[] EventTypes, StartingPosition StartingPosition)> All()
     {
-        foreach (var subscription in Subscriptions.Values)
+        foreach (var subscription in _subscriptions.Values)
         {
-            var eventTypes = subscription.EventTypes.Select(EventTypeMap.GetName).ToArray();
+            var eventTypes = subscription.EventTypes.Select(eventTypeMap.GetName).ToArray();
 
             yield return (subscription.Name, eventTypes, subscription.StartingPosition);
         }
     }
 
-    public static Type GetType(string name)
+    public Type GetType(string name)
     {
-        if (!Subscriptions.TryGetValue(name, out var subscription))
+        if (!_subscriptions.TryGetValue(name, out var subscription))
         {
             throw new InvalidOperationException($"Unknown subscription: {name}");
         }
@@ -56,9 +56,9 @@ public static class SubscriptionRegistry
         return subscription.Type;
     }
 
-    public static Subscription GetSubscription(string name)
+    public Subscription GetSubscription(string name)
     {
-        if (!Subscriptions.TryGetValue(name, out var subscription))
+        if (!_subscriptions.TryGetValue(name, out var subscription))
         {
             throw new InvalidOperationException($"Unknown subscription: {name}");
         }

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Beckett.Events;
 
 public readonly record struct EventContext(
@@ -10,6 +8,5 @@ public readonly record struct EventContext(
     Type Type,
     object Data,
     IDictionary<string, object> Metadata,
-    DateTimeOffset Timestamp,
-    IServiceScope Services
+    DateTimeOffset Timestamp
 ) : IEventContext;

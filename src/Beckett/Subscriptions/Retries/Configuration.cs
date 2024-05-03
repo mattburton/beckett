@@ -6,23 +6,25 @@ namespace Beckett.Subscriptions.Retries;
 
 public class Configuration : IConfigureBeckett
 {
-    public void Configure(IServiceCollection services, BeckettOptions beckett)
+    public void Configure(IServiceCollection services, BeckettOptions options)
     {
-        beckett.Events.Map<RetryCreated>("$retry_created");
-        beckett.Events.Map<RetryFailed>("$retry_failed");
-        beckett.Events.Map<RetryScheduled>("$retry_scheduled");
-        beckett.Events.Map<RetrySucceeded>("$retry_succeeded");
-        beckett.Events.Map<RetryUnsuccessful>("$retry_unsuccessful");
+        options.Events.Map<RetryCreated>("$retry_created");
+        options.Events.Map<RetryFailed>("$retry_failed");
+        options.Events.Map<RetryScheduled>("$retry_scheduled");
+        options.Events.Map<RetrySucceeded>("$retry_succeeded");
+        options.Events.Map<RetryUnsuccessful>("$retry_unsuccessful");
 
+        services.AddSingleton<IRetryService, RetryService>();
+        
         services.AddScoped<RetryCreatedHandler>();
         services.AddScoped<RetryScheduledHandler>();
 
-        beckett.Subscriptions.AddSubscription<RetryCreatedHandler, RetryCreated>(
+        options.Subscriptions.AddSubscription<RetryCreatedHandler, RetryCreated>(
             "$retry_created_subscription",
             (handler, @event, token) => handler.Handle(@event, token)
         );
 
-        beckett.Subscriptions.AddSubscription<RetryScheduledHandler, RetryScheduled>(
+        options.Subscriptions.AddSubscription<RetryScheduledHandler, RetryScheduled>(
             "$retry_scheduled_subscription",
             (handler, @event, token) => handler.Handle(@event, token)
         );

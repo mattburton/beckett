@@ -2,33 +2,33 @@ using System.Collections.Concurrent;
 
 namespace Beckett.Events;
 
-public static class EventTypeMap
+public class EventTypeMap : IEventTypeMap
 {
-    private static readonly ConcurrentDictionary<string, Type?> NameToTypeMap = new();
-    private static readonly ConcurrentDictionary<Type, string> TypeToNameMap = new();
+    private readonly ConcurrentDictionary<string, Type?> _nameToTypeMap = new();
+    private readonly ConcurrentDictionary<Type, string> _typeToNameMap = new();
 
-    public static void Map<TEvent>(string name)
+    public void Map<TEvent>(string name)
     {
         var type = typeof(TEvent);
 
-        if (NameToTypeMap.TryGetValue(name, out var existingType) && existingType != type)
+        if (_nameToTypeMap.TryGetValue(name, out var existingType) && existingType != type)
         {
             throw new Exception($"Event type name {type.Name} for {type} already mapped to {existingType}");
         }
 
-        NameToTypeMap.TryAdd(name, type);
-        TypeToNameMap.TryAdd(type, name);
+        _nameToTypeMap.TryAdd(name, type);
+        _typeToNameMap.TryAdd(type, name);
     }
 
-    public static string GetName(Type type)
+    public string GetName(Type type)
     {
-        if (TypeToNameMap.TryGetValue(type, out var name))
+        if (_typeToNameMap.TryGetValue(type, out var name))
         {
             return name;
         }
 
         //TODO - support custom type names, mapping from old names to new ones, etc...
-        if (NameToTypeMap.TryGetValue(type.Name, out var existingType))
+        if (_nameToTypeMap.TryGetValue(type.Name, out var existingType))
         {
             if (existingType != type)
             {
@@ -36,21 +36,23 @@ public static class EventTypeMap
             }
         }
 
-        NameToTypeMap.TryAdd(type.Name, type);
-        TypeToNameMap.TryAdd(type, type.Name);
+        _nameToTypeMap.TryAdd(type.Name, type);
+        _typeToNameMap.TryAdd(type, type.Name);
 
-        return TypeToNameMap[type];
+        return _typeToNameMap[type];
     }
 
-    public static Type? GetType(string name)
+    public Type? GetType(string name)
     {
-        return NameToTypeMap.GetOrAdd(
+
+
+        return _nameToTypeMap.GetOrAdd(
             name,
             typeName => { return EventTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName)); }
         );
     }
 
-    private static bool MatchCriteria(Type type, string name)
+    private bool MatchCriteria(Type type, string name)
     {
         return type.Name == name || type.FullName == name;
     }

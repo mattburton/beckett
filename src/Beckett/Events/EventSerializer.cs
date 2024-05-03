@@ -2,15 +2,15 @@ using System.Text.Json;
 
 namespace Beckett.Events;
 
-public static class EventSerializer
+public class EventSerializer(IEventTypeMap eventTypeMap) : IEventSerializer
 {
-    public static (Type Type, string TypeName, string Data, string Metadata) Serialize(
+    public (Type Type, string TypeName, string Data, string Metadata) Serialize(
         object @event,
         Dictionary<string, object> metadata
     )
     {
         var type = @event.GetType();
-        var typeName = EventTypeMap.GetName(type);
+        var typeName = eventTypeMap.GetName(type);
         var dataJson = JsonSerializer.Serialize(@event);
         var metadataJson = JsonSerializer.Serialize(metadata);
 

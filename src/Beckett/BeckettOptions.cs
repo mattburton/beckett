@@ -1,4 +1,3 @@
-using System.Reflection;
 using Beckett.Events;
 using Beckett.Storage.Postgres;
 using Beckett.Subscriptions;
@@ -7,36 +6,28 @@ namespace Beckett;
 
 public class BeckettOptions
 {
-    internal Assembly[] Assemblies { get; private set; } = AppDomain.CurrentDomain.GetAssemblies();
-    internal PostgresOptions Postgres { get; } = new();
-
-    public EventOptions Events { get; } = new();
-    public SubscriptionOptions Subscriptions { get; } = new();
-
-    public void UseAssemblies(params Assembly[] assemblies)
+    public BeckettOptions(EventOptions events, SubscriptionOptions subscriptions, PostgresOptions postgres)
     {
-        Assemblies = assemblies;
+        Events = events;
+        Subscriptions = subscriptions;
+        Postgres = postgres;
     }
+
+    public BeckettOptions()
+    {
+        Events = new EventOptions();
+        Subscriptions = new SubscriptionOptions(Events);
+        Postgres = new PostgresOptions();
+    }
+
+    public EventOptions Events { get; }
+    public SubscriptionOptions Subscriptions { get; }
+    public PostgresOptions Postgres { get; }
 
     public void UsePostgres(Action<PostgresOptions> configure)
     {
         Postgres.Enabled = true;
 
         configure(Postgres);
-    }
-
-    internal IEnumerable<Type> GetAssemblyTypes()
-    {
-        return Assemblies.SelectMany(x =>
-        {
-            try
-            {
-                return x.GetTypes();
-            }
-            catch (ReflectionTypeLoadException)
-            {
-                return Array.Empty<Type>();
-            }
-        });
     }
 }

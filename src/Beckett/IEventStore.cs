@@ -1,4 +1,6 @@
+using System.Transactions;
 using Beckett.Events;
+using Beckett.Events.Scheduling;
 
 namespace Beckett;
 
@@ -14,9 +16,9 @@ public interface IEventStore
     Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
 }
 
-public class EventStore(IEventStorage storage) : IEventStore
+public class EventStore(IEventStorage eventStorage, IScheduledEventStorage scheduledEventStorage) : IEventStore
 {
-    public Task<AppendResult> AppendToStream(
+    public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> events,
@@ -25,27 +27,72 @@ public class EventStore(IEventStorage storage) : IEventStore
     {
         //TODO - populate from activity source
         var metadata = new Dictionary<string, object>();
-
         var eventsToAppend = new List<EventEnvelope>();
+        var eventsToSchedule = new List<ScheduledEventEnvelope>();
 
         foreach (var @event in events)
         {
-            if (@event is ScheduledEvent scheduledEvent)
+            var eventMetadata = new Dictionary<string, object>(metadata);
+
+            if (@event is MetadataEventWrapper eventWithMetadata)
             {
-                eventsToAppend.Add(new EventEnvelope(scheduledEvent.Event, metadata, scheduledEvent.DeliverAt));
+                foreach (var item in eventWithMetadata.Metadata)
+                {
+                    eventMetadata.Add(item.Key, item.Value);
+                }
+
+                if (@event is not ScheduledEventWrapper)
+                {
+                    eventsToAppend.Add(new EventEnvelope(eventWithMetadata.Event, eventMetadata));
+
+                    continue;
+                }
+            }
+
+            if (@event is ScheduledEventWrapper scheduledEvent)
+            {
+                eventsToSchedule.Add(new ScheduledEventEnvelope(scheduledEvent.Event, eventMetadata, scheduledEvent.DeliverAt));
 
                 continue;
             }
 
-            eventsToAppend.Add(new EventEnvelope(@event, metadata, null));
+            eventsToAppend.Add(new EventEnvelope(@event, eventMetadata));
         }
 
-        return storage.AppendToStream(streamName, expectedVersion, eventsToAppend, cancellationToken);
+        if (eventsToSchedule.Count == 0)
+        {
+            return await eventStorage.AppendToStream(streamName, expectedVersion, eventsToAppend, cancellationToken);
+        }
+
+        if (eventsToAppend.Count == 0)
+        {
+            await scheduledEventStorage.ScheduleEvents(streamName, eventsToSchedule, cancellationToken);
+
+            return new AppendResult(-1);
+        }
+
+        using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
+        try
+        {
+            await scheduledEventStorage.ScheduleEvents(streamName, eventsToSchedule, cancellationToken);
+
+            return await eventStorage.AppendToStream(
+                streamName,
+                expectedVersion,
+                eventsToAppend,
+                cancellationToken
+            );
+        }
+        finally
+        {
+            transactionScope.Complete();
+        }
     }
 
     public Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken)
     {
-        return storage.ReadStream(streamName, options, cancellationToken);
+        return eventStorage.ReadStream(streamName, options, cancellationToken);
     }
 }
 

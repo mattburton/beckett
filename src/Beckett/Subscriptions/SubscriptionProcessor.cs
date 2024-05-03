@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
-using Beckett.Events;
+using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -8,8 +8,9 @@ using Npgsql;
 namespace Beckett.Subscriptions;
 
 public class SubscriptionProcessor(
-    BeckettOptions beckett,
+    BeckettOptions options,
     ISubscriptionStorage subscriptionStorage,
+    IRetryService retryService,
     IServiceProvider serviceProvider,
     ILogger<SubscriptionProcessor> logger
 ) : ISubscriptionProcessor
@@ -24,12 +25,12 @@ public class SubscriptionProcessor(
         _queue = new BufferBlock<SubscriptionStream>(
             new DataflowBlockOptions
             {
-                BoundedCapacity = beckett.Subscriptions.BufferSize,
+                BoundedCapacity = options.Subscriptions.BufferSize,
                 EnsureOrdered = true
             }
         );
 
-        var concurrency = Debugger.IsAttached ? 1 : beckett.Subscriptions.Concurrency;
+        var concurrency = Debugger.IsAttached ? 1 : options.Subscriptions.Concurrency;
 
         _consumer = new ActionBlock<SubscriptionStream>(
             subscriptionStream => ProcessSubscriptionStream(subscriptionStream, stoppingToken),
@@ -71,7 +72,7 @@ public class SubscriptionProcessor(
         CancellationToken cancellationToken
     )
     {
-        var subscription = SubscriptionRegistry.GetSubscription(subscriptionName);
+        var subscription = options.Subscriptions.Registry.GetSubscription(subscriptionName);
 
         if (subscription.Handler == null)
         {
@@ -85,6 +86,7 @@ public class SubscriptionProcessor(
             subscriptionStream,
             streamPosition,
             1,
+            true,
             ProcessSubscriptionStreamCallback,
             cancellationToken
         );
@@ -97,7 +99,7 @@ public class SubscriptionProcessor(
             try
             {
                 var subscriptionStreams = await subscriptionStorage.GetSubscriptionStreamsToProcess(
-                    beckett.Subscriptions.BatchSize,
+                    options.Subscriptions.BatchSize,
                     cancellationToken
                 );
 
@@ -115,8 +117,6 @@ public class SubscriptionProcessor(
 
                 foreach (var subscriptionStream in subscriptionStreams)
                 {
-                    subscriptionStream.EnsureSubscriptionTypeIsValid();
-
                     await _consumer.SendAsync(subscriptionStream, cancellationToken);
                 }
             }
@@ -142,7 +142,7 @@ public class SubscriptionProcessor(
         CancellationToken cancellationToken
     )
     {
-        var subscription = SubscriptionRegistry.GetSubscription(subscriptionStream.SubscriptionName);
+        var subscription = options.Subscriptions.Registry.GetSubscription(subscriptionStream.SubscriptionName);
 
         if (subscription.Handler == null)
         {
@@ -153,7 +153,8 @@ public class SubscriptionProcessor(
             subscription,
             subscriptionStream,
             null,
-            beckett.Subscriptions.BatchSize,
+            options.Subscriptions.BatchSize,
+            false,
             ProcessSubscriptionStreamCallback,
             cancellationToken
         );
@@ -162,7 +163,8 @@ public class SubscriptionProcessor(
     private async Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(
         Subscription subscription,
         SubscriptionStream subscriptionStream,
-        IReadOnlyList<EventData> events,
+        IReadOnlyList<IEventContext> events,
+        bool retryOnError,
         CancellationToken cancellationToken)
     {
         try
@@ -181,14 +183,12 @@ public class SubscriptionProcessor(
 
                 using var scope = serviceProvider.CreateScope();
 
-                var context = @event.WithServices(scope);
-
                 //TODO - support handlers that accept the event context as an argument
                 var handler = scope.ServiceProvider.GetRequiredService(subscription.Type);
 
                 try
                 {
-                    await subscription.Handler!(handler, context.Data, cancellationToken);
+                    await subscription.Handler!(handler, @event.Data, cancellationToken);
                 }
                 catch(Exception e)
                 {
@@ -201,6 +201,16 @@ public class SubscriptionProcessor(
                         subscription.Type,
                         @event.Id
                     );
+
+                    if (retryOnError && handler is not IShouldNotBeRetried)
+                    {
+                        await retryService.Retry(
+                            subscriptionStream.SubscriptionName,
+                            subscriptionStream.StreamName,
+                            @event.StreamPosition,
+                            cancellationToken
+                        );
+                    }
 
                     return new ProcessSubscriptionStreamResult.Blocked(@event.StreamPosition, e);
                 }

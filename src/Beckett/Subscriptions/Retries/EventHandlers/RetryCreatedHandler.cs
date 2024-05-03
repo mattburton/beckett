@@ -2,7 +2,7 @@ using Beckett.Subscriptions.Retries.Events;
 
 namespace Beckett.Subscriptions.Retries.EventHandlers;
 
-public class RetryCreatedHandler(IEventStore eventStore)
+public class RetryCreatedHandler(IEventStore eventStore) : IShouldNotBeRetried
 {
     public Task Handle(RetryCreated e, CancellationToken cancellationToken)
     {

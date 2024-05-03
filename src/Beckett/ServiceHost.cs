@@ -1,11 +1,9 @@
-using Beckett.Events;
 using Beckett.Subscriptions;
 
 namespace Beckett;
 
-public class BackgroundService(
-    BeckettOptions beckett,
-    IEventStorage eventStorage,
+public class ServiceHost(
+    BeckettOptions options,
     ISubscriptionStorage subscriptionStorage,
     ISubscriptionProcessor subscriptionProcessor
 ) : Microsoft.Extensions.Hosting.BackgroundService
@@ -18,22 +16,20 @@ public class BackgroundService(
 
         var tasks = new List<Task>();
 
-        tasks.AddRange(eventStorage.ConfigureBackgroundService(stoppingToken));
-
         tasks.AddRange(subscriptionStorage.ConfigureBackgroundService(subscriptionProcessor, stoppingToken));
 
-        tasks.Add(ContinuousPolling(subscriptionProcessor, beckett, stoppingToken));
+        tasks.Add(ContinuousPolling(subscriptionProcessor, options, stoppingToken));
 
         await Task.WhenAll(tasks);
     }
 
     private static async Task ContinuousPolling(
         ISubscriptionProcessor subscriptionProcessor,
-        BeckettOptions beckett,
+        BeckettOptions options,
         CancellationToken cancellationToken
     )
     {
-        if (beckett.Subscriptions.PollingInterval == TimeSpan.Zero)
+        if (options.Subscriptions.PollingInterval == TimeSpan.Zero)
         {
             return;
         }
@@ -42,13 +38,13 @@ public class BackgroundService(
         {
             subscriptionProcessor.Poll(cancellationToken);
 
-            await Task.Delay(beckett.Subscriptions.PollingInterval, cancellationToken);
+            await Task.Delay(options.Subscriptions.PollingInterval, cancellationToken);
         }
     }
 
     private async Task ConfigureSubscriptions(CancellationToken cancellationToken)
     {
-        foreach (var subscription in SubscriptionRegistry.All())
+        foreach (var subscription in options.Subscriptions.Registry.All())
         {
             await subscriptionStorage.AddOrUpdateSubscription(
                 subscription.Name,
