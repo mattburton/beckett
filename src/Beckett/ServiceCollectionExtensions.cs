@@ -9,19 +9,19 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddBeckett(this IServiceCollection services, Action<BeckettOptions> configure)
     {
-        var options = new BeckettOptions();
+        var beckett = new BeckettOptions();
 
-        configure(options);
+        configure(beckett);
 
-        RunConfigurators(services, options);
+        RunConfigurators(services, beckett);
 
-        services.AddSingleton(options);
+        services.AddSingleton(beckett);
 
-        services.AddPostgresSupport(options);
+        services.AddPostgresSupport(beckett);
 
-        services.AddEventSupport(options);
+        services.AddEventSupport(beckett);
 
-        services.AddSubscriptionSupport(options);
+        services.AddSubscriptionSupport(beckett);
 
         services.AddSingleton<IEventStore, EventStore>();
 
@@ -30,18 +30,18 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static void RunConfigurators(IServiceCollection services, BeckettOptions options)
+    private static void RunConfigurators(IServiceCollection services, BeckettOptions beckett)
     {
         var configuratorType = typeof(IConfigureBeckett);
 
-        var configurators = options.GetAssemblyTypes()
+        var configurators = beckett.GetAssemblyTypes()
             .Where(x => x.GetInterfaces().Any(i => i == configuratorType))
             .Select(Activator.CreateInstance)
             .Cast<IConfigureBeckett>();
 
         foreach (var configurator in configurators)
         {
-            configurator.Configure(services, options);
+            configurator.Configure(services, beckett);
         }
     }
 }

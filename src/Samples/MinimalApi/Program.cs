@@ -5,17 +5,18 @@ using MinimalApi.TodoList;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddNpgsqlDataSource(
-    builder.Configuration.GetConnectionString("TodoList") ?? throw new Exception("Missing TodoList connection string"),
-    options => options.AddBeckett()
-);
+var connectionString = builder.Configuration.GetConnectionString("TodoList") ??
+                       throw new Exception("Missing TodoList connection string");
+
+builder.Services.AddNpgsqlDataSource(connectionString, options => options.AddBeckett());
+
+await Postgres.UpgradeSchema(connectionString, "beckett");
 
 builder.Services.AddBeckett(options =>
 {
     options.UsePostgres(configuration =>
     {
         configuration.UseNotifications();
-        configuration.AutoMigrate();
     });
 });
 

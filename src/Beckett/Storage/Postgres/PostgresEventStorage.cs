@@ -2,7 +2,6 @@ using Beckett.Events;
 using Beckett.Storage.Postgres.Queries;
 using Beckett.Storage.Postgres.Types;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
@@ -12,27 +11,6 @@ public class PostgresEventStorage(
     ILogger<PostgresEventStorage> logger
 ) : IEventStorage
 {
-    public async Task Initialize(CancellationToken cancellationToken)
-    {
-        if (!beckett.Postgres.RunMigrationsAtStartup)
-        {
-            return;
-        }
-
-        await using var connection = beckett.Postgres.MigrationConnectionString == null
-            ? database.CreateConnection()
-            : new NpgsqlConnection(beckett.Postgres.MigrationConnectionString);
-
-        await connection.OpenAsync(cancellationToken);
-
-        await PostgresMigrator.Execute(
-            connection,
-            beckett.Postgres.Schema,
-            beckett.Postgres.MigrationAdvisoryLockId,
-            cancellationToken
-        );
-    }
-
     public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,

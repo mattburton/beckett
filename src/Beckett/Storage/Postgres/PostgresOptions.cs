@@ -10,10 +10,6 @@ public class PostgresOptions
     internal NpgsqlDataSource? DataSource { get; private set; }
     internal string Schema { get; private set; } = DefaultSchema;
 
-    internal bool RunMigrationsAtStartup { get; private set; }
-    internal string? MigrationConnectionString { get; private set; }
-    internal int MigrationAdvisoryLockId { get; private set; }
-
     internal bool EnableNotifications { get; private set; }
     internal TimeSpan ListenerKeepAlive { get; private set; } = TimeSpan.FromSeconds(10);
 
@@ -49,21 +45,5 @@ public class PostgresOptions
         {
             ListenerKeepAlive = keepAlive.Value;
         }
-    }
-
-    public void AutoMigrate(string? connectionString = null, int? advisoryLockId = null)
-    {
-        if (!string.IsNullOrWhiteSpace(connectionString))
-        {
-            MigrationConnectionString = connectionString;
-        }
-
-        MigrationAdvisoryLockId = advisoryLockId switch
-        {
-            < 0 => throw new ArgumentException("The migration advisory lock ID must be greater than or equal to zero"),
-            _ => advisoryLockId ?? 0
-        };
-
-        RunMigrationsAtStartup = true;
     }
 }

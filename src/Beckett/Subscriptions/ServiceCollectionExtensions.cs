@@ -4,9 +4,9 @@ namespace Beckett.Subscriptions;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
+    public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions beckett)
     {
-        if (!options.Subscriptions.Enabled)
+        if (!beckett.Subscriptions.Enabled)
         {
             return;
         }

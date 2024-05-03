@@ -3,7 +3,7 @@ using Beckett.Subscriptions.Retries.Events.Models;
 
 namespace Beckett.Subscriptions.Retries.EventHandlers;
 
-public class RetryScheduledHandler(IEventStore eventStore, ISubscriptionProcessor processor, BeckettOptions options)
+public class RetryScheduledHandler(IEventStore eventStore, ISubscriptionProcessor processor, BeckettOptions beckett)
 {
     public async Task Handle(RetryScheduled e, CancellationToken cancellationToken)
     {
@@ -22,7 +22,7 @@ public class RetryScheduledHandler(IEventStore eventStore, ISubscriptionProcesso
             var currentAttempt = attempts + 1;
             var retryAt = currentAttempt.GetNextDelayWithExponentialBackoff();
 
-            if (currentAttempt >= options.Subscriptions.MaxRetryCount)
+            if (currentAttempt >= beckett.Subscriptions.MaxRetryCount)
             {
                 await eventStore.AppendToStream(
                     RetryStreamName.For(e.SubscriptionName, e.StreamName, e.StreamPosition),

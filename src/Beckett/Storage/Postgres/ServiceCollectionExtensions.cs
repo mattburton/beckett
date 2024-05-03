@@ -7,16 +7,16 @@ namespace Beckett.Storage.Postgres;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
+    public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions beckett)
     {
-        if (!options.Postgres.Enabled)
+        if (!beckett.Postgres.Enabled)
         {
             return;
         }
 
         services.AddSingleton<IPostgresDatabase>(provider =>
         {
-            var dataSource = options.Postgres.DataSource ?? provider.GetService<NpgsqlDataSource>();
+            var dataSource = beckett.Postgres.DataSource ?? provider.GetService<NpgsqlDataSource>();
             if (dataSource is null)
             {
                 throw new InvalidOperationException(

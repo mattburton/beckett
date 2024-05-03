@@ -4,8 +4,6 @@ namespace Beckett.Subscriptions;
 
 public interface ISubscriptionStorage
 {
-    Task Initialize(CancellationToken cancellationToken);
-
     Task AddOrUpdateSubscription(
         string subscriptionName,
         string[] eventTypes,

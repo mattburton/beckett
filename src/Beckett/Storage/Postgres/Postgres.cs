@@ -3,29 +3,30 @@ using Npgsql;
 
 namespace Beckett.Storage.Postgres;
 
-public static class PostgresMigrator
+public static class Postgres
 {
-    public static async Task Execute(
+    private const int DefaultAdvisoryLockId = 0;
+
+    public static Task UpgradeSchema(
+        string connectionString,
+        string schema,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return UpgradeSchema(connectionString, schema, DefaultAdvisoryLockId, cancellationToken);
+    }
+
+    public static async Task UpgradeSchema(
         string connectionString,
         string schema,
         int advisoryLockId,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken = default
     )
     {
         await using var connection = new NpgsqlConnection(connectionString);
 
         await connection.OpenAsync(cancellationToken);
 
-        await Execute(connection, schema, advisoryLockId, cancellationToken);
-    }
-
-    public static async Task Execute(
-        NpgsqlConnection connection,
-        string schema,
-        int advisoryLockId,
-        CancellationToken cancellationToken
-    )
-    {
         if (!await connection.TryAdvisoryLock(advisoryLockId, cancellationToken))
         {
             return;
@@ -143,7 +144,7 @@ public static class PostgresMigrator
 
     private static IEnumerable<(string Name, string Script)> LoadMigrations(string schema)
     {
-        var assembly = typeof(PostgresMigrator).Assembly;
+        var assembly = typeof(Postgres).Assembly;
 
         return assembly.GetManifestResourceNames()
             .Where(x => x.EndsWith(".sql"))

@@ -4,5 +4,5 @@ namespace Beckett;
 
 public interface IConfigureBeckett
 {
-    void Configure(IServiceCollection services, BeckettOptions options);
+    void Configure(IServiceCollection services, BeckettOptions beckett);
 }

@@ -8,7 +8,7 @@ using Npgsql;
 namespace Beckett.Subscriptions;
 
 public class SubscriptionProcessor(
-    BeckettOptions options,
+    BeckettOptions beckett,
     ISubscriptionStorage subscriptionStorage,
     IServiceProvider serviceProvider,
     ILogger<SubscriptionProcessor> logger
@@ -24,12 +24,12 @@ public class SubscriptionProcessor(
         _queue = new BufferBlock<SubscriptionStream>(
             new DataflowBlockOptions
             {
-                BoundedCapacity = options.Subscriptions.BufferSize,
+                BoundedCapacity = beckett.Subscriptions.BufferSize,
                 EnsureOrdered = true
             }
         );
 
-        var concurrency = Debugger.IsAttached ? 1 : options.Subscriptions.Concurrency;
+        var concurrency = Debugger.IsAttached ? 1 : beckett.Subscriptions.Concurrency;
 
         _consumer = new ActionBlock<SubscriptionStream>(
             subscriptionStream => ProcessSubscriptionStream(subscriptionStream, stoppingToken),
@@ -97,7 +97,7 @@ public class SubscriptionProcessor(
             try
             {
                 var subscriptionStreams = await subscriptionStorage.GetSubscriptionStreamsToProcess(
-                    options.Subscriptions.BatchSize,
+                    beckett.Subscriptions.BatchSize,
                     cancellationToken
                 );
 
@@ -153,7 +153,7 @@ public class SubscriptionProcessor(
             subscription,
             subscriptionStream,
             null,
-            options.Subscriptions.BatchSize,
+            beckett.Subscriptions.BatchSize,
             ProcessSubscriptionStreamCallback,
             cancellationToken
         );

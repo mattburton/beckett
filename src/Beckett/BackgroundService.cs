@@ -4,7 +4,7 @@ using Beckett.Subscriptions;
 namespace Beckett;
 
 public class BackgroundService(
-    BeckettOptions options,
+    BeckettOptions beckett,
     IEventStorage eventStorage,
     ISubscriptionStorage subscriptionStorage,
     ISubscriptionProcessor subscriptionProcessor
@@ -12,10 +12,6 @@ public class BackgroundService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await eventStorage.Initialize(stoppingToken);
-
-        await subscriptionStorage.Initialize(stoppingToken);
-
         await ConfigureSubscriptions(stoppingToken);
 
         subscriptionProcessor.Initialize(stoppingToken);
@@ -26,18 +22,18 @@ public class BackgroundService(
 
         tasks.AddRange(subscriptionStorage.ConfigureBackgroundService(subscriptionProcessor, stoppingToken));
 
-        tasks.Add(ContinuousPolling(subscriptionProcessor, options, stoppingToken));
+        tasks.Add(ContinuousPolling(subscriptionProcessor, beckett, stoppingToken));
 
         await Task.WhenAll(tasks);
     }
 
     private static async Task ContinuousPolling(
         ISubscriptionProcessor subscriptionProcessor,
-        BeckettOptions options,
+        BeckettOptions beckett,
         CancellationToken cancellationToken
     )
     {
-        if (options.Subscriptions.PollingInterval == TimeSpan.Zero)
+        if (beckett.Subscriptions.PollingInterval == TimeSpan.Zero)
         {
             return;
         }
@@ -46,7 +42,7 @@ public class BackgroundService(
         {
             subscriptionProcessor.Poll(cancellationToken);
 
-            await Task.Delay(options.Subscriptions.PollingInterval, cancellationToken);
+            await Task.Delay(beckett.Subscriptions.PollingInterval, cancellationToken);
         }
     }
 
