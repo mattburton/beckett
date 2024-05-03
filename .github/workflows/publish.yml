@@ -26,7 +26,7 @@ jobs:
         with:
           dotnet-version: '8.x'
       - name: Create NuGet Package
-        run: dotnet pack --configuration Release --output ${{ env.NuGetDirectory }}
+        run: dotnet pack src/Beckett/Beckett.csproj --configuration Release --output ${{ env.NuGetDirectory }}
       - name: Publish NuGet Package
         run: |
           foreach($file in (Get-ChildItem "${{ env.NuGetDirectory }}" -Recurse -Include *.nupkg)) {
