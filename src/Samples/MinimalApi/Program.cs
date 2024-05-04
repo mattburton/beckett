@@ -2,15 +2,20 @@ using System.Text.Json;
 using Beckett.Storage.Postgres;
 using Microsoft.AspNetCore.Http.Json;
 using MinimalApi.TodoList;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var migrationsConnection = builder.Configuration.GetConnectionString("Migrations") ??
+                       throw new Exception("Missing Migrations connection string");
 var connectionString = builder.Configuration.GetConnectionString("TodoList") ??
                        throw new Exception("Missing TodoList connection string");
 
-builder.Services.AddNpgsqlDataSource(connectionString, options => options.AddBeckett());
+await Postgres.UpgradeSchema(migrationsConnection);
+await EnsureAppDbUser(migrationsConnection);
 
-await Postgres.UpgradeSchema(connectionString);
+builder.Services.AddNpgsqlDataSource(connectionString, options => options.AddBeckett());
+await Postgres.UpgradeSchema(migrationsConnection);
 
 builder.Services.AddBeckett(options =>
 {
@@ -39,3 +44,26 @@ if (app.Environment.IsDevelopment())
 app.MapGroup("/todos").UseTodoListRoutes();
 
 app.Run();
+return;
+
+async Task EnsureAppDbUser(string connection)
+{
+    var dataSource = new NpgsqlDataSourceBuilder(connection).Build();
+    await using var createRole = dataSource.CreateCommand(
+        "CREATE ROLE todo_app WITH LOGIN PASSWORD 'password';");
+    try
+    {
+        await createRole.ExecuteNonQueryAsync();
+    }
+    catch (PostgresException e) when (e.SqlState == "42710")
+    {
+        // Role already exists
+    }
+
+    await using var assignRole = dataSource.CreateCommand(
+        "GRANT beckett to todo_app;");
+    {
+        await assignRole.ExecuteNonQueryAsync();
+    }
+}
+

@@ -1,8 +1,18 @@
+DO
+$do$
+BEGIN
+   IF EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE  rolname = 'beckett') THEN
+
+      RAISE NOTICE 'Role "beckett" already exists. Skipping.';
+ELSE
 CREATE ROLE beckett;
+END IF;
+END
+$do$;
 
 GRANT USAGE ON SCHEMA __schema__ to beckett;
-GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA __schema__ TO beckett;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA __schema__ TO beckett;
 
 -- EVENT STORE SUPPORT
 CREATE TYPE __schema__.new_event AS
@@ -380,3 +390,7 @@ SET blocked = false
 WHERE subscription_name = _subscription_name
 AND stream_name = _stream_name;
 $$;
+
+
+GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA __schema__ TO beckett;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA __schema__ TO beckett;
