@@ -2,8 +2,14 @@ namespace Beckett.Events;
 
 public class EventOptions
 {
-    internal EventTypeMap TypeMap { get; } = new();
+    public EventOptions()
+    {
+        TypeMap = new EventTypeMap(this);
+    }
 
+    internal EventTypeMap TypeMap { get; }
+
+    public bool AllowDynamicTypeMapping { get; set; }
     public int ScheduledEventBatchSize { get; set; } = 100;
     public TimeSpan ScheduledEventPollingInterval { get; set; } = TimeSpan.FromMilliseconds(500);
 

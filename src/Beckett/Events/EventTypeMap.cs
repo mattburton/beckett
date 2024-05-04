@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 
 namespace Beckett.Events;
 
-public class EventTypeMap : IEventTypeMap
+public class EventTypeMap(EventOptions options) : IEventTypeMap
 {
     private readonly ConcurrentDictionary<string, Type?> _nameToTypeMap = new();
     private readonly ConcurrentDictionary<Type, string> _typeToNameMap = new();
@@ -44,11 +44,17 @@ public class EventTypeMap : IEventTypeMap
 
     public Type? GetType(string name)
     {
-
-
         return _nameToTypeMap.GetOrAdd(
             name,
-            typeName => { return EventTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName)); }
+            typeName =>
+            {
+                if (!options.AllowDynamicTypeMapping)
+                {
+                    throw new InvalidOperationException($"Missing event type mapping for {name}");
+                }
+
+                return EventTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName));
+            }
         );
     }
 

@@ -4,11 +4,16 @@ namespace Beckett.Events;
 
 public static class EventTypeProvider
 {
-    private static Type[] _types = [];
+    private static readonly Lazy<Type[]> Types = new(LoadTypes);
 
-    public static void Initialize(IEnumerable<Assembly> assemblies)
+    public static Type? FindMatchFor(Predicate<Type> criteria)
     {
-        _types = assemblies.SelectMany(x =>
+        return Array.Find(Types.Value, criteria);
+    }
+
+    private static Type[] LoadTypes()
+    {
+        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(x =>
         {
             try
             {
@@ -19,10 +24,5 @@ public static class EventTypeProvider
                 return Array.Empty<Type>();
             }
         }).ToArray();
-    }
-
-    public static Type? FindMatchFor(Predicate<Type> criteria)
-    {
-        return Array.Find(_types, criteria);
     }
 }
