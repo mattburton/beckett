@@ -1,3 +1,4 @@
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Subscriptions;
@@ -14,5 +15,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISubscriptionRegistry>(options.Subscriptions.Registry);
 
         services.AddSingleton<ISubscriptionProcessor, SubscriptionProcessor>();
+
+        services.AddHostedService<ConfigureSubscriptions>();
+
+        services.AddHostedService<SubscriptionPollingService>();
     }
 }

@@ -9,8 +9,6 @@ public interface ISubscriptionStorage
         CancellationToken cancellationToken
     );
 
-    IEnumerable<Task> ConfigureBackgroundService(ISubscriptionProcessor processor, CancellationToken stoppingToken);
-
     Task<IReadOnlyList<SubscriptionStream>> GetSubscriptionStreamsToProcess(
         int batchSize,
         CancellationToken cancellationToken

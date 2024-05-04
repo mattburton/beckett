@@ -26,8 +26,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IEventStore, EventStore>();
 
-        services.AddHostedService<ServiceHost>();
-
         return services;
     }
 

@@ -1,5 +1,6 @@
 using Beckett.Events;
 using Beckett.Events.Scheduling;
+using Beckett.Storage.Postgres.Services;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -36,5 +37,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPostgresNotificationListener, PostgresNotificationListener>();
 
         services.AddSingleton<ISubscriptionStorage, PostgresSubscriptionStorage>();
+
+        if (options.Postgres.EnableNotifications)
+        {
+            services.AddHostedService<PostgresListenerService>();
+        }
     }
 }
