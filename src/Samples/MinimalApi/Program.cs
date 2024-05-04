@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Beckett.Storage.Postgres;
 using Microsoft.AspNetCore.Http.Json;
+using MinimalApi;
 using MinimalApi.TodoList;
 using Npgsql;
 
@@ -32,6 +33,7 @@ builder.Services.Configure<JsonOptions>(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHostedService<LogLinkToApiDocumentation>();
 
 var app = builder.Build();
 
