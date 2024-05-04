@@ -207,7 +207,7 @@ public class SubscriptionProcessor(
 
                     if (!retryOnError || handler is IShouldNotBeRetried)
                     {
-                        return new ProcessSubscriptionStreamResult.Blocked(@event.StreamPosition, e);
+                        throw;
                     }
 
                     try

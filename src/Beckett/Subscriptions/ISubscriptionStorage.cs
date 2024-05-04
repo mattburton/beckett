@@ -23,8 +23,6 @@ public interface ISubscriptionStorage
         ProcessSubscriptionStreamCallback callback,
         CancellationToken cancellationToken
     );
-
-    Task UnblockCheckpoint(SubscriptionStream subscriptionStream, CancellationToken cancellationToken);
 }
 
 public delegate Task<ProcessSubscriptionStreamResult> ProcessSubscriptionStreamCallback(

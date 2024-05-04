@@ -377,20 +377,5 @@ WHERE subscription_name = _subscription_name
 AND stream_name = _stream_name;
 $$;
 
-CREATE FUNCTION __schema__.unblock_checkpoint(
-  _subscription_name text,
-  _stream_name text
-)
-  RETURNS void
-  LANGUAGE sql
-AS
-$$
-UPDATE __schema__.checkpoints
-SET blocked = false
-WHERE subscription_name = _subscription_name
-AND stream_name = _stream_name;
-$$;
-
-
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA __schema__ TO beckett;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA __schema__ TO beckett;

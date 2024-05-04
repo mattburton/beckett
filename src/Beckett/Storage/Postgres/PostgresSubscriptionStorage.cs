@@ -140,11 +140,6 @@ public class PostgresSubscriptionStorage(
                 cancellationToken
             );
 
-            if (!retryOnError && result is ProcessSubscriptionStreamResult.Blocked blockedAtPosition)
-            {
-                throw blockedAtPosition.Exception;
-            }
-
             switch (result)
             {
                 case ProcessSubscriptionStreamResult.Success success:
@@ -175,20 +170,5 @@ public class PostgresSubscriptionStorage(
         {
             await connection.AdvisoryUnlock(advisoryLockId, cancellationToken);
         }
-    }
-
-    public async Task UnblockCheckpoint(SubscriptionStream subscriptionStream, CancellationToken cancellationToken)
-    {
-        await using var connection = database.CreateConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        await UnblockCheckpointQuery.Execute(
-            connection,
-            options.Postgres.Schema,
-            subscriptionStream.SubscriptionName,
-            subscriptionStream.StreamName,
-            cancellationToken
-        );
     }
 }
