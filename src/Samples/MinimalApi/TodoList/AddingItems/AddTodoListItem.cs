@@ -15,7 +15,7 @@ public record AddTodoListItem(Guid Id, string Item)
 
         return await eventStore.AppendToStream(
             StreamName.For<TodoList>(Id),
-            new ExpectedVersion(stream.StreamVersion),
+            ExpectedVersion.For(stream.StreamVersion),
             new TodoListItemAdded(Id, Item),
             cancellationToken
         );
