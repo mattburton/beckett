@@ -19,12 +19,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPostgresDatabase>(provider =>
         {
             var dataSource = options.Postgres.DataSource ?? provider.GetService<NpgsqlDataSource>();
+
             if (dataSource is null)
             {
                 throw new InvalidOperationException(
                     "Registered NpgsqlDataSource not found - please register one using AddNpgsqlDataSource from the Npgsql.DependencyInjection package, provide a configured instance via UseDataSource, or call UseConnectionString"
                 );
             }
+
             return new PostgresDatabase(dataSource);
         });
 

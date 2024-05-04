@@ -2,11 +2,11 @@ using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Subscriptions.Services;
 
-public class ConfigureSubscriptions(BeckettOptions options, ISubscriptionStorage subscriptionStorage) : IHostedService
+public class ConfigureSubscriptions(ISubscriptionRegistry subscriptionRegistry, ISubscriptionStorage subscriptionStorage) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        foreach (var subscription in options.Subscriptions.Registry.All())
+        foreach (var subscription in subscriptionRegistry.All())
         {
             await subscriptionStorage.AddOrUpdateSubscription(
                 subscription.Name,

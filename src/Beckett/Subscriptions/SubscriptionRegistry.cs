@@ -2,14 +2,14 @@ using Beckett.Events;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionRegistry(EventTypeMap eventTypeMap)
+public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionRegistry
 {
     private readonly Dictionary<string, Subscription> _subscriptions = new();
     private readonly Dictionary<string, Type> _nameTypeMap = new();
 
     public void AddSubscription<THandler, TEvent>(
         string name,
-        Func<THandler, TEvent, CancellationToken, Task> handler,
+        SubscriptionHandler<THandler, TEvent> handler,
         Action<Subscription>? configure = null
     )
     {

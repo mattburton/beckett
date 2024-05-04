@@ -5,11 +5,9 @@ namespace Beckett.Events;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddEventSupport(this IServiceCollection services, BeckettOptions options)
+    public static void AddEventSupport(this IServiceCollection services)
     {
-        services.AddSingleton(options.Events.TypeMap);
-
-        services.AddSingleton<EventSerializer>();
+        services.AddSingleton<IEventSerializer, EventSerializer>();
 
         services.AddHostedService<ScheduledEventService>();
     }

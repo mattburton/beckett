@@ -20,6 +20,8 @@ public class ScheduledEventService(
                     DeliverScheduledEvents,
                     stoppingToken
                 );
+
+                await Task.Delay(options.Events.ScheduledEventPollingInterval, stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

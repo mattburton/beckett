@@ -1,9 +1,11 @@
 namespace MinimalApi.TodoList.CreatingLists;
 
-public class Configuration : IConfigureBeckett
+public static class Configuration
 {
-    public void Configure(IServiceCollection services, BeckettOptions options)
+    public static IBeckettBuilder UseCreatingLists(this IBeckettBuilder builder)
     {
-        options.Events.Map<TodoListCreated>("TodoListCreated");
+        builder.MapEvent<TodoListCreated>("TodoListCreated");
+
+        return builder;
     }
 }

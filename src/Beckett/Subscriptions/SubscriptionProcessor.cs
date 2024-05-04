@@ -11,6 +11,7 @@ namespace Beckett.Subscriptions;
 
 public class SubscriptionProcessor(
     BeckettOptions options,
+    ISubscriptionRegistry subscriptionRegistry,
     ISubscriptionStorage subscriptionStorage,
     IEventStore eventStore,
     IServiceProvider serviceProvider,
@@ -74,7 +75,7 @@ public class SubscriptionProcessor(
         CancellationToken cancellationToken
     )
     {
-        var subscription = options.Subscriptions.Registry.GetSubscription(subscriptionName);
+        var subscription = subscriptionRegistry.GetSubscription(subscriptionName);
 
         if (subscription.Handler == null)
         {
@@ -144,7 +145,7 @@ public class SubscriptionProcessor(
         CancellationToken cancellationToken
     )
     {
-        var subscription = options.Subscriptions.Registry.GetSubscription(subscriptionStream.SubscriptionName);
+        var subscription = subscriptionRegistry.GetSubscription(subscriptionStream.SubscriptionName);
 
         if (subscription.Handler == null)
         {

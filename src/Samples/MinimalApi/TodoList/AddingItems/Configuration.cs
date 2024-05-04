@@ -1,9 +1,11 @@
 namespace MinimalApi.TodoList.AddingItems;
 
-public class Configuration : IConfigureBeckett
+public static class Configuration
 {
-    public void Configure(IServiceCollection services, BeckettOptions options)
+    public static IBeckettBuilder UseAddingItems(this IBeckettBuilder builder)
     {
-        options.Events.Map<TodoListItemAdded>("TodoListItemAdded");
+        builder.MapEvent<TodoListItemAdded>("TodoListItemAdded");
+
+        return builder;
     }
 }

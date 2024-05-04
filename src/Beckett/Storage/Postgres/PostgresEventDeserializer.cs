@@ -1,13 +1,14 @@
 using System.Text.Json;
+using Beckett.Events;
 using Beckett.Storage.Postgres.Types;
 
 namespace Beckett.Storage.Postgres;
 
 public static class PostgresEventDeserializer
 {
-    public static object Deserialize(StreamEvent @event, BeckettOptions options)
+    public static object Deserialize(StreamEvent @event, IEventTypeMap eventTypeMap)
     {
-        var type = options.Events.TypeMap.GetType(@event.Type) ??
+        var type = eventTypeMap.GetType(@event.Type) ??
                    throw new Exception($"Unknown event type: {@event.Type}");
 
         return JsonSerializer.Deserialize(@event.Data, type) ?? throw new Exception(
@@ -17,10 +18,10 @@ public static class PostgresEventDeserializer
 
     public static (Type Type, object Event, Dictionary<string, object> Metadata) DeserializeAll(
         StreamEvent @event,
-        BeckettOptions options
+        IEventTypeMap eventTypeMap
     )
     {
-        var type = options.Events.TypeMap.GetType(@event.Type) ??
+        var type = eventTypeMap.GetType(@event.Type) ??
                    throw new Exception($"Unknown event type: {@event.Type}");
 
         var actualEvent = JsonSerializer.Deserialize(@event.Data, type) ?? throw new Exception(
@@ -36,10 +37,10 @@ public static class PostgresEventDeserializer
 
     public static (Type Type, object Event, Dictionary<string, object> Metadata) DeserializeAll(
         ScheduledEvent @event,
-        BeckettOptions options
+        IEventTypeMap eventTypeMap
     )
     {
-        var type = options.Events.TypeMap.GetType(@event.Type) ??
+        var type = eventTypeMap.GetType(@event.Type) ??
                    throw new Exception($"Unknown scheduled event type: {@event.Type}");
 
         var actualEvent = JsonSerializer.Deserialize(@event.Data, type) ?? throw new Exception(

@@ -1,57 +1,92 @@
-using System.Reflection;
 using Beckett.Events;
 using Beckett.Storage.Postgres;
 using Beckett.Subscriptions;
+using Beckett.Subscriptions.Retries;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Beckett;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddBeckett(this IServiceCollection services, Action<BeckettOptions> configure)
+    public static IBeckettBuilder AddBeckett(
+        this IHostApplicationBuilder builder,
+        Action<BeckettOptions>? configure = null
+    )
     {
-        var options = new BeckettOptions();
+        var options = builder.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
+                      new BeckettOptions();
 
-        configure(options);
+        configure?.Invoke(options);
 
-        RunConfigurators(services, options);
+        builder.Services.AddSingleton(options);
 
-        services.AddSingleton(options);
+        builder.Services.AddPostgresSupport(options);
 
-        services.AddPostgresSupport(options);
+        builder.Services.AddEventSupport();
 
-        services.AddEventSupport(options);
+        builder.Services.AddSubscriptionSupport(options);
 
-        services.AddSubscriptionSupport(options);
+        builder.Services.AddSingleton<IEventStore, EventStore>();
 
-        services.AddSingleton<IEventStore, EventStore>();
+        var eventTypeMap = new EventTypeMap(options.Events);
 
-        return services;
+        builder.Services.AddSingleton<IEventTypeMap>(eventTypeMap);
+
+        var subscriptionRegistry = new SubscriptionRegistry(eventTypeMap);
+
+        builder.Services.AddSingleton<ISubscriptionRegistry>(subscriptionRegistry);
+
+        return new BeckettBuilder(
+            builder.Configuration,
+            builder.Environment,
+            builder.Services,
+            eventTypeMap,
+            subscriptionRegistry
+        ).UseSubscriptionRetries();
     }
 
-    private static void RunConfigurators(IServiceCollection services, BeckettOptions options)
+    public static IBeckettBuilder AddBeckett(this IHostBuilder builder, Action<BeckettOptions>? configure = null)
     {
-        var configuratorType = typeof(IConfigureBeckett);
+        IConfiguration configuration = null!;
+        IHostEnvironment environment = null!;
+        IServiceCollection serviceCollection = null!;
+        BeckettOptions options;
+        IEventTypeMap eventTypeMap = null!;
+        ISubscriptionRegistry subscriptionRegistry = null!;
 
-        var configurators = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(x =>
-            {
-                try
-                {
-                    return x.GetTypes();
-                }
-                catch (ReflectionTypeLoadException)
-                {
-                    return [];
-                }
-            })
-            .Where(x => x.GetInterfaces().Any(i => i == configuratorType))
-            .Select(Activator.CreateInstance)
-            .Cast<IConfigureBeckett>();
-
-        foreach (var configurator in configurators)
+        builder.ConfigureServices((context, services) =>
         {
-            configurator.Configure(services, options);
-        }
+            configuration = context.Configuration;
+            environment = context.HostingEnvironment;
+            serviceCollection = services;
+
+            options = context.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
+                      new BeckettOptions();
+
+            configure?.Invoke(options);
+
+            services.AddSingleton(options);
+
+            services.AddPostgresSupport(options);
+
+            services.AddEventSupport();
+
+            services.AddSubscriptionSupport(options);
+
+            services.AddSingleton<IEventStore, EventStore>();
+
+            eventTypeMap = new EventTypeMap(options.Events);
+
+            services.AddSingleton(eventTypeMap);
+
+            subscriptionRegistry = new SubscriptionRegistry(eventTypeMap);
+
+            services.AddSingleton(subscriptionRegistry);
+        });
+
+        return new BeckettBuilder(configuration, environment, serviceCollection, eventTypeMap, subscriptionRegistry)
+            .UseSubscriptionRetries();
     }
 }

@@ -9,7 +9,8 @@ public interface IPostgresEventStorage : IEventStorage;
 public class PostgresEventStorage(
     BeckettOptions options,
     IPostgresDatabase database,
-    EventSerializer eventSerializer
+    IEventSerializer eventSerializer,
+    IEventTypeMap eventTypeMap
 ) : IPostgresEventStorage
 {
     public async Task<AppendResult> AppendToStream(
@@ -58,7 +59,7 @@ public class PostgresEventStorage(
         //TODO update query to always return actual stream version regardless of read options supplied
         var streamVersion = streamEvents.Count == 0 ? 0 : streamEvents[^1].StreamPosition;
 
-        var events = streamEvents.Select(x => PostgresEventDeserializer.Deserialize(x, options)).ToList();
+        var events = streamEvents.Select(x => PostgresEventDeserializer.Deserialize(x, eventTypeMap)).ToList();
 
         return new ReadResult(events, streamVersion);
     }

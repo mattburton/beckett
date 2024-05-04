@@ -8,7 +8,8 @@ namespace Beckett.Storage.Postgres;
 public class PostgresSubscriptionStorage(
     BeckettOptions options,
     IPostgresDatabase database,
-    IPostgresNotificationListener listener
+    IPostgresNotificationListener listener,
+    IEventTypeMap eventTypeMap
 ) : ISubscriptionStorage
 {
     public async Task AddOrUpdateSubscription(string subscriptionName, string[] eventTypes, bool startFromBeginning,
@@ -114,7 +115,10 @@ public class PostgresSubscriptionStorage(
 
             foreach (var subscriptionStreamEvent in subscriptionStreamEvents)
             {
-                var (type, data, metadata) = PostgresEventDeserializer.DeserializeAll(subscriptionStreamEvent, options);
+                var (type, data, metadata) = PostgresEventDeserializer.DeserializeAll(
+                    subscriptionStreamEvent,
+                    eventTypeMap
+                );
 
                 events.Add(new EventContext(
                     subscriptionStreamEvent.Id,

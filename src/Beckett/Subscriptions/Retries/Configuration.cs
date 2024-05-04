@@ -4,28 +4,30 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Subscriptions.Retries;
 
-public class Configuration : IConfigureBeckett
+public static class Configuration
 {
-    public void Configure(IServiceCollection services, BeckettOptions options)
+    public static IBeckettBuilder UseSubscriptionRetries(this IBeckettBuilder builder)
     {
-        options.Events.Map<RetryError>("$retry_error");
-        options.Events.Map<RetryFailed>("$retry_failed");
-        options.Events.Map<RetrySucceeded>("$retry_succeeded");
-        options.Events.Map<SubscriptionError>("$subscription_error");
+        builder.MapEvent<RetryError>("$retry_error");
+        builder.MapEvent<RetryFailed>("$retry_failed");
+        builder.MapEvent<RetrySucceeded>("$retry_succeeded");
+        builder.MapEvent<SubscriptionError>("$subscription_error");
 
-        services.AddSingleton<IRetryService, RetryService>();
+        builder.Services.AddSingleton<IRetryService, RetryService>();
 
-        services.AddScoped<SubscriptionErrorHandler>();
-        services.AddScoped<RetryErrorHandler>();
+        builder.Services.AddScoped<SubscriptionErrorHandler>();
+        builder.Services.AddScoped<RetryErrorHandler>();
 
-        options.Subscriptions.AddSubscription<SubscriptionErrorHandler, SubscriptionError>(
+        builder.AddSubscription<SubscriptionErrorHandler, SubscriptionError>(
             "$subscription_error",
             (handler, @event, token) => handler.Handle(@event, token)
         );
 
-        options.Subscriptions.AddSubscription<RetryErrorHandler, RetryError>(
+        builder.AddSubscription<RetryErrorHandler, RetryError>(
             "$retry_error",
             (handler, @event, token) => handler.Handle(@event, token)
         );
+
+        return builder;
     }
 }

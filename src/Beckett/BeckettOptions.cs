@@ -6,28 +6,16 @@ namespace Beckett;
 
 public class BeckettOptions
 {
-    public BeckettOptions(EventOptions events, SubscriptionOptions subscriptions, PostgresOptions postgres)
-    {
-        Events = events;
-        Subscriptions = subscriptions;
-        Postgres = postgres;
-    }
+    public const string SectionName = "Beckett";
 
-    public BeckettOptions()
-    {
-        Events = new EventOptions();
-        Subscriptions = new SubscriptionOptions(Events);
-        Postgres = new PostgresOptions();
-    }
+    public EventOptions Events { get; } = new();
+    public SubscriptionOptions Subscriptions { get; } = new();
+    public PostgresOptions Postgres { get; } = new();
 
-    public EventOptions Events { get; }
-    public SubscriptionOptions Subscriptions { get; }
-    public PostgresOptions Postgres { get; }
-
-    public void UsePostgres(Action<PostgresOptions> configure)
+    public void UsePostgres(Action<PostgresOptions>? configure = null)
     {
         Postgres.Enabled = true;
 
-        configure(Postgres);
+        configure?.Invoke(Postgres);
     }
 }

@@ -3,7 +3,7 @@ using MinimalApi.TodoList.CreatingLists;
 
 namespace MinimalApi.TodoList.GetTodoList;
 
-public class ViewState : IState
+public class TodoListView : IState
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;

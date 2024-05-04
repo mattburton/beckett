@@ -1,6 +1,6 @@
 using MinimalApi.TodoList.CreatingLists;
 
-namespace MinimalApi.TodoList.Notifications.WhenListCreated;
+namespace MinimalApi.TodoList.NotifyWhenListCreated;
 
 public class TodoListCreatedHandler
 {

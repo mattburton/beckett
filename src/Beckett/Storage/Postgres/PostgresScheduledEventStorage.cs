@@ -8,7 +8,8 @@ namespace Beckett.Storage.Postgres;
 public class PostgresScheduledEventStorage(
     BeckettOptions options,
     IPostgresDatabase database,
-    EventSerializer eventSerializer
+    IEventSerializer eventSerializer,
+    IEventTypeMap eventTypeMap
 ) : IScheduledEventStorage
 {
     public async Task ScheduleEvents(
@@ -63,7 +64,7 @@ public class PostgresScheduledEventStorage(
         {
             foreach (var scheduledEvent in streamGroup)
             {
-                var (_, data, metadata) = PostgresEventDeserializer.DeserializeAll(scheduledEvent, options);
+                var (_, data, metadata) = PostgresEventDeserializer.DeserializeAll(scheduledEvent, eventTypeMap);
 
                 scheduledEvents.Add(new ScheduledEventContext(scheduledEvent.StreamName, data, metadata));
             }
