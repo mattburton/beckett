@@ -19,10 +19,7 @@ await TodoListApplicationUser.EnsureExists(migrationsConnectionString);
 
 builder.Services.AddNpgsqlDataSource(applicationConnectionString, options => options.AddBeckett());
 
-builder.AddBeckett(options =>
-{
-    options.UsePostgres();
-}).UseTodoListModule();
+builder.AddBeckett().UseTodoListModule();
 
 builder.Services.Configure<JsonOptions>(options =>
 {

@@ -6,12 +6,11 @@ public class PostgresOptions
 {
     public const string DefaultSchema = "beckett";
 
-    internal bool Enabled { get; set; }
-    internal NpgsqlDataSource? DataSource { get; private set; }
-    internal string Schema { get; private set; } = DefaultSchema;
-
-    internal bool EnableNotifications { get; private set; }
-    internal TimeSpan ListenerKeepAlive { get; private set; } = TimeSpan.FromSeconds(10);
+    public bool Enabled { get; set; }
+    public NpgsqlDataSource? DataSource { get; private set; }
+    public string Schema { get; private set; } = DefaultSchema;
+    public bool EnableNotifications { get; private set; }
+    public TimeSpan ListenerKeepAlive { get; private set; } = TimeSpan.FromSeconds(10);
 
     public void UseSchema(string schema)
     {

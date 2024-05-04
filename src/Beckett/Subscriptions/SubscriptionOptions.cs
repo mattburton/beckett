@@ -1,5 +1,3 @@
-using Beckett.Events;
-
 namespace Beckett.Subscriptions;
 
 public class SubscriptionOptions
