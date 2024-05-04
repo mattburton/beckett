@@ -12,8 +12,6 @@ public static class ServiceCollectionExtensions
             return;
         }
 
-        services.AddSingleton<ISubscriptionRegistry>(options.Subscriptions.Registry);
-
         services.AddSingleton<ISubscriptionProcessor, SubscriptionProcessor>();
 
         services.AddHostedService<ConfigureSubscriptions>();

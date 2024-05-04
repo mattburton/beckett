@@ -42,7 +42,7 @@ public static class ServiceCollectionExtensions
                 }
                 catch (ReflectionTypeLoadException)
                 {
-                    return Array.Empty<Type>();
+                    return [];
                 }
             })
             .Where(x => x.GetInterfaces().Any(i => i == configuratorType))

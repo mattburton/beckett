@@ -19,12 +19,12 @@ public class Configuration : IConfigureBeckett
         services.AddScoped<RetryErrorHandler>();
 
         options.Subscriptions.AddSubscription<SubscriptionErrorHandler, SubscriptionError>(
-            "$retry_created_subscription",
+            "$subscription_error",
             (handler, @event, token) => handler.Handle(@event, token)
         );
 
         options.Subscriptions.AddSubscription<RetryErrorHandler, RetryError>(
-            "$retry_scheduled_subscription",
+            "$retry_error",
             (handler, @event, token) => handler.Handle(@event, token)
         );
     }

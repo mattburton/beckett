@@ -8,7 +8,7 @@ namespace Beckett.Storage.Postgres;
 public class PostgresScheduledEventStorage(
     BeckettOptions options,
     IPostgresDatabase database,
-    IEventSerializer eventSerializer
+    EventSerializer eventSerializer
 ) : IScheduledEventStorage
 {
     public async Task ScheduleEvents(

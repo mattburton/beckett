@@ -17,7 +17,7 @@ public class NewScheduledEvent
         object @event,
         Dictionary<string, object> metadata,
         DateTimeOffset deliverAt,
-        IEventSerializer eventSerializer
+        EventSerializer eventSerializer
     )
     {
         var result = eventSerializer.Serialize(@event, metadata);

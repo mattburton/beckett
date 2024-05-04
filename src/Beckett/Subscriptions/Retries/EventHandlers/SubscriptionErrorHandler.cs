@@ -11,7 +11,6 @@ public class SubscriptionErrorHandler(IRetryService retryService) : IShouldNotBe
             e.StreamName,
             e.StreamPosition,
             0,
-            e.Exception,
             cancellationToken
         );
     }

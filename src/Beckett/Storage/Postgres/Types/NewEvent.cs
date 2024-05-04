@@ -12,7 +12,7 @@ public class NewEvent
 
     public static string DataTypeNameFor(string schema) => $"{schema}.new_event[]";
 
-    public static NewEvent From(object @event, Dictionary<string, object> metadata, IEventSerializer eventSerializer)
+    public static NewEvent From(object @event, Dictionary<string, object> metadata, EventSerializer eventSerializer)
     {
         var result = eventSerializer.Serialize(@event, metadata);
 

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Beckett.Events.Scheduling;
+namespace Beckett.Events.Scheduling.Services;
 
 public class ScheduledEventService(
     BeckettOptions options,

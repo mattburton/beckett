@@ -10,7 +10,7 @@ var connectionString = builder.Configuration.GetConnectionString("TodoList") ??
 
 builder.Services.AddNpgsqlDataSource(connectionString, options => options.AddBeckett());
 
-await Postgres.UpgradeSchema(connectionString, "beckett");
+await Postgres.UpgradeSchema(connectionString);
 
 builder.Services.AddBeckett(options =>
 {

@@ -9,6 +9,14 @@ public static class Postgres
 
     public static Task UpgradeSchema(
         string connectionString,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return UpgradeSchema(connectionString, PostgresOptions.DefaultSchema, DefaultAdvisoryLockId, cancellationToken);
+    }
+
+    public static Task UpgradeSchema(
+        string connectionString,
         string schema,
         CancellationToken cancellationToken = default
     )

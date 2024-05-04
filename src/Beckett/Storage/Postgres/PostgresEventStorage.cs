@@ -9,7 +9,7 @@ public interface IPostgresEventStorage : IEventStorage;
 public class PostgresEventStorage(
     BeckettOptions options,
     IPostgresDatabase database,
-    IEventSerializer eventSerializer
+    EventSerializer eventSerializer
 ) : IPostgresEventStorage
 {
     public async Task<AppendResult> AppendToStream(

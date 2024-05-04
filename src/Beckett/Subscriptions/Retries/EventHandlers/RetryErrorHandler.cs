@@ -11,7 +11,6 @@ public class RetryErrorHandler(IRetryService retryService) : IShouldNotBeRetried
             e.StreamName,
             e.StreamPosition,
             e.Attempts,
-            e.Exception,
             cancellationToken
         );
     }

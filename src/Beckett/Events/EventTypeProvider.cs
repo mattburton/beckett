@@ -21,7 +21,7 @@ public static class EventTypeProvider
             }
             catch (ReflectionTypeLoadException)
             {
-                return Array.Empty<Type>();
+                return [];
             }
         }).ToArray();
     }

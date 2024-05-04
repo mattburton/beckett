@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Beckett.Events;
 
-public class EventSerializer(IEventTypeMap eventTypeMap) : IEventSerializer
+public class EventSerializer(EventTypeMap eventTypeMap)
 {
     public (Type Type, string TypeName, string Data, string Metadata) Serialize(
         object @event,

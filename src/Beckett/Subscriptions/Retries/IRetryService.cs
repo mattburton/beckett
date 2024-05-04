@@ -10,7 +10,6 @@ public interface IRetryService
         string streamName,
         long streamPosition,
         int attempts,
-        ExceptionData exception,
         CancellationToken cancellationToken
     );
 }
@@ -26,7 +25,6 @@ public class RetryService(
         string streamName,
         long streamPosition,
         int attempts,
-        ExceptionData exception,
         CancellationToken cancellationToken
     )
     {
