@@ -4,7 +4,9 @@ public record AddTodoListItem(Guid Id, string Item)
 {
     public async Task<AppendResult> Execute(IEventStore eventStore, CancellationToken cancellationToken)
     {
-        var stream = await eventStore.ReadStream(StreamName.For<TodoList>(Id), cancellationToken);
+        var streamName = StreamName.For<TodoList>(Id);
+
+        var stream = await eventStore.ReadStream(streamName, cancellationToken);
 
         var state = stream.ProjectTo<DecisionState>();
 
@@ -14,7 +16,7 @@ public record AddTodoListItem(Guid Id, string Item)
         }
 
         return await eventStore.AppendToStream(
-            StreamName.For<TodoList>(Id),
+            streamName,
             ExpectedVersion.For(stream.StreamVersion),
             new TodoListItemAdded(Id, Item),
             cancellationToken

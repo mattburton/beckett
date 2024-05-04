@@ -1,6 +1,6 @@
 using MinimalApi.TodoList.AddingItems;
 
-namespace MinimalApi.TodoList.Notifications.WhenItemAdded;
+namespace MinimalApi.TodoList.NotifyWhenItemAdded;
 
 public class TodoListItemAddedHandler
 {

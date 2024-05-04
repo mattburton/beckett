@@ -1,14 +1,13 @@
-using Beckett.Events.Scheduling.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Events;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddEventSupport(this IServiceCollection services)
+    public static void AddEventSupport(this IServiceCollection services, EventOptions options)
     {
-        services.AddSingleton<IEventSerializer, EventSerializer>();
+        services.AddSingleton(options);
 
-        services.AddHostedService<ScheduledEventService>();
+        services.AddSingleton<IEventSerializer, EventSerializer>();
     }
 }

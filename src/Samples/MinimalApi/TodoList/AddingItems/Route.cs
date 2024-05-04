@@ -12,6 +12,7 @@ public static class Route
         {
             try
             {
+                //TODO - add polly retry example here
                 var result = await command.Execute(eventStore, cancellationToken);
 
                 return Results.Ok(new

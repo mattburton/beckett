@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Beckett.Storage.Postgres;
+using Beckett.Database;
 using Microsoft.AspNetCore.Http.Json;
 using MinimalApi.Infrastructure.Database;
 using MinimalApi.Infrastructure.Swagger;

@@ -8,6 +8,7 @@ public class Subscription
     internal Func<object, object, CancellationToken, Task>? Handler { get; set; }
 
     public StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
+    public int MaxRetryCount { get; set; } = 10;
 
     public void SubscribeTo<TEvent>() => EventTypes.Add(typeof(TEvent));
 

@@ -2,13 +2,13 @@ using System.Reflection;
 
 namespace Beckett.Events;
 
-public static class EventTypeProvider
+public class EventTypeProvider : IEventTypeProvider
 {
-    private static readonly Lazy<Type[]> Types = new(LoadTypes);
+    private readonly Lazy<Type[]> _types = new(LoadTypes);
 
-    public static Type? FindMatchFor(Predicate<Type> criteria)
+    public Type? FindMatchFor(Predicate<Type> criteria)
     {
-        return Array.Find(Types.Value, criteria);
+        return Array.Find(_types.Value, criteria);
     }
 
     private static Type[] LoadTypes()

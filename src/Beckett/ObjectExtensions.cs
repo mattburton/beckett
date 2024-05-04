@@ -1,5 +1,5 @@
 using Beckett.Events;
-using Beckett.Events.Scheduling;
+using Beckett.ScheduledEvents;
 
 namespace Beckett;
 

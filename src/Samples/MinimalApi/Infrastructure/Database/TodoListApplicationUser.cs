@@ -19,7 +19,7 @@ public static class TodoListApplicationUser
             // Role already exists
         }
 
-        await using var assignRole = dataSource.CreateCommand("GRANT beckett to todo_list;");
+        await using var assignRole = dataSource.CreateCommand("GRANT beckett TO todo_list;");
 
         await assignRole.ExecuteNonQueryAsync();
     }

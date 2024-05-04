@@ -56,14 +56,9 @@ public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionReg
         return subscription.Type;
     }
 
-    public Subscription GetSubscription(string name)
+    public Subscription? GetSubscription(string name)
     {
-        if (!_subscriptions.TryGetValue(name, out var subscription))
-        {
-            throw new InvalidOperationException($"Unknown subscription: {name}");
-        }
-
-        return subscription;
+        return _subscriptions.GetValueOrDefault(name);
     }
 }
 

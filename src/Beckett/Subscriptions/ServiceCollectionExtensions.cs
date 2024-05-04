@@ -5,16 +5,24 @@ namespace Beckett.Subscriptions;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
+    public static void AddSubscriptionSupport(this IServiceCollection services, SubscriptionOptions options)
     {
-        if (!options.Subscriptions.Enabled)
+        if (!options.Enabled)
         {
             return;
         }
 
-        services.AddSingleton<ISubscriptionProcessor, SubscriptionProcessor>();
+        services.AddSingleton(options);
 
-        services.AddHostedService<ConfigureSubscriptions>();
+        services.AddSingleton<IGlobalStreamConsumer, GlobalStreamConsumer>();
+
+        services.AddSingleton<ISubscriptionStreamProcessor, SubscriptionStreamProcessor>();
+
+        services.AddSingleton<ISubscriptionConsumerGroup, SubscriptionConsumerGroup>();
+
+        services.AddHostedService<InitializeSubscriptions>();
+
+        services.AddHostedService<GlobalPollingService>();
 
         services.AddHostedService<SubscriptionPollingService>();
     }

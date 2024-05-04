@@ -1,5 +1,6 @@
+using Beckett.Database;
 using Beckett.Events;
-using Beckett.Storage.Postgres;
+using Beckett.ScheduledEvents;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.Configuration;
@@ -20,17 +21,21 @@ public static class ServiceCollectionExtensions
 
         configure?.Invoke(options);
 
-        builder.Services.AddSingleton(options);
+        builder.Services.AddPostgresSupport(options.Postgres);
 
-        builder.Services.AddPostgresSupport(options);
+        builder.Services.AddEventSupport(options.Events);
 
-        builder.Services.AddEventSupport();
+        builder.Services.AddScheduledEventSupport(options.ScheduledEvents);
 
-        builder.Services.AddSubscriptionSupport(options);
+        builder.Services.AddSubscriptionSupport(options.Subscriptions);
 
         builder.Services.AddSingleton<IEventStore, EventStore>();
 
-        var eventTypeMap = new EventTypeMap(options.Events);
+        var eventTypeProvider = new EventTypeProvider();
+
+        builder.Services.AddSingleton<IEventTypeProvider>(eventTypeProvider);
+
+        var eventTypeMap = new EventTypeMap(options.Events, eventTypeProvider);
 
         builder.Services.AddSingleton<IEventTypeMap>(eventTypeMap);
 
@@ -69,15 +74,21 @@ public static class ServiceCollectionExtensions
 
             services.AddSingleton(options);
 
-            services.AddPostgresSupport(options);
+            services.AddPostgresSupport(options.Postgres);
 
-            services.AddEventSupport();
+            services.AddEventSupport(options.Events);
 
-            services.AddSubscriptionSupport(options);
+            services.AddScheduledEventSupport(options.ScheduledEvents);
+
+            services.AddSubscriptionSupport(options.Subscriptions);
 
             services.AddSingleton<IEventStore, EventStore>();
 
-            eventTypeMap = new EventTypeMap(options.Events);
+            var eventTypeProvider = new EventTypeProvider();
+
+            services.AddSingleton<IEventTypeProvider>(eventTypeProvider);
+
+            eventTypeMap = new EventTypeMap(options.Events, eventTypeProvider);
 
             services.AddSingleton(eventTypeMap);
 
@@ -86,7 +97,12 @@ public static class ServiceCollectionExtensions
             services.AddSingleton(subscriptionRegistry);
         });
 
-        return new BeckettBuilder(configuration, environment, serviceCollection, eventTypeMap, subscriptionRegistry)
-            .UseSubscriptionRetries();
+        return new BeckettBuilder(
+            configuration,
+            environment,
+            serviceCollection,
+            eventTypeMap,
+            subscriptionRegistry
+        ).UseSubscriptionRetries();
     }
 }

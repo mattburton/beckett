@@ -2,22 +2,22 @@ using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Subscriptions.Services;
 
-public class SubscriptionPollingService(BeckettOptions options, ISubscriptionProcessor processor) : BackgroundService
+public class SubscriptionPollingService(SubscriptionOptions options, ISubscriptionConsumerGroup consumerGroup) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        processor.Initialize(stoppingToken);
-
-        if (options.Subscriptions.PollingInterval == TimeSpan.Zero)
+        if (options.SubscriptionPollingInterval == TimeSpan.Zero)
         {
             return;
         }
 
+        consumerGroup.Initialize(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            processor.Poll(stoppingToken);
+            consumerGroup.StartPolling();
 
-            await Task.Delay(options.Subscriptions.PollingInterval, stoppingToken);
+            await Task.Delay(options.SubscriptionPollingInterval, stoppingToken);
         }
     }
 }

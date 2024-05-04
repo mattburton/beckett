@@ -1,6 +1,6 @@
 using System.Transactions;
 using Beckett.Events;
-using Beckett.Events.Scheduling;
+using Beckett.ScheduledEvents;
 
 namespace Beckett;
 
@@ -16,7 +16,7 @@ public interface IEventStore
     Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
 }
 
-public class EventStore(IEventStorage eventStorage, IScheduledEventStorage scheduledEventStorage) : IEventStore
+public class EventStore(IEventStorage eventStorage, IEventScheduler eventScheduler) : IEventStore
 {
     public async Task<AppendResult> AppendToStream(
         string streamName,
@@ -66,28 +66,25 @@ public class EventStore(IEventStorage eventStorage, IScheduledEventStorage sched
 
         if (eventsToAppend.Count == 0)
         {
-            await scheduledEventStorage.ScheduleEvents(streamName, eventsToSchedule, cancellationToken);
+            await eventScheduler.ScheduleEvents(streamName, eventsToSchedule, cancellationToken);
 
             return new AppendResult(-1);
         }
 
         using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
-        try
-        {
-            await scheduledEventStorage.ScheduleEvents(streamName, eventsToSchedule, cancellationToken);
+        await eventScheduler.ScheduleEvents(streamName, eventsToSchedule, cancellationToken);
 
-            return await eventStorage.AppendToStream(
-                streamName,
-                expectedVersion,
-                eventsToAppend,
-                cancellationToken
-            );
-        }
-        finally
-        {
-            transactionScope.Complete();
-        }
+        var result = await eventStorage.AppendToStream(
+            streamName,
+            expectedVersion,
+            eventsToAppend,
+            cancellationToken
+        );
+
+        transactionScope.Complete();
+
+        return result;
     }
 
     public Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken)

@@ -10,7 +10,7 @@ public interface ISubscriptionRegistry
 
     IEnumerable<(string Name, string[] EventTypes, StartingPosition StartingPosition)> All();
     Type GetType(string name);
-    Subscription GetSubscription(string name);
+    Subscription? GetSubscription(string name);
 }
 
 public delegate Task SubscriptionHandler<in THandler, in TEvent>(

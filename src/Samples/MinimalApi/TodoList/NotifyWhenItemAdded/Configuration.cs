@@ -1,5 +1,4 @@
 using MinimalApi.TodoList.AddingItems;
-using MinimalApi.TodoList.Notifications.WhenItemAdded;
 
 namespace MinimalApi.TodoList.NotifyWhenItemAdded;
 

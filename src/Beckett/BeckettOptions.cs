@@ -1,5 +1,6 @@
+using Beckett.Database;
 using Beckett.Events;
-using Beckett.Storage.Postgres;
+using Beckett.ScheduledEvents;
 using Beckett.Subscriptions;
 
 namespace Beckett;
@@ -9,6 +10,7 @@ public class BeckettOptions
     public const string SectionName = "Beckett";
 
     public EventOptions Events { get; } = new();
+    public ScheduledEventOptions ScheduledEvents { get; set; } = new();
     public SubscriptionOptions Subscriptions { get; } = new();
     public PostgresOptions Postgres { get; } = new();
 
