@@ -1,39 +1,95 @@
 using Beckett.Subscriptions.Retries.Events;
-using Microsoft.Extensions.Logging;
+using Beckett.Subscriptions.Retries.Events.Models;
 
 namespace Beckett.Subscriptions.Retries;
 
 public interface IRetryService
 {
-    Task Retry(string subscriptionName, string streamName, long streamPosition, CancellationToken cancellationToken);
+    Task Retry(
+        string subscriptionName,
+        string streamName,
+        long streamPosition,
+        int attempts,
+        ExceptionData exception,
+        CancellationToken cancellationToken
+    );
 }
 
-public class RetryService(IEventStore eventStore, ILogger<RetryService> logger) : IRetryService
+public class RetryService(
+    BeckettOptions options,
+    ISubscriptionProcessor processor,
+    IEventStore eventStore
+) : IRetryService
 {
     public async Task Retry(
         string subscriptionName,
         string streamName,
         long streamPosition,
+        int attempts,
+        ExceptionData exception,
         CancellationToken cancellationToken
     )
     {
+        var retryStreamName = RetryStreamName.For(subscriptionName, streamName, streamPosition);
+        var retryAt = attempts.GetNextDelayWithExponentialBackoff();
+
         try
         {
+            await processor.ProcessSubscriptionStreamAtPosition(
+                subscriptionName,
+                streamName,
+                streamPosition,
+                cancellationToken
+            );
+
             await eventStore.AppendToStream(
-                RetryStreamName.For(subscriptionName, streamName, streamPosition),
-                ExpectedVersion.StreamDoesNotExist,
-                new RetryCreated(subscriptionName, streamName, streamPosition, DateTimeOffset.UtcNow),
+                retryStreamName,
+                ExpectedVersion.StreamExists,
+                new RetrySucceeded(
+                    subscriptionName,
+                    streamName,
+                    streamPosition,
+                    attempts + 1,
+                    DateTimeOffset.UtcNow
+                ),
                 cancellationToken
             );
         }
-        catch (StreamAlreadyExistsException)
+        catch (Exception ex)
         {
-            logger.LogWarning(
-                "Attempted to create a retry where one is already in progress - subscription: {SubscriptionName}, stream name: {StreamName}, stream position: {StreamPosition}",
-                subscriptionName,
-                streamName,
-                streamPosition
-            );
+            if (attempts >= options.Subscriptions.MaxRetryCount)
+            {
+                await eventStore.AppendToStream(
+                    retryStreamName,
+                    ExpectedVersion.StreamExists,
+                    new RetryFailed(
+                        subscriptionName,
+                        streamName,
+                        streamPosition,
+                        attempts + 1,
+                        ExceptionData.From(ex),
+                        DateTimeOffset.UtcNow
+                    ),
+                    cancellationToken
+                );
+            }
+            else
+            {
+                await eventStore.AppendToStream(
+                    retryStreamName,
+                    ExpectedVersion.StreamExists,
+                    new RetryError(
+                        subscriptionName,
+                        streamName,
+                        streamPosition,
+                        attempts + 1,
+                        ExceptionData.From(ex),
+                        retryAt,
+                        DateTimeOffset.UtcNow
+                    ).ScheduleAt(retryAt),
+                    cancellationToken
+                );
+            }
         }
     }
 }

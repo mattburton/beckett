@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
 using Beckett.Subscriptions.Retries;
+using Beckett.Subscriptions.Retries.Events;
+using Beckett.Subscriptions.Retries.Events.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -10,7 +12,7 @@ namespace Beckett.Subscriptions;
 public class SubscriptionProcessor(
     BeckettOptions options,
     ISubscriptionStorage subscriptionStorage,
-    IRetryService retryService,
+    IEventStore eventStore,
     IServiceProvider serviceProvider,
     ILogger<SubscriptionProcessor> logger
 ) : ISubscriptionProcessor
@@ -86,7 +88,7 @@ public class SubscriptionProcessor(
             subscriptionStream,
             streamPosition,
             1,
-            true,
+            false,
             ProcessSubscriptionStreamCallback,
             cancellationToken
         );
@@ -154,7 +156,7 @@ public class SubscriptionProcessor(
             subscriptionStream,
             null,
             options.Subscriptions.BatchSize,
-            false,
+            true,
             ProcessSubscriptionStreamCallback,
             cancellationToken
         );
@@ -202,13 +204,40 @@ public class SubscriptionProcessor(
                         @event.Id
                     );
 
-                    if (retryOnError && handler is not IShouldNotBeRetried)
+                    if (!retryOnError || handler is IShouldNotBeRetried)
                     {
-                        await retryService.Retry(
+                        return new ProcessSubscriptionStreamResult.Blocked(@event.StreamPosition, e);
+                    }
+
+                    try
+                    {
+                        var retryAt = 0.GetNextDelayWithExponentialBackoff();
+
+                        await eventStore.AppendToStream(
+                            RetryStreamName.For(
+                                subscriptionStream.SubscriptionName,
+                                subscriptionStream.StreamName,
+                                @event.StreamPosition
+                            ),
+                            ExpectedVersion.StreamDoesNotExist,
+                            new SubscriptionError(
+                                subscriptionStream.SubscriptionName,
+                                subscriptionStream.StreamName,
+                                @event.StreamPosition,
+                                ExceptionData.From(e),
+                                retryAt,
+                                DateTimeOffset.UtcNow
+                            ).ScheduleAt(retryAt),
+                            cancellationToken
+                        );
+                    }
+                    catch (StreamAlreadyExistsException)
+                    {
+                        logger.LogWarning(
+                            "Attempted to start a retry where one is already in progress - subscription: {SubscriptionName}, stream name: {StreamName}, stream position: {StreamPosition}",
                             subscriptionStream.SubscriptionName,
                             subscriptionStream.StreamName,
-                            @event.StreamPosition,
-                            cancellationToken
+                            @event.StreamPosition
                         );
                     }
 

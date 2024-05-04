@@ -2,12 +2,12 @@ namespace Beckett;
 
 public interface IEventContext
 {
-    Guid Id { get; init; }
-    string StreamName { get; init; }
-    long StreamPosition { get; init; }
-    long GlobalPosition { get; init; }
-    Type Type { get; init; }
-    object Data { get; init; }
-    IDictionary<string, object> Metadata { get; init; }
-    DateTimeOffset Timestamp { get; init; }
+    Guid Id { get; }
+    string StreamName { get; }
+    long StreamPosition { get; }
+    long GlobalPosition { get; }
+    Type Type { get; }
+    object Data { get; }
+    IDictionary<string, object> Metadata { get; }
+    DateTimeOffset Timestamp { get; }
 }
