@@ -8,7 +8,6 @@ namespace Beckett.Storage.Postgres;
 public class PostgresSubscriptionStorage(
     BeckettOptions options,
     IPostgresDatabase database,
-    IPostgresNotificationListener listener,
     IEventTypeMap eventTypeMap
 ) : ISubscriptionStorage
 {
@@ -27,18 +26,6 @@ public class PostgresSubscriptionStorage(
             startFromBeginning,
             cancellationToken
         );
-    }
-
-    public IEnumerable<Task> ConfigureBackgroundService(ISubscriptionProcessor processor, CancellationToken stoppingToken)
-    {
-        if (options.Postgres.EnableNotifications)
-        {
-            yield return listener.Listen(
-                "beckett:poll",
-                (_, _) => processor.Poll(stoppingToken),
-                stoppingToken
-            );
-        }
     }
 
     public async Task<IReadOnlyList<SubscriptionStream>> GetSubscriptionStreamsToProcess(
