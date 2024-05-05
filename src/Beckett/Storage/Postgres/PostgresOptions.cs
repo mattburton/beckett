@@ -6,11 +6,10 @@ public class PostgresOptions
 {
     public const string DefaultSchema = "beckett";
 
+    internal NpgsqlDataSource? DataSource { get; private set; }
+
     public bool Enabled { get; set; }
-    public NpgsqlDataSource? DataSource { get; private set; }
-    public string Schema { get; private set; } = DefaultSchema;
-    public bool EnableNotifications { get; private set; }
-    public TimeSpan ListenerKeepAlive { get; private set; } = TimeSpan.FromSeconds(10);
+    public string Schema { get; set; } = DefaultSchema;
 
     public void UseSchema(string schema)
     {
@@ -34,15 +33,5 @@ public class PostgresOptions
         };
 
         DataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).AddBeckett().Build();
-    }
-
-    public void UseNotifications(TimeSpan? keepAlive = null)
-    {
-        EnableNotifications = true;
-
-        if (keepAlive != null)
-        {
-            ListenerKeepAlive = keepAlive.Value;
-        }
     }
 }

@@ -11,7 +11,6 @@ public interface IPostgresNotificationListener
 }
 
 public class PostgresNotificationListener(
-    BeckettOptions options,
     IPostgresDatabase database,
     ILogger<PostgresNotificationListener> logger
 ) : IPostgresNotificationListener
@@ -26,7 +25,7 @@ public class PostgresNotificationListener(
 
                 connection.Notification += eventHandler;
 
-                using var keepAlive = new System.Timers.Timer(options.Postgres.ListenerKeepAlive.TotalMilliseconds);
+                using var keepAlive = new System.Timers.Timer(TimeSpan.FromSeconds(10).TotalMilliseconds);
 
                 try
                 {

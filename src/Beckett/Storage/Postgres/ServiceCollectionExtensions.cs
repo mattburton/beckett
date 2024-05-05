@@ -30,19 +30,16 @@ public static class ServiceCollectionExtensions
             return new PostgresDatabase(dataSource);
         });
 
+        services.AddSingleton<IPostgresNotificationListener, PostgresNotificationListener>();
+
         services.AddSingleton<IEventStorage, PostgresEventStorage>();
 
         services.AddSingleton<IPostgresEventStorage, PostgresEventStorage>();
 
+        services.AddHostedService<PostgresEventListenerService>();
+
         services.AddSingleton<IScheduledEventStorage, PostgresScheduledEventStorage>();
 
-        services.AddSingleton<IPostgresNotificationListener, PostgresNotificationListener>();
-
         services.AddSingleton<ISubscriptionStorage, PostgresSubscriptionStorage>();
-
-        if (options.Postgres.EnableNotifications)
-        {
-            services.AddHostedService<PostgresListenerService>();
-        }
     }
 }

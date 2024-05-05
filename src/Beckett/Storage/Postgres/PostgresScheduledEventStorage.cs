@@ -54,7 +54,7 @@ public class PostgresScheduledEventStorage(
             connection,
             transaction,
             options.Postgres.Schema,
-            options.Events.ScheduledEventBatchSize,
+            options.Events.Scheduling.BatchSize,
             cancellationToken
         );
 

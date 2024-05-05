@@ -16,12 +16,12 @@ public class ScheduledEventService(
             try
             {
                 await storage.DeliverScheduledEvents(
-                    options.Events.ScheduledEventBatchSize,
+                    options.Events.Scheduling.BatchSize,
                     DeliverScheduledEvents,
                     stoppingToken
                 );
 
-                await Task.Delay(options.Events.ScheduledEventPollingInterval, stoppingToken);
+                await Task.Delay(options.Events.Scheduling.PollingInterval, stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

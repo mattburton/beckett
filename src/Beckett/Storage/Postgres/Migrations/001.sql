@@ -137,7 +137,7 @@ BEGIN
   SELECT stream_version INTO _stream_version
   FROM new_stream_version;
 
-  PERFORM pg_notify('beckett:poll', null);
+  PERFORM pg_notify('beckett:events', null);
 
   RETURN _stream_version;
 END;
