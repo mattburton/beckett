@@ -2,7 +2,10 @@ using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Subscriptions.Services;
 
-public class SubscriptionPollingService(SubscriptionOptions options, ISubscriptionConsumerGroup consumerGroup) : BackgroundService
+public class SubscriptionPollingService(
+    SubscriptionOptions options,
+    ISubscriptionConsumerGroup consumerGroup
+) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

@@ -15,12 +15,6 @@ $$;
 
 GRANT USAGE ON SCHEMA __schema__ to beckett;
 
-ALTER DEFAULT PRIVILEGES FOR ROLE beckett IN SCHEMA __schema__
-GRANT SELECT, INSERT ON TABLES TO beckett;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE beckett IN SCHEMA __schema__
-GRANT EXECUTE ON FUNCTIONS TO beckett;
-
 -------------------------------------------------
 -- EVENT STORE SUPPORT
 -------------------------------------------------

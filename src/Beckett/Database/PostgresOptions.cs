@@ -11,7 +11,6 @@ public class PostgresOptions
     public bool Enabled { get; set; }
     public bool Notifications { get; set; } = true;
     public string Schema { get; set; } = DefaultSchema;
-    public long GlobalPollingLockId { get; set; } = 1;
 
     public void UseSchema(string schema)
     {

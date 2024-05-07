@@ -6,8 +6,8 @@ using Beckett.Subscriptions.Retries.Events.Models;
 namespace Beckett.Subscriptions.Retries;
 
 public class RetryManager(
-    ISubscriptionRegistry subscriptionRegistry,
     IPostgresDatabase database,
+    ISubscriptionRegistry subscriptionRegistry,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
     IEventStore eventStore
 ) : IRetryManager
@@ -24,7 +24,7 @@ public class RetryManager(
 
         if (subscription == null)
         {
-            throw new InvalidOperationException($"Unknown subscription: {subscriptionName}");
+            return;
         }
 
         var retryStreamName = RetryStreamName.For(subscriptionName, streamName);

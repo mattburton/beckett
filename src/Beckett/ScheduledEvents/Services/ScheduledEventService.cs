@@ -10,7 +10,8 @@ public class ScheduledEventService(
     ScheduledEventOptions options,
     IPostgresEventDeserializer eventDeserializer,
     IEventStore eventStore,
-    ILogger<ScheduledEventService> logger) : BackgroundService
+    ILogger<ScheduledEventService> logger
+) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
