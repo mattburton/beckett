@@ -56,7 +56,8 @@ public class SubscriptionStreamProcessor(
                 type,
                 message,
                 metadata,
-                streamMessage.Timestamp
+                streamMessage.Timestamp,
+                messageStore
             ));
         }
 

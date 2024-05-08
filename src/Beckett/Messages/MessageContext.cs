@@ -8,5 +8,18 @@ public readonly record struct MessageContext(
     Type Type,
     object Message,
     IDictionary<string, object> Metadata,
-    DateTimeOffset Timestamp
-) : IMessageContext;
+    DateTimeOffset Timestamp,
+    IMessageStore MessageStore
+) : IMessageContext
+{
+    public Task<AppendResult> AppendToStream(string streamName, ExpectedVersion expectedVersion, IEnumerable<object> messages,
+        CancellationToken cancellationToken)
+    {
+        return MessageStore.AppendToStream(streamName, expectedVersion, messages, cancellationToken);
+    }
+
+    public Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken)
+    {
+        return MessageStore.ReadStream(streamName, options, cancellationToken);
+    }
+}
