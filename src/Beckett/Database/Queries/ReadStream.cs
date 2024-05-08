@@ -7,9 +7,9 @@ namespace Beckett.Database.Queries;
 public class ReadStream(
     string streamName,
     ReadOptions options
-) : IPostgresDatabaseQuery<IReadOnlyList<PostgresEvent>>
+) : IPostgresDatabaseQuery<IReadOnlyList<PostgresMessage>>
 {
-    public async Task<IReadOnlyList<PostgresEvent>> Execute(
+    public async Task<IReadOnlyList<PostgresMessage>> Execute(
         NpgsqlCommand command,
         string schema,
         CancellationToken cancellationToken
@@ -47,11 +47,11 @@ public class ReadStream(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<PostgresEvent>();
+        var results = new List<PostgresMessage>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            results.Add(PostgresEvent.From(reader));
+            results.Add(PostgresMessage.From(reader));
         }
 
         return results;

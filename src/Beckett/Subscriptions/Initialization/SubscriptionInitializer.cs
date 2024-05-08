@@ -1,16 +1,16 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
-using Beckett.Events;
+using Beckett.Messages;
 
 namespace Beckett.Subscriptions.Initialization;
 
 public class SubscriptionInitializer(
     IPostgresDatabase database,
     SubscriptionOptions options,
-    IEventStorage eventStorage,
+    IMessageStorage messageStorage,
     ISubscriptionRegistry subscriptionRegistry,
-    IEventTypeMap eventTypeMap
+    IMessageTypeMap messageTypeMap
 ) : ISubscriptionInitializer
 {
     private Task _task = Task.CompletedTask;
@@ -85,7 +85,7 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            var streamChanges = await eventStorage.ReadStreamChanges(
+            var streamChanges = await messageStorage.ReadStreamChanges(
                 checkpoint.StreamPosition,
                 options.BatchSize,
                 cancellationToken
@@ -100,7 +100,7 @@ public class SubscriptionInitializer(
                     cancellationToken
                 );
 
-                var newStreamChanges = await eventStorage.ReadStreamChanges(
+                var newStreamChanges = await messageStorage.ReadStreamChanges(
                     checkpoint.StreamPosition,
                     options.BatchSize,
                     cancellationToken
@@ -123,13 +123,13 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            var subscriptionEventTypes = subscription.EventTypes.Select(eventTypeMap.GetName).ToArray();
+            var subscriptionMessageTypes = subscription.MessageTypes.Select(messageTypeMap.GetName).ToArray();
 
             var checkpoints = new List<CheckpointType>();
 
             foreach (var streamChange in streamChanges)
             {
-                if (!subscriptionEventTypes.Intersect(streamChange.EventTypes).Any())
+                if (!subscriptionMessageTypes.Intersect(streamChange.MessageTypes).Any())
                 {
                     continue;
                 }

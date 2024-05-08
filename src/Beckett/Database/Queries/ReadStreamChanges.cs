@@ -18,7 +18,7 @@ public class ReadStreamChanges(
             select stream_name,
                    stream_version,
                    global_position,
-                   event_types
+                   message_types
             from {schema}.read_stream_changes($1, $2);
         ";
 
@@ -51,6 +51,6 @@ public class ReadStreamChanges(
         string StreamName,
         long StreamVersion,
         long GlobalPosition,
-        string[] EventTypes
+        string[] MessageTypes
     );
 }

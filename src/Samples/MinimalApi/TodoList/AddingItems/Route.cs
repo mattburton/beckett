@@ -6,14 +6,14 @@ public static class Route
     {
         builder.MapPost("/{id}", async (
             AddTodoListItem command,
-            IEventStore eventStore,
+            IMessageStore messageStore,
             CancellationToken cancellationToken
         ) =>
         {
             try
             {
                 //TODO - add polly retry example here
-                var result = await command.Execute(eventStore, cancellationToken);
+                var result = await command.Execute(messageStore, cancellationToken);
 
                 return Results.Ok(new
                 {

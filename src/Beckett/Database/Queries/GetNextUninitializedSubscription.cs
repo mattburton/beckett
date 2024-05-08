@@ -1,5 +1,4 @@
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 

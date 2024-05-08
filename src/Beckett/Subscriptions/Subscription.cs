@@ -4,14 +4,14 @@ public class Subscription
 {
     internal string Name { get; set; } = null!;
     internal Type Type { get; set; } = null!;
-    internal HashSet<Type> EventTypes { get; } = [];
+    internal HashSet<Type> MessageTypes { get; } = [];
     internal Func<object, object, CancellationToken, Task>? Handler { get; set; }
-    internal bool EventContextHandler { get; set; }
+    internal bool MessageContextHandler { get; set; }
 
     public StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     public int MaxRetryCount { get; set; } = 10;
 
-    public void SubscribeTo<TEvent>() => EventTypes.Add(typeof(TEvent));
+    public void SubscribeTo<TMessage>() => MessageTypes.Add(typeof(TMessage));
 
-    internal bool SubscribedToEvent(Type eventType) => EventTypes.Contains(eventType);
+    internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType);
 }

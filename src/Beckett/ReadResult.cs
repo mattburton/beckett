@@ -1,11 +1,11 @@
 namespace Beckett;
 
-public readonly struct ReadResult(IReadOnlyList<object> events, long streamVersion)
+public readonly struct ReadResult(IReadOnlyList<object> messages, long streamVersion)
 {
-    public IReadOnlyList<object> Events { get; } = events;
+    public IReadOnlyList<object> Messages { get; } = messages;
     public long StreamVersion { get; } = streamVersion;
 
-    public bool IsEmpty => Events.Count == 0;
+    public bool IsEmpty => Messages.Count == 0;
 
-    public TState ProjectTo<TState>() where TState : IState, new() => Events.ProjectTo<TState>();
+    public TState AggregateTo<TState>() where TState : IState, new() => Messages.AggregateTo<TState>();
 }

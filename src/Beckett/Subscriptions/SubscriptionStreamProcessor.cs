@@ -1,6 +1,6 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
-using Beckett.Events;
+using Beckett.Messages;
 using Beckett.Subscriptions.Retries;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Events.Models;
@@ -12,8 +12,8 @@ namespace Beckett.Subscriptions;
 
 public class SubscriptionStreamProcessor(
     IPostgresDatabase database,
-    IPostgresEventDeserializer eventDeserializer,
-    IEventStore eventStore,
+    IPostgresMessageDeserializer messageDeserializer,
+    IMessageStore messageStore,
     IServiceProvider serviceProvider,
     ILogger<SubscriptionStreamProcessor> logger
 ) : ISubscriptionStreamProcessor
@@ -29,7 +29,7 @@ public class SubscriptionStreamProcessor(
         CancellationToken cancellationToken
     )
     {
-        var streamEvents = await database.Execute(
+        var streamMessages = await database.Execute(
             new ReadStream(
                 streamName,
                 new ReadOptions
@@ -42,29 +42,29 @@ public class SubscriptionStreamProcessor(
             cancellationToken
         );
 
-        var events = new List<IEventContext>();
+        var messages = new List<IMessageContext>();
 
-        foreach (var streamEvent in streamEvents)
+        foreach (var streamMessage in streamMessages)
         {
-            var (type, data, metadata) = eventDeserializer.DeserializeAll(streamEvent);
+            var (type, message, metadata) = messageDeserializer.DeserializeAll(streamMessage);
 
-            events.Add(new EventContext(
-                streamEvent.Id,
-                streamEvent.StreamName,
-                streamEvent.StreamPosition,
-                streamEvent.GlobalPosition,
+            messages.Add(new MessageContext(
+                streamMessage.Id,
+                streamMessage.StreamName,
+                streamMessage.StreamPosition,
+                streamMessage.GlobalPosition,
                 type,
-                data,
+                message,
                 metadata,
-                streamEvent.Timestamp
+                streamMessage.Timestamp
             ));
         }
 
-        var result = await HandleEventBatch(subscription, streamName, events, true, cancellationToken);
+        var result = await HandleMessageBatch(subscription, streamName, messages, true, cancellationToken);
 
         switch (result)
         {
-            case EventBatchResult.Success success:
+            case MessageBatchResult.Success success:
                 await database.Execute(
                     new UpdateCheckpointStreamPosition(subscription.Name, streamName, success.StreamPosition, false),
                     connection,
@@ -73,7 +73,7 @@ public class SubscriptionStreamProcessor(
                 );
 
                 break;
-            case EventBatchResult.Blocked blocked:
+            case MessageBatchResult.Blocked blocked:
                 if (ShouldThrow(subscription, retryOnError))
                 {
                     throw blocked.Exception;
@@ -95,54 +95,53 @@ public class SubscriptionStreamProcessor(
         return !retryOnError || subscription.MaxRetryCount == 0;
     }
 
-    private async Task<EventBatchResult> HandleEventBatch(
+    private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,
         string streamName,
-        IReadOnlyList<IEventContext> events,
+        IReadOnlyList<IMessageContext> messages,
         bool retryOnError,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            if (events.Count == 0)
+            if (messages.Count == 0)
             {
-                return new EventBatchResult.NoEvents();
+                return new MessageBatchResult.NoMessages();
             }
 
-            foreach (var @event in events)
+            foreach (var messageContext in messages)
             {
-                if (!subscription.SubscribedToEvent(@event.Type))
+                if (!subscription.SubscribedToMessage(messageContext.Type))
                 {
                     continue;
                 }
 
                 using var scope = serviceProvider.CreateScope();
 
-                //TODO - support handlers that accept the event context as an argument
                 var handler = scope.ServiceProvider.GetRequiredService(subscription.Type);
 
                 try
                 {
-                    if (subscription.EventContextHandler)
+                    if (subscription.MessageContextHandler)
                     {
-                        await subscription.Handler!(handler, @event, cancellationToken);
+                        await subscription.Handler!(handler, messageContext, cancellationToken);
                     }
                     else
                     {
-                        await subscription.Handler!(handler, @event.Data, cancellationToken);
+                        await subscription.Handler!(handler, messageContext.Message, cancellationToken);
                     }
                 }
                 catch (Exception e)
                 {
                     logger.LogError(
                         e,
-                        "Error dispatching event {EventType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [ID: {EventId}]",
-                        @event.Type,
+                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [ID: {MessageId}]",
+                        messageContext.Type,
                         subscription.Name,
                         streamName,
                         subscription.Type,
-                        @event.Id
+                        messageContext.Id
                     );
 
                     if (!retryOnError || subscription.MaxRetryCount == 0)
@@ -152,7 +151,7 @@ public class SubscriptionStreamProcessor(
 
                     var retryAt = 0.GetNextDelayWithExponentialBackoff();
 
-                    await eventStore.AppendToStream(
+                    await messageStore.AppendToStream(
                         RetryStreamName.For(
                             subscription.Name,
                             streamName
@@ -161,7 +160,7 @@ public class SubscriptionStreamProcessor(
                         new SubscriptionError(
                             subscription.Name,
                             streamName,
-                            @event.StreamPosition,
+                            messageContext.StreamPosition,
                             ExceptionData.From(e),
                             retryAt,
                             DateTimeOffset.UtcNow
@@ -169,11 +168,11 @@ public class SubscriptionStreamProcessor(
                         cancellationToken
                     );
 
-                    return new EventBatchResult.Blocked(@event.StreamPosition, e);
+                    return new MessageBatchResult.Blocked(messageContext.StreamPosition, e);
                 }
             }
 
-            return new EventBatchResult.Success(events[^1].StreamPosition);
+            return new MessageBatchResult.Success(messages[^1].StreamPosition);
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -187,12 +186,12 @@ public class SubscriptionStreamProcessor(
         }
     }
 
-    public abstract record EventBatchResult
+    public abstract record MessageBatchResult
     {
-        public record NoEvents : EventBatchResult;
+        public record NoMessages : MessageBatchResult;
 
-        public record Success(long StreamPosition) : EventBatchResult;
+        public record Success(long StreamPosition) : MessageBatchResult;
 
-        public record Blocked(long StreamPosition, Exception Exception) : EventBatchResult;
+        public record Blocked(long StreamPosition, Exception Exception) : MessageBatchResult;
     }
 }

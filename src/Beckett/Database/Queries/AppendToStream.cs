@@ -4,7 +4,11 @@ using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class AppendToStream(string streamName, long expectedVersion, EventType[] events) : IPostgresDatabaseQuery<long>
+public class AppendToStream(
+    string streamName,
+    long expectedVersion,
+    MessageType[] messages
+) : IPostgresDatabaseQuery<long>
 {
     public async Task<long> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
@@ -14,13 +18,13 @@ public class AppendToStream(string streamName, long expectedVersion, EventType[]
 
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-            command.Parameters.Add(new NpgsqlParameter { DataTypeName = EventType.DataTypeNameFor(schema) });
+            command.Parameters.Add(new NpgsqlParameter { DataTypeName = MessageType.DataTypeNameFor(schema) });
 
             await command.PrepareAsync(cancellationToken);
 
             command.Parameters[0].Value = streamName;
             command.Parameters[1].Value = expectedVersion;
-            command.Parameters[2].Value = events;
+            command.Parameters[2].Value = messages;
 
             var result = await command.ExecuteScalarAsync(cancellationToken);
 

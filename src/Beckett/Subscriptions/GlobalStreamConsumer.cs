@@ -1,19 +1,13 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
-using Beckett.Events;
+using Beckett.Messages;
 
 namespace Beckett.Subscriptions;
 
-public static class GlobalConstants
-{
-    public const string GlobalName = "$global";
-    public const string AllStreamName = "$all";
-}
-
 public class GlobalStreamConsumer(
     IPostgresDatabase database,
-    IEventStorage eventStorage,
+    IMessageStorage messageStorage,
     SubscriptionOptions options,
     ISubscriptionRegistry subscriptionRegistry
 ) : IGlobalStreamConsumer
@@ -50,7 +44,7 @@ public class GlobalStreamConsumer(
             return;
         }
 
-        var streamChanges = await eventStorage.ReadStreamChanges(
+        var streamChanges = await messageStorage.ReadStreamChanges(
             checkpoint.StreamPosition,
             options.BatchSize,
             cancellationToken
@@ -66,7 +60,7 @@ public class GlobalStreamConsumer(
         foreach (var streamChange in streamChanges)
         {
             var subscriptions = subscriptionRegistry.All()
-                .Where(x => x.EventTypes.Intersect(streamChange.EventTypes).Any());
+                .Where(x => x.MessageTypes.Intersect(streamChange.MessageTypes).Any());
 
             checkpoints.AddRange(subscriptions.Select(subscription =>
                 new CheckpointType

@@ -2,9 +2,9 @@ namespace MinimalApi.TodoList.CreatingLists;
 
 public record CreateTodoList(Guid Id, string Name)
 {
-    public Task<AppendResult> Execute(IEventStore eventStore, CancellationToken cancellationToken)
+    public Task<AppendResult> Execute(IMessageStore messageStore, CancellationToken cancellationToken)
     {
-        return eventStore.AppendToStream(
+        return messageStore.AppendToStream(
             StreamName.For<TodoList>(Id),
             ExpectedVersion.StreamDoesNotExist,
             new TodoListCreated(Id, Name),

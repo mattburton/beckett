@@ -1,15 +1,15 @@
-using Beckett.Events;
+using Beckett.Messages;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionRegistry
+public class SubscriptionRegistry(IMessageTypeMap messageTypeMap) : ISubscriptionRegistry
 {
     private readonly Dictionary<string, Subscription> _subscriptions = new();
     private readonly Dictionary<string, Type> _nameTypeMap = new();
 
-    public void AddSubscription<THandler, TEvent>(
+    public void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandler<THandler, TEvent> handler,
+        SubscriptionHandler<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     )
     {
@@ -29,16 +29,16 @@ public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionReg
 
         configure?.Invoke(configuration);
 
-        configuration.SubscribeTo<TEvent>();
+        configuration.SubscribeTo<TMessage>();
 
-        configuration.Handler = (h, e, t) => handler((THandler)h, (TEvent)e, t);
+        configuration.Handler = (h, m, t) => handler((THandler)h, (TMessage)m, t);
 
         _subscriptions.Add(name, configuration);
     }
 
-    public void AddSubscription<THandler, TEvent>(
+    public void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandlerWithContext<THandler, TEvent> handler,
+        SubscriptionHandlerWithContext<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     )
     {
@@ -58,11 +58,11 @@ public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionReg
 
         configure?.Invoke(configuration);
 
-        configuration.SubscribeTo<TEvent>();
+        configuration.SubscribeTo<TMessage>();
 
-        configuration.Handler = (h, c, t) => handler((THandler)h, (TEvent)((IEventContext)c).Data, (IEventContext)c, t);
+        configuration.Handler = (h, c, t) => handler((THandler)h, (TMessage)((IMessageContext)c).Message, (IMessageContext)c, t);
 
-        configuration.EventContextHandler = true;
+        configuration.MessageContextHandler = true;
 
         _subscriptions.Add(name, configuration);
     }
@@ -85,27 +85,27 @@ public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionReg
 
         configure?.Invoke(configuration);
 
-        configuration.Handler = (h, c, t) => handler((THandler)h, (IEventContext)c, t);
+        configuration.Handler = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
 
-        configuration.EventContextHandler = true;
+        configuration.MessageContextHandler = true;
 
-        if (configuration.EventTypes.Count == 0)
+        if (configuration.MessageTypes.Count == 0)
         {
             throw new Exception(
-                $"Subscriptions that handle IEventContext instead of a specific event type must subscribe to one or more event types explicitly by calling configuration.SubscribeTo<EventType>()"
+                $"Subscription configuration error for {name} - subscriptions that handle {nameof(IMessageContext)} instead of a specific message type must subscribe to one or more message types explicitly by calling configuration.SubscribeTo<MessageType>()"
             );
         }
 
         _subscriptions.Add(name, configuration);
     }
 
-    public IEnumerable<(string Name, string[] EventTypes, StartingPosition StartingPosition)> All()
+    public IEnumerable<(string Name, string[] MessageTypes, StartingPosition StartingPosition)> All()
     {
         foreach (var subscription in _subscriptions.Values)
         {
-            var eventTypes = subscription.EventTypes.Select(eventTypeMap.GetName).ToArray();
+            var messageTypes = subscription.MessageTypes.Select(messageTypeMap.GetName).ToArray();
 
-            yield return (subscription.Name, eventTypes, subscription.StartingPosition);
+            yield return (subscription.Name, messageTypes, subscription.StartingPosition);
         }
     }
 

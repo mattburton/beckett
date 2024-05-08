@@ -4,7 +4,7 @@ public static class Configuration
 {
     public static IBeckettBuilder UseAddingItems(this IBeckettBuilder builder)
     {
-        builder.MapEvent<TodoListItemAdded>("TodoListItemAdded");
+        builder.MapMessage<TodoListItemAdded>("TodoListItemAdded");
 
         return builder;
     }

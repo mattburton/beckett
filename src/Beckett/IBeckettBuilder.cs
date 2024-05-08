@@ -1,4 +1,4 @@
-using Beckett.Events;
+using Beckett.Messages;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,17 +12,17 @@ public interface IBeckettBuilder
     IHostEnvironment Environment { get; }
     IServiceCollection Services { get; }
 
-    void MapEvent<TEvent>(string name);
+    void MapMessage<TMessage>(string name);
 
-    void AddSubscription<THandler, TEvent>(
+    void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandler<THandler, TEvent> handler,
+        SubscriptionHandler<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     );
 
-    void AddSubscription<THandler, TEvent>(
+    void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandlerWithContext<THandler, TEvent> handler,
+        SubscriptionHandlerWithContext<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     );
 
@@ -37,7 +37,7 @@ public class BeckettBuilder(
     IConfiguration configuration,
     IHostEnvironment environment,
     IServiceCollection services,
-    IEventTypeMap eventTypeMap,
+    IMessageTypeMap messageTypeMap,
     ISubscriptionRegistry subscriptionRegistry
 ) : IBeckettBuilder
 {
@@ -45,17 +45,17 @@ public class BeckettBuilder(
     public IHostEnvironment Environment { get; } = environment;
     public IServiceCollection Services { get; } = services;
 
-    public void MapEvent<TEvent>(string name) => eventTypeMap.Map<TEvent>(name);
+    public void MapMessage<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
 
-    public void AddSubscription<THandler, TEvent>(
+    public void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandler<THandler, TEvent> handler,
+        SubscriptionHandler<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     ) => subscriptionRegistry.AddSubscription(name, handler, configure);
 
-    public void AddSubscription<THandler, TEvent>(
+    public void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandlerWithContext<THandler, TEvent> handler,
+        SubscriptionHandlerWithContext<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     ) => subscriptionRegistry.AddSubscription(name, handler, configure);
 

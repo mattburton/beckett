@@ -4,9 +4,9 @@ public class DecisionState : IState
 {
     public HashSet<string> Items { get; } = [];
 
-    public void Apply(object @event)
+    public void Apply(object message)
     {
-        switch (@event)
+        switch (message)
         {
             case TodoListItemAdded e:
                 Apply(e);

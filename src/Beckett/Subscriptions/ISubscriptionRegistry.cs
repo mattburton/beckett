@@ -2,15 +2,15 @@ namespace Beckett.Subscriptions;
 
 public interface ISubscriptionRegistry
 {
-    void AddSubscription<THandler, TEvent>(
+    void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandler<THandler, TEvent> handler,
+        SubscriptionHandler<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     );
 
-    void AddSubscription<THandler, TEvent>(
+    void AddSubscription<THandler, TMessage>(
         string name,
-        SubscriptionHandlerWithContext<THandler, TEvent> handler,
+        SubscriptionHandlerWithContext<THandler, TMessage> handler,
         Action<Subscription>? configure = null
     );
 
@@ -20,26 +20,26 @@ public interface ISubscriptionRegistry
         Action<Subscription>? configure = null
     );
 
-    IEnumerable<(string Name, string[] EventTypes, StartingPosition StartingPosition)> All();
+    IEnumerable<(string Name, string[] MessageTypes, StartingPosition StartingPosition)> All();
     Type GetType(string name);
     Subscription? GetSubscription(string name);
 }
 
-public delegate Task SubscriptionHandler<in THandler, in TEvent>(
+public delegate Task SubscriptionHandler<in THandler, in TMessage>(
     THandler handler,
-    TEvent @event,
+    TMessage message,
     CancellationToken cancellationToken
 );
 
-public delegate Task SubscriptionHandlerWithContext<in THandler, in TEvent>(
+public delegate Task SubscriptionHandlerWithContext<in THandler, in TMessage>(
     THandler handler,
-    TEvent @event,
-    IEventContext context,
+    TMessage message,
+    IMessageContext context,
     CancellationToken cancellationToken
 );
 
 public delegate Task SubscriptionHandler<in THandler>(
     THandler handler,
-    IEventContext context,
+    IMessageContext context,
     CancellationToken cancellationToken
 );

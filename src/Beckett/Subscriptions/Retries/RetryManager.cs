@@ -9,7 +9,7 @@ public class RetryManager(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
-    IEventStore eventStore
+    IMessageStore messageStore
 ) : IRetryManager
 {
     public async Task Retry(
@@ -63,7 +63,7 @@ public class RetryManager(
 
             await transaction.CommitAsync(cancellationToken);
 
-            await eventStore.AppendToStream(
+            await messageStore.AppendToStream(
                 retryStreamName,
                 ExpectedVersion.StreamExists,
                 new SubscriptionRetrySucceeded(
@@ -80,7 +80,7 @@ public class RetryManager(
         {
             if (attempts >= subscription.MaxRetryCount)
             {
-                await eventStore.AppendToStream(
+                await messageStore.AppendToStream(
                     retryStreamName,
                     ExpectedVersion.StreamExists,
                     new SubscriptionRetryFailed(
@@ -96,7 +96,7 @@ public class RetryManager(
             }
             else
             {
-                await eventStore.AppendToStream(
+                await messageStore.AppendToStream(
                     retryStreamName,
                     ExpectedVersion.StreamExists,
                     new SubscriptionRetryError(

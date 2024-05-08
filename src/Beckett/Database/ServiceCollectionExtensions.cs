@@ -1,7 +1,7 @@
 using Beckett.Database.Notifications;
 using Beckett.Database.Notifications.Handlers;
 using Beckett.Database.Notifications.Services;
-using Beckett.Events;
+using Beckett.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -32,9 +32,9 @@ public static class ServiceCollectionExtensions
             return new PostgresDatabase(dataSource, options);
         });
 
-        services.AddSingleton<IPostgresEventDeserializer, PostgresEventDeserializer>();
+        services.AddSingleton<IPostgresMessageDeserializer, PostgresMessageDeserializer>();
 
-        services.AddSingleton<IEventStorage, PostgresEventStorage>();
+        services.AddSingleton<IMessageStorage, PostgresMessageStorage>();
 
         if (options.Notifications)
         {
@@ -44,9 +44,9 @@ public static class ServiceCollectionExtensions
 
     private static void AddPostgresNotifications(IServiceCollection services)
     {
-        services.AddSingleton<IPostgresNotificationHandler, CheckpointsNotificationHandler>();
+        services.AddSingleton<IPostgresNotificationHandler, CheckpointNotificationHandler>();
 
-        services.AddSingleton<IPostgresNotificationHandler, EventsNotificationHandler>();
+        services.AddSingleton<IPostgresNotificationHandler, MessageNotificationHandler>();
 
         services.AddSingleton<IPostgresNotificationListener, PostgresNotificationListener>();
 

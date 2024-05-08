@@ -9,9 +9,9 @@ public class TodoListView : IState
     public string Name { get; set; } = null!;
     public List<string> Items { get; set; } = [];
 
-    public void Apply(object @event)
+    public void Apply(object message)
     {
-        switch (@event)
+        switch (message)
         {
             case TodoListCreated e:
                 Apply(e);

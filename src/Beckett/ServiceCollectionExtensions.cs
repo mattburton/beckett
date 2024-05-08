@@ -1,6 +1,6 @@
 using Beckett.Database;
-using Beckett.Events;
-using Beckett.ScheduledEvents;
+using Beckett.Messages;
+using Beckett.Messages.Scheduling;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.Configuration;
@@ -23,23 +23,23 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddPostgresSupport(options.Postgres);
 
-        builder.Services.AddEventSupport(options.Events);
+        builder.Services.AddMessageSupport(options.Messages);
 
-        builder.Services.AddScheduledEventSupport(options.ScheduledEvents);
+        builder.Services.AddScheduledMessageSupport(options.ScheduledMessages);
 
         builder.Services.AddSubscriptionSupport(options.Subscriptions);
 
-        builder.Services.AddSingleton<IEventStore, EventStore>();
+        builder.Services.AddSingleton<IMessageStore, MessageStore>();
 
-        var eventTypeProvider = new EventTypeProvider();
+        var messageTypeProvider = new MessageTypeProvider();
 
-        builder.Services.AddSingleton<IEventTypeProvider>(eventTypeProvider);
+        builder.Services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
 
-        var eventTypeMap = new EventTypeMap(options.Events, eventTypeProvider);
+        var messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
 
-        builder.Services.AddSingleton<IEventTypeMap>(eventTypeMap);
+        builder.Services.AddSingleton<IMessageTypeMap>(messageTypeMap);
 
-        var subscriptionRegistry = new SubscriptionRegistry(eventTypeMap);
+        var subscriptionRegistry = new SubscriptionRegistry(messageTypeMap);
 
         builder.Services.AddSingleton<ISubscriptionRegistry>(subscriptionRegistry);
 
@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
             builder.Configuration,
             builder.Environment,
             builder.Services,
-            eventTypeMap,
+            messageTypeMap,
             subscriptionRegistry
         ).UseSubscriptionRetries();
     }
@@ -58,7 +58,7 @@ public static class ServiceCollectionExtensions
         IHostEnvironment environment = null!;
         IServiceCollection serviceCollection = null!;
         BeckettOptions options;
-        IEventTypeMap eventTypeMap = null!;
+        IMessageTypeMap messageTypeMap = null!;
         ISubscriptionRegistry subscriptionRegistry = null!;
 
         builder.ConfigureServices((context, services) =>
@@ -76,23 +76,23 @@ public static class ServiceCollectionExtensions
 
             services.AddPostgresSupport(options.Postgres);
 
-            services.AddEventSupport(options.Events);
+            services.AddMessageSupport(options.Messages);
 
-            services.AddScheduledEventSupport(options.ScheduledEvents);
+            services.AddScheduledMessageSupport(options.ScheduledMessages);
 
             services.AddSubscriptionSupport(options.Subscriptions);
 
-            services.AddSingleton<IEventStore, EventStore>();
+            services.AddSingleton<IMessageStore, MessageStore>();
 
-            var eventTypeProvider = new EventTypeProvider();
+            var messageTypeProvider = new MessageTypeProvider();
 
-            services.AddSingleton<IEventTypeProvider>(eventTypeProvider);
+            services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
 
-            eventTypeMap = new EventTypeMap(options.Events, eventTypeProvider);
+            messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
 
-            services.AddSingleton(eventTypeMap);
+            services.AddSingleton(messageTypeMap);
 
-            subscriptionRegistry = new SubscriptionRegistry(eventTypeMap);
+            subscriptionRegistry = new SubscriptionRegistry(messageTypeMap);
 
             services.AddSingleton(subscriptionRegistry);
         });
@@ -101,7 +101,7 @@ public static class ServiceCollectionExtensions
             configuration,
             environment,
             serviceCollection,
-            eventTypeMap,
+            messageTypeMap,
             subscriptionRegistry
         ).UseSubscriptionRetries();
     }

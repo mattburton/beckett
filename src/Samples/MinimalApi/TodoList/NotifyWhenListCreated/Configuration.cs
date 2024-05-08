@@ -11,7 +11,7 @@ public static class Configuration
 
         builder.AddSubscription<TodoListCreatedHandler, TodoListCreated>(
             nameof(TodoListCreatedHandler),
-            (handler, @event, token) => handler.Handle(@event, token),
+            (handler, message, token) => handler.Handle(message, token),
             configuration => configuration.StartingPosition = StartingPosition.Earliest
         );
 

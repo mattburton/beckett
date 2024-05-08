@@ -6,11 +6,11 @@ public static class Route
     {
         builder.MapPost("/", async (
             CreateTodoList command,
-            IEventStore eventStore,
+            IMessageStore messageStore,
             CancellationToken cancellationToken
         ) =>
         {
-            var result = await command.Execute(eventStore, cancellationToken);
+            var result = await command.Execute(messageStore, cancellationToken);
 
             return Results.Ok(new
             {

@@ -10,12 +10,12 @@
         <PackageId>Beckett</PackageId>
         <PackageVersion>0.0.16</PackageVersion>
         <Authors>Matt Burton</Authors>
-        <Description>Event sourcing library</Description>
+        <Description>Messaging and event sourcing library</Description>
         <PackageProjectUrl>https://github.com/mattburton/beckett</PackageProjectUrl>
         <RepositoryUrl>https://github.com/mattburton/beckett</RepositoryUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>event sourcing, event modeling, event store</PackageTags>
+        <PackageTags>messaging, event sourcing, event modeling, event store</PackageTags>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591</NoWarn>
         <EnablePackageValidation>true</EnablePackageValidation>

@@ -8,10 +8,10 @@ public static class Configuration
 {
     public static IBeckettBuilder UseSubscriptionRetries(this IBeckettBuilder builder)
     {
-        builder.MapEvent<SubscriptionRetryError>("$subscription_retry_error");
-        builder.MapEvent<SubscriptionRetryFailed>("$subscription_retry_failed");
-        builder.MapEvent<SubscriptionRetrySucceeded>("$subscription_retry_succeeded");
-        builder.MapEvent<SubscriptionError>("$subscription_error");
+        builder.MapMessage<SubscriptionRetryError>("$subscription_retry_error");
+        builder.MapMessage<SubscriptionRetryFailed>("$subscription_retry_failed");
+        builder.MapMessage<SubscriptionRetrySucceeded>("$subscription_retry_succeeded");
+        builder.MapMessage<SubscriptionError>("$subscription_error");
 
         builder.Services.AddSingleton<IRetryManager, RetryManager>();
 
@@ -20,13 +20,13 @@ public static class Configuration
 
         builder.AddSubscription<SubscriptionErrorHandler, SubscriptionError>(
             "$subscription_error",
-            (handler, @event, token) => handler.Handle(@event, token),
+            (handler, message, token) => handler.Handle(message, token),
             configuration => configuration.MaxRetryCount = 0
         );
 
         builder.AddSubscription<SubscriptionRetryErrorHandler, SubscriptionRetryError>(
             "$subscription_retry_error",
-            (handler, @event, token) => handler.Handle(@event, token),
+            (handler, message, token) => handler.Handle(message, token),
             configuration => configuration.MaxRetryCount = 0
         );
 

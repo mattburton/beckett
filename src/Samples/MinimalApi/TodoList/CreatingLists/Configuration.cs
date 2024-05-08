@@ -4,7 +4,7 @@ public static class Configuration
 {
     public static IBeckettBuilder UseCreatingLists(this IBeckettBuilder builder)
     {
-        builder.MapEvent<TodoListCreated>("TodoListCreated");
+        builder.MapMessage<TodoListCreated>("TodoListCreated");
 
         return builder;
     }

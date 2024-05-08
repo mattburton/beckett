@@ -160,7 +160,7 @@ public static class Postgres
             .OrderBy(x => x.Name);
     }
 
-    private static string LoadMigration(Stream stream, string schema)
+    private static string LoadMigration(System.IO.Stream stream, string schema)
     {
         using var reader = new StreamReader(stream, Encoding.UTF8, true);
 
