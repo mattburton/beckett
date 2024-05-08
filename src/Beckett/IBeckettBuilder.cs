@@ -19,6 +19,18 @@ public interface IBeckettBuilder
         SubscriptionHandler<THandler, TEvent> handler,
         Action<Subscription>? configure = null
     );
+
+    void AddSubscription<THandler, TEvent>(
+        string name,
+        SubscriptionHandlerWithContext<THandler, TEvent> handler,
+        Action<Subscription>? configure = null
+    );
+
+    void AddSubscription<THandler>(
+        string name,
+        SubscriptionHandler<THandler> handler,
+        Action<Subscription>? configure = null
+    );
 }
 
 public class BeckettBuilder(
@@ -38,6 +50,18 @@ public class BeckettBuilder(
     public void AddSubscription<THandler, TEvent>(
         string name,
         SubscriptionHandler<THandler, TEvent> handler,
+        Action<Subscription>? configure = null
+    ) => subscriptionRegistry.AddSubscription(name, handler, configure);
+
+    public void AddSubscription<THandler, TEvent>(
+        string name,
+        SubscriptionHandlerWithContext<THandler, TEvent> handler,
+        Action<Subscription>? configure = null
+    ) => subscriptionRegistry.AddSubscription(name, handler, configure);
+
+    public void AddSubscription<THandler>(
+        string name,
+        SubscriptionHandler<THandler> handler,
         Action<Subscription>? configure = null
     ) => subscriptionRegistry.AddSubscription(name, handler, configure);
 }

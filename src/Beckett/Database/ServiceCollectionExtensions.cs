@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
 
             if (dataSource is null)
             {
-                throw new InvalidOperationException(
+                throw new Exception(
                     "Registered NpgsqlDataSource not found - please register one using AddNpgsqlDataSource from the Npgsql.DependencyInjection package, provide a configured instance via UseDataSource, or call UseConnectionString"
                 );
             }

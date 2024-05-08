@@ -1,5 +1,6 @@
 using MinimalApi.TodoList.AddingItems;
 using MinimalApi.TodoList.CreatingLists;
+using MinimalApi.TodoList.NotifyForEverything;
 using MinimalApi.TodoList.NotifyWhenItemAdded;
 using MinimalApi.TodoList.NotifyWhenListCreated;
 
@@ -11,5 +12,6 @@ public static class Configuration
         .UseCreatingLists()
         .UseAddingItems()
         .UseNotifyWhenItemAdded()
-        .UseNotifyWhenListCreated();
+        .UseNotifyWhenListCreated()
+        .UseGenericNotify();
 }

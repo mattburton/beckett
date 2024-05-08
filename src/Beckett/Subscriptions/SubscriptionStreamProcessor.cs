@@ -124,7 +124,14 @@ public class SubscriptionStreamProcessor(
 
                 try
                 {
-                    await subscription.Handler!(handler, @event.Data, cancellationToken);
+                    if (subscription.EventContextHandler)
+                    {
+                        await subscription.Handler!(handler, @event, cancellationToken);
+                    }
+                    else
+                    {
+                        await subscription.Handler!(handler, @event.Data, cancellationToken);
+                    }
                 }
                 catch (Exception e)
                 {

@@ -6,6 +6,7 @@ public class Subscription
     internal Type Type { get; set; } = null!;
     internal HashSet<Type> EventTypes { get; } = [];
     internal Func<object, object, CancellationToken, Task>? Handler { get; set; }
+    internal bool EventContextHandler { get; set; }
 
     public StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     public int MaxRetryCount { get; set; } = 10;

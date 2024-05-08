@@ -50,7 +50,7 @@ public class EventTypeMap(EventOptions options, IEventTypeProvider eventTypeProv
             {
                 if (!options.AllowDynamicTypeMapping)
                 {
-                    throw new InvalidOperationException($"Missing event type mapping for {name}");
+                    throw new Exception($"Missing event type mapping for {name}");
                 }
 
                 return eventTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName));

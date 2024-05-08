@@ -28,7 +28,7 @@ public class AppendToStream(string streamName, long expectedVersion, EventType[]
             {
                 long streamVersion => streamVersion,
                 DBNull => -1,
-                _ => throw new InvalidOperationException($"Unexpected result from append_to_stream function: {result}")
+                _ => throw new Exception($"Unexpected result from append_to_stream function: {result}")
             };
         }
         catch (PostgresException e)

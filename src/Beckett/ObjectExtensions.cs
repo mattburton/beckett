@@ -16,7 +16,7 @@ public static class ObjectExtensions
     {
         if (deliverAt < DateTimeOffset.UtcNow)
         {
-            throw new InvalidOperationException("When scheduling an event the delivery time must be in the future");
+            throw new Exception("When scheduling an event the delivery time must be in the future");
         }
 
         return new ScheduledEventWrapper(@event, deliverAt);
