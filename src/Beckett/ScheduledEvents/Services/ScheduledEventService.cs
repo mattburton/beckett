@@ -64,6 +64,10 @@ public class ScheduledEventService(
             {
                 throw;
             }
+            catch (TaskCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.LogError(e, "Unhandled error delivering scheduled events - will try again in 10 seconds");

@@ -23,6 +23,10 @@ public class GlobalPollingService(
             {
                 throw;
             }
+            catch (TaskCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (NpgsqlException e)
             {
                 logger.LogError(e, "Database error - will retry in 10 seconds");
