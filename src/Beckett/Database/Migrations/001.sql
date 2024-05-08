@@ -309,14 +309,48 @@ GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 CREATE FUNCTION __schema__.add_or_update_subscription(
   _name text
 )
-  RETURNS boolean
+  RETURNS TABLE (
+    initialized boolean
+  )
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.subscriptions (name, initialized)
-VALUES (_name, true)
-ON CONFLICT (name) DO NOTHING
-RETURNING initialized;
+INSERT INTO __schema__.subscriptions (name)
+VALUES (_name)
+ON CONFLICT (name) DO NOTHING;
+
+SELECT initialized
+FROM __schema__.subscriptions
+WHERE name = _name;
+$$;
+
+CREATE FUNCTION __schema__.get_next_uninitialized_subscription()
+  RETURNS TABLE (
+    name text
+  )
+  LANGUAGE sql
+AS
+$$
+SELECT name
+FROM __schema__.subscriptions
+WHERE initialized = false
+LIMIT 1;
+$$;
+
+CREATE FUNCTION __schema__.set_subscription_to_initialized(
+  _name text
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+DELETE FROM __schema__.checkpoints
+WHERE name = _name
+AND stream_name = '$initializing';
+
+UPDATE __schema__.subscriptions
+SET initialized = true
+WHERE name = _name;
 $$;
 
 CREATE FUNCTION __schema__.lock_checkpoint(

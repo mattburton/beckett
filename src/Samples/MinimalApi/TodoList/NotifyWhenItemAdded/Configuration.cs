@@ -1,3 +1,4 @@
+using Beckett.Subscriptions;
 using MinimalApi.TodoList.AddingItems;
 
 namespace MinimalApi.TodoList.NotifyWhenItemAdded;
@@ -10,7 +11,8 @@ public static class Configuration
 
         builder.AddSubscription<TodoListItemAddedHandler, TodoListItemAdded>(
             nameof(TodoListItemAddedHandler),
-            (handler, @event, token) => handler.Handle(@event, token)
+            (handler, @event, token) => handler.Handle(@event, token),
+            configuration => configuration.StartingPosition = StartingPosition.Earliest
         );
 
         return builder;

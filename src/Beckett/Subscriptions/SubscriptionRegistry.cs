@@ -24,7 +24,7 @@ public class SubscriptionRegistry(IEventTypeMap eventTypeMap) : ISubscriptionReg
         {
             Name = name,
             Type = handlerType,
-            StartingPosition = StartingPosition.Earliest
+            StartingPosition = StartingPosition.Latest
         };
 
         configure?.Invoke(configuration);

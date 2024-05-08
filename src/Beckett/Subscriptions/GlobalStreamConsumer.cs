@@ -5,6 +5,12 @@ using Beckett.Events;
 
 namespace Beckett.Subscriptions;
 
+public static class GlobalConstants
+{
+    public const string GlobalName = "$global";
+    public const string AllStreamName = "$all";
+}
+
 public class GlobalStreamConsumer(
     IPostgresDatabase database,
     IEventStorage eventStorage,
@@ -12,9 +18,6 @@ public class GlobalStreamConsumer(
     ISubscriptionRegistry subscriptionRegistry
 ) : IGlobalStreamConsumer
 {
-    private const string Global = "$global";
-    private const string All = "$all";
-
     private Task _task = Task.CompletedTask;
 
     public void Run(CancellationToken cancellationToken)
@@ -36,7 +39,7 @@ public class GlobalStreamConsumer(
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         var checkpoint = await database.Execute(
-            new LockCheckpoint(Global, All),
+            new LockCheckpoint(GlobalConstants.GlobalName, GlobalConstants.AllStreamName),
             connection,
             transaction,
             cancellationToken
@@ -84,7 +87,12 @@ public class GlobalStreamConsumer(
         var newGlobalPosition = streamChanges.Max(x => x.GlobalPosition);
 
         await database.Execute(
-            new RecordCheckpoint(Global, All, newGlobalPosition, newGlobalPosition),
+            new RecordCheckpoint(
+                GlobalConstants.GlobalName,
+                GlobalConstants.AllStreamName,
+                newGlobalPosition,
+                newGlobalPosition
+            ),
             connection,
             transaction,
             cancellationToken
