@@ -6,6 +6,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{A75A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinimalApi", "src\Samples\MinimalApi\MinimalApi.csproj", "{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Worker", "src\Samples\Worker\Worker.csproj", "{8AE829DD-CBC9-4923-A648-6D0CDDD9AFB6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,8 +22,13 @@ Global
 		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8AE829DD-CBC9-4923-A648-6D0CDDD9AFB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AE829DD-CBC9-4923-A648-6D0CDDD9AFB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AE829DD-CBC9-4923-A648-6D0CDDD9AFB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AE829DD-CBC9-4923-A648-6D0CDDD9AFB6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}
+		{8AE829DD-CBC9-4923-A648-6D0CDDD9AFB6} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}
 	EndGlobalSection
 EndGlobal
