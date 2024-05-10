@@ -8,11 +8,6 @@ public static class ServiceCollectionExtensions
 {
     public static void AddSubscriptionSupport(this IServiceCollection services, SubscriptionOptions options)
     {
-        if (!options.Enabled)
-        {
-            return;
-        }
-
         services.AddSingleton(options);
 
         services.AddSingleton<ISubscriptionInitializer, SubscriptionInitializer>();
@@ -22,6 +17,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISubscriptionStreamProcessor, SubscriptionStreamProcessor>();
 
         services.AddSingleton<ISubscriptionConsumerGroup, SubscriptionConsumerGroup>();
+
+        if (!options.Enabled)
+        {
+            return;
+        }
 
         services.AddHostedService<BootstrapSubscriptions>();
 
