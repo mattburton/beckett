@@ -8,7 +8,7 @@ public class PostgresOptions
 
     internal NpgsqlDataSource? DataSource { get; private set; }
 
-    public bool Enabled { get; set; }
+    public bool Enabled { get; set; } = true;
     public bool Notifications { get; set; } = true;
     public string Schema { get; set; } = DefaultSchema;
 
