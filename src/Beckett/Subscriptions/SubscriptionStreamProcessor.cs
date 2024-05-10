@@ -57,7 +57,8 @@ public class SubscriptionStreamProcessor(
                 message,
                 metadata,
                 streamMessage.Timestamp,
-                messageStore
+                messageStore,
+                serviceProvider
             ));
         }
 
@@ -118,19 +119,26 @@ public class SubscriptionStreamProcessor(
                     continue;
                 }
 
-                using var scope = serviceProvider.CreateScope();
-
-                var handler = scope.ServiceProvider.GetRequiredService(subscription.Type);
-
                 try
                 {
-                    if (subscription.MessageContextHandler)
+                    if (subscription.StaticMethod != null)
                     {
-                        await subscription.Handler!(handler, messageContext, cancellationToken);
+                        await subscription.StaticMethod!(messageContext, cancellationToken);
+
+                        continue;
+                    }
+
+                    using var scope = serviceProvider.CreateScope();
+
+                    var handler = scope.ServiceProvider.GetRequiredService(subscription.Type);
+
+                    if (subscription.AcceptsMessageContext)
+                    {
+                        await subscription.InstanceMethod!(handler, messageContext, cancellationToken);
                     }
                     else
                     {
-                        await subscription.Handler!(handler, messageContext.Message, cancellationToken);
+                        await subscription.InstanceMethod!(handler, messageContext.Message, cancellationToken);
                     }
                 }
                 catch (Exception e)
@@ -155,7 +163,8 @@ public class SubscriptionStreamProcessor(
                     await messageStore.AppendToStream(
                         RetryStreamName.For(
                             subscription.Name,
-                            streamName
+                            streamName,
+                            messageContext.StreamPosition
                         ),
                         ExpectedVersion.Any,
                         new SubscriptionError(

@@ -27,7 +27,7 @@ public class RetryManager(
             return;
         }
 
-        var retryStreamName = RetryStreamName.For(subscriptionName, streamName);
+        var retryStreamName = RetryStreamName.For(subscriptionName, streamName, streamPosition);
         var retryAt = attempts.GetNextDelayWithExponentialBackoff();
 
         try

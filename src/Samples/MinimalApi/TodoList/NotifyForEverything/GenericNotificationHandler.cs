@@ -3,9 +3,9 @@ using MinimalApi.TodoList.CreatingLists;
 
 namespace MinimalApi.TodoList.NotifyForEverything;
 
-public class GenericNotificationHandler
+public static class GenericNotificationHandler
 {
-    public Task Handle(IMessageContext context, CancellationToken _)
+    public static Task Handle(IMessageContext context, CancellationToken _)
     {
         switch (context.Message)
         {

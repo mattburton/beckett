@@ -24,7 +24,7 @@ public class BootstrapSubscriptions(
 
         foreach (var subscription in subscriptionRegistry.All())
         {
-            EnsureSubscriptionHandlerIsRegistered(subscription.Name);
+            EnsureSubscriptionHandlerIsRegistered(subscription);
 
             var initialized = await database.Execute(
                 new AddOrUpdateSubscription(subscription.Name),
@@ -62,20 +62,23 @@ public class BootstrapSubscriptions(
         subscriptionInitializer.Start(cancellationToken);
     }
 
-    private void EnsureSubscriptionHandlerIsRegistered(string name)
+    private void EnsureSubscriptionHandlerIsRegistered(Subscription subscription)
     {
-        var subscriptionType = subscriptionRegistry.GetType(name);
+        if (subscription.StaticMethod != null)
+        {
+            return;
+        }
 
         try
         {
             var scope = serviceProvider.CreateScope();
 
-            scope.ServiceProvider.GetRequiredService(subscriptionType);
+            scope.ServiceProvider.GetRequiredService(subscription.Type);
         }
         catch
         {
             throw new InvalidOperationException(
-                $"The subscription handler {subscriptionType} for {name} has not been registered in the container"
+                $"The subscription handler {subscription.Type} for {subscription.Name} has not been registered in the container"
             );
         }
     }

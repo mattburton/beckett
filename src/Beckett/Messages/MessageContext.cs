@@ -9,7 +9,8 @@ public readonly record struct MessageContext(
     object Message,
     IDictionary<string, object> Metadata,
     DateTimeOffset Timestamp,
-    IMessageStore MessageStore
+    IMessageStore MessageStore,
+    IServiceProvider Services
 ) : IMessageContext
 {
     public Task<AppendResult> AppendToStream(string streamName, ExpectedVersion expectedVersion, IEnumerable<object> messages,

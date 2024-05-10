@@ -2,8 +2,8 @@ namespace Beckett.Subscriptions.Retries;
 
 public static class RetryStreamName
 {
-    public static string For(string subscriptionName, string streamName)
+    public static string For(string subscriptionName, string streamName, long streamPosition)
     {
-        return $"$subscription-retry-{subscriptionName}-{streamName}";
+        return $"$retry-{subscriptionName}-{streamName}-{streamPosition}";
     }
 }

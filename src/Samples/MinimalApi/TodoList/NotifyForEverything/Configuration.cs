@@ -8,11 +8,9 @@ public static class Configuration
 {
     public static IBeckettBuilder UseGenericNotify(this IBeckettBuilder builder)
     {
-        builder.Services.AddScoped<GenericNotificationHandler>();
-
-        builder.AddSubscription<GenericNotificationHandler>(
+        builder.AddSubscription(
             nameof(GenericNotificationHandler),
-            (handler, context, token) => handler.Handle(context, token),
+            GenericNotificationHandler.Handle,
             configuration =>
             {
                 configuration.StartingPosition = StartingPosition.Earliest;

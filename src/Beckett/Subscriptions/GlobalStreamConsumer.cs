@@ -59,8 +59,7 @@ public class GlobalStreamConsumer(
 
         foreach (var streamChange in streamChanges)
         {
-            var subscriptions = subscriptionRegistry.All()
-                .Where(x => x.MessageTypes.Intersect(streamChange.MessageTypes).Any());
+            var subscriptions = subscriptionRegistry.All().Where(x => streamChange.AppliesTo(x));
 
             checkpoints.AddRange(subscriptions.Select(subscription =>
                 new CheckpointType

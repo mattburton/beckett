@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
 -------------------------------------------------
 -- CREATE BECKETT ROLE
 -------------------------------------------------
@@ -54,10 +52,7 @@ CREATE TABLE IF NOT EXISTS __schema__.messages
   UNIQUE (stream_name, stream_position)
 );
 
-CREATE INDEX IF NOT EXISTS ix_messages_type ON __schema__.messages (type);
-
-CREATE INDEX IF NOT EXISTS ix_messages_topic ON __schema__.messages
-  USING gin(__schema__.stream_topic(stream_name) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS ix_messages_topic ON __schema__.messages (__schema__.stream_topic(stream_name));
 
 CREATE FUNCTION __schema__.stream_hash(
   _stream_name text

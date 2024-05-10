@@ -31,6 +31,8 @@ public interface IBeckettBuilder
         SubscriptionHandler<THandler> handler,
         Action<Subscription>? configure = null
     );
+
+    void AddSubscription(string name, SubscriptionHandler handler, Action<Subscription>? configure = null);
 }
 
 public class BeckettBuilder(
@@ -64,4 +66,7 @@ public class BeckettBuilder(
         SubscriptionHandler<THandler> handler,
         Action<Subscription>? configure = null
     ) => subscriptionRegistry.AddSubscription(name, handler, configure);
+
+    public void AddSubscription(string name, SubscriptionHandler handler, Action<Subscription>? configure = null) =>
+        subscriptionRegistry.AddSubscription(name, handler, configure);
 }

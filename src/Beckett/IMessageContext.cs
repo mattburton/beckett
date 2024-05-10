@@ -10,6 +10,7 @@ public interface IMessageContext
     object Message { get; }
     IDictionary<string, object> Metadata { get; }
     DateTimeOffset Timestamp { get; }
+    IServiceProvider Services { get; }
 
     Task<AppendResult> AppendToStream(
         string streamName,

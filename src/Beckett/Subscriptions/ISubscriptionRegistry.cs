@@ -20,7 +20,13 @@ public interface ISubscriptionRegistry
         Action<Subscription>? configure = null
     );
 
-    IEnumerable<(string Name, string[] MessageTypes, StartingPosition StartingPosition)> All();
+    void AddSubscription(
+        string name,
+        SubscriptionHandler handler,
+        Action<Subscription>? configure = null
+    );
+
+    IEnumerable<Subscription> All();
     Type GetType(string name);
     Subscription? GetSubscription(string name);
 }
@@ -40,6 +46,11 @@ public delegate Task SubscriptionHandlerWithContext<in THandler, in TMessage>(
 
 public delegate Task SubscriptionHandler<in THandler>(
     THandler handler,
+    IMessageContext context,
+    CancellationToken cancellationToken
+);
+
+public delegate Task SubscriptionHandler(
     IMessageContext context,
     CancellationToken cancellationToken
 );
