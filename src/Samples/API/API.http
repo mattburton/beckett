@@ -25,17 +25,21 @@ Content-Type: application/json
   client.global.set("item", response.body.item)
 %}
 
-### Get List
-
-GET {{base_url}}/{{id}}
-Accept: application/json
-
 ### Complete Item
 
 POST {{base_url}}/{{id}}/complete/{{item}}
+Content-Type: application/json### Add Item
+
+### Add Item - CC User
+
+POST {{base_url}}/{{id}}
 Content-Type: application/json
 
-### Get List Without Completed Item
+{
+  "item": "{{$random.alphabetic(10)}} cc: @bob"
+}
+
+### Get List
 
 GET {{base_url}}/{{id}}
 Accept: application/json

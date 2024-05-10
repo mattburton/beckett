@@ -1,9 +1,9 @@
 using System.Text.Json;
+using API;
 using Beckett;
 using Microsoft.AspNetCore.Http.Json;
 using TodoList;
 using TodoList.Infrastructure.Database;
-using TodoList.Infrastructure.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +18,7 @@ builder.Services.Configure<JsonOptions>(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHostedService<LogLinkToApiDocumentationAtStartup>();
+builder.Services.AddHostedService<LogSwaggerLink>();
 
 var app = builder.Build();
 

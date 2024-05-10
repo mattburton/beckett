@@ -1,15 +1,13 @@
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
-namespace TodoList.Infrastructure.Swagger;
+namespace API;
 
-public class LogLinkToApiDocumentationAtStartup(
+public class LogSwaggerLink(
     IHostApplicationLifetime applicationLifetime,
     IServer server,
-    ILogger<LogLinkToApiDocumentationAtStartup> logger
+    ILogger<LogSwaggerLink> logger
 ) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
@@ -28,8 +26,5 @@ public class LogLinkToApiDocumentationAtStartup(
         return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
