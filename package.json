@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "reset": "docker-compose down -v && docker-compose up -d",
-    "start": "dotnet run --project src/Samples/MinimalApi/MinimalApi.csproj",
-    "worker": "dotnet run --project src/Samples/WorkerService/WorkerService.csproj"
+    "start": "dotnet run --project src/Samples/API/API.csproj",
+    "worker": "dotnet run --project src/Samples/Worker/Worker.csproj"
   }
 }

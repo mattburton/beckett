@@ -1,0 +1,41 @@
+@base_url = http://localhost:5222/todos
+
+### Create List
+
+POST {{base_url}}
+Content-Type: application/json
+
+{
+  "id": "{{$random.uuid}}",
+  "name": "{{$random.alphabetic(10)}}"
+}
+> {%
+  client.global.set("id", response.body.id)
+%}
+
+### Add Item
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "item": "{{$random.alphabetic(10)}}"
+}
+> {%
+  client.global.set("item", response.body.item)
+%}
+
+### Get List
+
+GET {{base_url}}/{{id}}
+Accept: application/json
+
+### Complete Item
+
+POST {{base_url}}/{{id}}/complete/{{item}}
+Content-Type: application/json
+
+### Get List Without Completed Item
+
+GET {{base_url}}/{{id}}
+Accept: application/json

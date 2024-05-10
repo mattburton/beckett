@@ -1,6 +1,6 @@
 using Beckett;
-using MinimalApi.Infrastructure.Database;
-using MinimalApi.TodoList;
+using TodoList;
+using TodoList.Infrastructure.Database;
 
 var builder = Host.CreateApplicationBuilder(args);
 
