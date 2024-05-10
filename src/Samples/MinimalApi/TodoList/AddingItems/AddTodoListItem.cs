@@ -8,7 +8,7 @@ public record AddTodoListItem(Guid Id, string Item)
 
         var stream = await messageStore.ReadStream(streamName, cancellationToken);
 
-        var state = stream.AggregateTo<DecisionState>();
+        var state = stream.ProjectTo<DecisionState>();
 
         if (state.Items.Contains(Item))
         {

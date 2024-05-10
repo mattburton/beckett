@@ -8,7 +8,7 @@ public static class Route
         {
             var stream = await messageStore.ReadStream(StreamName.For<TodoList>(id), cancellationToken);
 
-            return stream.IsEmpty ? Results.NotFound() : Results.Ok(stream.AggregateTo<TodoListView>());
+            return stream.IsEmpty ? Results.NotFound() : Results.Ok(stream.ProjectTo<TodoListView>());
         }).Produces<TodoListView>().WithName("Get Todo List").WithOpenApi();
 
         return builder;

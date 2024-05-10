@@ -7,5 +7,5 @@ public readonly struct ReadResult(IReadOnlyList<object> messages, long streamVer
 
     public bool IsEmpty => Messages.Count == 0;
 
-    public TState AggregateTo<TState>() where TState : IState, new() => Messages.AggregateTo<TState>();
+    public TState ProjectTo<TState>() where TState : IState, new() => Messages.ProjectTo<TState>();
 }
