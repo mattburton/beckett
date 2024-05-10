@@ -1,18 +1,23 @@
 using Beckett.Subscriptions.Models;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class LockNextAvailableCheckpoint : IPostgresDatabaseQuery<Checkpoint?>
+public class LockNextAvailableCheckpoint(string application) : IPostgresDatabaseQuery<Checkpoint?>
 {
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select name, stream_name, stream_position, stream_version, blocked
-            from {schema}.lock_next_available_checkpoint();
+            select application, name, stream_name, stream_position, stream_version, blocked
+            from {schema}.lock_next_available_checkpoint($1);
         ";
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+
         await command.PrepareAsync(cancellationToken);
+
+        command.Parameters[0].Value = application;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -23,9 +28,10 @@ public class LockNextAvailableCheckpoint : IPostgresDatabaseQuery<Checkpoint?>
             : new Checkpoint(
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),
-                reader.GetFieldValue<long>(2),
+                reader.GetFieldValue<string>(2),
                 reader.GetFieldValue<long>(3),
-                reader.GetFieldValue<bool>(4)
+                reader.GetFieldValue<long>(4),
+                reader.GetFieldValue<bool>(5)
             );
     }
 }

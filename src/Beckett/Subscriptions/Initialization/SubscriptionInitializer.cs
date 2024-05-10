@@ -29,7 +29,7 @@ public class SubscriptionInitializer(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            var subscriptionName = await database.Execute(new GetNextUninitializedSubscription(), cancellationToken);
+            var subscriptionName = await database.Execute(new GetNextUninitializedSubscription(options.ApplicationName), cancellationToken);
 
             if (subscriptionName == null)
             {
@@ -74,7 +74,7 @@ public class SubscriptionInitializer(
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             var checkpoint = await database.Execute(
-                new LockCheckpoint(subscription.Name, InitializationConstants.StreamName),
+                new LockCheckpoint(options.ApplicationName, subscription.Name, InitializationConstants.StreamName),
                 connection,
                 transaction,
                 cancellationToken
@@ -94,7 +94,11 @@ public class SubscriptionInitializer(
             if (streamChanges.Count == 0)
             {
                 await database.Execute(
-                    new LockCheckpoint(GlobalConstants.GlobalName, GlobalConstants.AllStreamName),
+                    new LockCheckpoint(
+                        options.ApplicationName,
+                        GlobalConstants.GlobalName,
+                        GlobalConstants.AllStreamName
+                    ),
                     connection,
                     transaction,
                     cancellationToken
@@ -112,7 +116,7 @@ public class SubscriptionInitializer(
                 }
 
                 await database.Execute(
-                    new SetSubscriptionToInitialized(subscription.Name),
+                    new SetSubscriptionToInitialized(options.ApplicationName, subscription.Name),
                     connection,
                     transaction,
                     cancellationToken
@@ -136,6 +140,7 @@ public class SubscriptionInitializer(
 
                 checkpoints.Add(new CheckpointType
                 {
+                    Application = options.ApplicationName,
                     Name = subscription.Name,
                     StreamName = streamChange.StreamName,
                     StreamVersion = streamChange.StreamVersion
@@ -153,6 +158,7 @@ public class SubscriptionInitializer(
 
             await database.Execute(
                 new RecordCheckpoint(
+                    options.ApplicationName,
                     subscription.Name,
                     InitializationConstants.StreamName,
                     newGlobalPosition,

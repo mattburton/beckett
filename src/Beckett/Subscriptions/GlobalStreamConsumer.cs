@@ -33,7 +33,7 @@ public class GlobalStreamConsumer(
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         var checkpoint = await database.Execute(
-            new LockCheckpoint(GlobalConstants.GlobalName, GlobalConstants.AllStreamName),
+            new LockCheckpoint(options.ApplicationName, GlobalConstants.GlobalName, GlobalConstants.AllStreamName),
             connection,
             transaction,
             cancellationToken
@@ -64,6 +64,7 @@ public class GlobalStreamConsumer(
             checkpoints.AddRange(subscriptions.Select(subscription =>
                 new CheckpointType
                 {
+                    Application = options.ApplicationName,
                     Name = subscription.Name,
                     StreamName = streamChange.StreamName,
                     StreamVersion = streamChange.StreamVersion
@@ -81,6 +82,7 @@ public class GlobalStreamConsumer(
 
         await database.Execute(
             new RecordCheckpoint(
+                options.ApplicationName,
                 GlobalConstants.GlobalName,
                 GlobalConstants.AllStreamName,
                 newGlobalPosition,

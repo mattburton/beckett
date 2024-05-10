@@ -15,6 +15,7 @@ public class SubscriptionStreamProcessor(
     IPostgresMessageDeserializer messageDeserializer,
     IMessageStore messageStore,
     IServiceProvider serviceProvider,
+    SubscriptionOptions options,
     ILogger<SubscriptionStreamProcessor> logger
 ) : ISubscriptionStreamProcessor
 {
@@ -68,7 +69,13 @@ public class SubscriptionStreamProcessor(
         {
             case MessageBatchResult.Success success:
                 await database.Execute(
-                    new UpdateCheckpointStreamPosition(subscription.Name, streamName, success.StreamPosition, false),
+                    new UpdateCheckpointStreamPosition(
+                        options.ApplicationName,
+                        subscription.Name,
+                        streamName,
+                        success.StreamPosition,
+                        false
+                    ),
                     connection,
                     transaction,
                     cancellationToken
@@ -82,7 +89,13 @@ public class SubscriptionStreamProcessor(
                 }
 
                 await database.Execute(
-                    new UpdateCheckpointStreamPosition(subscription.Name, streamName, blocked.StreamPosition, true),
+                    new UpdateCheckpointStreamPosition(
+                        options.ApplicationName,
+                        subscription.Name,
+                        streamName,
+                        blocked.StreamPosition,
+                        true
+                    ),
                     connection,
                     transaction,
                     cancellationToken

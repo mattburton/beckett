@@ -3,31 +3,25 @@ using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class UpdateCheckpointStreamPosition(
+public class EnsureCheckpointExists(
     string application,
     string name,
-    string streamName,
-    long streamPosition,
-    bool blocked
+    string streamName
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {schema}.update_checkpoint_stream_position($1, $2, $3, $4, $5);";
+        command.CommandText = $"select {schema}.ensure_checkpoint_exists($1, $2, $3);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
 
         await command.PrepareAsync(cancellationToken);
 
         command.Parameters[0].Value = application;
         command.Parameters[1].Value = name;
         command.Parameters[2].Value = streamName;
-        command.Parameters[3].Value = streamPosition;
-        command.Parameters[4].Value = blocked;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

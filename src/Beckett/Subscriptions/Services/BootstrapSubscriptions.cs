@@ -10,6 +10,7 @@ namespace Beckett.Subscriptions.Services;
 public class BootstrapSubscriptions(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
+    SubscriptionOptions options,
     ISubscriptionInitializer subscriptionInitializer,
     IServiceProvider serviceProvider
 ) : IHostedService
@@ -20,6 +21,16 @@ public class BootstrapSubscriptions(
 
         await connection.OpenAsync(cancellationToken);
 
+        await database.Execute(
+            new EnsureCheckpointExists(
+                options.ApplicationName,
+                GlobalConstants.GlobalName,
+                GlobalConstants.AllStreamName
+            ),
+            connection,
+            cancellationToken
+        );
+
         var checkpoints = new List<CheckpointType>();
 
         foreach (var subscription in subscriptionRegistry.All())
@@ -27,7 +38,10 @@ public class BootstrapSubscriptions(
             EnsureSubscriptionHandlerIsRegistered(subscription);
 
             var initialized = await database.Execute(
-                new AddOrUpdateSubscription(subscription.Name),
+                new AddOrUpdateSubscription(
+                    options.ApplicationName,
+                    subscription.Name
+                ),
                 connection,
                 cancellationToken
             );
@@ -39,16 +53,20 @@ public class BootstrapSubscriptions(
 
             if (subscription.StartingPosition == StartingPosition.Latest)
             {
-                await database.Execute(new SetSubscriptionToInitialized(subscription.Name), cancellationToken);
+                await database.Execute(
+                    new SetSubscriptionToInitialized(options.ApplicationName, subscription.Name),
+                    cancellationToken
+                );
 
                 continue;
             }
 
             checkpoints.Add(new CheckpointType
             {
-                 Name = subscription.Name,
-                 StreamName = InitializationConstants.StreamName,
-                 StreamVersion = 0
+                Application = options.ApplicationName,
+                Name = subscription.Name,
+                StreamName = InitializationConstants.StreamName,
+                StreamVersion = 0
             });
         }
 

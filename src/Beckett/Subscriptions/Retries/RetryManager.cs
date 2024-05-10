@@ -8,6 +8,7 @@ namespace Beckett.Subscriptions.Retries;
 public class RetryManager(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
+    SubscriptionOptions options,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
     IMessageStore messageStore
 ) : IRetryManager
@@ -39,7 +40,7 @@ public class RetryManager(
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             var checkpoint = await database.Execute(
-                new LockCheckpoint(subscription.Name, streamName),
+                new LockCheckpoint(options.ApplicationName, subscription.Name, streamName),
                 connection,
                 transaction,
                 cancellationToken

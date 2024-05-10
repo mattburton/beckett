@@ -4,6 +4,7 @@ using NpgsqlTypes;
 namespace Beckett.Database.Queries;
 
 public class RecordCheckpoint(
+    string application,
     string name,
     string streamName,
     long streamPosition,
@@ -12,8 +13,9 @@ public class RecordCheckpoint(
 {
     public async Task<int> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {schema}.record_checkpoint($1, $2, $3, $4);";
+        command.CommandText = $"select {schema}.record_checkpoint($1, $2, $3, $4, $5);";
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
@@ -21,10 +23,11 @@ public class RecordCheckpoint(
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = name;
-        command.Parameters[1].Value = streamName;
-        command.Parameters[2].Value = streamPosition;
-        command.Parameters[3].Value = streamVersion;
+        command.Parameters[0].Value = application;
+        command.Parameters[1].Value = name;
+        command.Parameters[2].Value = streamName;
+        command.Parameters[3].Value = streamPosition;
+        command.Parameters[4].Value = streamVersion;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

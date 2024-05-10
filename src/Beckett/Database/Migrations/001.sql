@@ -277,6 +277,7 @@ $$;
 
 CREATE TYPE __schema__.checkpoint AS
 (
+  application text,
   name text,
   stream_name text,
   stream_version bigint
@@ -284,8 +285,10 @@ CREATE TYPE __schema__.checkpoint AS
 
 CREATE TABLE IF NOT EXISTS __schema__.subscriptions
 (
-  name text NOT NULL PRIMARY KEY,
-  initialized boolean DEFAULT false NOT NULL
+  application text NOT NULL,
+  name text NOT NULL,
+  initialized boolean DEFAULT false NOT NULL,
+  PRIMARY KEY (application, name)
 );
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
@@ -295,14 +298,16 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   stream_version bigint DEFAULT 0 NOT NULL,
   stream_position bigint DEFAULT 0 NOT NULL,
   blocked boolean DEFAULT false NOT NULL,
+  application text NOT NULL,
   name text NOT NULL,
   stream_name text NOT NULL,
-  PRIMARY KEY (name, stream_name)
+  PRIMARY KEY (application, name, stream_name)
 );
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
 CREATE FUNCTION __schema__.add_or_update_subscription(
+  _application text,
   _name text
 )
   RETURNS TABLE (
@@ -311,16 +316,18 @@ CREATE FUNCTION __schema__.add_or_update_subscription(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.subscriptions (name)
-VALUES (_name)
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO __schema__.subscriptions (application, name)
+VALUES (_application, _name)
+ON CONFLICT (application, name) DO NOTHING;
 
 SELECT initialized
 FROM __schema__.subscriptions
 WHERE name = _name;
 $$;
 
-CREATE FUNCTION __schema__.get_next_uninitialized_subscription()
+CREATE FUNCTION __schema__.get_next_uninitialized_subscription(
+  _application text
+)
   RETURNS TABLE (
     name text
   )
@@ -329,11 +336,13 @@ AS
 $$
 SELECT name
 FROM __schema__.subscriptions
-WHERE initialized = false
+WHERE application = _application
+AND initialized = false
 LIMIT 1;
 $$;
 
 CREATE FUNCTION __schema__.set_subscription_to_initialized(
+  _application text,
   _name text
 )
   RETURNS void
@@ -341,19 +350,37 @@ CREATE FUNCTION __schema__.set_subscription_to_initialized(
 AS
 $$
 DELETE FROM __schema__.checkpoints
-WHERE name = _name
+WHERE application = _application
+AND name = _name
 AND stream_name = '$initializing';
 
 UPDATE __schema__.subscriptions
 SET initialized = true
-WHERE name = _name;
+WHERE application = _application
+AND name = _name;
+$$;
+
+CREATE FUNCTION __schema__.ensure_checkpoint_exists(
+  _application text,
+  _name text,
+  _stream_name text
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+INSERT INTO __schema__.checkpoints (application, name, stream_name)
+VALUES (_application, _name, _stream_name)
+ON CONFLICT (application, name, stream_name) DO NOTHING;
 $$;
 
 CREATE FUNCTION __schema__.lock_checkpoint(
+  _application text,
   _name text,
   _stream_name text
 )
   RETURNS TABLE (
+    application text,
     name text,
     stream_name text,
     stream_position bigint,
@@ -363,16 +390,20 @@ CREATE FUNCTION __schema__.lock_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT name, stream_name, stream_position, stream_version, blocked
+SELECT application, name, stream_name, stream_position, stream_version, blocked
 FROM __schema__.checkpoints
-WHERE name = _name
+WHERE application = _application
+AND name = _name
 AND stream_name = _stream_name
 FOR UPDATE
 SKIP LOCKED;
 $$;
 
-CREATE FUNCTION __schema__.lock_next_available_checkpoint()
+CREATE FUNCTION __schema__.lock_next_available_checkpoint(
+  _application text
+)
   RETURNS TABLE (
+    application text,
     name text,
     stream_name text,
     stream_position bigint,
@@ -382,10 +413,11 @@ CREATE FUNCTION __schema__.lock_next_available_checkpoint()
   LANGUAGE sql
 AS
 $$
-SELECT c.name, c.stream_name, c.stream_position, c.stream_version, c.blocked
+SELECT c.application, c.name, c.stream_name, c.stream_position, c.stream_version, c.blocked
 FROM __schema__.checkpoints c
-INNER JOIN __schema__.subscriptions s on c.name = s.name
-WHERE s.initialized = true
+INNER JOIN __schema__.subscriptions s ON c.application = s.application AND c.name = s.name
+WHERE s.application = _application
+AND s.initialized = true
 AND c.stream_position < c.stream_version
 AND c.blocked = false
 FOR UPDATE
@@ -401,10 +433,10 @@ CREATE FUNCTION __schema__.record_checkpoints(
 AS
 $$
 BEGIN
-  INSERT INTO __schema__.checkpoints (stream_version, name, stream_name)
-  SELECT c.stream_version, c.name, c.stream_name
+  INSERT INTO __schema__.checkpoints (stream_version, application, name, stream_name)
+  SELECT c.stream_version, c.application, c.name, c.stream_name
   FROM unnest(_checkpoints) c
-  ON CONFLICT (name, stream_name) DO UPDATE
+  ON CONFLICT (application, name, stream_name) DO UPDATE
     SET stream_version = excluded.stream_version;
 
   PERFORM pg_notify('beckett:checkpoints', null);
@@ -412,6 +444,7 @@ END;
 $$;
 
 CREATE FUNCTION __schema__.update_checkpoint_stream_position(
+  _application text,
   _name text,
   _stream_name text,
   _stream_position bigint,
@@ -424,11 +457,13 @@ $$
 UPDATE __schema__.checkpoints
 SET stream_position = _stream_position,
     blocked = _blocked
-WHERE name = _name
+WHERE application = _application
+AND name = _name
 AND stream_name = _stream_name;
 $$;
 
 CREATE FUNCTION __schema__.record_checkpoint(
+  _application text,
   _name text,
   _stream_name text,
   _stream_position bigint,
@@ -438,14 +473,12 @@ CREATE FUNCTION __schema__.record_checkpoint(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (stream_version, stream_position, name, stream_name)
-VALUES (_stream_version, _stream_position, _name, _stream_name)
-ON CONFLICT (name, stream_name) DO UPDATE
+INSERT INTO __schema__.checkpoints (stream_version, stream_position, application, name, stream_name)
+VALUES (_stream_version, _stream_position, _application, _name, _stream_name)
+ON CONFLICT (application, name, stream_name) DO UPDATE
   SET stream_version = excluded.stream_version,
       stream_position = excluded.stream_position;
 $$;
 
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA __schema__ TO beckett;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA __schema__ TO beckett;
-
-INSERT INTO __schema__.checkpoints (name, stream_name) VALUES ('$global', '$all');
