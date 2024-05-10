@@ -1,4 +1,4 @@
-namespace Beckett;
+namespace Beckett.Subscriptions;
 
 public static class IntegerExtensions
 {
