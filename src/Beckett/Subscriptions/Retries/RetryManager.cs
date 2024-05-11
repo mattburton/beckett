@@ -15,7 +15,8 @@ public class RetryManager(
 {
     public async Task Retry(
         string subscriptionName,
-        string streamName,
+        string topic,
+        string streamId,
         long streamPosition,
         int attempts,
         CancellationToken cancellationToken
@@ -28,7 +29,7 @@ public class RetryManager(
             return;
         }
 
-        var retryStreamName = RetryStreamName.For(subscriptionName, streamName, streamPosition);
+        var retryStreamId = RetryStreamId.For(subscriptionName, topic, streamId, streamPosition);
         var retryAt = attempts.GetNextDelayWithExponentialBackoff();
 
         try
@@ -40,7 +41,7 @@ public class RetryManager(
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             var checkpoint = await database.Execute(
-                new LockCheckpoint(options.ApplicationName, subscription.Name, streamName),
+                new LockCheckpoint(options.ApplicationName, subscription.Name, topic, streamId),
                 connection,
                 transaction,
                 cancellationToken
@@ -55,7 +56,8 @@ public class RetryManager(
                 connection,
                 transaction,
                 subscription,
-                streamName,
+                topic,
+                streamId,
                 checkpoint.StreamPosition,
                 1,
                 false,
@@ -65,11 +67,13 @@ public class RetryManager(
             await transaction.CommitAsync(cancellationToken);
 
             await messageStore.AppendToStream(
-                retryStreamName,
+                RetryConstants.Topic,
+                retryStreamId,
                 ExpectedVersion.StreamExists,
                 new SubscriptionRetrySucceeded(
                     subscriptionName,
-                    streamName,
+                    topic,
+                    streamId,
                     streamPosition,
                     attempts + 1,
                     DateTimeOffset.UtcNow
@@ -82,11 +86,13 @@ public class RetryManager(
             if (attempts >= subscription.MaxRetryCount)
             {
                 await messageStore.AppendToStream(
-                    retryStreamName,
+                    RetryConstants.Topic,
+                    retryStreamId,
                     ExpectedVersion.StreamExists,
                     new SubscriptionRetryFailed(
                         subscriptionName,
-                        streamName,
+                        topic,
+                        streamId,
                         streamPosition,
                         attempts + 1,
                         ExceptionData.From(ex),
@@ -98,11 +104,13 @@ public class RetryManager(
             else
             {
                 await messageStore.AppendToStream(
-                    retryStreamName,
+                    RetryConstants.Topic,
+                    retryStreamId,
                     ExpectedVersion.StreamExists,
                     new SubscriptionRetryError(
                         subscriptionName,
-                        streamName,
+                        topic,
+                        streamId,
                         streamPosition,
                         attempts + 1,
                         ExceptionData.From(ex),

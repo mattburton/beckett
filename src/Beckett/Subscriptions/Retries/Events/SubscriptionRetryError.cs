@@ -4,7 +4,8 @@ namespace Beckett.Subscriptions.Retries.Events;
 
 public record SubscriptionRetryError(
     string SubscriptionName,
-    string StreamName,
+    string Topic,
+    string StreamId,
     long StreamPosition,
     int Attempts,
     ExceptionData Exception,

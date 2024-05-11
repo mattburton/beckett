@@ -19,7 +19,8 @@ public partial class MentionsHandler(IMessageStore messageStore)
         var item = $"Hi {username} - please follow up on {followUpItem}";
 
         await messageStore.AppendToStream(
-            StreamName.For<TodoList>(e.TodoListId),
+            Topics.TodoList,
+            e.TodoListId,
             ExpectedVersion.StreamExists,
             e with { Item = item },
             cancellationToken

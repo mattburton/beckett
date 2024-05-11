@@ -4,7 +4,8 @@ public interface IRetryManager
 {
     Task Retry(
         string subscriptionName,
-        string streamName,
+        string topic,
+        string streamId,
         long streamPosition,
         int attempts,
         CancellationToken cancellationToken

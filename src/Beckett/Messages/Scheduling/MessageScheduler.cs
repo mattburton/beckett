@@ -10,7 +10,8 @@ public class MessageScheduler(
 ) : IMessageScheduler
 {
     public async Task ScheduleMessages(
-        string streamName,
+        string topic,
+        string streamId,
         IEnumerable<ScheduledMessageEnvelope> messages,
         CancellationToken cancellationToken
     )
@@ -22,6 +23,6 @@ public class MessageScheduler(
             messageSerializer
         )).ToArray();
 
-        await database.Execute(new ScheduleMessages(streamName, scheduledMessages), cancellationToken);
+        await database.Execute(new ScheduleMessages(topic, streamId, scheduledMessages), cancellationToken);
     }
 }

@@ -15,7 +15,8 @@ public class ReadStreamChanges(
     )
     {
         command.CommandText = $@"
-            select stream_name,
+            select topic,
+                   stream_id,
                    stream_version,
                    global_position,
                    message_types
@@ -38,9 +39,10 @@ public class ReadStreamChanges(
         {
             results.Add(new Result(
                 reader.GetFieldValue<string>(0),
-                reader.GetFieldValue<long>(1),
+                reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<long>(2),
-                reader.GetFieldValue<string[]>(3)
+                reader.GetFieldValue<long>(3),
+                reader.GetFieldValue<string[]>(4)
             ));
         }
 
@@ -48,7 +50,8 @@ public class ReadStreamChanges(
     }
 
     public readonly record struct Result(
-        string StreamName,
+        string Topic,
+        string StreamId,
         long StreamVersion,
         long GlobalPosition,
         string[] MessageTypes

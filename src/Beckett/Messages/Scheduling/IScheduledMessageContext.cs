@@ -2,7 +2,8 @@ namespace Beckett.Messages.Scheduling;
 
 public interface IScheduledMessageContext
 {
-    string StreamName { get; }
+    string Topic { get; }
+    string StreamId { get; }
     object Message { get; }
     Dictionary<string, object> Metadata { get; }
 }

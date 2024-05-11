@@ -5,13 +5,19 @@ namespace Beckett.Messages;
 public interface IMessageStorage
 {
     Task<AppendResult> AppendToStream(
-        string streamName,
+        string topic,
+        string streamId,
         ExpectedVersion expectedVersion,
         IEnumerable<MessageEnvelope> messages,
         CancellationToken cancellationToken
     );
 
-    Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
+    Task<ReadResult> ReadStream(
+        string topic,
+        string streamId,
+        ReadOptions options,
+        CancellationToken cancellationToken
+    );
 
     Task<IReadOnlyList<StreamChange>> ReadStreamChanges(
         long lastGlobalPosition,
@@ -20,7 +26,13 @@ public interface IMessageStorage
     );
 }
 
-public record StreamChange(string StreamName, long StreamVersion, long GlobalPosition, string[] MessageTypes)
+public record StreamChange(
+    string Topic,
+    string StreamId,
+    long StreamVersion,
+    long GlobalPosition,
+    string[] MessageTypes
+)
 {
     public bool AppliesTo(Subscription subscription)
     {

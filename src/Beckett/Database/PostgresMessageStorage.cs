@@ -11,7 +11,8 @@ public class PostgresMessageStorage(
 ) : IMessageStorage
 {
     public async Task<AppendResult> AppendToStream(
-        string streamName,
+        string topic,
+        string streamId,
         ExpectedVersion expectedVersion,
         IEnumerable<MessageEnvelope> messages,
         CancellationToken cancellationToken
@@ -20,7 +21,7 @@ public class PostgresMessageStorage(
         var newMessages = messages.Select(x => MessageType.From(x.Message, x.Metadata, messageSerializer)).ToArray();
 
         var streamVersion = await database.Execute(
-            new AppendToStream(streamName, expectedVersion.Value, newMessages),
+            new AppendToStream(topic, streamId, expectedVersion.Value, newMessages),
             cancellationToken
         );
 
@@ -28,12 +29,13 @@ public class PostgresMessageStorage(
     }
 
     public async Task<ReadResult> ReadStream(
-        string streamName,
+        string topic,
+        string streamId,
         ReadOptions readOptions,
         CancellationToken cancellationToken
     )
     {
-        var streamMessages = await database.Execute(new ReadStream(streamName, readOptions), cancellationToken);
+        var streamMessages = await database.Execute(new ReadStream(topic, streamId, readOptions), cancellationToken);
 
         //TODO update query to always return actual stream version regardless of read options supplied
         var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[^1].StreamPosition;
@@ -57,7 +59,8 @@ public class PostgresMessageStorage(
         return results.Count == 0
             ? []
             : results.Select(x => new StreamChange(
-                x.StreamName,
+                x.Topic,
+                x.StreamId,
                 x.StreamVersion,
                 x.GlobalPosition,
                 x.MessageTypes

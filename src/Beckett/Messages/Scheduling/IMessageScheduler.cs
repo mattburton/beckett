@@ -3,7 +3,8 @@ namespace Beckett.Messages.Scheduling;
 public interface IMessageScheduler
 {
     Task ScheduleMessages(
-        string streamName,
+        string topic,
+        string streamId,
         IEnumerable<ScheduledMessageEnvelope> messages,
         CancellationToken cancellationToken
     );

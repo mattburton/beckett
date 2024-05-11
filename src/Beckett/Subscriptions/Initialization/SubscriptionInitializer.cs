@@ -74,7 +74,12 @@ public class SubscriptionInitializer(
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             var checkpoint = await database.Execute(
-                new LockCheckpoint(options.ApplicationName, subscription.Name, InitializationConstants.StreamName),
+                new LockCheckpoint(
+                    options.ApplicationName,
+                    subscription.Name,
+                    subscription.Name,
+                    InitializationConstants.StreamId
+                ),
                 connection,
                 transaction,
                 cancellationToken
@@ -96,8 +101,9 @@ public class SubscriptionInitializer(
                 await database.Execute(
                     new LockCheckpoint(
                         options.ApplicationName,
-                        GlobalConstants.GlobalName,
-                        GlobalConstants.AllStreamName
+                        GlobalCheckpoint.Name,
+                        GlobalCheckpoint.Topic,
+                        GlobalCheckpoint.StreamId
                     ),
                     connection,
                     transaction,
@@ -142,7 +148,8 @@ public class SubscriptionInitializer(
                 {
                     Application = options.ApplicationName,
                     Name = subscription.Name,
-                    StreamName = streamChange.StreamName,
+                    Topic = streamChange.Topic,
+                    StreamId = streamChange.StreamId,
                     StreamVersion = streamChange.StreamVersion
                 });
             }
@@ -160,7 +167,8 @@ public class SubscriptionInitializer(
                 new RecordCheckpoint(
                     options.ApplicationName,
                     subscription.Name,
-                    InitializationConstants.StreamName,
+                    subscription.Name,
+                    InitializationConstants.StreamId,
                     newGlobalPosition,
                     newGlobalPosition
                 ),

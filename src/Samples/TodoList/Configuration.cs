@@ -12,17 +12,17 @@ public static class Configuration
     {
         builder.Services.AddTransient<MentionsHandler>();
 
-        builder.MapMessage<TodoListCreated>("TodoListCreated");
-        builder.MapMessage<TodoListItemAdded>("TodoListItemAdded");
-        builder.MapMessage<TodoListItemCompleted>("TodoListItemCompleted");
+        builder.MapMessage<TodoListCreated>("todo_list_created");
+        builder.MapMessage<TodoListItemAdded>("todo_list_item_added");
+        builder.MapMessage<TodoListItemCompleted>("todo_list_item_completed");
 
         builder.AddSubscription<MentionsHandler, TodoListItemAdded>(
-            "Mentions",
+            "mentions",
             (handler, message, token) => handler.Handle(message, token)
         );
 
         builder.AddSubscription(
-            "Notifications",
+            "notifications",
             NotificationHandler.Handle,
             configuration =>
             {

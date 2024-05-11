@@ -28,7 +28,7 @@ Content-Type: application/json
 ### Complete Item
 
 POST {{base_url}}/{{id}}/complete/{{item}}
-Content-Type: application/json### Add Item
+Content-Type: application/json
 
 ### Add Item - CC User
 

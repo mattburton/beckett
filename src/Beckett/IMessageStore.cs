@@ -7,19 +7,26 @@ namespace Beckett;
 public interface IMessageStore
 {
     Task<AppendResult> AppendToStream(
-        string streamName,
+        string topic,
+        object streamId,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
         CancellationToken cancellationToken
     );
 
-    Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
+    Task<ReadResult> ReadStream(
+        string topic,
+        object streamId,
+        ReadOptions options,
+        CancellationToken cancellationToken
+    );
 }
 
 public class MessageStore(IMessageStorage messageStorage, IMessageScheduler messageScheduler) : IMessageStore
 {
     public async Task<AppendResult> AppendToStream(
-        string streamName,
+        string topic,
+        object streamId,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
         CancellationToken cancellationToken
@@ -61,24 +68,33 @@ public class MessageStore(IMessageStorage messageStorage, IMessageScheduler mess
             messagesToAppend.Add(new MessageEnvelope(message, messageMetadata));
         }
 
+        var streamIdString = streamId.ToString()!;
+
         if (messagesToSchedule.Count == 0)
         {
-            return await messageStorage.AppendToStream(streamName, expectedVersion, messagesToAppend, cancellationToken);
+            return await messageStorage.AppendToStream(
+                topic,
+                streamIdString,
+                expectedVersion,
+                messagesToAppend,
+                cancellationToken
+            );
         }
 
         if (messagesToAppend.Count == 0)
         {
-            await messageScheduler.ScheduleMessages(streamName, messagesToSchedule, cancellationToken);
+            await messageScheduler.ScheduleMessages(topic, streamIdString, messagesToSchedule, cancellationToken);
 
             return new AppendResult(-1);
         }
 
         using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
-        await messageScheduler.ScheduleMessages(streamName, messagesToSchedule, cancellationToken);
+        await messageScheduler.ScheduleMessages(topic, streamIdString, messagesToSchedule, cancellationToken);
 
         var result = await messageStorage.AppendToStream(
-            streamName,
+            topic,
+            streamIdString,
             expectedVersion,
             messagesToAppend,
             cancellationToken
@@ -89,9 +105,14 @@ public class MessageStore(IMessageStorage messageStorage, IMessageScheduler mess
         return result;
     }
 
-    public Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken)
+    public Task<ReadResult> ReadStream(
+        string topic,
+        object streamId,
+        ReadOptions options,
+        CancellationToken cancellationToken
+    )
     {
-        return messageStorage.ReadStream(streamName, options, cancellationToken);
+        return messageStorage.ReadStream(topic, streamId.ToString()!, options, cancellationToken);
     }
 }
 
@@ -99,21 +120,23 @@ public static class MessageStoreExtensions
 {
     public static Task<AppendResult> AppendToStream(
         this IMessageStore messageStore,
-        string streamName,
+        string topic,
+        object streamId,
         ExpectedVersion expectedVersion,
         object message,
         CancellationToken cancellationToken
     )
     {
-        return messageStore.AppendToStream(streamName, expectedVersion, [message], cancellationToken);
+        return messageStore.AppendToStream(topic, streamId, expectedVersion, [message], cancellationToken);
     }
 
     public static Task<ReadResult> ReadStream(
         this IMessageStore messageStore,
-        string streamName,
+        string topic,
+        object streamId,
         CancellationToken cancellationToken
     )
     {
-        return messageStore.ReadStream(streamName, ReadOptions.Default, cancellationToken);
+        return messageStore.ReadStream(topic, streamId, ReadOptions.Default, cancellationToken);
     }
 }

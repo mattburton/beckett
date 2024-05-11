@@ -32,24 +32,32 @@ public class ScheduledMessageService(
                     stoppingToken
                 );
 
-                var scehduledMessages = new List<IScheduledMessageContext>();
+                var scheduledMessages = new List<IScheduledMessageContext>();
 
-                foreach (var streamGroup in results.GroupBy(x => x.StreamName))
+                foreach (var streamGroup in results.GroupBy(x => (x.Topic, x.StreamId)))
                 {
                     foreach (var scheduledMessage in streamGroup)
                     {
                         var (data, metadata) = messageDeserializer.DeserializeAll(scheduledMessage);
 
-                        scehduledMessages.Add(new ScheduledMessageContext(scheduledMessage.StreamName, data, metadata));
+                        scheduledMessages.Add(
+                            new ScheduledMessageContext(
+                                scheduledMessage.Topic,
+                                scheduledMessage.StreamId,
+                                data,
+                                metadata
+                            )
+                        );
                     }
                 }
 
-                foreach (var scheduledMessagesForStream in scehduledMessages.GroupBy(x => x.StreamName))
+                foreach (var scheduledMessagesForStream in scheduledMessages.GroupBy(x => (x.Topic, x.StreamId)))
                 {
                     var messages = scheduledMessagesForStream.Select(x => x.Message.WithMetadata(x.Metadata));
 
                     await messageStore.AppendToStream(
-                        scheduledMessagesForStream.Key,
+                        scheduledMessagesForStream.Key.Topic,
+                        scheduledMessagesForStream.Key.StreamId,
                         ExpectedVersion.Any,
                         messages,
                         stoppingToken

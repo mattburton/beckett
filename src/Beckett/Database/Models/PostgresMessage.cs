@@ -5,7 +5,8 @@ namespace Beckett.Database.Models;
 public class PostgresMessage
 {
     public Guid Id { get; init; }
-    public string StreamName { get; init; } = null!;
+    public string Topic { get; init; } = null!;
+    public string StreamId { get; init; } = null!;
     public long StreamPosition { get; init; }
     public long GlobalPosition { get; init; }
     public string Type { get; init; } = null!;
@@ -18,13 +19,14 @@ public class PostgresMessage
         return new PostgresMessage
         {
             Id = reader.GetFieldValue<Guid>(0),
-            StreamName = reader.GetFieldValue<string>(1),
-            StreamPosition = reader.GetFieldValue<int>(2),
-            GlobalPosition = reader.GetFieldValue<int>(3),
-            Type = reader.GetFieldValue<string>(4),
-            Data = reader.GetFieldValue<string>(5),
-            Metadata = reader.GetFieldValue<string>(6),
-            Timestamp = reader.GetFieldValue<DateTimeOffset>(7)
+            Topic = reader.GetFieldValue<string>(1),
+            StreamId = reader.GetFieldValue<string>(2),
+            StreamPosition = reader.GetFieldValue<int>(3),
+            GlobalPosition = reader.GetFieldValue<int>(4),
+            Type = reader.GetFieldValue<string>(5),
+            Data = reader.GetFieldValue<string>(6),
+            Metadata = reader.GetFieldValue<string>(7),
+            Timestamp = reader.GetFieldValue<DateTimeOffset>(8)
         };
     }
 }

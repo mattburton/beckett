@@ -4,7 +4,8 @@ public class CheckpointType
 {
     public string Application { get; init; } = null!;
     public string Name { get; init; } = null!;
-    public string StreamName { get; init; } = null!;
+    public string Topic { get; init; } = null!;
+    public string StreamId { get; init; } = null!;
     public long StreamVersion { get; init; }
 
     public static string DataTypeNameFor(string schema) => $"{schema}.checkpoint[]";

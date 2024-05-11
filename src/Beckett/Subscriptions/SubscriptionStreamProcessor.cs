@@ -23,7 +23,8 @@ public class SubscriptionStreamProcessor(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Subscription subscription,
-        string streamName,
+        string topic,
+        string streamId,
         long streamPosition,
         int batchSize,
         bool retryOnError,
@@ -32,7 +33,8 @@ public class SubscriptionStreamProcessor(
     {
         var streamMessages = await database.Execute(
             new ReadStream(
-                streamName,
+                topic,
+                streamId,
                 new ReadOptions
                 {
                     StartingStreamPosition = streamPosition,
@@ -51,7 +53,8 @@ public class SubscriptionStreamProcessor(
 
             messages.Add(new MessageContext(
                 streamMessage.Id,
-                streamMessage.StreamName,
+                streamMessage.Topic,
+                streamMessage.StreamId,
                 streamMessage.StreamPosition,
                 streamMessage.GlobalPosition,
                 type,
@@ -63,7 +66,7 @@ public class SubscriptionStreamProcessor(
             ));
         }
 
-        var result = await HandleMessageBatch(subscription, streamName, messages, true, cancellationToken);
+        var result = await HandleMessageBatch(subscription, topic, streamId, messages, true, cancellationToken);
 
         switch (result)
         {
@@ -72,7 +75,8 @@ public class SubscriptionStreamProcessor(
                     new UpdateCheckpointStreamPosition(
                         options.ApplicationName,
                         subscription.Name,
-                        streamName,
+                        topic,
+                        streamId,
                         success.StreamPosition,
                         false
                     ),
@@ -92,7 +96,8 @@ public class SubscriptionStreamProcessor(
                     new UpdateCheckpointStreamPosition(
                         options.ApplicationName,
                         subscription.Name,
-                        streamName,
+                        topic,
+                        streamId,
                         blocked.StreamPosition,
                         true
                     ),
@@ -112,7 +117,8 @@ public class SubscriptionStreamProcessor(
 
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,
-        string streamName,
+        string topic,
+        string streamId,
         IReadOnlyList<IMessageContext> messages,
         bool retryOnError,
         CancellationToken cancellationToken
@@ -158,10 +164,11 @@ public class SubscriptionStreamProcessor(
                 {
                     logger.LogError(
                         e,
-                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [ID: {MessageId}]",
+                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {Topic}-{StreamId} using handler {HandlerType} [ID: {MessageId}]",
                         messageContext.Type,
                         subscription.Name,
-                        streamName,
+                        topic,
+                        streamId,
                         subscription.Type,
                         messageContext.Id
                     );
@@ -174,15 +181,18 @@ public class SubscriptionStreamProcessor(
                     var retryAt = 0.GetNextDelayWithExponentialBackoff();
 
                     await messageStore.AppendToStream(
-                        RetryStreamName.For(
+                        RetryConstants.Topic,
+                        RetryStreamId.For(
                             subscription.Name,
-                            streamName,
+                            topic,
+                            streamId,
                             messageContext.StreamPosition
                         ),
                         ExpectedVersion.Any,
                         new SubscriptionError(
                             subscription.Name,
-                            streamName,
+                            topic,
+                            streamId,
                             messageContext.StreamPosition,
                             ExceptionData.From(e),
                             retryAt,

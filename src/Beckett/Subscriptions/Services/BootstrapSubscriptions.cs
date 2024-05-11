@@ -24,8 +24,9 @@ public class BootstrapSubscriptions(
         await database.Execute(
             new EnsureCheckpointExists(
                 options.ApplicationName,
-                GlobalConstants.GlobalName,
-                GlobalConstants.AllStreamName
+                GlobalCheckpoint.Name,
+                GlobalCheckpoint.Topic,
+                GlobalCheckpoint.StreamId
             ),
             connection,
             cancellationToken
@@ -65,7 +66,8 @@ public class BootstrapSubscriptions(
             {
                 Application = options.ApplicationName,
                 Name = subscription.Name,
-                StreamName = InitializationConstants.StreamName,
+                Topic = subscription.Name,
+                StreamId = InitializationConstants.StreamId,
                 StreamVersion = 0
             });
         }

@@ -4,9 +4,7 @@ public record AddTodoListItem(string Item)
 {
     public async Task<AppendResult> Execute(Guid id, IMessageStore messageStore, CancellationToken cancellationToken)
     {
-        var streamName = StreamName.For<TodoList>(id);
-
-        var stream = await messageStore.ReadStream(streamName, cancellationToken);
+       var stream = await messageStore.ReadStream(Topics.TodoList, id, cancellationToken);
 
         var state = stream.ProjectTo<DecisionState>();
 
@@ -16,7 +14,8 @@ public record AddTodoListItem(string Item)
         }
 
         return await messageStore.AppendToStream(
-            streamName,
+            Topics.TodoList,
+            id,
             ExpectedVersion.For(stream.StreamVersion),
             new TodoListItemAdded(id, Item),
             cancellationToken
