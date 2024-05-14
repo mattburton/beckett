@@ -6,7 +6,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 await builder.AddTodoListDatabase();
 
-builder.AddBeckett().UseTodoListComponent();
+builder.AddBeckett().TodoListComponent();
 
 var host = builder.Build();
 

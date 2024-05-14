@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 await builder.AddTodoListDatabase();
 
-builder.AddBeckett().UseTodoListMessageMap();
+builder.AddBeckett().TodoListMessageMap();
 
 builder.Services.Configure<JsonOptions>(options =>
 {
@@ -28,6 +28,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapGroup("/todos").UseTodoListRoutes();
+app.MapGroup("/todos").TodoListRoutes();
 
 app.Run();

@@ -7,7 +7,7 @@ namespace TodoList;
 
 public static class Routes
 {
-    public static RouteGroupBuilder UseTodoListRoutes(this RouteGroupBuilder builder) =>
+    public static RouteGroupBuilder TodoListRoutes(this RouteGroupBuilder builder) =>
         builder
             .AddTodoListItemRoute()
             .CompleteTodoListItemRoute()

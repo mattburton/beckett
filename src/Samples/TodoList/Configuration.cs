@@ -8,7 +8,7 @@ namespace TodoList;
 
 public static class Configuration
 {
-    public static IBeckettBuilder UseTodoListMessageMap(this IBeckettBuilder builder)
+    public static IBeckettBuilder TodoListMessageMap(this IBeckettBuilder builder)
     {
         builder.Map<TodoListCreated>("todo_list_created");
         builder.Map<TodoListItemAdded>("todo_list_item_added");
@@ -17,9 +17,9 @@ public static class Configuration
         return builder;
     }
 
-    public static IBeckettBuilder UseTodoListComponent(this IBeckettBuilder builder)
+    public static IBeckettBuilder TodoListComponent(this IBeckettBuilder builder)
     {
-        builder.UseTodoListMessageMap();
+        builder.TodoListMessageMap();
 
         builder.Services.AddTransient<MentionsHandler>();
 
@@ -30,9 +30,7 @@ public static class Configuration
 
         builder.AddSubscription("notifications")
             .Topic(Topics.TodoList)
-            .Message<TodoListCreated>()
             .Message<TodoListItemAdded>()
-            .Message<TodoListItemCompleted>()
             .Handler(NotificationHandler.Handle);
 
         return builder;
