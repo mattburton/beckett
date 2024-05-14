@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 await builder.AddTodoListDatabase();
 
-builder.AddBeckett().UseTodoListModule();
+builder.AddBeckett().UseTodoListMessageMap();
 
 builder.Services.Configure<JsonOptions>(options =>
 {

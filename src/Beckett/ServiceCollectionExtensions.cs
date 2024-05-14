@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddSingleton<IMessageTypeMap>(messageTypeMap);
 
-        var subscriptionRegistry = new SubscriptionRegistry(messageTypeMap);
+        var subscriptionRegistry = new SubscriptionRegistry();
 
         builder.Services.AddSingleton<ISubscriptionRegistry>(subscriptionRegistry);
 
@@ -92,7 +92,7 @@ public static class ServiceCollectionExtensions
 
             services.AddSingleton(messageTypeMap);
 
-            subscriptionRegistry = new SubscriptionRegistry(messageTypeMap);
+            subscriptionRegistry = new SubscriptionRegistry();
 
             services.AddSingleton(subscriptionRegistry);
         });

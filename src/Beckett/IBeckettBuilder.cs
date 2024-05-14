@@ -12,27 +12,40 @@ public interface IBeckettBuilder
     IHostEnvironment Environment { get; }
     IServiceCollection Services { get; }
 
-    void MapMessage<TMessage>(string name);
+    void Map<TMessage>(string name);
 
-    void AddSubscription<THandler, TMessage>(
-        string name,
-        SubscriptionHandler<THandler, TMessage> handler,
-        Action<Subscription>? configure = null
-    );
+    ISubscriptionBuilder AddSubscription(string name);
+}
 
-    void AddSubscription<THandler, TMessage>(
-        string name,
-        SubscriptionHandlerWithContext<THandler, TMessage> handler,
-        Action<Subscription>? configure = null
-    );
+public interface ISubscriptionBuilder
+{
+    ITopicSubscriptionBuilder Topic(string topic);
+}
 
-    void AddSubscription<THandler>(
-        string name,
-        SubscriptionHandler<THandler> handler,
-        Action<Subscription>? configure = null
-    );
+public interface ISubscriptionConfigurationBuilder
+{
+    ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition);
+    ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount);
+}
 
-    void AddSubscription(string name, SubscriptionHandler handler, Action<Subscription>? configure = null);
+public interface ITopicSubscriptionBuilder
+{
+    ITopicMessageSubscriptionBuilder<TMessage> Message<TMessage>();
+
+    ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler);
+    ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler);
+}
+
+public interface ITopicMessageSubscriptionBuilder<out TMessage>
+{
+    ITopicMessageSubscriptionBuilder<T> Message<T>();
+
+    ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageHandler<THandler, TMessage> handler);
+    ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageAndContextHandler<THandler, TMessage> handler);
+    ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler);
+    ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageHandler<TMessage> handler);
+    ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageAndContextHandler<TMessage> handler);
+    ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler);
 }
 
 public class BeckettBuilder(
@@ -47,26 +60,163 @@ public class BeckettBuilder(
     public IHostEnvironment Environment { get; } = environment;
     public IServiceCollection Services { get; } = services;
 
-    public void MapMessage<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
+    public void Map<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
 
-    public void AddSubscription<THandler, TMessage>(
-        string name,
-        SubscriptionHandler<THandler, TMessage> handler,
-        Action<Subscription>? configure = null
-    ) => subscriptionRegistry.AddSubscription(name, handler, configure);
+    public ISubscriptionBuilder AddSubscription(string name)
+    {
+        if (!subscriptionRegistry.TryAdd(name, out var subscription))
+        {
+            throw new InvalidOperationException($"There is already a subscription with the name {name}");
+        }
 
-    public void AddSubscription<THandler, TMessage>(
-        string name,
-        SubscriptionHandlerWithContext<THandler, TMessage> handler,
-        Action<Subscription>? configure = null
-    ) => subscriptionRegistry.AddSubscription(name, handler, configure);
+        return new SubscriptionBuilder(subscription);
+    }
 
-    public void AddSubscription<THandler>(
-        string name,
-        SubscriptionHandler<THandler> handler,
-        Action<Subscription>? configure = null
-    ) => subscriptionRegistry.AddSubscription(name, handler, configure);
+    private class SubscriptionBuilder(Subscription subscription) : ISubscriptionBuilder
+    {
+        public ITopicSubscriptionBuilder Topic(string topic)
+        {
+            subscription.Topic = topic;
 
-    public void AddSubscription(string name, SubscriptionHandler handler, Action<Subscription>? configure = null) =>
-        subscriptionRegistry.AddSubscription(name, handler, configure);
+            return new TopicSubscriptionBuilder(subscription);
+        }
+    }
+
+    private class TopicSubscriptionBuilder(Subscription subscription) : ITopicSubscriptionBuilder
+    {
+        public ITopicMessageSubscriptionBuilder<TMessage> Message<TMessage>()
+        {
+            subscription.MessageTypes.Add(typeof(TMessage));
+
+            return new TopicMessageSubscriptionBuilder<TMessage>(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler)
+        {
+            subscription.Type = typeof(THandler);
+            subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
+            subscription.AcceptsMessageContext = true;
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler)
+        {
+            subscription.Type = handler.GetHandlerType();
+            subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
+            subscription.AcceptsMessageContext = true;
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+    }
+
+    private class TopicMessageSubscriptionBuilder<T>(Subscription subscription) : ITopicMessageSubscriptionBuilder<T>
+    {
+        public ITopicMessageSubscriptionBuilder<TMessage> Message<TMessage>()
+        {
+            subscription.MessageTypes.Add(typeof(TMessage));
+
+            return new TopicMessageSubscriptionBuilder<TMessage>(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageHandler<THandler, T> handler)
+        {
+            subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
+
+            subscription.Type = typeof(THandler);
+            subscription.InstanceMethod = (h, m, t) => handler((THandler)h, (T)m, t);
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageAndContextHandler<THandler, T> handler)
+        {
+            subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
+
+            subscription.Type = typeof(THandler);
+
+            subscription.InstanceMethod = (h, c, t) => handler(
+                (THandler)h,
+                (T)((IMessageContext)c).Message,
+                (IMessageContext)c,
+                t
+            );
+
+            subscription.AcceptsMessageContext = true;
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler)
+        {
+            subscription.Type = typeof(THandler);
+            subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageHandler<T> handler)
+        {
+            subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
+
+            subscription.Type = handler.GetHandlerType();
+            subscription.StaticMethod = (m, t) => handler((T)m, t);
+            subscription.AcceptsMessageContext = true;
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageAndContextHandler<T> handler)
+        {
+            subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
+
+            subscription.Type = handler.GetHandlerType();
+            subscription.StaticMethod = (c, t) => handler((T)((IMessageContext)c).Message, (IMessageContext)c, t);
+            subscription.AcceptsMessageContext = true;
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler)
+        {
+            subscription.Type = handler.GetHandlerType();
+            subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
+            subscription.AcceptsMessageContext = true;
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+    }
+
+    private class SubscriptionConfigurationBuilder(Subscription subscription) : ISubscriptionConfigurationBuilder
+    {
+        public ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition)
+        {
+            subscription.StartingPosition = startingPosition;
+
+            return this;
+        }
+
+        public ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount)
+        {
+            subscription.MaxRetryCount = maxRetryCount;
+
+            return this;
+        }
+    }
+}
+
+internal static class HandlerDelegateExtensions
+{
+    public static Type GetHandlerType(this Delegate handler)
+    {
+        var handlerType = handler.Method.DeclaringType ??
+                          throw new InvalidOperationException("Could not determine the handler type");
+
+        if (!handler.Method.IsStatic)
+        {
+            throw new InvalidOperationException($"The method being called on {handlerType} must be static");
+        }
+
+        return handlerType;
+    }
 }

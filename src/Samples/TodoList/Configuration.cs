@@ -8,28 +8,32 @@ namespace TodoList;
 
 public static class Configuration
 {
-    public static IBeckettBuilder UseTodoListModule(this IBeckettBuilder builder)
+    public static IBeckettBuilder UseTodoListMessageMap(this IBeckettBuilder builder)
     {
+        builder.Map<TodoListCreated>("todo_list_created");
+        builder.Map<TodoListItemAdded>("todo_list_item_added");
+        builder.Map<TodoListItemCompleted>("todo_list_item_completed");
+
+        return builder;
+    }
+
+    public static IBeckettBuilder UseTodoListComponent(this IBeckettBuilder builder)
+    {
+        builder.UseTodoListMessageMap();
+
         builder.Services.AddTransient<MentionsHandler>();
 
-        builder.MapMessage<TodoListCreated>("todo_list_created");
-        builder.MapMessage<TodoListItemAdded>("todo_list_item_added");
-        builder.MapMessage<TodoListItemCompleted>("todo_list_item_completed");
+        builder.AddSubscription("mentions")
+            .Topic(Topics.TodoList)
+            .Message<TodoListItemAdded>()
+            .Handler<MentionsHandler>((handler, message, token) => handler.Handle(message, token));
 
-        builder.AddSubscription<MentionsHandler, TodoListItemAdded>(
-            "mentions",
-            (handler, message, token) => handler.Handle(message, token)
-        );
-
-        builder.AddSubscription(
-            "notifications",
-            NotificationHandler.Handle,
-            configuration =>
-            {
-                configuration.SubscribeTo<TodoListCreated>();
-                configuration.SubscribeTo<TodoListItemAdded>();
-                configuration.SubscribeTo<TodoListItemCompleted>();
-            });
+        builder.AddSubscription("notifications")
+            .Topic(Topics.TodoList)
+            .Message<TodoListCreated>()
+            .Message<TodoListItemAdded>()
+            .Message<TodoListItemCompleted>()
+            .Handler(NotificationHandler.Handle);
 
         return builder;
     }

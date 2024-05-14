@@ -8,27 +8,27 @@ public static class Configuration
 {
     public static IBeckettBuilder UseSubscriptionRetries(this IBeckettBuilder builder)
     {
-        builder.MapMessage<SubscriptionRetryError>("$subscription_retry_error");
-        builder.MapMessage<SubscriptionRetryFailed>("$subscription_retry_failed");
-        builder.MapMessage<SubscriptionRetrySucceeded>("$subscription_retry_succeeded");
-        builder.MapMessage<SubscriptionError>("$subscription_error");
+        builder.Map<SubscriptionRetryError>("$subscription_retry_error");
+        builder.Map<SubscriptionRetryFailed>("$subscription_retry_failed");
+        builder.Map<SubscriptionRetrySucceeded>("$subscription_retry_succeeded");
+        builder.Map<SubscriptionError>("$subscription_error");
 
         builder.Services.AddSingleton<IRetryManager, RetryManager>();
 
         builder.Services.AddScoped<SubscriptionErrorHandler>();
         builder.Services.AddScoped<SubscriptionRetryErrorHandler>();
 
-        builder.AddSubscription<SubscriptionErrorHandler, SubscriptionError>(
-            "$subscription_error",
-            (handler, message, token) => handler.Handle(message, token),
-            configuration => configuration.MaxRetryCount = 0
-        );
+        builder.AddSubscription("$subscription_error")
+            .Topic(RetryConstants.Topic)
+            .Message<SubscriptionError>()
+            .Handler<SubscriptionErrorHandler>((handler, message, token) => handler.Handle(message, token))
+            .MaxRetryCount(0);
 
-        builder.AddSubscription<SubscriptionRetryErrorHandler, SubscriptionRetryError>(
-            "$subscription_retry_error",
-            (handler, message, token) => handler.Handle(message, token),
-            configuration => configuration.MaxRetryCount = 0
-        );
+        builder.AddSubscription("$subscription_retry_error")
+            .Topic(RetryConstants.Topic)
+            .Message<SubscriptionRetryError>()
+            .Handler<SubscriptionRetryErrorHandler>((handler, message, token) => handler.Handle(message, token))
+            .MaxRetryCount(0);
 
         return builder;
     }

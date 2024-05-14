@@ -36,6 +36,7 @@ public record StreamChange(
 {
     public bool AppliesTo(Subscription subscription)
     {
-        return MessageTypes.Intersect(subscription.MessageTypeNames).Any();
+        return string.Equals(Topic, subscription.Topic, StringComparison.OrdinalIgnoreCase) &&
+               MessageTypes.Intersect(subscription.MessageTypeNames).Any();
     }
 }

@@ -142,7 +142,14 @@ public class SubscriptionStreamProcessor(
                 {
                     if (subscription.StaticMethod != null)
                     {
-                        await subscription.StaticMethod!(messageContext, cancellationToken);
+                        if (subscription.AcceptsMessageContext)
+                        {
+                            await subscription.StaticMethod!(messageContext, cancellationToken);
+                        }
+                        else
+                        {
+                            await subscription.StaticMethod!(messageContext.Message, cancellationToken);
+                        }
 
                         continue;
                     }
