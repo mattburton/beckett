@@ -6,7 +6,7 @@ public class Subscription(string name)
 {
     internal string Name { get; } = name;
     internal string Topic { get; set; } = null!;
-    internal Type Type { get; set; } = null!;
+    internal Type? Type { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];
     internal HashSet<string> MessageTypeNames { get; private set; } = [];
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
@@ -20,6 +20,14 @@ public class Subscription(string name)
     internal void MapMessageTypeNames(IMessageTypeMap messageTypeMap)
     {
         MessageTypeNames = MessageTypes.Select(messageTypeMap.GetName).ToHashSet();
+    }
+
+    internal void EnsureHandlerIsConfigured()
+    {
+        if (Type == null)
+        {
+            throw new InvalidOperationException($"The subscription {Name} does not have a handler configured.");
+        }
     }
 
     internal void EnsureOnlyHandlerMessageTypeIsMapped<TMessage>()

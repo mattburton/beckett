@@ -40,6 +40,8 @@ public class BootstrapSubscriptions(
         {
             EnsureSubscriptionHandlerIsRegistered(subscription);
 
+            subscription.EnsureHandlerIsConfigured();
+
             subscription.MapMessageTypeNames(messageTypeMap);
 
             var initialized = await database.Execute(
