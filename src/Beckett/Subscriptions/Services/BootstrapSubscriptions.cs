@@ -99,7 +99,7 @@ public class BootstrapSubscriptions(
         {
             var scope = serviceProvider.CreateScope();
 
-            scope.ServiceProvider.GetRequiredService(subscription.Type);
+            scope.ServiceProvider.GetRequiredService(subscription.Type!);
         }
         catch
         {

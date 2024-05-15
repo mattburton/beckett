@@ -1,6 +1,7 @@
 using Beckett.Database;
 using Beckett.Messages;
 using Beckett.Messages.Scheduling;
+using Beckett.OpenTelemetry;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.Configuration;
@@ -21,9 +22,11 @@ public static class ServiceCollectionExtensions
 
         configure?.Invoke(options);
 
-        builder.Services.AddPostgresSupport(options.Postgres);
-
         builder.Services.AddMessageSupport(options.Messages);
+
+        builder.Services.AddOpenTelemetrySupport();
+
+        builder.Services.AddPostgresSupport(options.Postgres);
 
         builder.Services.AddScheduledMessageSupport(options.ScheduledMessages);
 
@@ -74,9 +77,11 @@ public static class ServiceCollectionExtensions
 
             services.AddSingleton(options);
 
-            services.AddPostgresSupport(options.Postgres);
-
             services.AddMessageSupport(options.Messages);
+
+            services.AddOpenTelemetrySupport();
+
+            services.AddPostgresSupport(options.Postgres);
 
             services.AddScheduledMessageSupport(options.ScheduledMessages);
 

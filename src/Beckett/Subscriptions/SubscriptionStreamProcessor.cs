@@ -1,6 +1,7 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Messages;
+using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Retries;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Events.Models;
@@ -16,6 +17,7 @@ public class SubscriptionStreamProcessor(
     IMessageStore messageStore,
     IServiceProvider serviceProvider,
     SubscriptionOptions options,
+    IInstrumentation instrumentation,
     ILogger<SubscriptionStreamProcessor> logger
 ) : ISubscriptionStreamProcessor
 {
@@ -140,6 +142,8 @@ public class SubscriptionStreamProcessor(
 
                 try
                 {
+                    using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
+
                     if (subscription.StaticMethod != null)
                     {
                         if (subscription.AcceptsMessageContext)
@@ -156,7 +160,7 @@ public class SubscriptionStreamProcessor(
 
                     using var scope = serviceProvider.CreateScope();
 
-                    var handler = scope.ServiceProvider.GetRequiredService(subscription.Type);
+                    var handler = scope.ServiceProvider.GetRequiredService(subscription.Type!);
 
                     if (subscription.AcceptsMessageContext)
                     {

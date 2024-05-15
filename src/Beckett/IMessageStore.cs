@@ -1,6 +1,7 @@
 using System.Transactions;
 using Beckett.Messages;
 using Beckett.Messages.Scheduling;
+using Beckett.OpenTelemetry;
 
 namespace Beckett;
 
@@ -22,7 +23,11 @@ public interface IMessageStore
     );
 }
 
-public class MessageStore(IMessageStorage messageStorage, IMessageScheduler messageScheduler) : IMessageStore
+public class MessageStore(
+    IMessageStorage messageStorage,
+    IMessageScheduler messageScheduler,
+    IInstrumentation instrumentation
+) : IMessageStore
 {
     public async Task<AppendResult> AppendToStream(
         string topic,
@@ -32,8 +37,10 @@ public class MessageStore(IMessageStorage messageStorage, IMessageScheduler mess
         CancellationToken cancellationToken
     )
     {
-        //TODO - populate from activity source
         var metadata = new Dictionary<string, object>();
+
+        using var activity = instrumentation.StartAppendToStreamActivity(topic, streamId, metadata);
+
         var messagesToAppend = new List<MessageEnvelope>();
         var messagesToSchedule = new List<ScheduledMessageEnvelope>();
 
@@ -45,7 +52,7 @@ public class MessageStore(IMessageStorage messageStorage, IMessageScheduler mess
             {
                 foreach (var item in messageWithMetadata.Metadata)
                 {
-                    messageMetadata.Add(item.Key, item.Value);
+                    messageMetadata.TryAdd(item.Key, item.Value);
                 }
 
                 if (message is not ScheduledMessageWrapper)
@@ -112,6 +119,8 @@ public class MessageStore(IMessageStorage messageStorage, IMessageScheduler mess
         CancellationToken cancellationToken
     )
     {
+        using var activity = instrumentation.StartReadStreamActivity(topic, streamId);
+
         return messageStorage.ReadStream(topic, streamId.ToString()!, options, cancellationToken);
     }
 }
