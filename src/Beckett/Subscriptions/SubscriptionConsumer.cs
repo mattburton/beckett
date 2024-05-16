@@ -12,11 +12,14 @@ public class SubscriptionConsumer(
 ) : ISubscriptionConsumer
 {
     private Task _task = null!;
+    private bool _pendingRequest;
 
     public void StartPolling()
     {
         if (_task is { IsCompleted: false })
         {
+            _pendingRequest = true;
+
             return;
         }
 
@@ -42,7 +45,14 @@ public class SubscriptionConsumer(
 
             if (checkpoint == null)
             {
-                break;
+                if (!_pendingRequest)
+                {
+                    break;
+                }
+
+                _pendingRequest = false;
+
+                continue;
             }
 
             var subscription = subscriptionRegistry.GetSubscription(checkpoint.Name);
