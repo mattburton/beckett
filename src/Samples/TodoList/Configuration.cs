@@ -30,9 +30,6 @@ public static class Configuration
 
         builder.AddSubscription("notifications")
             .Topic(Topics.TodoList)
-            .Message<TodoListCreated>()
-            .Message<TodoListItemAdded>()
-            .Message<TodoListItemCompleted>()
             .Handler(NotificationHandler.Handle);
 
         return builder;
