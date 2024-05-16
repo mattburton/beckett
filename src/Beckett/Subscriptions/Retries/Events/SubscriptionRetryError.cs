@@ -8,6 +8,5 @@ public record SubscriptionRetryError(
     long StreamPosition,
     int Attempts,
     ExceptionData Exception,
-    DateTimeOffset RetryAt,
     DateTimeOffset Timestamp
 );

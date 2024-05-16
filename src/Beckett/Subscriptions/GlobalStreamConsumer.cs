@@ -13,29 +13,26 @@ public class GlobalStreamConsumer(
 ) : IGlobalStreamConsumer
 {
     private Task _task = Task.CompletedTask;
-    private bool _pendingRequest;
 
-    public void StartPolling(CancellationToken cancellationToken)
+    public void StartPolling(CancellationToken stoppingToken)
     {
         if (_task is { IsCompleted: false })
         {
-            _pendingRequest = true;
-
             return;
         }
 
-        _task = Poll(cancellationToken);
+        _task = Poll(stoppingToken);
     }
 
-    private async Task Poll(CancellationToken cancellationToken)
+    private async Task Poll(CancellationToken stoppingToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
             await using var connection = database.CreateConnection();
 
-            await connection.OpenAsync(cancellationToken);
+            await connection.OpenAsync(stoppingToken);
 
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+            await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
             var checkpoint = await database.Execute(
                 new LockCheckpoint(
@@ -45,37 +42,23 @@ public class GlobalStreamConsumer(
                 ),
                 connection,
                 transaction,
-                cancellationToken
+                stoppingToken
             );
 
             if (checkpoint == null)
             {
-                if (!_pendingRequest)
-                {
-                    break;
-                }
-
-                _pendingRequest = false;
-
-                continue;
+                break;
             }
 
             var streamChanges = await messageStorage.ReadStreamChanges(
                 checkpoint.StreamPosition,
                 options.BatchSize,
-                cancellationToken
+                stoppingToken
             );
 
             if (streamChanges.Count == 0)
             {
-                if (!_pendingRequest)
-                {
-                    break;
-                }
-
-                _pendingRequest = false;
-
-                continue;
+                break;
             }
 
             var checkpoints = new List<CheckpointType>();
@@ -98,7 +81,7 @@ public class GlobalStreamConsumer(
                 new RecordCheckpoints(checkpoints.ToArray()),
                 connection,
                 transaction,
-                cancellationToken
+                stoppingToken
             );
 
             var newGlobalPosition = streamChanges.Max(x => x.GlobalPosition);
@@ -113,10 +96,10 @@ public class GlobalStreamConsumer(
                 ),
                 connection,
                 transaction,
-                cancellationToken
+                stoppingToken
             );
 
-            await transaction.CommitAsync(cancellationToken);
+            await transaction.CommitAsync(stoppingToken);
         }
     }
 }

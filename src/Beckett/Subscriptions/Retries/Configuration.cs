@@ -8,10 +8,10 @@ public static class Configuration
 {
     public static IBeckettBuilder UseSubscriptionRetries(this IBeckettBuilder builder)
     {
+        builder.Map<SubscriptionError>("$subscription_error");
         builder.Map<SubscriptionRetryError>("$subscription_retry_error");
         builder.Map<SubscriptionRetryFailed>("$subscription_retry_failed");
         builder.Map<SubscriptionRetrySucceeded>("$subscription_retry_succeeded");
-        builder.Map<SubscriptionError>("$subscription_error");
 
         builder.Services.AddSingleton<IRetryManager, RetryManager>();
 

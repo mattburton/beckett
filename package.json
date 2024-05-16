@@ -1,8 +1,12 @@
 {
   "private": true,
   "scripts": {
+    "api": "dotnet run --project src/Samples/API/API.csproj",
     "reset": "docker-compose down -v && docker-compose up -d",
-    "start": "dotnet run --project src/Samples/API/API.csproj",
+    "start": "concurrently -k \"npm:api\" \"npm:worker\"",
     "worker": "dotnet run --project src/Samples/Worker/Worker.csproj"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

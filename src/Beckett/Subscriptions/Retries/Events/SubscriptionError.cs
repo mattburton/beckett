@@ -7,6 +7,5 @@ public record SubscriptionError(
     string StreamName,
     long StreamPosition,
     ExceptionData Exception,
-    DateTimeOffset RetryAt,
     DateTimeOffset Timestamp
 );

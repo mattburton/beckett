@@ -78,7 +78,7 @@ public class BeckettBuilder(
         public ICategorySubscriptionBuilder Category(string category)
         {
             subscription.Category = category;
-            subscription.Pattern = new Regex($"{category}(?=-*)", RegexOptions.Compiled);
+            subscription.Pattern = new Regex($"({Regex.Escape(category)})(?=-*)", RegexOptions.Compiled);
 
             return new CategorySubscriptionBuilder(subscription);
         }

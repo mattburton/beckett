@@ -3,6 +3,7 @@ using Beckett.Database.Queries;
 using Beckett.Subscriptions.Models;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Events.Models;
+using Polly.Contrib.WaitAndRetry;
 
 namespace Beckett.Subscriptions.Retries;
 
@@ -30,9 +31,8 @@ public class RetryManager(
         }
 
         var retryStreamName = RetryStreamName.For(subscriptionName, streamName, streamPosition);
-        var retryAt = attempts.GetNextDelayWithExponentialBackoff();
 
-        attempts++;
+        attempts += 1;
 
         var reachedMaxAttempts = attempts >= subscription.MaxRetryCount;
 
@@ -77,7 +77,7 @@ public class RetryManager(
                     subscriptionName,
                     streamName,
                     streamPosition,
-                    attempts + 1,
+                    attempts,
                     DateTimeOffset.UtcNow
                 ),
                 cancellationToken
@@ -103,6 +103,11 @@ public class RetryManager(
             }
             else
             {
+                var delay = Backoff.DecorrelatedJitterBackoffV2(
+                    TimeSpan.FromSeconds(10),
+                    subscription.MaxRetryCount
+                ).ElementAt(attempts);
+
                 await messageStore.AppendToStream(
                     retryStreamName,
                     ExpectedVersion.StreamExists,
@@ -112,9 +117,8 @@ public class RetryManager(
                         streamPosition,
                         attempts,
                         ExceptionData.From(ex),
-                        retryAt,
                         DateTimeOffset.UtcNow
-                    ).ScheduleAt(retryAt),
+                    ).DelayFor(delay),
                     cancellationToken
                 );
             }

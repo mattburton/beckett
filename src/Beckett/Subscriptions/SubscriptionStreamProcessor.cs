@@ -139,8 +139,6 @@ public class SubscriptionStreamProcessor(
         CancellationToken cancellationToken
     )
     {
-        var retryAt = 0.GetNextDelayWithExponentialBackoff();
-
         await messageStore.AppendToStream(
             RetryStreamName.For(
                 subscription.Name,
@@ -153,9 +151,8 @@ public class SubscriptionStreamProcessor(
                 streamName,
                 error.StreamPosition,
                 ExceptionData.From(error.Exception),
-                retryAt,
                 DateTimeOffset.UtcNow
-            ).ScheduleAt(retryAt),
+            ).DelayFor(TimeSpan.FromSeconds(10)),
             cancellationToken
         );
     }
