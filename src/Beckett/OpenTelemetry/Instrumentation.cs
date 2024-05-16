@@ -12,7 +12,7 @@ using OpenTelemetry.Context.Propagation;
 namespace Beckett.OpenTelemetry;
 
 [SuppressMessage("ReSharper", "ExplicitCallerInfoArgument")]
-public class Instrumentation : IDisposable, IInstrumentation
+public class Instrumentation : IInstrumentation, IDisposable
 {
     private readonly IPostgresDatabase _database;
     private readonly IMessageTypeMap _messageTypeMap;
@@ -59,13 +59,18 @@ public class Instrumentation : IDisposable, IInstrumentation
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.AppendToStream, ActivityKind.Producer);
 
-        activity?.AddTag(TelemetryConstants.Streams.Name, streamName);
+        if (activity == null)
+        {
+            return activity;
+        }
+
+        activity.AddTag(TelemetryConstants.Streams.Name, streamName);
 
         _propagator.Inject(
-            new PropagationContext(activity!.Context, default), metadata, (meta, key, value) => meta[key] = value
+            new PropagationContext(activity.Context, default), metadata, (meta, key, value) => meta[key] = value
         );
 
-        var causationId = activity?.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
+        var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
 
         if (causationId != null)
         {
@@ -98,23 +103,28 @@ public class Instrumentation : IDisposable, IInstrumentation
             parentContext.ActivityContext
         );
 
-        activity?.AddTag(TelemetryConstants.Application.Name, _options.Subscriptions.ApplicationName);
-        activity?.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
-        activity?.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
-        activity?.AddTag(TelemetryConstants.Subscription.Handler, subscription.Type?.FullName);
-        activity?.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
+        if (activity == null)
+        {
+            return activity;
+        }
+
+        activity.AddTag(TelemetryConstants.Application.Name, _options.Subscriptions.ApplicationName);
+        activity.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
+        activity.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
+        activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.Type?.FullName);
+        activity.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
 
         if (messageContext.Metadata.TryGetValue(MessageConstants.Metadata.CausationId, out var causationId))
         {
-            activity?.AddTag(TelemetryConstants.Message.CausationId, causationId);
+            activity.AddTag(TelemetryConstants.Message.CausationId, causationId);
         }
 
-        activity?.AddTag(TelemetryConstants.Message.StreamName, messageContext.StreamName);
-        activity?.AddTag(TelemetryConstants.Message.GlobalPosition, messageContext.GlobalPosition);
-        activity?.AddTag(TelemetryConstants.Message.StreamPosition, messageContext.StreamPosition);
-        activity?.AddTag(TelemetryConstants.Message.Type, _messageTypeMap.GetName(messageContext.Type));
+        activity.AddTag(TelemetryConstants.Message.StreamName, messageContext.StreamName);
+        activity.AddTag(TelemetryConstants.Message.GlobalPosition, messageContext.GlobalPosition);
+        activity.AddTag(TelemetryConstants.Message.StreamPosition, messageContext.StreamPosition);
+        activity.AddTag(TelemetryConstants.Message.Type, _messageTypeMap.GetName(messageContext.Type));
 
-        activity?.AddBaggage(TelemetryConstants.Message.Id, messageContext.Id.ToString());
+        activity.AddBaggage(TelemetryConstants.Message.Id, messageContext.Id.ToString());
 
         return activity;
     }
