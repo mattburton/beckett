@@ -24,7 +24,7 @@ public class GlobalStreamConsumer(
         _task = Consume(cancellationToken);
     }
 
-    public async Task Consume(CancellationToken cancellationToken)
+    private async Task Consume(CancellationToken cancellationToken)
     {
         await using var connection = database.CreateConnection();
 
