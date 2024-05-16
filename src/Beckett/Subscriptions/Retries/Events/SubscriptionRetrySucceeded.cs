@@ -2,8 +2,7 @@ namespace Beckett.Subscriptions.Retries.Events;
 
 public record SubscriptionRetrySucceeded(
     string SubscriptionName,
-    string Topic,
-    string StreamId,
+    string StreamName,
     long StreamPosition,
     int Attempts,
     DateTimeOffset Timestamp

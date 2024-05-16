@@ -3,16 +3,14 @@ namespace Beckett.Messages;
 public interface IMessageStorage
 {
     Task<AppendResult> AppendToStream(
-        string topic,
-        string streamId,
+        string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<MessageEnvelope> messages,
         CancellationToken cancellationToken
     );
 
     Task<ReadResult> ReadStream(
-        string topic,
-        string streamId,
+        string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
     );

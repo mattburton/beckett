@@ -77,8 +77,7 @@ public class SubscriptionInitializer(
                 new LockCheckpoint(
                     options.ApplicationName,
                     subscription.Name,
-                    subscription.Name,
-                    InitializationConstants.StreamId
+                    InitializationConstants.StreamName
                 ),
                 connection,
                 transaction,
@@ -102,8 +101,7 @@ public class SubscriptionInitializer(
                     new LockCheckpoint(
                         options.ApplicationName,
                         GlobalCheckpoint.Name,
-                        GlobalCheckpoint.Topic,
-                        GlobalCheckpoint.StreamId
+                        GlobalCheckpoint.StreamName
                     ),
                     connection,
                     transaction,
@@ -148,8 +146,7 @@ public class SubscriptionInitializer(
                 {
                     Application = options.ApplicationName,
                     Name = subscription.Name,
-                    Topic = streamChange.Topic,
-                    StreamId = streamChange.StreamId,
+                    StreamName = streamChange.StreamName,
                     StreamVersion = streamChange.StreamVersion
                 });
             }
@@ -167,8 +164,7 @@ public class SubscriptionInitializer(
                 new RecordCheckpoint(
                     options.ApplicationName,
                     subscription.Name,
-                    subscription.Name,
-                    InitializationConstants.StreamId,
+                    InitializationConstants.StreamName,
                     newGlobalPosition,
                     newGlobalPosition
                 ),

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Beckett.Messages;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.Configuration;
@@ -19,7 +20,7 @@ public interface IBeckettBuilder
 
 public interface ISubscriptionBuilder
 {
-    ITopicSubscriptionBuilder Topic(string topic);
+    ICategorySubscriptionBuilder Category(string category);
 }
 
 public interface ISubscriptionConfigurationBuilder
@@ -28,17 +29,17 @@ public interface ISubscriptionConfigurationBuilder
     ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount);
 }
 
-public interface ITopicSubscriptionBuilder
+public interface ICategorySubscriptionBuilder
 {
-    ITopicMessageSubscriptionBuilder<TMessage> Message<TMessage>();
+    ICategoryMessageSubscriptionBuilder<TMessage> Message<TMessage>();
 
     ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler);
     ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler);
 }
 
-public interface ITopicMessageSubscriptionBuilder<out TMessage>
+public interface ICategoryMessageSubscriptionBuilder<out TMessage>
 {
-    ITopicMessageSubscriptionBuilder<T> Message<T>();
+    ICategoryMessageSubscriptionBuilder<T> Message<T>();
 
     ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageHandler<THandler, TMessage> handler);
     ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageAndContextHandler<THandler, TMessage> handler);
@@ -74,21 +75,22 @@ public class BeckettBuilder(
 
     private class SubscriptionBuilder(Subscription subscription) : ISubscriptionBuilder
     {
-        public ITopicSubscriptionBuilder Topic(string topic)
+        public ICategorySubscriptionBuilder Category(string category)
         {
-            subscription.Topic = topic;
+            subscription.Category = category;
+            subscription.Pattern = new Regex($"{category}(?=-*)", RegexOptions.Compiled);
 
-            return new TopicSubscriptionBuilder(subscription);
+            return new CategorySubscriptionBuilder(subscription);
         }
     }
 
-    private class TopicSubscriptionBuilder(Subscription subscription) : ITopicSubscriptionBuilder
+    private class CategorySubscriptionBuilder(Subscription subscription) : ICategorySubscriptionBuilder
     {
-        public ITopicMessageSubscriptionBuilder<TMessage> Message<TMessage>()
+        public ICategoryMessageSubscriptionBuilder<TMessage> Message<TMessage>()
         {
             subscription.MessageTypes.Add(typeof(TMessage));
 
-            return new TopicMessageSubscriptionBuilder<TMessage>(subscription);
+            return new CategoryMessageSubscriptionBuilder<TMessage>(subscription);
         }
 
         public ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler)
@@ -110,13 +112,13 @@ public class BeckettBuilder(
         }
     }
 
-    private class TopicMessageSubscriptionBuilder<T>(Subscription subscription) : ITopicMessageSubscriptionBuilder<T>
+    private class CategoryMessageSubscriptionBuilder<T>(Subscription subscription) : ICategoryMessageSubscriptionBuilder<T>
     {
-        public ITopicMessageSubscriptionBuilder<TMessage> Message<TMessage>()
+        public ICategoryMessageSubscriptionBuilder<TMessage> Message<TMessage>()
         {
             subscription.MessageTypes.Add(typeof(TMessage));
 
-            return new TopicMessageSubscriptionBuilder<TMessage>(subscription);
+            return new CategoryMessageSubscriptionBuilder<TMessage>(subscription);
         }
 
         public ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageHandler<THandler, T> handler)

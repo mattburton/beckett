@@ -16,8 +16,7 @@ public class GetScheduledMessagesToDeliver(
     {
         command.CommandText = $@"
             select id,
-                   topic,
-                   stream_id,
+                   stream_name,
                    type,
                    data,
                    metadata,

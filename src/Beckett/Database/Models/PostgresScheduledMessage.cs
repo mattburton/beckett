@@ -5,8 +5,7 @@ namespace Beckett.Database.Models;
 public class PostgresScheduledMessage
 {
     public Guid Id { get; init; }
-    public string Topic { get; init; } = null!;
-    public string StreamId { get; init; } = null!;
+    public string StreamName { get; init; } = null!;
     public string Type { get; init; } = null!;
     public string Data { get; init; } = null!;
     public string Metadata { get; init; } = null!;
@@ -18,13 +17,12 @@ public class PostgresScheduledMessage
         return new PostgresScheduledMessage
         {
             Id = reader.GetFieldValue<Guid>(0),
-            Topic = reader.GetFieldValue<string>(1),
-            StreamId = reader.GetFieldValue<string>(2),
-            Type = reader.GetFieldValue<string>(3),
-            Data = reader.GetFieldValue<string>(4),
-            Metadata = reader.GetFieldValue<string>(5),
-            DeliverAt = reader.GetFieldValue<DateTimeOffset>(6),
-            Timestamp = reader.GetFieldValue<DateTimeOffset>(7)
+            StreamName = reader.GetFieldValue<string>(1),
+            Type = reader.GetFieldValue<string>(2),
+            Data = reader.GetFieldValue<string>(3),
+            Metadata = reader.GetFieldValue<string>(4),
+            DeliverAt = reader.GetFieldValue<DateTimeOffset>(5),
+            Timestamp = reader.GetFieldValue<DateTimeOffset>(6)
         };
     }
 }

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Beckett.Messages;
 
 namespace Beckett.Subscriptions;
@@ -5,7 +6,8 @@ namespace Beckett.Subscriptions;
 public class Subscription(string name)
 {
     internal string Name { get; } = name;
-    internal string Topic { get; set; } = null!;
+    internal string Category { get; set; } = null!;
+    internal Regex Pattern { get; set; } = null!;
     internal Type? Type { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];
     internal HashSet<string> MessageTypeNames { get; private set; } = [];
@@ -15,7 +17,7 @@ public class Subscription(string name)
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal int MaxRetryCount { get; set; } = 10;
 
-    internal bool IsTopicOnly => MessageTypes.Count == 0;
+    internal bool IsPatternOnly => MessageTypes.Count == 0;
 
     internal bool HasStaticMethod => StaticMethod != null;
 

@@ -27,6 +27,17 @@ CREATE TYPE __schema__.message AS
   metadata jsonb
 );
 
+CREATE OR REPLACE FUNCTION __schema__.stream_category(
+  _stream_name text
+)
+  RETURNS text
+  IMMUTABLE
+  LANGUAGE sql
+AS
+$$
+SELECT split_part(_stream_name, '-', 1);
+$$;
+
 CREATE TABLE IF NOT EXISTS __schema__.messages
 (
   id uuid NOT NULL UNIQUE,
@@ -34,29 +45,30 @@ CREATE TABLE IF NOT EXISTS __schema__.messages
   stream_position bigint NOT NULL,
   transaction_id xid8 DEFAULT pg_current_xact_id() NOT NULL,
   timestamp timestamp with time zone DEFAULT now() NOT NULL,
-  topic text NOT NULL,
-  stream_id text NOT NULL,
+  stream_name text NOT NULL,
   type text NOT NULL,
   data jsonb NOT NULL,
   metadata jsonb NOT NULL,
-  UNIQUE (topic, stream_id, stream_position)
+  UNIQUE (stream_name, stream_position)
+);
+
+CREATE INDEX IF NOT EXISTS ix_messages_stream_category ON __schema__.messages (
+  __schema__.stream_category(stream_name)
 );
 
 CREATE FUNCTION __schema__.stream_hash(
-  _topic text,
-  _stream_id text
+  _stream_name text
 )
   RETURNS bigint
   IMMUTABLE
   LANGUAGE sql
 AS
 $$
-SELECT abs(hashtextextended(_topic || '-' || _stream_id, 0));
+SELECT abs(hashtextextended(_stream_name, 0));
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.append_to_stream(
-  _topic text,
-  _stream_id text,
+  _stream_name text,
   _expected_version bigint,
   _messages __schema__.message[]
 )
@@ -68,30 +80,28 @@ DECLARE
   _current_version bigint;
   _stream_version bigint;
 BEGIN
-  PERFORM pg_advisory_xact_lock(__schema__.stream_hash(_topic, _stream_id));
+  PERFORM pg_advisory_xact_lock(__schema__.stream_hash(_stream_name));
 
   SELECT coalesce(max(m.stream_position), 0)
   INTO _current_version
   FROM __schema__.messages m
-  WHERE m.topic = _topic
-  AND m.stream_id = _stream_id;
+  WHERE m.stream_name = _stream_name;
 
   IF (_expected_version < -2) THEN
     RAISE EXCEPTION 'Invalid value for expected version: %', _expected_version;
   END IF;
 
   IF (_expected_version = -1 AND _current_version = 0) THEN
-    RAISE EXCEPTION 'Attempted to append to a non-existing stream: %-%', _topic, _stream_id;
+    RAISE EXCEPTION 'Attempted to append to a non-existing stream: %', _stream_name;
   END IF;
 
   IF (_expected_version = 0 AND _current_version > 0) THEN
-    RAISE EXCEPTION 'Attempted to start a stream that already exists: %-%', _topic, _stream_id;
+    RAISE EXCEPTION 'Attempted to start a stream that already exists: %', _stream_name;
   END IF;
 
   IF (_expected_version > 0 AND _expected_version != _current_version) THEN
-    RAISE EXCEPTION 'Stream %-% version % does not match expected version %',
-      _topic,
-      _stream_id,
+    RAISE EXCEPTION 'Stream % version % does not match expected version %',
+      _stream_name,
       _current_version,
       _expected_version;
   END IF;
@@ -100,16 +110,14 @@ BEGIN
     INSERT INTO __schema__.messages (
       id,
       stream_position,
-      topic,
-      stream_id,
+      stream_name,
       type,
       data,
       metadata
     )
     SELECT m.id,
            _current_version + (row_number() over())::bigint,
-           _topic,
-           _stream_id,
+           _stream_name,
            m.type,
            m.data,
            m.metadata
@@ -127,8 +135,7 @@ $$;
 
 --TODO: return actual stream version regardless of filters
 CREATE FUNCTION __schema__.read_stream(
-  _topic text,
-  _stream_id text,
+  _stream_name text,
   _starting_stream_position bigint DEFAULT NULL,
   _ending_global_position bigint DEFAULT NULL,
   _count integer DEFAULT NULL,
@@ -136,8 +143,7 @@ CREATE FUNCTION __schema__.read_stream(
 )
   RETURNS TABLE (
     id uuid,
-    topic text,
-    stream_id text,
+    stream_name text,
     stream_position bigint,
     global_position bigint,
     type text,
@@ -149,8 +155,7 @@ CREATE FUNCTION __schema__.read_stream(
 AS
 $$
 SELECT m.id,
-       m.topic,
-       m.stream_id,
+       m.stream_name,
        m.stream_position,
        m.global_position,
        m.type,
@@ -158,8 +163,7 @@ SELECT m.id,
        m.metadata,
        m.timestamp
 FROM __schema__.messages m
-WHERE m.topic = _topic
-AND m.stream_id = _stream_id
+WHERE m.stream_name = _stream_name
 AND (_starting_stream_position IS NULL OR m.stream_position >= _starting_stream_position)
 AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
 ORDER BY CASE WHEN _read_forwards = true THEN stream_position END,
@@ -172,8 +176,7 @@ CREATE FUNCTION __schema__.read_stream_changes(
   _batch_size int
 )
   RETURNS TABLE (
-    topic text,
-    stream_id text,
+    stream_name text,
     stream_version bigint,
     global_position bigint,
     message_types text[]
@@ -189,8 +192,7 @@ WITH last_transaction_id AS (
   SELECT '0'::xid8 as transaction_id
   LIMIT 1
 )
-SELECT m.topic,
-       m.stream_id,
+SELECT m.stream_name,
        max(m.stream_position) as stream_version,
        max(m.global_position) as global_position,
        array_agg(m.type) as message_types
@@ -201,7 +203,7 @@ WHERE (
   (m.transaction_id > lti.transaction_id)
 )
 AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-GROUP BY m.topic, m.stream_id
+GROUP BY m.stream_name
 LIMIT _batch_size;
 $$;
 
@@ -221,8 +223,7 @@ CREATE TYPE __schema__.scheduled_message AS
 CREATE TABLE __schema__.scheduled_messages
 (
   id uuid NOT NULL PRIMARY KEY,
-  topic text NOT NULL,
-  stream_id text NOT NULL,
+  stream_name text NOT NULL,
   type text NOT NULL,
   data jsonb NOT NULL,
   metadata jsonb NOT NULL,
@@ -233,8 +234,7 @@ CREATE TABLE __schema__.scheduled_messages
 GRANT UPDATE, DELETE ON __schema__.scheduled_messages TO beckett;
 
 CREATE OR REPLACE FUNCTION __schema__.schedule_messages(
-  _topic text,
-  _stream_id text,
+  _stream_name text,
   _scheduled_messages __schema__.scheduled_message[]
 )
   RETURNS void
@@ -243,14 +243,13 @@ AS
 $$
 INSERT INTO __schema__.scheduled_messages (
   id,
-  topic,
-  stream_id,
+  stream_name,
   type,
   data,
   metadata,
   deliver_at
 )
-SELECT m.id, _topic, _stream_id, m.type, m.data, m.metadata, m.deliver_at
+SELECT m.id, _stream_name, m.type, m.data, m.metadata, m.deliver_at
 FROM unnest(_scheduled_messages) as m
 ON CONFLICT (id) DO NOTHING;
 $$;
@@ -282,8 +281,7 @@ CREATE TYPE __schema__.checkpoint AS
 (
   application text,
   name text,
-  topic text,
-  stream_id text,
+  stream_name text,
   stream_version bigint
 );
 
@@ -305,10 +303,9 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   stream_position bigint DEFAULT 0 NOT NULL,
   application text NOT NULL,
   name text NOT NULL,
-  topic text NOT NULL,
-  stream_id text NOT NULL,
+  stream_name text NOT NULL,
   status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
-  PRIMARY KEY (application, name, topic, stream_id)
+  PRIMARY KEY (application, name, stream_name)
 );
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
@@ -359,8 +356,7 @@ $$
 DELETE FROM __schema__.checkpoints
 WHERE application = _application
 AND name = _name
-AND topic = _name
-AND stream_id = '$initializing';
+AND stream_name = '$initializing';
 
 UPDATE __schema__.subscriptions
 SET initialized = true
@@ -371,29 +367,26 @@ $$;
 CREATE FUNCTION __schema__.ensure_checkpoint_exists(
   _application text,
   _name text,
-  _topic text,
-  _stream_id text
+  _stream_name text
 )
   RETURNS void
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (application, name, topic, stream_id)
-VALUES (_application, _name, _topic, _stream_id)
-ON CONFLICT (application, name, topic, stream_id) DO NOTHING;
+INSERT INTO __schema__.checkpoints (application, name, stream_name)
+VALUES (_application, _name, _stream_name)
+ON CONFLICT (application, name, stream_name) DO NOTHING;
 $$;
 
 CREATE FUNCTION __schema__.lock_checkpoint(
   _application text,
   _name text,
-  _topic text,
-  _stream_id text
+  _stream_name text
 )
   RETURNS TABLE (
     application text,
     name text,
-    topic text,
-    stream_id text,
+    stream_name text,
     stream_position bigint,
     stream_version bigint,
     status __schema__.checkpoint_status
@@ -401,12 +394,11 @@ CREATE FUNCTION __schema__.lock_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT application, name, topic, stream_id, stream_position, stream_version, status
+SELECT application, name, checkpoints.stream_name, stream_position, stream_version, status
 FROM __schema__.checkpoints
 WHERE application = _application
 AND name = _name
-AND topic = _topic
-AND stream_id = _stream_id
+AND stream_name = _stream_name
 FOR UPDATE
 SKIP LOCKED;
 $$;
@@ -417,8 +409,7 @@ CREATE FUNCTION __schema__.lock_next_available_checkpoint(
   RETURNS TABLE (
     application text,
     name text,
-    topic text,
-    stream_id text,
+    stream_name text,
     stream_position bigint,
     stream_version bigint,
     status __schema__.checkpoint_status
@@ -426,7 +417,7 @@ CREATE FUNCTION __schema__.lock_next_available_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT c.application, c.name, c.topic, c.stream_id, c.stream_position, c.stream_version, c.status
+SELECT c.application, c.name, c.stream_name, c.stream_position, c.stream_version, c.status
 FROM __schema__.checkpoints c
 INNER JOIN __schema__.subscriptions s ON c.application = s.application AND c.name = s.name
 WHERE s.application = _application
@@ -446,10 +437,10 @@ CREATE FUNCTION __schema__.record_checkpoints(
 AS
 $$
 BEGIN
-  INSERT INTO __schema__.checkpoints (stream_version, application, name, topic, stream_id)
-  SELECT c.stream_version, c.application, c.name, c.topic, c.stream_id
+  INSERT INTO __schema__.checkpoints (stream_version, application, name, stream_name)
+  SELECT c.stream_version, c.application, c.name, c.stream_name
   FROM unnest(_checkpoints) c
-  ON CONFLICT (application, name, topic, stream_id) DO UPDATE
+  ON CONFLICT (application, name, stream_name) DO UPDATE
     SET stream_version = excluded.stream_version;
 
   PERFORM pg_notify('beckett:checkpoints', null);
@@ -459,8 +450,7 @@ $$;
 CREATE FUNCTION __schema__.update_checkpoint_status(
   _application text,
   _name text,
-  _topic text,
-  _stream_id text,
+  _stream_name text,
   _stream_position bigint,
   _status __schema__.checkpoint_status
 )
@@ -473,15 +463,13 @@ SET stream_position = _stream_position,
     status = _status
 WHERE application = _application
 AND name = _name
-AND topic = _topic
-AND stream_id = _stream_id;
+AND stream_name = _stream_name;
 $$;
 
 CREATE FUNCTION __schema__.record_checkpoint(
   _application text,
   _name text,
-  _topic text,
-  _stream_id text,
+  _stream_name text,
   _stream_position bigint,
   _stream_version bigint
 )
@@ -489,9 +477,9 @@ CREATE FUNCTION __schema__.record_checkpoint(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (stream_version, stream_position, application, name, topic, stream_id)
-VALUES (_stream_version, _stream_position, _application, _name, _topic, _stream_id)
-ON CONFLICT (application, name, topic, stream_id) DO UPDATE
+INSERT INTO __schema__.checkpoints (stream_version, stream_position, application, name, stream_name)
+VALUES (_stream_version, _stream_position, _application, _name, _stream_name)
+ON CONFLICT (application, name, stream_name) DO UPDATE
   SET stream_version = excluded.stream_version,
       stream_position = excluded.stream_position;
 $$;

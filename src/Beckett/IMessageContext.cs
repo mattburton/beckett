@@ -3,8 +3,7 @@ namespace Beckett;
 public interface IMessageContext
 {
     Guid Id { get; }
-    string Topic { get; }
-    string StreamId { get; }
+    string StreamName { get; }
     long StreamPosition { get; }
     long GlobalPosition { get; }
     Type Type { get; }
@@ -14,16 +13,14 @@ public interface IMessageContext
     IServiceProvider Services { get; }
 
     Task<AppendResult> AppendToStream(
-        string topic,
-        string streamId,
+        string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
         CancellationToken cancellationToken
     );
 
     Task<ReadResult> ReadStream(
-        string topic,
-        string streamId,
+        string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
     );
@@ -33,23 +30,21 @@ public static class MessageContextExtensions
 {
     public static Task<AppendResult> AppendToStream(
         this IMessageContext context,
-        string topic,
-        string streamId,
+        string streamName,
         ExpectedVersion expectedVersion,
         object message,
         CancellationToken cancellationToken
     )
     {
-        return context.AppendToStream(topic, streamId, expectedVersion, [message], cancellationToken);
+        return context.AppendToStream(streamName, expectedVersion, [message], cancellationToken);
     }
 
     public static Task<ReadResult> ReadStream(
         this IMessageContext context,
-        string topic,
-        string streamId,
+        string streamName,
         CancellationToken cancellationToken
     )
     {
-        return context.ReadStream(topic, streamId, ReadOptions.Default, cancellationToken);
+        return context.ReadStream(streamName, ReadOptions.Default, cancellationToken);
     }
 }

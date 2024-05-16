@@ -8,16 +8,14 @@ namespace Beckett;
 public interface IMessageStore
 {
     Task<AppendResult> AppendToStream(
-        string topic,
-        object streamId,
+        string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
         CancellationToken cancellationToken
     );
 
     Task<ReadResult> ReadStream(
-        string topic,
-        object streamId,
+        string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
     );
@@ -30,8 +28,7 @@ public class MessageStore(
 ) : IMessageStore
 {
     public async Task<AppendResult> AppendToStream(
-        string topic,
-        object streamId,
+        string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
         CancellationToken cancellationToken
@@ -39,7 +36,7 @@ public class MessageStore(
     {
         var metadata = new Dictionary<string, object>();
 
-        using var activity = instrumentation.StartAppendToStreamActivity(topic, streamId, metadata);
+        using var activity = instrumentation.StartAppendToStreamActivity(streamName, metadata);
 
         var messagesToAppend = new List<MessageEnvelope>();
         var messagesToSchedule = new List<ScheduledMessageEnvelope>();
@@ -75,13 +72,10 @@ public class MessageStore(
             messagesToAppend.Add(new MessageEnvelope(message, messageMetadata));
         }
 
-        var streamIdString = streamId.ToString()!;
-
         if (messagesToSchedule.Count == 0)
         {
             return await messageStorage.AppendToStream(
-                topic,
-                streamIdString,
+                streamName,
                 expectedVersion,
                 messagesToAppend,
                 cancellationToken
@@ -90,18 +84,17 @@ public class MessageStore(
 
         if (messagesToAppend.Count == 0)
         {
-            await messageScheduler.ScheduleMessages(topic, streamIdString, messagesToSchedule, cancellationToken);
+            await messageScheduler.ScheduleMessages(streamName, messagesToSchedule, cancellationToken);
 
             return new AppendResult(-1);
         }
 
         using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
-        await messageScheduler.ScheduleMessages(topic, streamIdString, messagesToSchedule, cancellationToken);
+        await messageScheduler.ScheduleMessages(streamName, messagesToSchedule, cancellationToken);
 
         var result = await messageStorage.AppendToStream(
-            topic,
-            streamIdString,
+            streamName,
             expectedVersion,
             messagesToAppend,
             cancellationToken
@@ -113,15 +106,14 @@ public class MessageStore(
     }
 
     public Task<ReadResult> ReadStream(
-        string topic,
-        object streamId,
+        string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
     )
     {
-        using var activity = instrumentation.StartReadStreamActivity(topic, streamId);
+        using var activity = instrumentation.StartReadStreamActivity(streamName);
 
-        return messageStorage.ReadStream(topic, streamId.ToString()!, options, cancellationToken);
+        return messageStorage.ReadStream(streamName, options, cancellationToken);
     }
 }
 
@@ -129,23 +121,21 @@ public static class MessageStoreExtensions
 {
     public static Task<AppendResult> AppendToStream(
         this IMessageStore messageStore,
-        string topic,
-        object streamId,
+        string streamName,
         ExpectedVersion expectedVersion,
         object message,
         CancellationToken cancellationToken
     )
     {
-        return messageStore.AppendToStream(topic, streamId, expectedVersion, [message], cancellationToken);
+        return messageStore.AppendToStream(streamName, expectedVersion, [message], cancellationToken);
     }
 
     public static Task<ReadResult> ReadStream(
         this IMessageStore messageStore,
-        string topic,
-        object streamId,
+        string streamName,
         CancellationToken cancellationToken
     )
     {
-        return messageStore.ReadStream(topic, streamId, ReadOptions.Default, cancellationToken);
+        return messageStore.ReadStream(streamName, ReadOptions.Default, cancellationToken);
     }
 }

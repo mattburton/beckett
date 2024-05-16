@@ -4,7 +4,7 @@ using TodoList.CreateList;
 
 namespace TodoList.GetList;
 
-public class TodoListView : IState
+public class TodoListView : IApply
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;

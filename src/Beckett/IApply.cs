@@ -1,6 +1,6 @@
 namespace Beckett;
 
-public interface IState
+public interface IApply
 {
     void Apply(object message);
 }

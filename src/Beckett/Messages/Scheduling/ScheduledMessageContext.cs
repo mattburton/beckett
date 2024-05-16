@@ -1,14 +1,12 @@
 namespace Beckett.Messages.Scheduling;
 
 public readonly struct ScheduledMessageContext(
-    string topic,
-    string streamId,
+    string streamName,
     object data,
     Dictionary<string, object> metadata
 ) : IScheduledMessageContext
 {
-    public string Topic { get; } = topic;
-    public string StreamId { get; } = streamId;
+    public string StreamName { get; } = streamName;
     public object Message { get; } = data;
     public Dictionary<string, object> Metadata { get; } = metadata;
 }

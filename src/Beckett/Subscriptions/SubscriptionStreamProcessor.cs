@@ -26,8 +26,7 @@ public class SubscriptionStreamProcessor(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Subscription subscription,
-        string topic,
-        string streamId,
+        string streamName,
         long streamPosition,
         int batchSize,
         bool moveToFailedOnError,
@@ -37,8 +36,7 @@ public class SubscriptionStreamProcessor(
     {
         var streamMessages = await database.Execute(
             new ReadStream(
-                topic,
-                streamId,
+                streamName,
                 new ReadOptions
                 {
                     StartingStreamPosition = streamPosition,
@@ -57,8 +55,7 @@ public class SubscriptionStreamProcessor(
 
             messages.Add(new MessageContext(
                 streamMessage.Id,
-                streamMessage.Topic,
-                streamMessage.StreamId,
+                streamMessage.StreamName,
                 streamMessage.StreamPosition,
                 streamMessage.GlobalPosition,
                 type,
@@ -70,7 +67,7 @@ public class SubscriptionStreamProcessor(
             ));
         }
 
-        var result = await HandleMessageBatch(subscription, topic, streamId, messages, cancellationToken);
+        var result = await HandleMessageBatch(subscription, streamName, messages, cancellationToken);
 
         switch (result)
         {
@@ -79,8 +76,7 @@ public class SubscriptionStreamProcessor(
                     new UpdateCheckpointStatus(
                         options.ApplicationName,
                         subscription.Name,
-                        topic,
-                        streamId,
+                        streamName,
                         success.StreamPosition,
                         CheckpointStatus.Active
                     ),
@@ -97,8 +93,7 @@ public class SubscriptionStreamProcessor(
                         new UpdateCheckpointStatus(
                             options.ApplicationName,
                             subscription.Name,
-                            topic,
-                            streamId,
+                            streamName,
                             error.StreamPosition,
                             CheckpointStatus.Failed
                         ),
@@ -118,14 +113,13 @@ public class SubscriptionStreamProcessor(
                     return;
                 }
 
-                await StartRetryForSubscriptionStream(subscription, topic, streamId, error, cancellationToken);
+                await StartRetryForSubscriptionStream(subscription, streamName, error, cancellationToken);
 
                 await database.Execute(
                     new UpdateCheckpointStatus(
                         options.ApplicationName,
                         subscription.Name,
-                        topic,
-                        streamId,
+                        streamName,
                         error.StreamPosition,
                         CheckpointStatus.Retry
                     ),
@@ -140,8 +134,7 @@ public class SubscriptionStreamProcessor(
 
     private async Task StartRetryForSubscriptionStream(
         Subscription subscription,
-        string topic,
-        string streamId,
+        string streamName,
         MessageBatchResult.Error error,
         CancellationToken cancellationToken
     )
@@ -149,18 +142,15 @@ public class SubscriptionStreamProcessor(
         var retryAt = 0.GetNextDelayWithExponentialBackoff();
 
         await messageStore.AppendToStream(
-            RetryConstants.Topic,
-            RetryStreamId.For(
+            RetryStreamName.For(
                 subscription.Name,
-                topic,
-                streamId,
+                streamName,
                 error.StreamPosition
             ),
             ExpectedVersion.Any,
             new SubscriptionError(
                 subscription.Name,
-                topic,
-                streamId,
+                streamName,
                 error.StreamPosition,
                 ExceptionData.From(error.Exception),
                 retryAt,
@@ -172,8 +162,7 @@ public class SubscriptionStreamProcessor(
 
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,
-        string topic,
-        string streamId,
+        string streamName,
         IReadOnlyList<IMessageContext> messages,
         CancellationToken cancellationToken
     )
@@ -227,11 +216,10 @@ public class SubscriptionStreamProcessor(
                 {
                     logger.LogError(
                         e,
-                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {Topic}-{StreamId} using handler {HandlerType} [ID: {MessageId}]",
+                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [ID: {MessageId}]",
                         messageContext.Type,
                         subscription.Name,
-                        topic,
-                        streamId,
+                        streamName,
                         subscription.Type,
                         messageContext.Id
                     );

@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 await builder.AddTodoListDatabase();
 
-builder.AddBeckett().TodoListMessageMap();
+builder.AddBeckett();
 
 builder.Services.Configure<JsonOptions>(options =>
 {

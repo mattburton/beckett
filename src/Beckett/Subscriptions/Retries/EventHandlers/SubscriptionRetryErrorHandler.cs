@@ -8,8 +8,7 @@ public class SubscriptionRetryErrorHandler(IRetryManager retryManager)
     {
         return retryManager.Retry(
             e.SubscriptionName,
-            e.Topic,
-            e.StreamId,
+            e.StreamName,
             e.StreamPosition,
             e.Attempts,
             cancellationToken

@@ -9,7 +9,7 @@ public class LockNextAvailableCheckpoint(string application) : IPostgresDatabase
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select application, name, topic, stream_id, stream_position, stream_version, status
+            select application, name, stream_name, stream_position, stream_version, status
             from {schema}.lock_next_available_checkpoint($1);
         ";
 
@@ -29,10 +29,9 @@ public class LockNextAvailableCheckpoint(string application) : IPostgresDatabase
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<string>(2),
-                reader.GetFieldValue<string>(3),
+                reader.GetFieldValue<long>(3),
                 reader.GetFieldValue<long>(4),
-                reader.GetFieldValue<long>(5),
-                reader.GetFieldValue<CheckpointStatus>(6)
+                reader.GetFieldValue<CheckpointStatus>(5)
             );
     }
 }

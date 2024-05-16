@@ -55,12 +55,11 @@ public class Instrumentation : IDisposable, IInstrumentation
         _meter.CreateObservableGauge(TelemetryConstants.Metrics.SubscriptionFailedCount, GetSubscriptionFailedCount);
     }
 
-    public Activity? StartAppendToStreamActivity(string topic, object streamId, Dictionary<string, object> metadata)
+    public Activity? StartAppendToStreamActivity(string streamName, Dictionary<string, object> metadata)
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.AppendToStream, ActivityKind.Producer);
 
-        activity?.AddTag(TelemetryConstants.Streams.Topic, topic);
-        activity?.AddTag(TelemetryConstants.Streams.StreamId, streamId);
+        activity?.AddTag(TelemetryConstants.Streams.Name, streamName);
 
         _propagator.Inject(
             new PropagationContext(activity!.Context, default), metadata, (meta, key, value) => meta[key] = value
@@ -76,12 +75,11 @@ public class Instrumentation : IDisposable, IInstrumentation
         return activity;
     }
 
-    public Activity? StartReadStreamActivity(string topic, object streamId)
+    public Activity? StartReadStreamActivity(string streamName)
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.ReadStream, ActivityKind.Producer);
 
-        activity?.AddTag(TelemetryConstants.Streams.Topic, topic);
-        activity?.AddTag(TelemetryConstants.Streams.StreamId, streamId);
+        activity?.AddTag(TelemetryConstants.Streams.Name, streamName);
 
         return activity;
     }
@@ -102,7 +100,7 @@ public class Instrumentation : IDisposable, IInstrumentation
 
         activity?.AddTag(TelemetryConstants.Application.Name, _options.Subscriptions.ApplicationName);
         activity?.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
-        activity?.AddTag(TelemetryConstants.Subscription.Topic, subscription.Topic);
+        activity?.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
         activity?.AddTag(TelemetryConstants.Subscription.Handler, subscription.Type?.FullName);
         activity?.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
 
@@ -111,8 +109,7 @@ public class Instrumentation : IDisposable, IInstrumentation
             activity?.AddTag(TelemetryConstants.Message.CausationId, causationId);
         }
 
-        activity?.AddTag(TelemetryConstants.Message.Topic, messageContext.Topic);
-        activity?.AddTag(TelemetryConstants.Message.StreamId, messageContext.StreamId);
+        activity?.AddTag(TelemetryConstants.Message.StreamName, messageContext.StreamName);
         activity?.AddTag(TelemetryConstants.Message.GlobalPosition, messageContext.GlobalPosition);
         activity?.AddTag(TelemetryConstants.Message.StreamPosition, messageContext.StreamPosition);
         activity?.AddTag(TelemetryConstants.Message.Type, _messageTypeMap.GetName(messageContext.Type));

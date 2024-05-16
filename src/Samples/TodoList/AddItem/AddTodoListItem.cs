@@ -4,7 +4,7 @@ public record AddTodoListItem(string Item)
 {
     public async Task<AppendResult> Execute(Guid id, IMessageStore messageStore, CancellationToken cancellationToken)
     {
-       var stream = await messageStore.ReadStream(Topics.TodoList, id, cancellationToken);
+       var stream = await messageStore.ReadStream(TodoList.StreamName(id), cancellationToken);
 
         var state = stream.ProjectTo<DecisionState>();
 
@@ -14,15 +14,14 @@ public record AddTodoListItem(string Item)
         }
 
         return await messageStore.AppendToStream(
-            Topics.TodoList,
-            id,
+            TodoList.StreamName(id),
             ExpectedVersion.For(stream.StreamVersion),
             new TodoListItemAdded(id, Item),
             cancellationToken
         );
     }
 
-    private class DecisionState : IState
+    private class DecisionState : IApply
     {
         public HashSet<string> Items { get; } = [];
 

@@ -3,8 +3,7 @@ using Beckett.Subscriptions;
 namespace Beckett.Messages;
 
 public record StreamChange(
-    string Topic,
-    string StreamId,
+    string StreamName,
     long StreamVersion,
     long GlobalPosition,
     string[] MessageTypes
@@ -12,12 +11,11 @@ public record StreamChange(
 {
     public bool AppliesTo(Subscription subscription)
     {
-        if (subscription.IsTopicOnly)
+        if (subscription.IsPatternOnly)
         {
-            return string.Equals(Topic, subscription.Topic, StringComparison.OrdinalIgnoreCase);
+            return subscription.Pattern.IsMatch(StreamName);
         }
 
-        return string.Equals(Topic, subscription.Topic, StringComparison.OrdinalIgnoreCase) &&
-               MessageTypes.Intersect(subscription.MessageTypeNames, StringComparer.OrdinalIgnoreCase).Any();
+        return subscription.Pattern.IsMatch(StreamName) && MessageTypes.Intersect(subscription.MessageTypeNames).Any();
     }
 }

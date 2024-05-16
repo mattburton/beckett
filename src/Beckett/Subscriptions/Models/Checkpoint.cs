@@ -3,8 +3,7 @@ namespace Beckett.Subscriptions.Models;
 public record Checkpoint(
     string Application,
     string Name,
-    string Topic,
-    string StreamId,
+    string StreamName,
     long StreamPosition,
     long StreamVersion,
     CheckpointStatus Status

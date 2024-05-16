@@ -36,8 +36,7 @@ public class GlobalStreamConsumer(
             new LockCheckpoint(
                 options.ApplicationName,
                 GlobalCheckpoint.Name,
-                GlobalCheckpoint.Topic,
-                GlobalCheckpoint.StreamId
+                GlobalCheckpoint.StreamName
             ),
             connection,
             transaction,
@@ -71,8 +70,7 @@ public class GlobalStreamConsumer(
                 {
                     Application = options.ApplicationName,
                     Name = subscription.Name,
-                    Topic = streamChange.Topic,
-                    StreamId = streamChange.StreamId,
+                    StreamName = streamChange.StreamName,
                     StreamVersion = streamChange.StreamVersion
                 }));
         }
@@ -90,8 +88,7 @@ public class GlobalStreamConsumer(
             new RecordCheckpoint(
                 options.ApplicationName,
                 GlobalCheckpoint.Name,
-                GlobalCheckpoint.Topic,
-                GlobalCheckpoint.StreamId,
+                GlobalCheckpoint.StreamName,
                 newGlobalPosition,
                 newGlobalPosition
             ),

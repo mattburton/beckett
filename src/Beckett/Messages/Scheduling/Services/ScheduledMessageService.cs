@@ -34,7 +34,7 @@ public class ScheduledMessageService(
 
                 var scheduledMessages = new List<IScheduledMessageContext>();
 
-                foreach (var streamGroup in results.GroupBy(x => (x.Topic, x.StreamId)))
+                foreach (var streamGroup in results.GroupBy(x => x.StreamName))
                 {
                     foreach (var scheduledMessage in streamGroup)
                     {
@@ -42,8 +42,7 @@ public class ScheduledMessageService(
 
                         scheduledMessages.Add(
                             new ScheduledMessageContext(
-                                scheduledMessage.Topic,
-                                scheduledMessage.StreamId,
+                                scheduledMessage.StreamName,
                                 data,
                                 metadata
                             )
@@ -51,13 +50,12 @@ public class ScheduledMessageService(
                     }
                 }
 
-                foreach (var scheduledMessagesForStream in scheduledMessages.GroupBy(x => (x.Topic, x.StreamId)))
+                foreach (var scheduledMessagesForStream in scheduledMessages.GroupBy(x => (x.StreamName)))
                 {
                     var messages = scheduledMessagesForStream.Select(x => x.Message.WithMetadata(x.Metadata));
 
                     await messageStore.AppendToStream(
-                        scheduledMessagesForStream.Key.Topic,
-                        scheduledMessagesForStream.Key.StreamId,
+                        scheduledMessagesForStream.Key,
                         ExpectedVersion.Any,
                         messages,
                         stoppingToken

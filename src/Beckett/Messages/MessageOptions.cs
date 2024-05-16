@@ -2,5 +2,5 @@ namespace Beckett.Messages;
 
 public class MessageOptions
 {
-    public bool AllowDynamicTypeMapping { get; set; }
+    public bool AllowDynamicTypeMapping { get; set; } = true;
 }

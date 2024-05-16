@@ -13,8 +13,7 @@ public class SubscriptionRetryFailedHandler(IPostgresDatabase database, Subscrip
             new UpdateCheckpointStatus(
                 options.ApplicationName,
                 message.SubscriptionName,
-                message.Topic,
-                message.StreamId,
+                message.StreamName,
                 message.StreamPosition,
                 CheckpointStatus.Failed
             ),

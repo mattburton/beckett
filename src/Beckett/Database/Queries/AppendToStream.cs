@@ -5,8 +5,7 @@ using NpgsqlTypes;
 namespace Beckett.Database.Queries;
 
 public class AppendToStream(
-    string topic,
-    string streamId,
+    string streamName,
     long expectedVersion,
     MessageType[] messages
 ) : IPostgresDatabaseQuery<long>
@@ -15,19 +14,17 @@ public class AppendToStream(
     {
         try
         {
-            command.CommandText = $"select {schema}.append_to_stream($1, $2, $3, $4);";
+            command.CommandText = $"select {schema}.append_to_stream($1, $2, $3);";
 
-            command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
             command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageArray(schema) });
 
             await command.PrepareAsync(cancellationToken);
 
-            command.Parameters[0].Value = topic;
-            command.Parameters[1].Value = streamId;
-            command.Parameters[2].Value = expectedVersion;
-            command.Parameters[3].Value = messages;
+            command.Parameters[0].Value = streamName;
+            command.Parameters[1].Value = expectedVersion;
+            command.Parameters[2].Value = messages;
 
             var result = await command.ExecuteScalarAsync(cancellationToken);
 
