@@ -12,7 +12,8 @@ public interface ISubscriptionStreamProcessor
         string streamId,
         long streamPosition,
         int batchSize,
-        bool retryOnError,
+        bool movedToFailedOnError,
+        bool throwOnError,
         CancellationToken cancellationToken
     );
 }

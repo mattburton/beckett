@@ -11,7 +11,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 await builder.AddTodoListDatabase();
 
-builder.AddBeckett().TodoListComponent();
+builder.AddBeckett().TodoListModule();
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("todo-list-worker"))

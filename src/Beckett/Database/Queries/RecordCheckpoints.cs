@@ -9,7 +9,7 @@ public class RecordCheckpoints(CheckpointType[] checkpoints) : IPostgresDatabase
     {
         command.CommandText = $"select {schema}.record_checkpoints($1);";
 
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = CheckpointType.DataTypeNameFor(schema) });
+        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointArray(schema) });
 
         await command.PrepareAsync(cancellationToken);
 

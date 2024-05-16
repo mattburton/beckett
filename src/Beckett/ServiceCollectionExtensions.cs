@@ -22,6 +22,8 @@ public static class ServiceCollectionExtensions
 
         configure?.Invoke(options);
 
+        builder.Services.AddSingleton(options);
+
         builder.Services.AddMessageSupport(options.Messages);
 
         builder.Services.AddOpenTelemetrySupport();

@@ -287,6 +287,8 @@ CREATE TYPE __schema__.checkpoint AS
   stream_version bigint
 );
 
+CREATE TYPE __schema__.checkpoint_status AS ENUM ('active', 'retry', 'failed');
+
 CREATE TABLE IF NOT EXISTS __schema__.subscriptions
 (
   application text NOT NULL,
@@ -301,11 +303,11 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 (
   stream_version bigint DEFAULT 0 NOT NULL,
   stream_position bigint DEFAULT 0 NOT NULL,
-  blocked boolean DEFAULT false NOT NULL,
   application text NOT NULL,
   name text NOT NULL,
   topic text NOT NULL,
   stream_id text NOT NULL,
+  status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
   PRIMARY KEY (application, name, topic, stream_id)
 );
 
@@ -394,12 +396,12 @@ CREATE FUNCTION __schema__.lock_checkpoint(
     stream_id text,
     stream_position bigint,
     stream_version bigint,
-    blocked boolean
+    status __schema__.checkpoint_status
   )
   LANGUAGE sql
 AS
 $$
-SELECT application, name, topic, stream_id, stream_position, stream_version, blocked
+SELECT application, name, topic, stream_id, stream_position, stream_version, status
 FROM __schema__.checkpoints
 WHERE application = _application
 AND name = _name
@@ -419,18 +421,18 @@ CREATE FUNCTION __schema__.lock_next_available_checkpoint(
     stream_id text,
     stream_position bigint,
     stream_version bigint,
-    blocked boolean
+    status __schema__.checkpoint_status
   )
   LANGUAGE sql
 AS
 $$
-SELECT c.application, c.name, c.topic, c.stream_id, c.stream_position, c.stream_version, c.blocked
+SELECT c.application, c.name, c.topic, c.stream_id, c.stream_position, c.stream_version, c.status
 FROM __schema__.checkpoints c
 INNER JOIN __schema__.subscriptions s ON c.application = s.application AND c.name = s.name
 WHERE s.application = _application
 AND s.initialized = true
 AND c.stream_position < c.stream_version
-AND c.blocked = false
+AND c.status = 'active'
 FOR UPDATE
 SKIP LOCKED
 LIMIT 1;
@@ -454,13 +456,13 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION __schema__.update_checkpoint_stream_position(
+CREATE FUNCTION __schema__.update_checkpoint_status(
   _application text,
   _name text,
   _topic text,
   _stream_id text,
   _stream_position bigint,
-  _blocked boolean
+  _status __schema__.checkpoint_status
 )
   RETURNS void
   LANGUAGE sql
@@ -468,7 +470,7 @@ AS
 $$
 UPDATE __schema__.checkpoints
 SET stream_position = _stream_position,
-    blocked = _blocked
+    status = _status
 WHERE application = _application
 AND name = _name
 AND topic = _topic
@@ -492,6 +494,47 @@ VALUES (_stream_version, _stream_position, _application, _name, _topic, _stream_
 ON CONFLICT (application, name, topic, stream_id) DO UPDATE
   SET stream_version = excluded.stream_version,
       stream_position = excluded.stream_position;
+$$;
+
+CREATE FUNCTION __schema__.get_subscription_lag(
+  _application text
+)
+  RETURNS bigint
+  LANGUAGE sql
+AS
+$$
+SELECT count(*)
+FROM __schema__.checkpoints
+WHERE application = _application
+AND starts_with(name, '$') = false
+AND stream_position < stream_version
+AND status = 'active';
+$$;
+
+CREATE FUNCTION __schema__.get_subscription_retry_count(
+  _application text
+)
+  RETURNS bigint
+  LANGUAGE sql
+AS
+$$
+SELECT count(*)
+FROM __schema__.checkpoints
+WHERE application = _application
+AND status = 'retry';
+$$;
+
+CREATE FUNCTION __schema__.get_subscription_failed_count(
+  _application text
+)
+  RETURNS bigint
+  LANGUAGE sql
+AS
+$$
+SELECT count(*)
+FROM __schema__.checkpoints
+WHERE application = _application
+AND status = 'failed';
 $$;
 
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA __schema__ TO beckett;

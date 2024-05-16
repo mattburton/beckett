@@ -1,5 +1,6 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
+using Beckett.Subscriptions.Models;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Events.Models;
 
@@ -32,6 +33,10 @@ public class RetryManager(
         var retryStreamId = RetryStreamId.For(subscriptionName, topic, streamId, streamPosition);
         var retryAt = attempts.GetNextDelayWithExponentialBackoff();
 
+        attempts++;
+
+        var reachedMaxAttempts = attempts >= subscription.MaxRetryCount;
+
         try
         {
             await using var connection = database.CreateConnection();
@@ -47,7 +52,7 @@ public class RetryManager(
                 cancellationToken
             );
 
-            if (checkpoint is not { Blocked: true })
+            if (checkpoint == null || checkpoint.Status is CheckpointStatus.Active)
             {
                 return;
             }
@@ -60,7 +65,8 @@ public class RetryManager(
                 streamId,
                 checkpoint.StreamPosition,
                 1,
-                false,
+                reachedMaxAttempts,
+                true,
                 cancellationToken
             );
 
@@ -83,7 +89,7 @@ public class RetryManager(
         }
         catch (Exception ex)
         {
-            if (attempts >= subscription.MaxRetryCount)
+            if (reachedMaxAttempts)
             {
                 await messageStore.AppendToStream(
                     RetryConstants.Topic,
@@ -94,7 +100,7 @@ public class RetryManager(
                         topic,
                         streamId,
                         streamPosition,
-                        attempts + 1,
+                        attempts,
                         ExceptionData.From(ex),
                         DateTimeOffset.UtcNow
                     ),
@@ -112,7 +118,7 @@ public class RetryManager(
                         topic,
                         streamId,
                         streamPosition,
-                        attempts + 1,
+                        attempts,
                         ExceptionData.From(ex),
                         retryAt,
                         DateTimeOffset.UtcNow

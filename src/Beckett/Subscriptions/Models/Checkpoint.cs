@@ -7,5 +7,5 @@ public record Checkpoint(
     string StreamId,
     long StreamPosition,
     long StreamVersion,
-    bool Blocked
+    CheckpointStatus Status
 );

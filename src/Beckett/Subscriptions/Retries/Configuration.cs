@@ -17,17 +17,24 @@ public static class Configuration
 
         builder.Services.AddScoped<SubscriptionErrorHandler>();
         builder.Services.AddScoped<SubscriptionRetryErrorHandler>();
+        builder.Services.AddScoped<SubscriptionRetryFailedHandler>();
 
-        builder.AddSubscription("$subscription_error")
+        builder.AddSubscription("$retry:subscription_error")
             .Topic(RetryConstants.Topic)
             .Message<SubscriptionError>()
             .Handler<SubscriptionErrorHandler>((handler, message, token) => handler.Handle(message, token))
             .MaxRetryCount(0);
 
-        builder.AddSubscription("$subscription_retry_error")
+        builder.AddSubscription("$retry:subscription_retry_error")
             .Topic(RetryConstants.Topic)
             .Message<SubscriptionRetryError>()
             .Handler<SubscriptionRetryErrorHandler>((handler, message, token) => handler.Handle(message, token))
+            .MaxRetryCount(0);
+
+        builder.AddSubscription("$retry:subscription_retry_failed")
+            .Topic(RetryConstants.Topic)
+            .Message<SubscriptionRetryFailed>()
+            .Handler<SubscriptionRetryFailedHandler>((handler, message, token) => handler.Handle(message, token))
             .MaxRetryCount(0);
 
         return builder;

@@ -20,7 +20,7 @@ public class LockCheckpoint(
                    stream_id,
                    stream_position,
                    stream_version,
-                   blocked
+                   status
             from {schema}.lock_checkpoint($1, $2, $3, $4);
         ";
 
@@ -47,7 +47,7 @@ public class LockCheckpoint(
             reader.GetFieldValue<string>(3),
             reader.GetFieldValue<long>(4),
             reader.GetFieldValue<long>(5),
-            reader.GetFieldValue<bool>(6)
+            reader.GetFieldValue<CheckpointStatus>(6)
         );
     }
 }

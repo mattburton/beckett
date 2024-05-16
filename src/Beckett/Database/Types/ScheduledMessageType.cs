@@ -11,8 +11,6 @@ public class ScheduledMessageType
     public string Metadata { get; init; } = null!;
     public DateTimeOffset DeliverAt { get; init; } = DateTimeOffset.UtcNow;
 
-    public static string DataTypeNameFor(string schema) => $"{schema}.scheduled_message[]";
-
     public static ScheduledMessageType From(
         object message,
         Dictionary<string, object> metadata,

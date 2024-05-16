@@ -9,7 +9,9 @@ public static class TelemetryConstants
 
     public static class Metrics
     {
-        public const string SubscriptionLag = "beckett_subscription_lag";
+        public const string SubscriptionLag = "beckett.subscriptions.lag";
+        public const string SubscriptionRetryCount = "beckett.subscriptions.retry";
+        public const string SubscriptionFailedCount = "beckett.subscriptions.failed";
     }
 
     public static class Activities

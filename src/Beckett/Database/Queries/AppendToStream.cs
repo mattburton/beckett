@@ -20,7 +20,7 @@ public class AppendToStream(
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-            command.Parameters.Add(new NpgsqlParameter { DataTypeName = MessageType.DataTypeNameFor(schema) });
+            command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageArray(schema) });
 
             await command.PrepareAsync(cancellationToken);
 

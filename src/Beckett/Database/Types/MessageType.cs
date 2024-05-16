@@ -10,8 +10,6 @@ public class MessageType
     public string Data { get; init; } = null!;
     public string Metadata { get; init; } = null!;
 
-    public static string DataTypeNameFor(string schema) => $"{schema}.message[]";
-
     public static MessageType From(
         object message,
         Dictionary<string, object> metadata,

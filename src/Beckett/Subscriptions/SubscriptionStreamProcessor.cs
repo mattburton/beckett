@@ -2,6 +2,7 @@ using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Messages;
 using Beckett.OpenTelemetry;
+using Beckett.Subscriptions.Models;
 using Beckett.Subscriptions.Retries;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Events.Models;
@@ -29,7 +30,8 @@ public class SubscriptionStreamProcessor(
         string streamId,
         long streamPosition,
         int batchSize,
-        bool retryOnError,
+        bool moveToFailedOnError,
+        bool throwOnError,
         CancellationToken cancellationToken
     )
     {
@@ -68,19 +70,19 @@ public class SubscriptionStreamProcessor(
             ));
         }
 
-        var result = await HandleMessageBatch(subscription, topic, streamId, messages, true, cancellationToken);
+        var result = await HandleMessageBatch(subscription, topic, streamId, messages, cancellationToken);
 
         switch (result)
         {
             case MessageBatchResult.Success success:
                 await database.Execute(
-                    new UpdateCheckpointStreamPosition(
+                    new UpdateCheckpointStatus(
                         options.ApplicationName,
                         subscription.Name,
                         topic,
                         streamId,
                         success.StreamPosition,
-                        false
+                        CheckpointStatus.Active
                     ),
                     connection,
                     transaction,
@@ -88,20 +90,44 @@ public class SubscriptionStreamProcessor(
                 );
 
                 break;
-            case MessageBatchResult.Blocked blocked:
-                if (ShouldThrow(subscription, retryOnError))
+            case MessageBatchResult.Error error:
+                if (moveToFailedOnError)
                 {
-                    throw blocked.Exception;
+                    await database.Execute(
+                        new UpdateCheckpointStatus(
+                            options.ApplicationName,
+                            subscription.Name,
+                            topic,
+                            streamId,
+                            error.StreamPosition,
+                            CheckpointStatus.Failed
+                        ),
+                        connection,
+                        transaction,
+                        cancellationToken
+                    );
                 }
 
+                if (throwOnError)
+                {
+                    throw error.Exception;
+                }
+
+                if (moveToFailedOnError)
+                {
+                    return;
+                }
+
+                await StartRetryForSubscriptionStream(subscription, topic, streamId, error, cancellationToken);
+
                 await database.Execute(
-                    new UpdateCheckpointStreamPosition(
+                    new UpdateCheckpointStatus(
                         options.ApplicationName,
                         subscription.Name,
                         topic,
                         streamId,
-                        blocked.StreamPosition,
-                        true
+                        error.StreamPosition,
+                        CheckpointStatus.Retry
                     ),
                     connection,
                     transaction,
@@ -112,9 +138,36 @@ public class SubscriptionStreamProcessor(
         }
     }
 
-    private static bool ShouldThrow(Subscription subscription, bool retryOnError)
+    private async Task StartRetryForSubscriptionStream(
+        Subscription subscription,
+        string topic,
+        string streamId,
+        MessageBatchResult.Error error,
+        CancellationToken cancellationToken
+    )
     {
-        return !retryOnError || subscription.MaxRetryCount == 0;
+        var retryAt = 0.GetNextDelayWithExponentialBackoff();
+
+        await messageStore.AppendToStream(
+            RetryConstants.Topic,
+            RetryStreamId.For(
+                subscription.Name,
+                topic,
+                streamId,
+                error.StreamPosition
+            ),
+            ExpectedVersion.Any,
+            new SubscriptionError(
+                subscription.Name,
+                topic,
+                streamId,
+                error.StreamPosition,
+                ExceptionData.From(error.Exception),
+                retryAt,
+                DateTimeOffset.UtcNow
+            ).ScheduleAt(retryAt),
+            cancellationToken
+        );
     }
 
     private async Task<MessageBatchResult> HandleMessageBatch(
@@ -122,7 +175,6 @@ public class SubscriptionStreamProcessor(
         string topic,
         string streamId,
         IReadOnlyList<IMessageContext> messages,
-        bool retryOnError,
         CancellationToken cancellationToken
     )
     {
@@ -184,35 +236,7 @@ public class SubscriptionStreamProcessor(
                         messageContext.Id
                     );
 
-                    if (!retryOnError || subscription.MaxRetryCount == 0)
-                    {
-                        throw;
-                    }
-
-                    var retryAt = 0.GetNextDelayWithExponentialBackoff();
-
-                    await messageStore.AppendToStream(
-                        RetryConstants.Topic,
-                        RetryStreamId.For(
-                            subscription.Name,
-                            topic,
-                            streamId,
-                            messageContext.StreamPosition
-                        ),
-                        ExpectedVersion.Any,
-                        new SubscriptionError(
-                            subscription.Name,
-                            topic,
-                            streamId,
-                            messageContext.StreamPosition,
-                            ExceptionData.From(e),
-                            retryAt,
-                            DateTimeOffset.UtcNow
-                        ).ScheduleAt(retryAt),
-                        cancellationToken
-                    );
-
-                    return new MessageBatchResult.Blocked(messageContext.StreamPosition, e);
+                    return new MessageBatchResult.Error(messageContext.StreamPosition, e);
                 }
             }
 
@@ -236,6 +260,6 @@ public class SubscriptionStreamProcessor(
 
         public record Success(long StreamPosition) : MessageBatchResult;
 
-        public record Blocked(long StreamPosition, Exception Exception) : MessageBatchResult;
+        public record Error(long StreamPosition, Exception Exception) : MessageBatchResult;
     }
 }

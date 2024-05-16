@@ -16,7 +16,7 @@ public class ScheduleMessages(
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = ScheduledMessageType.DataTypeNameFor(schema) });
+        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.ScheduledMessageArray(schema) });
 
         await command.PrepareAsync(cancellationToken);
 

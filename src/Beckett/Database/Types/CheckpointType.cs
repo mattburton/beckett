@@ -7,6 +7,4 @@ public class CheckpointType
     public string Topic { get; init; } = null!;
     public string StreamId { get; init; } = null!;
     public long StreamVersion { get; init; }
-
-    public static string DataTypeNameFor(string schema) => $"{schema}.checkpoint[]";
 }

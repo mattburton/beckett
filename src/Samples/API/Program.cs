@@ -4,7 +4,6 @@ using Beckett;
 using Beckett.OpenTelemetry;
 using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
-using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TodoList;

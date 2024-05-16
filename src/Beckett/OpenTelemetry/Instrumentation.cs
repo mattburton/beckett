@@ -5,6 +5,8 @@ using Beckett.Database;
 using Beckett.Messages;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using NpgsqlTypes;
 using OpenTelemetry.Context.Propagation;
 
 namespace Beckett.OpenTelemetry;
@@ -14,7 +16,7 @@ public class Instrumentation : IDisposable, IInstrumentation
 {
     private readonly IPostgresDatabase _database;
     private readonly IMessageTypeMap _messageTypeMap;
-    private readonly SubscriptionOptions _options;
+    private readonly BeckettOptions _options;
     private readonly ILogger<Instrumentation> _logger;
     private readonly ActivitySource _activitySource;
     private readonly Meter? _meter;
@@ -24,7 +26,7 @@ public class Instrumentation : IDisposable, IInstrumentation
         IPostgresDatabase database,
         IMeterFactory meterFactory,
         IMessageTypeMap messageTypeMap,
-        SubscriptionOptions options,
+        BeckettOptions options,
         ILogger<Instrumentation> logger
     )
     {
@@ -39,7 +41,7 @@ public class Instrumentation : IDisposable, IInstrumentation
 
         _propagator = Propagators.DefaultTextMapPropagator;
 
-        if (!options.Enabled)
+        if (!options.Subscriptions.Enabled)
         {
             return;
         }
@@ -47,6 +49,10 @@ public class Instrumentation : IDisposable, IInstrumentation
         _meter = meterFactory.Create(TelemetryConstants.ActivitySource.Name, version);
 
         _meter.CreateObservableGauge(TelemetryConstants.Metrics.SubscriptionLag, GetSubscriptionLag);
+
+        _meter.CreateObservableGauge(TelemetryConstants.Metrics.SubscriptionRetryCount, GetSubscriptionRetryCount);
+
+        _meter.CreateObservableGauge(TelemetryConstants.Metrics.SubscriptionFailedCount, GetSubscriptionFailedCount);
     }
 
     public Activity? StartAppendToStreamActivity(string topic, object streamId, Dictionary<string, object> metadata)
@@ -94,7 +100,7 @@ public class Instrumentation : IDisposable, IInstrumentation
             parentContext.ActivityContext
         );
 
-        activity?.AddTag(TelemetryConstants.Application.Name, _options.ApplicationName);
+        activity?.AddTag(TelemetryConstants.Application.Name, _options.Subscriptions.ApplicationName);
         activity?.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
         activity?.AddTag(TelemetryConstants.Subscription.Topic, subscription.Topic);
         activity?.AddTag(TelemetryConstants.Subscription.Handler, subscription.Type?.FullName);
@@ -133,13 +139,51 @@ public class Instrumentation : IDisposable, IInstrumentation
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $@"
-            select count(*)
-            from beckett.checkpoints
-            where application = '{_options.ApplicationName}'
-            and starts_with(name, '$') = false
-            and stream_position < stream_version;
-        ";
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_lag($1);";
+
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+
+        command.Prepare();
+
+        command.Parameters[0].Value = _options.Subscriptions.ApplicationName;
+
+        return (long)command.ExecuteScalar()!;
+    }
+
+    private long GetSubscriptionRetryCount()
+    {
+        using var connection = _database.CreateConnection();
+
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_retry_count($1);";
+
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+
+        command.Prepare();
+
+        command.Parameters[0].Value = _options.Subscriptions.ApplicationName;
+
+        return (long)command.ExecuteScalar()!;
+    }
+
+    private long GetSubscriptionFailedCount()
+    {
+        using var connection = _database.CreateConnection();
+
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_failed_count($1);";
+
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+
+        command.Prepare();
+
+        command.Parameters[0].Value = _options.Subscriptions.ApplicationName;
 
         return (long)command.ExecuteScalar()!;
     }
