@@ -14,17 +14,17 @@ public class GlobalStreamConsumer(
 {
     private Task _task = Task.CompletedTask;
 
-    public void Run(CancellationToken cancellationToken)
+    public void Consume(CancellationToken cancellationToken)
     {
         if (_task is { IsCompleted: false })
         {
             return;
         }
 
-        _task = Consume(cancellationToken);
+        _task = Execute(cancellationToken);
     }
 
-    private async Task Consume(CancellationToken cancellationToken)
+    private async Task Execute(CancellationToken cancellationToken)
     {
         await using var connection = database.CreateConnection();
 

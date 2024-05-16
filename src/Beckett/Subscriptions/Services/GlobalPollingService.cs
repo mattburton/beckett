@@ -15,7 +15,7 @@ public class GlobalPollingService(
         {
             try
             {
-                globalStreamConsumer.Run(stoppingToken);
+                globalStreamConsumer.Consume(stoppingToken);
 
                 await Task.Delay(options.GlobalPollingInterval, stoppingToken);
             }

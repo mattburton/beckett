@@ -196,7 +196,7 @@ public class SubscriptionStreamProcessor(
                 {
                     using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
 
-                    if (subscription.StaticMethod != null)
+                    if (subscription.HasStaticMethod)
                     {
                         if (subscription.AcceptsMessageContext)
                         {

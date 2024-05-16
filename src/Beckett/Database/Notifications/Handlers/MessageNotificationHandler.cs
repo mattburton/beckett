@@ -8,6 +8,6 @@ public class MessageNotificationHandler(IGlobalStreamConsumer globalStreamConsum
 
     public void Handle(string payload, CancellationToken cancellationToken)
     {
-        globalStreamConsumer.Run(cancellationToken);
+        globalStreamConsumer.Consume(cancellationToken);
     }
 }

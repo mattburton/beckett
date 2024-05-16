@@ -90,7 +90,7 @@ public class BootstrapSubscriptions(
 
     private void EnsureSubscriptionHandlerIsRegistered(Subscription subscription)
     {
-        if (subscription.StaticMethod != null)
+        if (subscription.HasStaticMethod)
         {
             return;
         }

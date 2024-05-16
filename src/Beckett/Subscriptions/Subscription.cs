@@ -15,6 +15,8 @@ public class Subscription(string name)
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal int MaxRetryCount { get; set; } = 10;
 
+    internal bool HasStaticMethod => StaticMethod != null;
+
     internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType);
 
     internal void MapMessageTypeNames(IMessageTypeMap messageTypeMap)
