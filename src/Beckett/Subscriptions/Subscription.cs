@@ -13,7 +13,7 @@ public class Subscription(string name)
     internal HashSet<string> MessageTypeNames { get; private set; } = [];
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
     internal Func<object, CancellationToken, Task>? StaticMethod { get; set; }
-    internal bool AcceptsMessageContext { get; set; }
+    internal bool HandlesMessageContext { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal int MaxRetryCount { get; set; } = 10;
 
@@ -21,7 +21,7 @@ public class Subscription(string name)
 
     internal bool HasStaticMethod => StaticMethod != null;
 
-    internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || AcceptsMessageContext;
+    internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || HandlesMessageContext;
 
     internal void MapMessageTypeNames(IMessageTypeMap messageTypeMap)
     {

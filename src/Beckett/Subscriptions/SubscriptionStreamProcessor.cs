@@ -184,7 +184,7 @@ public class SubscriptionStreamProcessor(
 
                     if (subscription.HasStaticMethod)
                     {
-                        if (subscription.AcceptsMessageContext)
+                        if (subscription.HandlesMessageContext)
                         {
                             await subscription.StaticMethod!(messageContext, cancellationToken);
                         }
@@ -200,7 +200,7 @@ public class SubscriptionStreamProcessor(
 
                     var handler = scope.ServiceProvider.GetRequiredService(subscription.Type!);
 
-                    if (subscription.AcceptsMessageContext)
+                    if (subscription.HandlesMessageContext)
                     {
                         await subscription.InstanceMethod!(handler, messageContext, cancellationToken);
                     }

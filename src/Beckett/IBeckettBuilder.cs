@@ -97,7 +97,7 @@ public class BeckettBuilder(
         {
             subscription.Type = typeof(THandler);
             subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
-            subscription.AcceptsMessageContext = true;
+            subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -106,7 +106,7 @@ public class BeckettBuilder(
         {
             subscription.Type = handler.GetHandlerType();
             subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
-            subscription.AcceptsMessageContext = true;
+            subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -144,7 +144,7 @@ public class BeckettBuilder(
                 t
             );
 
-            subscription.AcceptsMessageContext = true;
+            subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -153,6 +153,7 @@ public class BeckettBuilder(
         {
             subscription.Type = typeof(THandler);
             subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
+            subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -163,7 +164,6 @@ public class BeckettBuilder(
 
             subscription.Type = handler.GetHandlerType();
             subscription.StaticMethod = (m, t) => handler((T)m, t);
-            subscription.AcceptsMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -174,7 +174,7 @@ public class BeckettBuilder(
 
             subscription.Type = handler.GetHandlerType();
             subscription.StaticMethod = (c, t) => handler((T)((IMessageContext)c).Message, (IMessageContext)c, t);
-            subscription.AcceptsMessageContext = true;
+            subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -183,7 +183,7 @@ public class BeckettBuilder(
         {
             subscription.Type = handler.GetHandlerType();
             subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
-            subscription.AcceptsMessageContext = true;
+            subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
