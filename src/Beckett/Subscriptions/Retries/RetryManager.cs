@@ -12,7 +12,8 @@ public class RetryManager(
     ISubscriptionRegistry subscriptionRegistry,
     SubscriptionOptions options,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
-    IMessageStore messageStore
+    IMessageStore messageStore,
+    IMessageScheduler messageScheduler
 ) : IRetryManager
 {
     public async Task Retry(
@@ -108,9 +109,8 @@ public class RetryManager(
                     subscription.MaxRetryCount
                 ).ElementAt(attempts);
 
-                await messageStore.AppendToStream(
+                await messageScheduler.Schedule(
                     retryStreamName,
-                    ExpectedVersion.StreamExists,
                     new SubscriptionRetryError(
                         subscriptionName,
                         streamName,
@@ -118,7 +118,8 @@ public class RetryManager(
                         attempts,
                         ExceptionData.From(ex),
                         DateTimeOffset.UtcNow
-                    ).DelayFor(delay),
+                    ),
+                    delay,
                     cancellationToken
                 );
             }

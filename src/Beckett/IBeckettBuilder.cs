@@ -112,7 +112,8 @@ public class BeckettBuilder(
         }
     }
 
-    private class CategoryMessageSubscriptionBuilder<T>(Subscription subscription) : ICategoryMessageSubscriptionBuilder<T>
+    private class CategoryMessageSubscriptionBuilder<T>(Subscription subscription)
+        : ICategoryMessageSubscriptionBuilder<T>
     {
         public ICategoryMessageSubscriptionBuilder<TMessage> Message<TMessage>()
         {

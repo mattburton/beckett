@@ -2,6 +2,7 @@ using System.Data;
 using System.Timers;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using Timer = System.Timers.Timer;
 
 namespace Beckett.Database.Notifications;
 
@@ -33,7 +34,7 @@ public class PostgresNotificationListener(
 
                 connection.Notification += NotificationEventHandler;
 
-                using var keepAlive = new System.Timers.Timer(TimeSpan.FromSeconds(10).TotalMilliseconds);
+                using var keepAlive = new Timer(TimeSpan.FromSeconds(10).TotalMilliseconds);
 
                 try
                 {
@@ -99,9 +100,8 @@ public class PostgresNotificationListener(
         handler.Handle(e.Payload, _cancellationToken.GetValueOrDefault());
     }
 
-    private static ElapsedEventHandler KeepAlive(NpgsqlConnection connection)
-    {
-        return (_, _) =>
+    private static ElapsedEventHandler KeepAlive(NpgsqlConnection connection) =>
+        (_, _) =>
         {
             if (connection.FullState == (ConnectionState.Open | ConnectionState.Fetching))
             {
@@ -114,5 +114,4 @@ public class PostgresNotificationListener(
 
             command.ExecuteNonQuery();
         };
-    }
 }

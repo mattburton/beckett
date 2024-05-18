@@ -15,10 +15,9 @@ await builder.AddTodoListDatabase();
 
 builder.AddBeckett();
 
-builder.Services.Configure<JsonOptions>(options =>
-{
-    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-});
+builder.Services.Configure<JsonOptions>(
+    options => { options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower; }
+);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -26,12 +25,13 @@ builder.Services.AddHostedService<LogSwaggerLink>();
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("todo-list-api"))
-    .WithTracing(tracing => tracing
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
-        .AddNpgsql()
-        .AddBeckett()
-        .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
+    .WithTracing(
+        tracing => tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddNpgsql()
+            .AddBeckett()
+            .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
     );
 
 var app = builder.Build();

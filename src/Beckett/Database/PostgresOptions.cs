@@ -19,10 +19,7 @@ public class PostgresOptions
         Schema = schema;
     }
 
-    public void UseDataSource(NpgsqlDataSource dataSource)
-    {
-        DataSource = dataSource;
-    }
+    public void UseDataSource(NpgsqlDataSource dataSource) => DataSource = dataSource;
 
     public void UseConnectionString(string connectionString)
     {

@@ -23,10 +23,8 @@ public class Subscription(string name)
 
     internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || HandlesMessageContext;
 
-    internal void MapMessageTypeNames(IMessageTypeMap messageTypeMap)
-    {
+    internal void MapMessageTypeNames(IMessageTypeMap messageTypeMap) =>
         MessageTypeNames = MessageTypes.Select(messageTypeMap.GetName).ToHashSet();
-    }
 
     internal void EnsureHandlerIsConfigured()
     {

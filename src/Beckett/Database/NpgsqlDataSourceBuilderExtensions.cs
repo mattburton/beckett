@@ -6,7 +6,10 @@ namespace Beckett.Database;
 
 public static class NpgsqlDataSourceBuilderExtensions
 {
-    public static NpgsqlDataSourceBuilder AddBeckett(this NpgsqlDataSourceBuilder builder, string schema = PostgresOptions.DefaultSchema)
+    public static NpgsqlDataSourceBuilder AddBeckett(
+        this NpgsqlDataSourceBuilder builder,
+        string schema = PostgresOptions.DefaultSchema
+    )
     {
         builder.MapEnum<CheckpointStatus>(DataTypeNames.CheckpointStatus(schema));
         builder.MapComposite<CheckpointType>(DataTypeNames.Checkpoint(schema));

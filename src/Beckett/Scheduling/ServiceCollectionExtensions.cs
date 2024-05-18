@@ -1,11 +1,11 @@
-using Beckett.Messages.Scheduling.Services;
+using Beckett.Scheduling.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Beckett.Messages.Scheduling;
+namespace Beckett.Scheduling;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddScheduledMessageSupport(this IServiceCollection services, ScheduledMessageOptions options)
+    public static void AddScheduledMessageSupport(this IServiceCollection services, SchedulingOptions options)
     {
         services.AddSingleton(options);
 

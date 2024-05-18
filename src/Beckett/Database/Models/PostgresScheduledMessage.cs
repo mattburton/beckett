@@ -12,9 +12,8 @@ public class PostgresScheduledMessage
     public DateTimeOffset DeliverAt { get; init; }
     public DateTimeOffset Timestamp { get; init; }
 
-    public static PostgresScheduledMessage From(NpgsqlDataReader reader)
-    {
-        return new PostgresScheduledMessage
+    public static PostgresScheduledMessage From(NpgsqlDataReader reader) =>
+        new()
         {
             Id = reader.GetFieldValue<Guid>(0),
             StreamName = reader.GetFieldValue<string>(1),
@@ -24,5 +23,4 @@ public class PostgresScheduledMessage
             DeliverAt = reader.GetFieldValue<DateTimeOffset>(5),
             Timestamp = reader.GetFieldValue<DateTimeOffset>(6)
         };
-    }
 }

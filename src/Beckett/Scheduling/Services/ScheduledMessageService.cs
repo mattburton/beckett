@@ -3,11 +3,11 @@ using Beckett.Database.Queries;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Beckett.Messages.Scheduling.Services;
+namespace Beckett.Scheduling.Services;
 
 public class ScheduledMessageService(
     IPostgresDatabase database,
-    ScheduledMessageOptions options,
+    SchedulingOptions options,
     IPostgresMessageDeserializer messageDeserializer,
     IMessageStore messageStore,
     ILogger<ScheduledMessageService> logger
@@ -32,25 +32,23 @@ public class ScheduledMessageService(
                     stoppingToken
                 );
 
-                var scheduledMessages = new List<IScheduledMessageContext>();
+                var scheduledMessages = new List<ScheduledMessageContext>();
 
                 foreach (var streamGroup in results.GroupBy(x => x.StreamName))
+                foreach (var scheduledMessage in streamGroup)
                 {
-                    foreach (var scheduledMessage in streamGroup)
-                    {
-                        var (data, metadata) = messageDeserializer.DeserializeAll(scheduledMessage);
+                    var (data, metadata) = messageDeserializer.DeserializeAll(scheduledMessage);
 
-                        scheduledMessages.Add(
-                            new ScheduledMessageContext(
-                                scheduledMessage.StreamName,
-                                data,
-                                metadata
-                            )
-                        );
-                    }
+                    scheduledMessages.Add(
+                        new ScheduledMessageContext(
+                            scheduledMessage.StreamName,
+                            data,
+                            metadata
+                        )
+                    );
                 }
 
-                foreach (var scheduledMessagesForStream in scheduledMessages.GroupBy(x => (x.StreamName)))
+                foreach (var scheduledMessagesForStream in scheduledMessages.GroupBy(x => x.StreamName))
                 {
                     var messages = scheduledMessagesForStream.Select(x => x.Message.WithMetadata(x.Metadata));
 

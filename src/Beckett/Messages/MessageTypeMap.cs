@@ -42,9 +42,8 @@ public class MessageTypeMap(MessageOptions options, IMessageTypeProvider message
         return _typeToNameMap[type];
     }
 
-    public Type? GetType(string name)
-    {
-        return _nameToTypeMap.GetOrAdd(
+    public Type? GetType(string name) =>
+        _nameToTypeMap.GetOrAdd(
             name,
             typeName =>
             {
@@ -56,10 +55,6 @@ public class MessageTypeMap(MessageOptions options, IMessageTypeProvider message
                 return messageTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName));
             }
         );
-    }
 
-    private static bool MatchCriteria(Type type, string name)
-    {
-        return type.Name == name || type.FullName == name;
-    }
+    private static bool MatchCriteria(Type type, string name) => type.Name == name || type.FullName == name;
 }

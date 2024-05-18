@@ -6,6 +6,7 @@ namespace Beckett.OpenTelemetry;
 public interface IInstrumentation
 {
     Activity? StartAppendToStreamActivity(string streamName, Dictionary<string, object> metadata);
-    Activity? StartReadStreamActivity(string streamName);
     Activity? StartHandleMessageActivity(Subscription subscription, IMessageContext messageContext);
+    Activity? StartReadStreamActivity(string streamName);
+    Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, object> metadata);
 }

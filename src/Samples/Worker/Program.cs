@@ -15,14 +15,16 @@ builder.AddBeckett().TodoListModule();
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("todo-list-worker"))
-    .WithMetrics(metrics => metrics
-        .AddBeckett()
-        .AddConsoleExporter()
+    .WithMetrics(
+        metrics => metrics
+            .AddBeckett()
+            .AddConsoleExporter()
     )
-    .WithTracing(tracing => tracing
-        .AddNpgsql()
-        .AddBeckett()
-        .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
+    .WithTracing(
+        tracing => tracing
+            .AddNpgsql()
+            .AddBeckett()
+            .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
     );
 
 var host = builder.Build();

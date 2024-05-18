@@ -56,11 +56,13 @@ public class PostgresMessageStorage(
 
         return results.Count == 0
             ? []
-            : results.Select(x => new StreamChange(
-                x.StreamName,
-                x.StreamVersion,
-                x.GlobalPosition,
-                x.MessageTypes
-            )).ToList();
+            : results.Select(
+                x => new StreamChange(
+                    x.StreamName,
+                    x.StreamVersion,
+                    x.GlobalPosition,
+                    x.MessageTypes
+                )
+            ).ToList();
     }
 }

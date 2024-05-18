@@ -17,8 +17,9 @@ public static class TelemetryConstants
     public static class Activities
     {
         public const string AppendToStream = nameof(AppendToStream);
-        public const string ReadStream = nameof(ReadStream);
         public const string HandleMessage = nameof(HandleMessage);
+        public const string ReadStream = nameof(ReadStream);
+        public const string ScheduleMessage = nameof(ScheduleMessage);
     }
 
     public static class Streams

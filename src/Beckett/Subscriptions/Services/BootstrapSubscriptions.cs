@@ -67,13 +67,15 @@ public class BootstrapSubscriptions(
                 continue;
             }
 
-            checkpoints.Add(new CheckpointType
-            {
-                Application = options.ApplicationName,
-                Name = subscription.Name,
-                StreamName = InitializationConstants.StreamName,
-                StreamVersion = 0
-            });
+            checkpoints.Add(
+                new CheckpointType
+                {
+                    Application = options.ApplicationName,
+                    Name = subscription.Name,
+                    StreamName = InitializationConstants.StreamName,
+                    StreamVersion = 0
+                }
+            );
         }
 
         if (checkpoints.Count == 0)
@@ -85,6 +87,8 @@ public class BootstrapSubscriptions(
 
         subscriptionInitializer.Start(cancellationToken);
     }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     private void EnsureSubscriptionHandlerIsRegistered(Subscription subscription)
     {
@@ -106,6 +110,4 @@ public class BootstrapSubscriptions(
             );
         }
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

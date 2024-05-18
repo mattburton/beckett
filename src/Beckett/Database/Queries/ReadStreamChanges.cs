@@ -36,12 +36,14 @@ public class ReadStreamChanges(
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            results.Add(new Result(
-                reader.GetFieldValue<string>(0),
-                reader.GetFieldValue<long>(1),
-                reader.GetFieldValue<long>(2),
-                reader.GetFieldValue<string[]>(3)
-            ));
+            results.Add(
+                new Result(
+                    reader.GetFieldValue<string>(0),
+                    reader.GetFieldValue<long>(1),
+                    reader.GetFieldValue<long>(2),
+                    reader.GetFieldValue<string[]>(3)
+                )
+            );
         }
 
         return results;

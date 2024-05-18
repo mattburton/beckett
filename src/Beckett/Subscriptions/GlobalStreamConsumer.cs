@@ -67,14 +67,18 @@ public class GlobalStreamConsumer(
             {
                 var subscriptions = subscriptionRegistry.All().Where(x => streamChange.AppliesTo(x));
 
-                checkpoints.AddRange(subscriptions.Select(subscription =>
-                    new CheckpointType
-                    {
-                        Application = options.ApplicationName,
-                        Name = subscription.Name,
-                        StreamName = streamChange.StreamName,
-                        StreamVersion = streamChange.StreamVersion
-                    }));
+                checkpoints.AddRange(
+                    subscriptions.Select(
+                        subscription =>
+                            new CheckpointType
+                            {
+                                Application = options.ApplicationName,
+                                Name = subscription.Name,
+                                StreamName = streamChange.StreamName,
+                                StreamVersion = streamChange.StreamVersion
+                            }
+                    )
+                );
             }
 
             await database.Execute(

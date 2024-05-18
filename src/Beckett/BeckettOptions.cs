@@ -1,6 +1,6 @@
 using Beckett.Database;
 using Beckett.Messages;
-using Beckett.Messages.Scheduling;
+using Beckett.Scheduling;
 using Beckett.Subscriptions;
 
 namespace Beckett;
@@ -10,7 +10,7 @@ public class BeckettOptions
     public const string SectionName = "Beckett";
 
     public MessageOptions Messages { get; } = new();
-    public ScheduledMessageOptions ScheduledMessages { get; } = new();
+    public SchedulingOptions Scheduling { get; } = new();
     public SubscriptionOptions Subscriptions { get; } = new();
     public PostgresOptions Postgres { get; } = new();
 

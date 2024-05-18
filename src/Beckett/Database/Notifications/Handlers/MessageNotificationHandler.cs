@@ -6,8 +6,6 @@ public class MessageNotificationHandler(IGlobalStreamConsumer globalStreamConsum
 {
     public string Channel => "beckett:messages";
 
-    public void Handle(string payload, CancellationToken cancellationToken)
-    {
+    public void Handle(string payload, CancellationToken cancellationToken) =>
         globalStreamConsumer.StartPolling(cancellationToken);
-    }
 }

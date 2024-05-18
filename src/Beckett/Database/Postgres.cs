@@ -10,19 +10,13 @@ public static class Postgres
     public static Task UpgradeSchema(
         string connectionString,
         CancellationToken cancellationToken = default
-    )
-    {
-        return UpgradeSchema(connectionString, PostgresOptions.DefaultSchema, cancellationToken);
-    }
+    ) => UpgradeSchema(connectionString, PostgresOptions.DefaultSchema, cancellationToken);
 
     public static Task UpgradeSchema(
         string connectionString,
         string schema,
         CancellationToken cancellationToken = default
-    )
-    {
-        return UpgradeSchema(connectionString, schema, DefaultAdvisoryLockId, cancellationToken);
-    }
+    ) => UpgradeSchema(connectionString, schema, DefaultAdvisoryLockId, cancellationToken);
 
     public static async Task UpgradeSchema(
         string connectionString,
@@ -141,7 +135,8 @@ public static class Postgres
     private static async Task EnsureSchemaIsCreated(
         NpgsqlConnection connection,
         string schema,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         await using var command = connection.CreateCommand();
 
@@ -160,7 +155,7 @@ public static class Postgres
             .OrderBy(x => x.Name);
     }
 
-    private static string LoadMigration(System.IO.Stream stream, string schema)
+    private static string LoadMigration(Stream stream, string schema)
     {
         using var reader = new StreamReader(stream, Encoding.UTF8, true);
 

@@ -12,16 +12,18 @@ public class LogSwaggerLink(
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            var address = server.Features.GetRequiredFeature<IServerAddressesFeature>().Addresses.First();
+        applicationLifetime.ApplicationStarted.Register(
+            () =>
+            {
+                var address = server.Features.GetRequiredFeature<IServerAddressesFeature>().Addresses.First();
 
-            logger.LogInformation(
-                "Review the API documentation by opening your browser to {host}{path}",
-                address,
-                "/swagger"
-            );
-        });
+                logger.LogInformation(
+                    "Review the API documentation by opening your browser to {host}{path}",
+                    address,
+                    "/swagger"
+                );
+            }
+        );
 
         return Task.CompletedTask;
     }

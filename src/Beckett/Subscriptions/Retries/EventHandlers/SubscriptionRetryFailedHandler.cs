@@ -7,8 +7,7 @@ namespace Beckett.Subscriptions.Retries.EventHandlers;
 
 public class SubscriptionRetryFailedHandler(IPostgresDatabase database, SubscriptionOptions options)
 {
-    public async Task Handle(SubscriptionRetryFailed message, CancellationToken cancellationToken)
-    {
+    public async Task Handle(SubscriptionRetryFailed message, CancellationToken cancellationToken) =>
         await database.Execute(
             new UpdateCheckpointStatus(
                 options.ApplicationName,
@@ -19,5 +18,4 @@ public class SubscriptionRetryFailedHandler(IPostgresDatabase database, Subscrip
             ),
             cancellationToken
         );
-    }
 }

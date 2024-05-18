@@ -19,6 +19,7 @@ public class SubscriptionStreamProcessor(
     IServiceProvider serviceProvider,
     SubscriptionOptions options,
     IInstrumentation instrumentation,
+    IMessageScheduler messageScheduler,
     ILogger<SubscriptionStreamProcessor> logger
 ) : ISubscriptionStreamProcessor
 {
@@ -53,18 +54,21 @@ public class SubscriptionStreamProcessor(
         {
             var (type, message, metadata) = messageDeserializer.DeserializeAll(streamMessage);
 
-            messages.Add(new MessageContext(
-                streamMessage.Id,
-                streamMessage.StreamName,
-                streamMessage.StreamPosition,
-                streamMessage.GlobalPosition,
-                type,
-                message,
-                metadata,
-                streamMessage.Timestamp,
-                messageStore,
-                serviceProvider
-            ));
+            messages.Add(
+                new MessageContext(
+                    streamMessage.Id,
+                    streamMessage.StreamName,
+                    streamMessage.StreamPosition,
+                    streamMessage.GlobalPosition,
+                    type,
+                    message,
+                    metadata,
+                    streamMessage.Timestamp,
+                    messageStore,
+                    messageScheduler,
+                    serviceProvider
+                )
+            );
         }
 
         var result = await HandleMessageBatch(subscription, streamName, messages, cancellationToken);
@@ -137,25 +141,22 @@ public class SubscriptionStreamProcessor(
         string streamName,
         MessageBatchResult.Error error,
         CancellationToken cancellationToken
-    )
-    {
-        await messageStore.AppendToStream(
-            RetryStreamName.For(
-                subscription.Name,
-                streamName,
-                error.StreamPosition
-            ),
-            ExpectedVersion.Any,
-            new SubscriptionError(
-                subscription.Name,
-                streamName,
-                error.StreamPosition,
-                ExceptionData.From(error.Exception),
-                DateTimeOffset.UtcNow
-            ).DelayFor(TimeSpan.FromSeconds(10)),
-            cancellationToken
-        );
-    }
+    ) => await messageScheduler.Schedule(
+        RetryStreamName.For(
+            subscription.Name,
+            streamName,
+            error.StreamPosition
+        ),
+        new SubscriptionError(
+            subscription.Name,
+            streamName,
+            error.StreamPosition,
+            ExceptionData.From(error.Exception),
+            DateTimeOffset.UtcNow
+        ),
+        TimeSpan.FromSeconds(10),
+        cancellationToken
+    );
 
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,

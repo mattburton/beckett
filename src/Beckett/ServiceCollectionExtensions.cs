@@ -1,7 +1,7 @@
 using Beckett.Database;
 using Beckett.Messages;
-using Beckett.Messages.Scheduling;
 using Beckett.OpenTelemetry;
+using Beckett.Scheduling;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.Configuration;
@@ -30,7 +30,7 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddPostgresSupport(options.Postgres);
 
-        builder.Services.AddScheduledMessageSupport(options.ScheduledMessages);
+        builder.Services.AddScheduledMessageSupport(options.Scheduling);
 
         builder.Services.AddSubscriptionSupport(options.Subscriptions);
 
@@ -66,43 +66,45 @@ public static class ServiceCollectionExtensions
         IMessageTypeMap messageTypeMap = null!;
         ISubscriptionRegistry subscriptionRegistry = null!;
 
-        builder.ConfigureServices((context, services) =>
-        {
-            configuration = context.Configuration;
-            environment = context.HostingEnvironment;
-            serviceCollection = services;
+        builder.ConfigureServices(
+            (context, services) =>
+            {
+                configuration = context.Configuration;
+                environment = context.HostingEnvironment;
+                serviceCollection = services;
 
-            options = context.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
-                      new BeckettOptions();
+                options = context.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
+                          new BeckettOptions();
 
-            configure?.Invoke(options);
+                configure?.Invoke(options);
 
-            services.AddSingleton(options);
+                services.AddSingleton(options);
 
-            services.AddMessageSupport(options.Messages);
+                services.AddMessageSupport(options.Messages);
 
-            services.AddOpenTelemetrySupport();
+                services.AddOpenTelemetrySupport();
 
-            services.AddPostgresSupport(options.Postgres);
+                services.AddPostgresSupport(options.Postgres);
 
-            services.AddScheduledMessageSupport(options.ScheduledMessages);
+                services.AddScheduledMessageSupport(options.Scheduling);
 
-            services.AddSubscriptionSupport(options.Subscriptions);
+                services.AddSubscriptionSupport(options.Subscriptions);
 
-            services.AddSingleton<IMessageStore, MessageStore>();
+                services.AddSingleton<IMessageStore, MessageStore>();
 
-            var messageTypeProvider = new MessageTypeProvider();
+                var messageTypeProvider = new MessageTypeProvider();
 
-            services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
+                services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
 
-            messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
+                messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
 
-            services.AddSingleton(messageTypeMap);
+                services.AddSingleton(messageTypeMap);
 
-            subscriptionRegistry = new SubscriptionRegistry();
+                subscriptionRegistry = new SubscriptionRegistry();
 
-            services.AddSingleton(subscriptionRegistry);
-        });
+                services.AddSingleton(subscriptionRegistry);
+            }
+        );
 
         return new BeckettBuilder(
             configuration,

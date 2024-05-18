@@ -4,8 +4,6 @@ namespace Beckett.OpenTelemetry;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddOpenTelemetrySupport(this IServiceCollection services)
-    {
+    public static void AddOpenTelemetrySupport(this IServiceCollection services) =>
         services.AddSingleton<IInstrumentation, Instrumentation>();
-    }
 }

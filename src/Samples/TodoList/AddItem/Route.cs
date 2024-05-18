@@ -4,30 +4,35 @@ public static class Route
 {
     public static RouteGroupBuilder AddTodoListItemRoute(this RouteGroupBuilder builder)
     {
-        builder.MapPost("/{id}", async (
-            Guid id,
-            AddTodoListItem command,
-            IMessageStore messageStore,
-            CancellationToken cancellationToken
-        ) =>
-        {
-            try
+        builder.MapPost(
+            "/{id}",
+            async (
+                Guid id,
+                AddTodoListItem command,
+                IMessageStore messageStore,
+                CancellationToken cancellationToken
+            ) =>
             {
-                //TODO - add polly retry example here
-                var result = await command.Execute(id, messageStore, cancellationToken);
-
-                return Results.Ok(new
+                try
                 {
-                    id,
-                    command.Item,
-                    result.StreamVersion
-                });
+                    //TODO - add polly retry example here
+                    var result = await command.Execute(id, messageStore, cancellationToken);
+
+                    return Results.Ok(
+                        new
+                        {
+                            id,
+                            command.Item,
+                            result.StreamVersion
+                        }
+                    );
+                }
+                catch (ItemAlreadyAddedException)
+                {
+                    return Results.Conflict();
+                }
             }
-            catch (ItemAlreadyAddedException)
-            {
-                return Results.Conflict();
-            }
-        }).WithName("Add Todo List Item").WithOpenApi();
+        ).WithName("Add Todo List Item").WithOpenApi();
 
         return builder;
     }

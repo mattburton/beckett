@@ -7,5 +7,25 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
+# ReSharper properties
+resharper_braces_for_ifelse = required
+resharper_braces_for_while = required
+resharper_csharp_wrap_after_declaration_lpar = true
+resharper_csharp_wrap_after_invocation_lpar = true
+resharper_csharp_wrap_arguments_style = chop_if_long
+resharper_csharp_wrap_before_declaration_rpar = true
+resharper_csharp_wrap_before_invocation_rpar = true
+resharper_csharp_wrap_parameters_style = chop_if_long
+resharper_instance_members_qualify_declared_in = base_class
+resharper_method_or_operator_body = expression_body
+resharper_wrap_before_primary_constructor_declaration_rpar = false
+resharper_wrap_parameters_style = wrap_if_long
+
+# Microsoft .NET properties
+csharp_style_expression_bodied_accessors = true:suggestion
+csharp_style_expression_bodied_constructors = false:none
+csharp_style_expression_bodied_methods = true:none
+csharp_style_expression_bodied_properties = true:suggestion
+
 [*.cs]
 indent_size = 4

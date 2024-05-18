@@ -14,12 +14,12 @@ namespace Beckett.OpenTelemetry;
 [SuppressMessage("ReSharper", "ExplicitCallerInfoArgument")]
 public class Instrumentation : IInstrumentation, IDisposable
 {
-    private readonly IPostgresDatabase _database;
-    private readonly IMessageTypeMap _messageTypeMap;
-    private readonly BeckettOptions _options;
-    private readonly ILogger<Instrumentation> _logger;
     private readonly ActivitySource _activitySource;
+    private readonly IPostgresDatabase _database;
+    private readonly ILogger<Instrumentation> _logger;
+    private readonly IMessageTypeMap _messageTypeMap;
     private readonly Meter? _meter;
+    private readonly BeckettOptions _options;
     private readonly TextMapPropagator _propagator;
 
     public Instrumentation(
@@ -55,9 +55,18 @@ public class Instrumentation : IInstrumentation, IDisposable
         _meter.CreateObservableGauge(TelemetryConstants.Metrics.SubscriptionFailedCount, GetSubscriptionFailedCount);
     }
 
+    public void Dispose()
+    {
+        _activitySource.Dispose();
+
+        _meter?.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
     public Activity? StartAppendToStreamActivity(string streamName, Dictionary<string, object> metadata)
     {
-        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.AppendToStream, ActivityKind.Producer);
+        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.AppendToStream);
 
         if (activity == null)
         {
@@ -67,7 +76,9 @@ public class Instrumentation : IInstrumentation, IDisposable
         activity.AddTag(TelemetryConstants.Streams.Name, streamName);
 
         _propagator.Inject(
-            new PropagationContext(activity.Context, default), metadata, (meta, key, value) => meta[key] = value
+            new PropagationContext(activity.Context, default),
+            metadata,
+            (meta, key, value) => meta[key] = value
         );
 
         var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
@@ -82,9 +93,36 @@ public class Instrumentation : IInstrumentation, IDisposable
 
     public Activity? StartReadStreamActivity(string streamName)
     {
-        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.ReadStream, ActivityKind.Producer);
+        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.ReadStream);
 
         activity?.AddTag(TelemetryConstants.Streams.Name, streamName);
+
+        return activity;
+    }
+
+    public Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, object> metadata)
+    {
+        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.ScheduleMessage);
+
+        if (activity == null)
+        {
+            return activity;
+        }
+
+        activity.AddTag(TelemetryConstants.Streams.Name, streamName);
+
+        _propagator.Inject(
+            new PropagationContext(activity.Context, default),
+            metadata,
+            (meta, key, value) => meta[key] = value
+        );
+
+        var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
+
+        if (causationId != null)
+        {
+            metadata.Add(MessageConstants.Metadata.CausationId, causationId);
+        }
 
         return activity;
     }
@@ -97,9 +135,9 @@ public class Instrumentation : IInstrumentation, IDisposable
             ExtractTraceContextFromMetadata
         );
 
-       var activity = _activitySource.StartActivity(
+        var activity = _activitySource.StartActivity(
             TelemetryConstants.Activities.HandleMessage,
-            ActivityKind.Consumer,
+            ActivityKind.Internal,
             parentContext.ActivityContext
         );
 
@@ -127,15 +165,6 @@ public class Instrumentation : IInstrumentation, IDisposable
         activity.AddBaggage(TelemetryConstants.Message.Id, messageContext.Id.ToString());
 
         return activity;
-    }
-
-    public void Dispose()
-    {
-        _activitySource.Dispose();
-
-        _meter?.Dispose();
-
-        GC.SuppressFinalize(this);
     }
 
     private long GetSubscriptionLag()

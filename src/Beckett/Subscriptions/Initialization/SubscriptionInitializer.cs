@@ -29,7 +29,10 @@ public class SubscriptionInitializer(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            var subscriptionName = await database.Execute(new GetNextUninitializedSubscription(options.ApplicationName), cancellationToken);
+            var subscriptionName = await database.Execute(
+                new GetNextUninitializedSubscription(options.ApplicationName),
+                cancellationToken
+            );
 
             if (subscriptionName == null)
             {
@@ -142,13 +145,15 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
-                checkpoints.Add(new CheckpointType
-                {
-                    Application = options.ApplicationName,
-                    Name = subscription.Name,
-                    StreamName = streamChange.StreamName,
-                    StreamVersion = streamChange.StreamVersion
-                });
+                checkpoints.Add(
+                    new CheckpointType
+                    {
+                        Application = options.ApplicationName,
+                        Name = subscription.Name,
+                        StreamName = streamChange.StreamName,
+                        StreamVersion = streamChange.StreamVersion
+                    }
+                );
             }
 
             await database.Execute(

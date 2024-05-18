@@ -32,13 +32,7 @@ public class TodoListView : IApply
         Name = e.Name;
     }
 
-    private void Apply(TodoListItemAdded e)
-    {
-        Items.Add(e.Item, false);
-    }
+    private void Apply(TodoListItemAdded e) => Items.Add(e.Item, false);
 
-    private void Apply(TodoListItemCompleted e)
-    {
-        Items[e.Item] = true;
-    }
+    private void Apply(TodoListItemCompleted e) => Items[e.Item] = true;
 }

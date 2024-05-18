@@ -6,23 +6,20 @@ public class MessageTypeProvider : IMessageTypeProvider
 {
     private readonly Lazy<Type[]> _types = new(LoadTypes);
 
-    public Type? FindMatchFor(Predicate<Type> criteria)
-    {
-        return Array.Find(_types.Value, criteria);
-    }
+    public Type? FindMatchFor(Predicate<Type> criteria) => Array.Find(_types.Value, criteria);
 
-    private static Type[] LoadTypes()
-    {
-        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(x =>
-        {
-            try
+    private static Type[] LoadTypes() =>
+        AppDomain.CurrentDomain.GetAssemblies().SelectMany(
+            x =>
             {
-                return x.GetTypes();
+                try
+                {
+                    return x.GetTypes();
+                }
+                catch (ReflectionTypeLoadException)
+                {
+                    return [];
+                }
             }
-            catch (ReflectionTypeLoadException)
-            {
-                return [];
-            }
-        }).ToArray();
-    }
+        ).ToArray();
 }

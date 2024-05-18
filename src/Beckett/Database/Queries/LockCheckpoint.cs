@@ -36,13 +36,15 @@ public class LockCheckpoint(
 
         await reader.ReadAsync(cancellationToken);
 
-        return !reader.HasRows ? null : new Checkpoint(
-            reader.GetFieldValue<string>(0),
-            reader.GetFieldValue<string>(1),
-            reader.GetFieldValue<string>(2),
-            reader.GetFieldValue<long>(3),
-            reader.GetFieldValue<long>(4),
-            reader.GetFieldValue<CheckpointStatus>(5)
-        );
+        return !reader.HasRows
+            ? null
+            : new Checkpoint(
+                reader.GetFieldValue<string>(0),
+                reader.GetFieldValue<string>(1),
+                reader.GetFieldValue<string>(2),
+                reader.GetFieldValue<long>(3),
+                reader.GetFieldValue<long>(4),
+                reader.GetFieldValue<CheckpointStatus>(5)
+            );
     }
 }

@@ -21,14 +21,7 @@ public class SubscriptionRegistry : ISubscriptionRegistry
         return true;
     }
 
-    public IEnumerable<Subscription> All()
-    {
-        return _subscriptions.Values;
-    }
+    public IEnumerable<Subscription> All() => _subscriptions.Values;
 
-    public Subscription? GetSubscription(string name)
-    {
-        return _subscriptions.GetValueOrDefault(name);
-    }
+    public Subscription? GetSubscription(string name) => _subscriptions.GetValueOrDefault(name);
 }
-
