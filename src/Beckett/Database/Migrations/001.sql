@@ -403,6 +403,19 @@ FOR UPDATE
 SKIP LOCKED;
 $$;
 
+CREATE FUNCTION beckett.checkpoint_hash(
+  _application text,
+  _name text,
+  _stream_name text
+)
+  RETURNS bigint
+  IMMUTABLE
+  LANGUAGE sql
+AS
+$$
+SELECT abs(hashtextextended(_application || '-' || _name || '-' || _stream_name, 0));
+$$;
+
 CREATE FUNCTION __schema__.lock_next_available_checkpoint(
   _application text
 )
@@ -417,16 +430,40 @@ CREATE FUNCTION __schema__.lock_next_available_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT c.application, c.name, c.stream_name, c.stream_position, c.stream_version, c.status
-FROM __schema__.checkpoints c
-INNER JOIN __schema__.subscriptions s ON c.application = s.application AND c.name = s.name
-WHERE s.application = _application
-AND s.initialized = true
-AND c.stream_position < c.stream_version
-AND c.status = 'active'
-FOR UPDATE
-SKIP LOCKED
-LIMIT 1;
+WITH available_checkpoints AS (
+    SELECT c.application,
+           c.name,
+           c.stream_name,
+           c.stream_position,
+           c.stream_version,
+           c.status
+    FROM __schema__.checkpoints c
+    INNER JOIN __schema__.subscriptions s
+    ON c.application = s.application AND c.name = s.name
+    WHERE s.application = _application
+    AND s.initialized = true
+    AND c.stream_position < c.stream_version
+    AND c.status = 'active'
+    LIMIT 5
+),
+lock_checkpoint AS (
+    SELECT application,
+           name,
+           stream_name,
+           stream_position,
+           stream_version,
+           status
+    FROM available_checkpoints
+    WHERE pg_try_advisory_xact_lock(beckett.checkpoint_hash(application, name, stream_name)) = true
+    LIMIT 1
+)
+SELECT application,
+       name,
+       stream_name,
+       stream_position,
+       stream_version,
+       status
+FROM lock_checkpoint;
 $$;
 
 CREATE FUNCTION __schema__.record_checkpoints(
