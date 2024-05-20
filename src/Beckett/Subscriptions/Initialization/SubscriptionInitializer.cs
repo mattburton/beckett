@@ -7,7 +7,7 @@ namespace Beckett.Subscriptions.Initialization;
 
 public class SubscriptionInitializer(
     IPostgresDatabase database,
-    SubscriptionOptions options,
+    BeckettOptions options,
     IMessageStorage messageStorage,
     ISubscriptionRegistry subscriptionRegistry,
     IMessageTypeMap messageTypeMap
@@ -94,7 +94,7 @@ public class SubscriptionInitializer(
 
             var streamChanges = await messageStorage.ReadStreamChanges(
                 checkpoint.StreamPosition,
-                options.BatchSize,
+                options.Subscriptions.BatchSize,
                 cancellationToken
             );
 
@@ -113,7 +113,7 @@ public class SubscriptionInitializer(
 
                 var newStreamChanges = await messageStorage.ReadStreamChanges(
                     checkpoint.StreamPosition,
-                    options.BatchSize,
+                    options.Subscriptions.BatchSize,
                     cancellationToken
                 );
 

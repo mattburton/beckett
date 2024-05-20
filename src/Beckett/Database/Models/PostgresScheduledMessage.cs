@@ -4,13 +4,13 @@ namespace Beckett.Database.Models;
 
 public class PostgresScheduledMessage
 {
-    public Guid Id { get; init; }
-    public string StreamName { get; init; } = null!;
-    public string Type { get; init; } = null!;
-    public string Data { get; init; } = null!;
-    public string Metadata { get; init; } = null!;
-    public DateTimeOffset DeliverAt { get; init; }
-    public DateTimeOffset Timestamp { get; init; }
+    public required Guid Id { get; init; }
+    public required string StreamName { get; init; }
+    public required string Type { get; init; }
+    public required string Data { get; init; }
+    public required string Metadata { get; init; }
+    public required DateTimeOffset DeliverAt { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
 
     public static PostgresScheduledMessage From(NpgsqlDataReader reader) =>
         new()

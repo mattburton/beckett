@@ -146,7 +146,7 @@ public class Instrumentation : IInstrumentation, IDisposable
             return activity;
         }
 
-        activity.AddTag(TelemetryConstants.Application.Name, _options.Subscriptions.ApplicationName);
+        activity.AddTag(TelemetryConstants.Application.Name, _options.ApplicationName);
         activity.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
         activity.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
         activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.Type?.FullName);
@@ -181,7 +181,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         command.Prepare();
 
-        command.Parameters[0].Value = _options.Subscriptions.ApplicationName;
+        command.Parameters[0].Value = _options.ApplicationName;
 
         return (long)command.ExecuteScalar()!;
     }
@@ -200,7 +200,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         command.Prepare();
 
-        command.Parameters[0].Value = _options.Subscriptions.ApplicationName;
+        command.Parameters[0].Value = _options.ApplicationName;
 
         return (long)command.ExecuteScalar()!;
     }
@@ -219,7 +219,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         command.Prepare();
 
-        command.Parameters[0].Value = _options.Subscriptions.ApplicationName;
+        command.Parameters[0].Value = _options.ApplicationName;
 
         return (long)command.ExecuteScalar()!;
     }

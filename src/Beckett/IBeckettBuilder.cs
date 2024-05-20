@@ -16,6 +16,10 @@ public interface IBeckettBuilder
     void Map<TMessage>(string name);
 
     ISubscriptionBuilder AddSubscription(string name);
+
+    void ScheduleRecurring<TMessage>(string name, string cronExpression, string streamName, TMessage message);
+
+    void ScheduleOnce<TMessage>(string name, string streamName, TMessage message);
 }
 
 public interface ISubscriptionBuilder

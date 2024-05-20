@@ -27,6 +27,21 @@ public readonly record struct MessageContext(
         CancellationToken cancellationToken
     ) => MessageStore.ReadStream(streamName, options, cancellationToken);
 
+    public Task Once(
+        string name,
+        string streamName,
+        object message,
+        CancellationToken cancellationToken
+    ) => MessageScheduler.Once(name, streamName, message, cancellationToken);
+
+    public Task Recurring(
+        string name,
+        string cronExpression,
+        string streamName,
+        object message,
+        CancellationToken cancellationToken
+    ) => MessageScheduler.Recurring(name, cronExpression, streamName, message, cancellationToken);
+
     public Task Schedule(
         string streamName,
         IEnumerable<object> messages,

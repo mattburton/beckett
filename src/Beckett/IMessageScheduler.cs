@@ -2,6 +2,21 @@ namespace Beckett;
 
 public interface IMessageScheduler
 {
+    Task Once(
+        string name,
+        string streamName,
+        object message,
+        CancellationToken cancellationToken
+    );
+
+    Task Recurring(
+        string name,
+        string cronExpression,
+        string streamName,
+        object message,
+        CancellationToken cancellationToken
+    );
+
     Task Schedule(
         string streamName,
         object message,

@@ -17,7 +17,7 @@ public class SubscriptionStreamProcessor(
     IPostgresMessageDeserializer messageDeserializer,
     IMessageStore messageStore,
     IServiceProvider serviceProvider,
-    SubscriptionOptions options,
+    BeckettOptions options,
     IInstrumentation instrumentation,
     IMessageScheduler messageScheduler,
     ILogger<SubscriptionStreamProcessor> logger

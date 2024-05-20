@@ -7,7 +7,7 @@ public class SubscriptionConsumer(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
-    SubscriptionOptions options,
+    BeckettOptions options,
     CancellationToken stoppingToken
 ) : ISubscriptionConsumer
 {
@@ -60,7 +60,7 @@ public class SubscriptionConsumer(
                 subscription,
                 checkpoint.StreamName,
                 checkpoint.StreamPosition + 1,
-                options.BatchSize,
+                options.Subscriptions.BatchSize,
                 movedToFailedOnError,
                 false,
                 stoppingToken
