@@ -8,7 +8,7 @@ namespace Beckett.Subscriptions;
 public class GlobalStreamConsumer(
     IPostgresDatabase database,
     IMessageStorage messageStorage,
-    SubscriptionOptions options,
+    BeckettOptions options,
     ISubscriptionRegistry subscriptionRegistry
 ) : IGlobalStreamConsumer
 {
@@ -52,7 +52,7 @@ public class GlobalStreamConsumer(
 
             var streamChanges = await messageStorage.ReadStreamChanges(
                 checkpoint.StreamPosition,
-                options.BatchSize,
+                options.Subscriptions.BatchSize,
                 stoppingToken
             );
 

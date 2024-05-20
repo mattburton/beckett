@@ -5,7 +5,7 @@ using Beckett.Subscriptions.Retries.Events;
 
 namespace Beckett.Subscriptions.Retries.EventHandlers;
 
-public class SubscriptionRetryFailedHandler(IPostgresDatabase database, SubscriptionOptions options)
+public class SubscriptionRetryFailedHandler(IPostgresDatabase database, BeckettOptions options)
 {
     public async Task Handle(SubscriptionRetryFailed message, CancellationToken cancellationToken) =>
         await database.Execute(

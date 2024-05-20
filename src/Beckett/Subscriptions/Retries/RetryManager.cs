@@ -10,7 +10,7 @@ namespace Beckett.Subscriptions.Retries;
 public class RetryManager(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
-    SubscriptionOptions options,
+    BeckettOptions options,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
     IMessageStore messageStore,
     IMessageScheduler messageScheduler

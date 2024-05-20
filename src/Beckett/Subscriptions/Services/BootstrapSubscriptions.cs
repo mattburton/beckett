@@ -12,7 +12,7 @@ public class BootstrapSubscriptions(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
     IMessageTypeMap messageTypeMap,
-    SubscriptionOptions options,
+    BeckettOptions options,
     ISubscriptionInitializer subscriptionInitializer,
     IServiceProvider serviceProvider
 ) : IHostedService
