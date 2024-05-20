@@ -1,4 +1,5 @@
 using Beckett.Messages;
+using Beckett.Scheduling;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,14 @@ public interface IBeckettBuilder
     void Map<TMessage>(string name);
 
     ISubscriptionBuilder AddSubscription(string name);
+
+    void ScheduleRecurringMessage<TMessage>(
+        string name,
+        string cronExpression,
+        string streamName,
+        TMessage message,
+        Dictionary<string, object>? metadata = null
+    ) where TMessage : notnull;
 }
 
 public interface ISubscriptionBuilder
@@ -26,8 +35,14 @@ public interface ICategorySubscriptionBuilder
 {
     ICategoryMessageSubscriptionBuilder<TMessage> Message<TMessage>();
 
-    ISubscriptionConfigurationBuilder Handler<THandler>(Func<THandler, IMessageContext, CancellationToken, Task> handler);
-    ISubscriptionConfigurationBuilder Handler(Func<IMessageContext, CancellationToken, Task> handler, string handlerName);
+    ISubscriptionConfigurationBuilder Handler<THandler>(
+        Func<THandler, IMessageContext, CancellationToken, Task> handler
+    );
+
+    ISubscriptionConfigurationBuilder Handler(
+        Func<IMessageContext, CancellationToken, Task> handler,
+        string handlerName
+    );
 }
 
 public interface ICategoryMessageSubscriptionBuilder<out TMessage>
@@ -35,8 +50,14 @@ public interface ICategoryMessageSubscriptionBuilder<out TMessage>
     ICategoryMessageSubscriptionBuilder<T> Message<T>();
 
     ISubscriptionConfigurationBuilder Handler<THandler>(Func<THandler, TMessage, CancellationToken, Task> handler);
-    ISubscriptionConfigurationBuilder Handler<THandler>(Func<THandler, TMessage, IMessageContext, CancellationToken, Task> handler);
-    ISubscriptionConfigurationBuilder Handler<THandler>(Func<THandler, IMessageContext, CancellationToken, Task> handler);
+
+    ISubscriptionConfigurationBuilder Handler<THandler>(
+        Func<THandler, TMessage, IMessageContext, CancellationToken, Task> handler
+    );
+
+    ISubscriptionConfigurationBuilder Handler<THandler>(
+        Func<THandler, IMessageContext, CancellationToken, Task> handler
+    );
 }
 
 public interface ISubscriptionConfigurationBuilder
@@ -51,7 +72,8 @@ public class BeckettBuilder(
     IHostEnvironment environment,
     IServiceCollection services,
     IMessageTypeMap messageTypeMap,
-    ISubscriptionRegistry subscriptionRegistry
+    ISubscriptionRegistry subscriptionRegistry,
+    IRecurringMessageRegistry recurringMessageRegistry
 ) : IBeckettBuilder
 {
     public IConfiguration Configuration { get; } = configuration;
@@ -68,6 +90,25 @@ public class BeckettBuilder(
         }
 
         return new SubscriptionBuilder(subscription);
+    }
+
+    public void ScheduleRecurringMessage<TMessage>(
+        string name,
+        string cronExpression,
+        string streamName,
+        TMessage message,
+        Dictionary<string, object>? metadata = null
+    ) where TMessage : notnull
+    {
+        if (!recurringMessageRegistry.TryAdd(name, out var recurringMessage))
+        {
+            throw new InvalidOperationException($"There is already a recurring message with the name {name}");
+        }
+
+        recurringMessage.CronExpression = cronExpression;
+        recurringMessage.StreamName = streamName;
+        recurringMessage.Message = message;
+        recurringMessage.Metadata = metadata ?? new Dictionary<string, object>();
     }
 
     private class SubscriptionBuilder(Subscription subscription) : ISubscriptionBuilder

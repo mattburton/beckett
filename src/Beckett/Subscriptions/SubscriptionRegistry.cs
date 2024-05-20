@@ -6,7 +6,7 @@ public class SubscriptionRegistry : ISubscriptionRegistry
 
     public bool TryAdd(string name, out Subscription subscription)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         if (_subscriptions.ContainsKey(name))
         {

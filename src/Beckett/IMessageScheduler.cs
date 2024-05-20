@@ -2,17 +2,25 @@ namespace Beckett;
 
 public interface IMessageScheduler
 {
-    Task Cancel(Guid id, CancellationToken cancellationToken);
+    Task CancelScheduledMessage(Guid id, CancellationToken cancellationToken);
 
-    Task<Guid> Schedule(
+    Task RecurringMessage(
+        string name,
+        string cronExpression,
+        string streamName,
+        object message,
+        CancellationToken cancellationToken
+    );
+
+    Task<Guid> ScheduleMessage(
         string streamName,
         object message,
         TimeSpan delay,
         CancellationToken cancellationToken
-    ) => Schedule(streamName, message, DateTimeOffset.UtcNow.Add(delay), cancellationToken);
+    ) => ScheduleMessage(streamName, message, DateTimeOffset.UtcNow.Add(delay), cancellationToken);
 
 
-    Task<Guid> Schedule(
+    Task<Guid> ScheduleMessage(
         string streamName,
         object message,
         DateTimeOffset deliverAt,

@@ -32,6 +32,22 @@ public class PostgresMessageDeserializer(IMessageTypeMap messageTypeMap) : IPost
         return (type, deserializedMessage, metadata);
     }
 
+    public (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresRecurringMessage message)
+    {
+        var type = messageTypeMap.GetType(message.Type) ??
+                   throw new Exception($"Unknown scheduled message type: {message.Type}");
+
+        var deserializedMessage = JsonSerializer.Deserialize(message.Data, type) ?? throw new Exception(
+            $"Unable to deserialize scheduled message data for type {message.Type}: {message.Data}"
+        );
+
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(message.Metadata) ?? throw new Exception(
+            $"Unable to deserialize scheduled message metadata for type {message.Type}: {message.Data}"
+        );
+
+        return (deserializedMessage, metadata);
+    }
+
     public (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresScheduledMessage message)
     {
         var type = messageTypeMap.GetType(message.Type) ??

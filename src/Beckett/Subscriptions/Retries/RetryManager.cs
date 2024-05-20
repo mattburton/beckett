@@ -23,7 +23,7 @@ public class RetryManager(
         CancellationToken cancellationToken
     )
     {
-        await messageScheduler.Schedule(
+        await messageScheduler.ScheduleMessage(
             RetryStreamName.For(id),
             new RetryStarted(
                 id,
@@ -133,7 +133,7 @@ public class RetryManager(
             {
                 var delay = attempts.GetNextDelayWithExponentialBackoff();
 
-                await messageScheduler.Schedule(
+                await messageScheduler.ScheduleMessage(
                     retryStreamName,
                     new RetryError(
                         id,

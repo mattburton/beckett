@@ -8,5 +8,7 @@ public interface IPostgresMessageDeserializer
 
     (Type Type, object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresMessage message);
 
+    (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresRecurringMessage message);
+
     (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresScheduledMessage message);
 }

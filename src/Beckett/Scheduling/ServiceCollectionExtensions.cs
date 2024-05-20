@@ -11,6 +11,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IMessageScheduler, MessageScheduler>();
 
+        services.AddHostedService<BootstrapRecurringMessages>();
+
+        services.AddHostedService<RecurringMessageService>();
+
         services.AddHostedService<ScheduledMessageService>();
     }
 }

@@ -46,12 +46,17 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddSingleton<ISubscriptionRegistry>(subscriptionRegistry);
 
+        var recurringMessageRegistry = new RecurringMessageRegistry();
+
+        builder.Services.AddSingleton<IRecurringMessageRegistry>(recurringMessageRegistry);
+
         return new BeckettBuilder(
             builder.Configuration,
             builder.Environment,
             builder.Services,
             messageTypeMap,
-            subscriptionRegistry
+            subscriptionRegistry,
+            recurringMessageRegistry
         ).SubscriptionRetryModule();
     }
 
@@ -63,6 +68,7 @@ public static class ServiceCollectionExtensions
         BeckettOptions options;
         IMessageTypeMap messageTypeMap = null!;
         ISubscriptionRegistry subscriptionRegistry = null!;
+        IRecurringMessageRegistry recurringMessageRegistry = null!;
 
         builder.ConfigureServices(
             (context, services) =>
@@ -99,6 +105,10 @@ public static class ServiceCollectionExtensions
                 subscriptionRegistry = new SubscriptionRegistry();
 
                 services.AddSingleton(subscriptionRegistry);
+
+                recurringMessageRegistry = new RecurringMessageRegistry();
+
+                services.AddSingleton(recurringMessageRegistry);
             }
         );
 
@@ -107,7 +117,8 @@ public static class ServiceCollectionExtensions
             environment,
             serviceCollection,
             messageTypeMap,
-            subscriptionRegistry
+            subscriptionRegistry,
+            recurringMessageRegistry
         ).SubscriptionRetryModule();
     }
 }
