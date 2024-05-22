@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using System.Text.RegularExpressions;
 using Beckett.Messages;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.Configuration;
@@ -24,32 +23,28 @@ public interface ISubscriptionBuilder
     ICategorySubscriptionBuilder Category(string category);
 }
 
-public interface ISubscriptionConfigurationBuilder
-{
-    ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition);
-    ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount);
-}
-
 public interface ICategorySubscriptionBuilder
 {
     ICategoryMessageSubscriptionBuilder<TMessage> Message<TMessage>();
 
-    ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler);
-    ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler, string description);
-
+    ISubscriptionConfigurationBuilder Handler<THandler>(Expression<Func<THandler, IMessageContext, CancellationToken, Task>> handler);
     ISubscriptionConfigurationBuilder Handler(Expression<Func<IMessageContext, CancellationToken, Task>> handler);
 }
 
-public interface ICategoryMessageSubscriptionBuilder<out TMessage>
+public interface ICategoryMessageSubscriptionBuilder<TMessage>
 {
     ICategoryMessageSubscriptionBuilder<T> Message<T>();
 
-    ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageHandler<THandler, TMessage> handler);
-    ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageAndContextHandler<THandler, TMessage> handler);
-    ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler);
-    ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageHandler<TMessage> handler);
-    ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageAndContextHandler<TMessage> handler);
-    ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler);
+    ISubscriptionConfigurationBuilder Handler<THandler>(Expression<Func<THandler, TMessage, CancellationToken, Task>> handler);
+    ISubscriptionConfigurationBuilder Handler<THandler>(Expression<Func<THandler, TMessage, IMessageContext, CancellationToken, Task>> handler);
+    ISubscriptionConfigurationBuilder Handler<THandler>(Expression<Func<THandler, IMessageContext, CancellationToken, Task>> handler);
+}
+
+public interface ISubscriptionConfigurationBuilder
+{
+    ISubscriptionConfigurationBuilder HandlerName(string name);
+    ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition);
+    ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount);
 }
 
 public class BeckettBuilder(
@@ -81,7 +76,6 @@ public class BeckettBuilder(
         public ICategorySubscriptionBuilder Category(string category)
         {
             subscription.Category = category;
-            subscription.Pattern = new Regex($"({Regex.Escape(category)})(?=-*)", RegexOptions.Compiled);
 
             return new CategorySubscriptionBuilder(subscription);
         }
@@ -96,32 +90,33 @@ public class BeckettBuilder(
             return new CategoryMessageSubscriptionBuilder<TMessage>(subscription);
         }
 
-        public ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler)
+        public ISubscriptionConfigurationBuilder Handler<THandler>(
+            Expression<Func<THandler, IMessageContext, CancellationToken, Task>> handler
+        )
         {
-            subscription.Type = typeof(THandler);
-            subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
-            subscription.HandlesMessageContext = true;
+            var handlerType = typeof(THandler);
 
-            return new SubscriptionConfigurationBuilder(subscription);
-        }
+            subscription.HandlerType = handlerType;
+            subscription.HandlerName = handlerType.FullName;
 
-        public ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler, string description)
-        {
-            subscription.HandlerName = description;
-            subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
-            subscription.HandlesMessageContext = true;
-
-            return new SubscriptionConfigurationBuilder(subscription);
-        }
-
-        public ISubscriptionConfigurationBuilder Handler(Expression<Func<IMessageContext, CancellationToken, Task>> handler)
-        {
-            subscription.HandlerName = handler.Body is MethodCallExpression methodCallExpression
-                ? $"{methodCallExpression.Method?.DeclaringType?.FullName}.{methodCallExpression.Method?.Name}"
-                : handler.Body.ToString();
             var func = handler.Compile();
+
+            subscription.InstanceMethod = (h, c, t) => func((THandler)h, (IMessageContext)c, t);
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler(
+            Expression<Func<IMessageContext, CancellationToken, Task>> handler
+        )
+        {
+            var func = handler.Compile();
+
+            subscription.HandlerName = handler.Body is MethodCallExpression methodCallExpression
+                ? $"{methodCallExpression.Method.DeclaringType?.FullName}.{methodCallExpression.Method.Name}"
+                : handler.Body.ToString();
+
             subscription.StaticMethod = (c, t) => func((IMessageContext)c, t);
-            subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -137,69 +132,63 @@ public class BeckettBuilder(
             return new CategoryMessageSubscriptionBuilder<TMessage>(subscription);
         }
 
-        public ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageHandler<THandler, T> handler)
+        public ISubscriptionConfigurationBuilder Handler<THandler>(
+            Expression<Func<THandler, T, CancellationToken, Task>> handler
+        )
         {
             subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
 
-            subscription.Type = typeof(THandler);
-            subscription.InstanceMethod = (h, m, t) => handler((THandler)h, (T)m, t);
+            var handlerType = typeof(THandler);
+
+            subscription.HandlerType = handlerType;
+            subscription.HandlerName = handlerType.FullName;
+
+            var func = handler.Compile();
+
+            subscription.InstanceMethod = (h, c, t) => func((THandler)h, (T)((IMessageContext)c).Message, t);
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
 
-        public ISubscriptionConfigurationBuilder Handler<THandler>(TypedMessageAndContextHandler<THandler, T> handler)
+        public ISubscriptionConfigurationBuilder Handler<THandler>(
+            Expression<Func<THandler, T, IMessageContext, CancellationToken, Task>> handler
+        )
         {
             subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
 
-            subscription.Type = typeof(THandler);
+            var handlerType = typeof(THandler);
 
-            subscription.InstanceMethod = (h, c, t) => handler(
+            subscription.HandlerType = handlerType;
+            subscription.HandlerName = handlerType.FullName;
+
+            var func = handler.Compile();
+
+            subscription.InstanceMethod = (h, c, t) => func(
                 (THandler)h,
                 (T)((IMessageContext)c).Message,
                 (IMessageContext)c,
                 t
             );
 
-            subscription.HandlesMessageContext = true;
-
             return new SubscriptionConfigurationBuilder(subscription);
         }
 
-        public ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler)
+        public ISubscriptionConfigurationBuilder Handler<THandler>(
+            Expression<Func<THandler, IMessageContext, CancellationToken, Task>> handler
+        )
         {
-            subscription.Type = typeof(THandler);
-            subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
-            subscription.HandlesMessageContext = true;
+            var handlerType = typeof(THandler);
 
-            return new SubscriptionConfigurationBuilder(subscription);
-        }
+            subscription.HandlerType = handlerType;
+            subscription.HandlerName = handlerType.FullName;
 
-        public ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageHandler<T> handler)
-        {
-            subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
+            var func = handler.Compile();
 
-            subscription.HandlerName = handler.GetHandlerDescription();
-            subscription.StaticMethod = (m, t) => handler((T)m, t);
-
-            return new SubscriptionConfigurationBuilder(subscription);
-        }
-
-        public ISubscriptionConfigurationBuilder Handler<THandler>(StaticTypedMessageAndContextHandler<T> handler)
-        {
-            subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
-
-            subscription.HandlerName = handler.GetHandlerDescription();
-            subscription.StaticMethod = (c, t) => handler((T)((IMessageContext)c).Message, (IMessageContext)c, t);
-            subscription.HandlesMessageContext = true;
-
-            return new SubscriptionConfigurationBuilder(subscription);
-        }
-
-        public ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler)
-        {
-            subscription.HandlerName = handler.GetHandlerDescription();
-            subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
-            subscription.HandlesMessageContext = true;
+            subscription.InstanceMethod = (h, c, t) => func(
+                (THandler)h,
+                (IMessageContext)c,
+                t
+            );
 
             return new SubscriptionConfigurationBuilder(subscription);
         }
@@ -207,6 +196,15 @@ public class BeckettBuilder(
 
     private class SubscriptionConfigurationBuilder(Subscription subscription) : ISubscriptionConfigurationBuilder
     {
+        public ISubscriptionConfigurationBuilder HandlerName(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+            subscription.HandlerName = name;
+
+            return this;
+        }
+
         public ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition)
         {
             subscription.StartingPosition = startingPosition;
@@ -216,17 +214,14 @@ public class BeckettBuilder(
 
         public ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount)
         {
+            if (maxRetryCount < 0)
+            {
+                throw new InvalidOperationException($"{nameof(MaxRetryCount)} must be greater than or equal to 0");
+            }
+
             subscription.MaxRetryCount = maxRetryCount;
 
             return this;
         }
-    }
-}
-
-internal static class HandlerDelegateExtensions
-{
-    public static string GetHandlerDescription(this Delegate handler)
-    {
-        return handler.Method.Name;
     }
 }

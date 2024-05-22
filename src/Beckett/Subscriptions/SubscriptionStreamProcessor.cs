@@ -183,32 +183,28 @@ public class SubscriptionStreamProcessor(
                 {
                     using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
 
-                    if (subscription.HasStaticMethod)
+                    if (subscription.StaticMethod != null)
                     {
-                        if (subscription.HandlesMessageContext)
-                        {
-                            await subscription.StaticMethod!(messageContext, cancellationToken);
-                        }
-                        else
-                        {
-                            await subscription.StaticMethod!(messageContext.Message, cancellationToken);
-                        }
+                        await subscription.StaticMethod(messageContext, cancellationToken);
 
                         continue;
                     }
 
+                    if (subscription.HandlerType == null)
+                    {
+                        throw new InvalidOperationException($"Subscription handler type is not configured for {subscription.Name}");
+                    }
+
+                    if (subscription.InstanceMethod == null)
+                    {
+                        throw new InvalidOperationException($"Subscription handler expression is not configured for {subscription.Name}");
+                    }
+
                     using var scope = serviceProvider.CreateScope();
 
-                    var handler = scope.ServiceProvider.GetRequiredService(subscription.Type!);
+                    var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
 
-                    if (subscription.HandlesMessageContext)
-                    {
-                        await subscription.InstanceMethod!(handler, messageContext, cancellationToken);
-                    }
-                    else
-                    {
-                        await subscription.InstanceMethod!(handler, messageContext.Message, cancellationToken);
-                    }
+                    await subscription.InstanceMethod(handler, messageContext, cancellationToken);
                 }
                 catch (Exception e)
                 {

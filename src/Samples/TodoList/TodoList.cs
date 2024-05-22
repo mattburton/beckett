@@ -14,12 +14,12 @@ public static class TodoList
     {
         builder.Services.AddTransient<MentionsHandler>();
 
-        builder.AddSubscription("mentions")
+        builder.AddSubscription("Mentions")
             .Category(Category)
             .Message<TodoListItemAdded>()
             .Handler<MentionsHandler>((handler, message, token) => handler.Handle(message, token));
 
-        builder.AddSubscription("notifications")
+        builder.AddSubscription("Notifications")
             .Category(Category)
             .Handler((context, token) => NotificationHandler.Handle(context, token));
 

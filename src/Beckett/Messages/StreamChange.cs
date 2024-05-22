@@ -11,11 +11,11 @@ public record StreamChange(
 {
     public bool AppliesTo(Subscription subscription)
     {
-        if (subscription.IsPatternOnly)
+        if (subscription.IsCategoryOnly)
         {
-            return subscription.Pattern.IsMatch(StreamName);
+            return subscription.CategoryMatches(StreamName);
         }
 
-        return subscription.Pattern.IsMatch(StreamName) && MessageTypes.Intersect(subscription.MessageTypeNames).Any();
+        return subscription.CategoryMatches(StreamName) && MessageTypes.Intersect(subscription.MessageTypeNames).Any();
     }
 }

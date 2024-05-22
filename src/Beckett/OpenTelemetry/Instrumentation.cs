@@ -136,7 +136,7 @@ public class Instrumentation : IInstrumentation, IDisposable
         );
 
         var activity = _activitySource.StartActivity(
-            TelemetryConstants.Activities.HandleMessage,
+            $"{_options.ApplicationName}.{subscription.Name}",
             ActivityKind.Internal,
             parentContext.ActivityContext
         );

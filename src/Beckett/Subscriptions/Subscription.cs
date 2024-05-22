@@ -1,42 +1,25 @@
-using System.Text.RegularExpressions;
 using Beckett.Messages;
 
 namespace Beckett.Subscriptions;
 
 public class Subscription(string name)
 {
-    private Type? _type;
     internal string Name { get; } = name;
     internal string Category { get; set; } = null!;
-    internal Regex Pattern { get; set; } = null!;
-
-    internal Type? Type
-    {
-        get => _type;
-        set
-        {
-            _type = value;
-            if (value != null && HandlerName == null)
-            {
-                HandlerName = value.FullName;
-            }
-        }
-    }
-
+    internal Type? HandlerType { get; set; }
+    internal string? HandlerName { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];
     internal HashSet<string> MessageTypeNames { get; private set; } = [];
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
     internal Func<object, CancellationToken, Task>? StaticMethod { get; set; }
-    internal bool HandlesMessageContext { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal int MaxRetryCount { get; set; } = 10;
 
-    internal bool IsPatternOnly => MessageTypes.Count == 0;
+    internal bool IsCategoryOnly => MessageTypes.Count == 0;
 
-    internal bool HasStaticMethod => StaticMethod != null;
-    internal string? HandlerName { get; set; }
+    internal bool CategoryMatches(string streamName) => streamName.StartsWith(Category);
 
-    internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || HandlesMessageContext;
+    internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || IsCategoryOnly;
 
     internal void MapMessageTypeNames(IMessageTypeMap messageTypeMap) =>
         MessageTypeNames = MessageTypes.Select(messageTypeMap.GetName).ToHashSet();

@@ -92,7 +92,7 @@ public class BootstrapSubscriptions(
 
     private void EnsureSubscriptionHandlerIsRegistered(Subscription subscription)
     {
-        if (subscription.HasStaticMethod)
+        if (subscription.HandlerType == null)
         {
             return;
         }
@@ -101,12 +101,12 @@ public class BootstrapSubscriptions(
         {
             var scope = serviceProvider.CreateScope();
 
-            scope.ServiceProvider.GetRequiredService(subscription.Type!);
+            scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
         }
         catch
         {
             throw new InvalidOperationException(
-                $"The subscription handler {subscription.Type} for {subscription.Name} has not been registered in the container"
+                $"The subscription handler {subscription.HandlerType} for {subscription.Name} has not been registered in the container"
             );
         }
     }
