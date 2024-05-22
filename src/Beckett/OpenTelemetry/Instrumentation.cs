@@ -149,7 +149,7 @@ public class Instrumentation : IInstrumentation, IDisposable
         activity.AddTag(TelemetryConstants.Application.Name, _options.ApplicationName);
         activity.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
         activity.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
-        activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.Type?.FullName);
+        activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.HandlerName);
         activity.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
 
         if (messageContext.Metadata.TryGetValue(MessageConstants.Metadata.CausationId, out var causationId))

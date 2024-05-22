@@ -21,7 +21,7 @@ public static class TodoList
 
         builder.AddSubscription("notifications")
             .Category(Category)
-            .Handler(NotificationHandler.Handle);
+            .Handler((context, token) => NotificationHandler.Handle(context, token));
 
         return builder;
     }

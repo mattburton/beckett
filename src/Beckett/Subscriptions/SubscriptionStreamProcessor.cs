@@ -218,7 +218,7 @@ public class SubscriptionStreamProcessor(
                         messageContext.Type,
                         subscription.Name,
                         streamName,
-                        subscription.Type,
+                        subscription.HandlerName,
                         messageContext.Id
                     );
 

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Beckett.Messages;
 using Beckett.Subscriptions;
@@ -34,7 +35,9 @@ public interface ICategorySubscriptionBuilder
     ICategoryMessageSubscriptionBuilder<TMessage> Message<TMessage>();
 
     ISubscriptionConfigurationBuilder Handler<THandler>(MessageContextHandler<THandler> handler);
-    ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler);
+    ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler, string description);
+
+    ISubscriptionConfigurationBuilder Handler(Expression<Func<IMessageContext, CancellationToken, Task>> handler);
 }
 
 public interface ICategoryMessageSubscriptionBuilder<out TMessage>
@@ -102,10 +105,22 @@ public class BeckettBuilder(
             return new SubscriptionConfigurationBuilder(subscription);
         }
 
-        public ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler)
+        public ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler, string description)
         {
-            subscription.Type = handler.GetHandlerType();
+            subscription.HandlerName = description;
             subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
+            subscription.HandlesMessageContext = true;
+
+            return new SubscriptionConfigurationBuilder(subscription);
+        }
+
+        public ISubscriptionConfigurationBuilder Handler(Expression<Func<IMessageContext, CancellationToken, Task>> handler)
+        {
+            subscription.HandlerName = handler.Body is MethodCallExpression methodCallExpression
+                ? $"{methodCallExpression.Method?.DeclaringType?.FullName}.{methodCallExpression.Method?.Name}"
+                : handler.Body.ToString();
+            var func = handler.Compile();
+            subscription.StaticMethod = (c, t) => func((IMessageContext)c, t);
             subscription.HandlesMessageContext = true;
 
             return new SubscriptionConfigurationBuilder(subscription);
@@ -163,7 +178,7 @@ public class BeckettBuilder(
         {
             subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
 
-            subscription.Type = handler.GetHandlerType();
+            subscription.HandlerName = handler.GetHandlerDescription();
             subscription.StaticMethod = (m, t) => handler((T)m, t);
 
             return new SubscriptionConfigurationBuilder(subscription);
@@ -173,7 +188,7 @@ public class BeckettBuilder(
         {
             subscription.EnsureOnlyHandlerMessageTypeIsMapped<T>();
 
-            subscription.Type = handler.GetHandlerType();
+            subscription.HandlerName = handler.GetHandlerDescription();
             subscription.StaticMethod = (c, t) => handler((T)((IMessageContext)c).Message, (IMessageContext)c, t);
             subscription.HandlesMessageContext = true;
 
@@ -182,7 +197,7 @@ public class BeckettBuilder(
 
         public ISubscriptionConfigurationBuilder Handler(StaticMessageContextHandler handler)
         {
-            subscription.Type = handler.GetHandlerType();
+            subscription.HandlerName = handler.GetHandlerDescription();
             subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
             subscription.HandlesMessageContext = true;
 
@@ -210,16 +225,8 @@ public class BeckettBuilder(
 
 internal static class HandlerDelegateExtensions
 {
-    public static Type GetHandlerType(this Delegate handler)
+    public static string GetHandlerDescription(this Delegate handler)
     {
-        var handlerType = handler.Method.DeclaringType ??
-                          throw new InvalidOperationException("Could not determine the handler type");
-
-        if (!handler.Method.IsStatic)
-        {
-            throw new InvalidOperationException($"The method being called on {handlerType} must be static");
-        }
-
-        return handlerType;
+        return handler.Method.Name;
     }
 }

@@ -5,10 +5,24 @@ namespace Beckett.Subscriptions;
 
 public class Subscription(string name)
 {
+    private Type? _type;
     internal string Name { get; } = name;
     internal string Category { get; set; } = null!;
     internal Regex Pattern { get; set; } = null!;
-    internal Type? Type { get; set; }
+
+    internal Type? Type
+    {
+        get => _type;
+        set
+        {
+            _type = value;
+            if (value != null && HandlerName == null)
+            {
+                HandlerName = value.FullName;
+            }
+        }
+    }
+
     internal HashSet<Type> MessageTypes { get; } = [];
     internal HashSet<string> MessageTypeNames { get; private set; } = [];
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
@@ -20,6 +34,7 @@ public class Subscription(string name)
     internal bool IsPatternOnly => MessageTypes.Count == 0;
 
     internal bool HasStaticMethod => StaticMethod != null;
+    internal string? HandlerName { get; set; }
 
     internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || HandlesMessageContext;
 
@@ -28,7 +43,7 @@ public class Subscription(string name)
 
     internal void EnsureHandlerIsConfigured()
     {
-        if (Type == null)
+        if (StaticMethod == null && InstanceMethod == null)
         {
             throw new InvalidOperationException($"The subscription {Name} does not have a handler configured.");
         }
