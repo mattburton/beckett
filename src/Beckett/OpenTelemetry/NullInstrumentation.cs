@@ -11,5 +11,7 @@ public class NullInstrumentation : IInstrumentation
 
     public Activity? StartReadStreamActivity(string streamName) => null;
 
+    public Activity? StartSaveChangesActivity(Dictionary<string, object> metadata) => null;
+
     public Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, object> metadata) => null;
 }

@@ -6,7 +6,7 @@ namespace Beckett.Subscriptions.Retries;
 
 public static class Configuration
 {
-    public static IBeckettBuilder UseSubscriptionRetries(this IBeckettBuilder builder)
+    public static IBeckettBuilder SubscriptionRetryModule(this IBeckettBuilder builder)
     {
         builder.Map<SubscriptionError>("$subscription_error");
         builder.Map<SubscriptionRetryError>("$subscription_retry_error");

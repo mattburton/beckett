@@ -100,6 +100,31 @@ public class Instrumentation : IInstrumentation, IDisposable
         return activity;
     }
 
+    public Activity? StartSaveChangesActivity(Dictionary<string, object> metadata)
+    {
+        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.SaveChanges);
+
+        if (activity == null)
+        {
+            return activity;
+        }
+
+        _propagator.Inject(
+            new PropagationContext(activity.Context, default),
+            metadata,
+            (meta, key, value) => meta[key] = value
+        );
+
+        var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
+
+        if (causationId != null)
+        {
+            metadata.Add(MessageConstants.Metadata.CausationId, causationId);
+        }
+
+        return activity;
+    }
+
     public Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, object> metadata)
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.ScheduleMessage);

@@ -18,6 +18,7 @@ public static class TelemetryConstants
     {
         public const string AppendToStream = $"{ActivitySource.Name}.{nameof(AppendToStream)}";
         public const string ReadStream = $"{ActivitySource.Name}.{nameof(ReadStream)}";
+        public const string SaveChanges = $"{ActivitySource.Name}.{nameof(SaveChanges)}";
         public const string ScheduleMessage = $"{ActivitySource.Name}.{nameof(ScheduleMessage)}";
     }
 

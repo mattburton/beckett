@@ -9,5 +9,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
 
         services.AddSingleton<IMessageSerializer, MessageSerializer>();
+
+        services.AddSingleton<IMessageStore, MessageStore>();
+
+        services.AddTransient<IMessageSession, MessageSession>();
     }
 }

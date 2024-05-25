@@ -1,5 +1,4 @@
 using Beckett.Messages;
-using UUIDNext;
 
 namespace Beckett.Database.Types;
 
@@ -22,7 +21,7 @@ public class ScheduledMessageType
 
         return new ScheduledMessageType
         {
-            Id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql),
+            Id = Guid.NewGuid(),
             Type = result.TypeName,
             Data = result.Data,
             Metadata = result.Metadata,
