@@ -65,4 +65,33 @@ public class PostgresMessageStorage(
                 )
             ).ToList();
     }
+
+    public async Task SaveChanges(IEnumerable<SessionMessageEnvelope> messages, CancellationToken cancellationToken)
+    {
+        var newMessages = new List<MessageType>();
+
+        foreach (var message in messages)
+        {
+            var messageId = Guid.NewGuid();
+
+            var (_, typeName, data, serializedMetadata) = messageSerializer.Serialize(
+                message.Message,
+                message.Metadata
+            );
+
+            newMessages.Add(
+                new MessageType
+                {
+                    Id = messageId,
+                    StreamName = message.StreamName,
+                    Type = typeName,
+                    Data = data,
+                    Metadata = serializedMetadata,
+                    ExpectedVersion = message.ExpectedVersion
+                }
+            );
+        }
+
+        await database.Execute(new AppendMessages(newMessages.ToArray()), cancellationToken);
+    }
 }

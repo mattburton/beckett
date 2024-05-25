@@ -1,6 +1,3 @@
-using Beckett.Database;
-using Beckett.Database.Queries;
-using Beckett.Database.Types;
 using Beckett.OpenTelemetry;
 
 namespace Beckett.Messages;
@@ -8,8 +5,7 @@ namespace Beckett.Messages;
 public class MessageSession(
     IMessageStore messageStore,
     IInstrumentation instrumentation,
-    IMessageSerializer messageSerializer,
-    IPostgresDatabase database
+    IMessageStorage messageStorage
 ) : IMessageSession
 {
     private readonly List<PendingMessage> _pendingMessages = [];
@@ -41,7 +37,7 @@ public class MessageSession(
             value => value.First().ExpectedVersion
         );
 
-        var messages = new List<MessageType>();
+        var messages = new List<SessionMessageEnvelope>();
 
         var metadata = new Dictionary<string, object>();
 
@@ -49,20 +45,13 @@ public class MessageSession(
 
         foreach (var pendingMessage in _pendingMessages)
         {
-            var messageId = Guid.NewGuid();
-
-            var (_, typeName, data, serializedMetadata) = messageSerializer.Serialize(pendingMessage.Message, metadata);
-
             messages.Add(
-                new MessageType
-                {
-                    Id = messageId,
-                    StreamName = pendingMessage.StreamName,
-                    Type = typeName,
-                    Data = data,
-                    Metadata = serializedMetadata,
-                    ExpectedVersion = streamVersions[pendingMessage.StreamName]
-                }
+                new SessionMessageEnvelope(
+                    pendingMessage.StreamName,
+                    pendingMessage.Message,
+                    metadata,
+                    streamVersions[pendingMessage.StreamName]
+                )
             );
 
             if (pendingMessage.ExpectedVersion >= 0)
@@ -71,7 +60,7 @@ public class MessageSession(
             }
         }
 
-        await database.Execute(new AppendMessages(messages.ToArray()), cancellationToken);
+        await messageStorage.SaveChanges(messages, cancellationToken);
 
         _pendingMessages.Clear();
     }
