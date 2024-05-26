@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Worker", "src\Samples\Worke
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TodoList", "src\Samples\TodoList\TodoList.csproj", "{DCBF99F1-DCD0-45C8-B578-2713AB8065E4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "src\Tests\Tests.csproj", "{F7019FAB-7568-4F7A-B6E2-C9473DB05B63}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{DCBF99F1-DCD0-45C8-B578-2713AB8065E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DCBF99F1-DCD0-45C8-B578-2713AB8065E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DCBF99F1-DCD0-45C8-B578-2713AB8065E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7019FAB-7568-4F7A-B6E2-C9473DB05B63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7019FAB-7568-4F7A-B6E2-C9473DB05B63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7019FAB-7568-4F7A-B6E2-C9473DB05B63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7019FAB-7568-4F7A-B6E2-C9473DB05B63}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}

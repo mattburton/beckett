@@ -14,6 +14,11 @@ public static class NotificationHandler
                 Console.WriteLine($"List created [Id: {e.TodoListId}]");
                 break;
             case TodoListItemAdded e:
+                if (e.Item.Contains("Error"))
+                {
+                    throw new Exception(e.Item);
+                }
+
                 Console.WriteLine($"Item added: {e.Item} [List: {e.TodoListId}]");
                 break;
             case TodoListItemCompleted e:

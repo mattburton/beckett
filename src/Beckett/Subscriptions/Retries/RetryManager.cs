@@ -3,7 +3,6 @@ using Beckett.Database.Queries;
 using Beckett.Subscriptions.Models;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Events.Models;
-using Polly.Contrib.WaitAndRetry;
 
 namespace Beckett.Subscriptions.Retries;
 
@@ -16,7 +15,31 @@ public class RetryManager(
     IMessageScheduler messageScheduler
 ) : IRetryManager
 {
+    public async Task CreateRetry(
+        Guid id,
+        string subscriptionName,
+        string streamName,
+        long streamPosition,
+        CancellationToken cancellationToken
+    )
+    {
+        await messageScheduler.Schedule(
+            RetryStreamName.For(id),
+            new RetryStarted(
+                id,
+                options.ApplicationName,
+                subscriptionName,
+                streamName,
+                streamPosition,
+                DateTimeOffset.UtcNow
+            ),
+            TimeSpan.FromSeconds(10),
+            cancellationToken
+        );
+    }
+
     public async Task Retry(
+        Guid id,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -31,7 +54,7 @@ public class RetryManager(
             return;
         }
 
-        var retryStreamName = RetryStreamName.For(subscriptionName, streamName, streamPosition);
+        var retryStreamName = RetryStreamName.For(id);
 
         attempts += 1;
 
@@ -74,7 +97,9 @@ public class RetryManager(
             await messageStore.AppendToStream(
                 retryStreamName,
                 ExpectedVersion.StreamExists,
-                new SubscriptionRetrySucceeded(
+                new RetrySucceeded(
+                    id,
+                    options.ApplicationName,
                     subscriptionName,
                     streamName,
                     streamPosition,
@@ -91,7 +116,9 @@ public class RetryManager(
                 await messageStore.AppendToStream(
                     retryStreamName,
                     ExpectedVersion.StreamExists,
-                    new SubscriptionRetryFailed(
+                    new RetryFailed(
+                        id,
+                        options.ApplicationName,
                         subscriptionName,
                         streamName,
                         streamPosition,
@@ -104,14 +131,13 @@ public class RetryManager(
             }
             else
             {
-                var delay = Backoff.DecorrelatedJitterBackoffV2(
-                    TimeSpan.FromSeconds(10),
-                    subscription.MaxRetryCount
-                ).ElementAt(attempts);
+                var delay = attempts.GetNextDelayWithExponentialBackoff();
 
                 await messageScheduler.Schedule(
                     retryStreamName,
-                    new SubscriptionRetryError(
+                    new RetryError(
+                        id,
+                        options.ApplicationName,
                         subscriptionName,
                         streamName,
                         streamPosition,

@@ -15,11 +15,11 @@ builder.AddBeckett().TodoListModule();
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("todo-list-worker"))
-    .WithMetrics(
-        metrics => metrics
-            .AddBeckett()
-            .AddConsoleExporter()
-    )
+    // .WithMetrics(
+    //     metrics => metrics
+    //         .AddBeckett()
+    //         .AddConsoleExporter()
+    // )
     .WithTracing(
         tracing => tracing
             .AddNpgsql()

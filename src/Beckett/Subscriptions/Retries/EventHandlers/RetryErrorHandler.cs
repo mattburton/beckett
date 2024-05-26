@@ -2,14 +2,15 @@ using Beckett.Subscriptions.Retries.Events;
 
 namespace Beckett.Subscriptions.Retries.EventHandlers;
 
-public class SubscriptionErrorHandler(IRetryManager retryManager)
+public class RetryErrorHandler(IRetryManager retryManager)
 {
-    public Task Handle(SubscriptionError e, CancellationToken cancellationToken) =>
+    public Task Handle(RetryError e, CancellationToken cancellationToken) =>
         retryManager.Retry(
+            e.Id,
             e.SubscriptionName,
             e.StreamName,
             e.StreamPosition,
-            0,
+            e.Attempts,
             cancellationToken
         );
 }

@@ -1,6 +1,8 @@
 namespace Beckett.Subscriptions.Retries.Events;
 
-public record SubscriptionRetrySucceeded(
+public record RetrySucceeded(
+    Guid Id,
+    string ApplicationName,
     string SubscriptionName,
     string StreamName,
     long StreamPosition,

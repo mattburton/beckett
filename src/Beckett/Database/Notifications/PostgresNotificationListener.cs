@@ -79,10 +79,6 @@ public class PostgresNotificationListener(
             {
                 throw;
             }
-            catch (TaskCanceledException e) when (e.CancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
             catch (Exception e)
             {
                 logger.LogError(e, "Error listening for notifications");

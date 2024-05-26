@@ -3,9 +3,6 @@ using Beckett.Database.Queries;
 using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Models;
-using Beckett.Subscriptions.Retries;
-using Beckett.Subscriptions.Retries.Events;
-using Beckett.Subscriptions.Retries.Events.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -105,19 +102,17 @@ public class SubscriptionStreamProcessor(
                         transaction,
                         cancellationToken
                     );
+
+                    if (!throwOnError)
+                    {
+                        return;
+                    }
                 }
 
                 if (throwOnError)
                 {
                     throw error.Exception;
                 }
-
-                if (moveToFailedOnError)
-                {
-                    return;
-                }
-
-                await StartRetryForSubscriptionStream(subscription, streamName, error, cancellationToken);
 
                 await database.Execute(
                     new UpdateCheckpointStatus(
@@ -135,28 +130,6 @@ public class SubscriptionStreamProcessor(
                 break;
         }
     }
-
-    private async Task StartRetryForSubscriptionStream(
-        Subscription subscription,
-        string streamName,
-        MessageBatchResult.Error error,
-        CancellationToken cancellationToken
-    ) => await messageScheduler.Schedule(
-        RetryStreamName.For(
-            subscription.Name,
-            streamName,
-            error.StreamPosition
-        ),
-        new SubscriptionError(
-            subscription.Name,
-            streamName,
-            error.StreamPosition,
-            ExceptionData.From(error.Exception),
-            DateTimeOffset.UtcNow
-        ),
-        TimeSpan.FromSeconds(10),
-        cancellationToken
-    );
 
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,

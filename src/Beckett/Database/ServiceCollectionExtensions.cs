@@ -50,6 +50,8 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPostgresNotificationHandler, MessageNotificationHandler>();
 
+        services.AddSingleton<IPostgresNotificationHandler, RetryNotificationHandler>();
+
         services.AddSingleton<IPostgresNotificationListener, PostgresNotificationListener>();
 
         services.AddHostedService<PostgresNotificationListenerService>();

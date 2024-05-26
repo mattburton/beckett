@@ -2,12 +2,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
-namespace Beckett.Subscriptions.Services;
+namespace Beckett.Subscriptions.Retries.Services;
 
-public class GlobalPollingService(
-    IGlobalStreamConsumer globalStreamConsumer,
+public class RetryPollingService(
+    IRetryMonitor retryMonitor,
     SubscriptionOptions options,
-    ILogger<GlobalPollingService> logger
+    ILogger<RetryPollingService> logger
 ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -16,9 +16,9 @@ public class GlobalPollingService(
         {
             try
             {
-                globalStreamConsumer.StartPolling(stoppingToken);
+                retryMonitor.StartPolling(stoppingToken);
 
-                await Task.Delay(options.GlobalPollingInterval, stoppingToken);
+                await Task.Delay(options.RetryPollingInterval, stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

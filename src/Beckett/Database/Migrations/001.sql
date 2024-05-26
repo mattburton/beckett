@@ -391,6 +391,7 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   name text NOT NULL,
   stream_name text NOT NULL,
   status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
+  retry_id uuid NULL,
   PRIMARY KEY (application, name, stream_name)
 );
 
@@ -578,15 +579,22 @@ CREATE FUNCTION __schema__.update_checkpoint_status(
   _status __schema__.checkpoint_status
 )
   RETURNS void
-  LANGUAGE sql
+  LANGUAGE plpgsql
 AS
 $$
-UPDATE __schema__.checkpoints
-SET stream_position = _stream_position,
-    status = _status
-WHERE application = _application
-AND name = _name
-AND stream_name = _stream_name;
+BEGIN
+  UPDATE __schema__.checkpoints
+  SET stream_position = _stream_position,
+      status = _status,
+      retry_id = NULL
+  WHERE application = _application
+  AND name = _name
+  AND stream_name = _stream_name;
+
+  IF (_status = 'retry') THEN
+    PERFORM pg_notify('beckett:retries', NULL);
+  END IF;
+END;
 $$;
 
 CREATE FUNCTION __schema__.record_checkpoint(
@@ -605,6 +613,40 @@ VALUES (_stream_version, _stream_position, _application, _name, _stream_name)
 ON CONFLICT (application, name, stream_name) DO UPDATE
   SET stream_version = excluded.stream_version,
       stream_position = excluded.stream_position;
+$$;
+
+CREATE FUNCTION __schema__.lock_next_checkpoint_for_retry(
+  _application text
+)
+  RETURNS TABLE (
+    application text,
+    name text,
+    stream_name text,
+    stream_position bigint,
+    retry_id uuid
+  )
+  LANGUAGE sql
+AS
+$$
+WITH retry AS (
+  SELECT c.application,
+         c.name,
+         c.stream_name
+  FROM __schema__.checkpoints c
+  WHERE c.application = _application
+  AND c.status = 'retry'
+  AND c.retry_id IS NULL
+  FOR UPDATE
+  SKIP LOCKED
+  LIMIT 1
+)
+UPDATE __schema__.checkpoints AS c
+SET retry_id = gen_random_uuid()
+FROM retry AS r
+WHERE c.application = r.application
+AND c.name = r.name
+AND c.stream_name = r.stream_name
+RETURNING c.application, c.name, c.stream_name, c.stream_position, c.retry_id;
 $$;
 
 CREATE FUNCTION __schema__.get_subscription_lag(
