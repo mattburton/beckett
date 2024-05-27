@@ -92,7 +92,7 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            var streamChanges = await messageStorage.ReadStreamChanges(
+            var streamChanges = await messageStorage.ReadStreamChangeFeed(
                 checkpoint.StreamPosition,
                 options.Subscriptions.BatchSize,
                 cancellationToken
@@ -111,7 +111,7 @@ public class SubscriptionInitializer(
                     cancellationToken
                 );
 
-                var newStreamChanges = await messageStorage.ReadStreamChanges(
+                var newStreamChanges = await messageStorage.ReadStreamChangeFeed(
                     checkpoint.StreamPosition,
                     options.Subscriptions.BatchSize,
                     cancellationToken

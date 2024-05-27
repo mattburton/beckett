@@ -24,6 +24,12 @@ public partial class MentionsHandler(IMessageSession messageSession)
             e with { Item = item }
         );
 
+        messageSession.AppendToStream(
+            TodoList.StreamName(e.TodoListId),
+            ExpectedVersion.StreamExists,
+            new FollowUpItemAdded(e.TodoListId, e.Item, item)
+        );
+
         await messageSession.SaveChanges(cancellationToken);
     }
 

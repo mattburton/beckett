@@ -22,8 +22,12 @@ public class MessageSession(
         }
     }
 
-    public Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken) =>
-        messageStore.ReadStream(streamName, options, cancellationToken);
+    public async Task<SessionReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken)
+    {
+        var result = await messageStore.ReadStream(streamName, options, cancellationToken);
+
+        return new SessionReadResult(result.StreamName, result.StreamVersion, result.Messages, AppendToStream);
+    }
 
     public async Task SaveChanges(CancellationToken cancellationToken)
     {
@@ -60,7 +64,7 @@ public class MessageSession(
             }
         }
 
-        await messageStorage.SaveChanges(messages, cancellationToken);
+        await messageStorage.SaveSessionChanges(messages, cancellationToken);
 
         _pendingMessages.Clear();
     }

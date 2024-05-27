@@ -13,9 +13,7 @@ public record AddTodoListItem(string Item)
             throw new ItemAlreadyAddedException();
         }
 
-        return await messageStore.AppendToStream(
-            TodoList.StreamName(id),
-            ExpectedVersion.For(stream.StreamVersion),
+        return await stream.Append(
             new TodoListItemAdded(id, Item),
             cancellationToken
         );

@@ -14,12 +14,12 @@ public interface IMessageSession
         IEnumerable<object> messages
     );
 
-    Task<ReadResult> ReadStream(
+    Task<SessionReadResult> ReadStream(
         string streamName,
         CancellationToken cancellationToken
     ) => ReadStream(streamName, ReadOptions.Default, cancellationToken);
 
-    Task<ReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
+    Task<SessionReadResult> ReadStream(string streamName, ReadOptions options, CancellationToken cancellationToken);
 
     Task SaveChanges(CancellationToken cancellationToken);
 }

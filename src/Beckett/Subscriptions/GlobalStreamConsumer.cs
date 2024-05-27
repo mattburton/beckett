@@ -50,7 +50,7 @@ public class GlobalStreamConsumer(
                 break;
             }
 
-            var streamChanges = await messageStorage.ReadStreamChanges(
+            var streamChanges = await messageStorage.ReadStreamChangeFeed(
                 checkpoint.StreamPosition,
                 options.Subscriptions.BatchSize,
                 stoppingToken

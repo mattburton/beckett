@@ -52,6 +52,6 @@ public class MessageStore(
     {
         using var activity = instrumentation.StartReadStreamActivity(streamName);
 
-        return messageStorage.ReadStream(streamName, options, cancellationToken);
+        return messageStorage.ReadStream(streamName, options, AppendToStream, cancellationToken);
     }
 }

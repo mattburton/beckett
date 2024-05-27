@@ -12,14 +12,15 @@ public interface IMessageStorage
     Task<ReadResult> ReadStream(
         string streamName,
         ReadOptions options,
+        AppendToStreamDelegate appendToStream,
         CancellationToken cancellationToken
     );
 
-    Task<IReadOnlyList<StreamChange>> ReadStreamChanges(
+    Task<IReadOnlyList<StreamChange>> ReadStreamChangeFeed(
         long lastGlobalPosition,
         int batchSize,
         CancellationToken cancellationToken
     );
 
-    Task SaveChanges(IEnumerable<SessionMessageEnvelope> messages, CancellationToken cancellationToken);
+    Task SaveSessionChanges(IEnumerable<SessionMessageEnvelope> messages, CancellationToken cancellationToken);
 }

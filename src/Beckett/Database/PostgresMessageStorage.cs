@@ -30,6 +30,7 @@ public class PostgresMessageStorage(
     public async Task<ReadResult> ReadStream(
         string streamName,
         ReadOptions readOptions,
+        AppendToStreamDelegate appendToStream,
         CancellationToken cancellationToken
     )
     {
@@ -40,10 +41,10 @@ public class PostgresMessageStorage(
 
         var messages = streamMessages.Select(messageDeserializer.Deserialize).ToList();
 
-        return new ReadResult(messages, streamVersion);
+        return new ReadResult(streamName, streamVersion, messages, appendToStream);
     }
 
-    public async Task<IReadOnlyList<StreamChange>> ReadStreamChanges(
+    public async Task<IReadOnlyList<StreamChange>> ReadStreamChangeFeed(
         long lastGlobalPosition,
         int batchSize,
         CancellationToken cancellationToken
@@ -66,7 +67,7 @@ public class PostgresMessageStorage(
             ).ToList();
     }
 
-    public async Task SaveChanges(IEnumerable<SessionMessageEnvelope> messages, CancellationToken cancellationToken)
+    public async Task SaveSessionChanges(IEnumerable<SessionMessageEnvelope> messages, CancellationToken cancellationToken)
     {
         var newMessages = new List<MessageType>();
 

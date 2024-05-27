@@ -13,9 +13,7 @@ public record CompleteTodoListItem(Guid Id, string Item)
             throw new ItemAlreadyCompletedException();
         }
 
-        return await messageStore.AppendToStream(
-            TodoList.StreamName(Id),
-            ExpectedVersion.For(stream.StreamVersion),
+        return await stream.Append(
             new TodoListItemCompleted(Id, Item),
             cancellationToken
         );
