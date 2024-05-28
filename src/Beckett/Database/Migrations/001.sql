@@ -6,7 +6,7 @@ DO
 $$
 BEGIN
   IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'beckett') THEN
-    RAISE NOTICE 'Role "beckett" already exists. Skipping.';
+    RAISE NOTICE 'Role "beckett" already exists - skipping';
   ELSE
     CREATE ROLE beckett;
   END IF;
@@ -14,6 +14,8 @@ END
 $$;
 
 GRANT USAGE ON SCHEMA __schema__ to beckett;
+ALTER DEFAULT PRIVILEGES IN SCHEMA __schema__ GRANT SELECT, INSERT ON TABLES TO beckett;
+ALTER DEFAULT PRIVILEGES IN SCHEMA __schema__ GRANT EXECUTE ON FUNCTIONS TO beckett;
 
 -------------------------------------------------
 -- MESSAGE STORE SUPPORT
@@ -645,6 +647,3 @@ FROM __schema__.checkpoints
 WHERE application = _application
 AND status = 'failed';
 $$;
-
-GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA __schema__ TO beckett;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA __schema__ TO beckett;

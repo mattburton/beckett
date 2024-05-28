@@ -9,7 +9,7 @@ public class SubscriptionPollingService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (options.SubscriptionPollingInterval == TimeSpan.Zero)
+        if (options.PollingInterval == TimeSpan.Zero)
         {
             return;
         }
@@ -20,7 +20,7 @@ public class SubscriptionPollingService(
         {
             consumerGroup.StartPolling();
 
-            await Task.Delay(options.SubscriptionPollingInterval, stoppingToken);
+            await Task.Delay(options.PollingInterval, stoppingToken);
         }
     }
 }

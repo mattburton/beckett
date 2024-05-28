@@ -30,7 +30,7 @@ public interface ICategorySubscriptionBuilder
     ISubscriptionConfigurationBuilder Handler(Func<IMessageContext, CancellationToken, Task> handler, string handlerName);
 }
 
-public interface ICategoryMessageSubscriptionBuilder<TMessage>
+public interface ICategoryMessageSubscriptionBuilder<out TMessage>
 {
     ICategoryMessageSubscriptionBuilder<T> Message<T>();
 
