@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS ix_messages_stream_category ON __schema__.messages (
   __schema__.stream_category(stream_name)
 );
 
-CREATE FUNCTION __schema__.stream_hash(
+CREATE OR REPLACE FUNCTION __schema__.stream_hash(
   _stream_name text
 )
   RETURNS bigint
@@ -137,7 +137,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION __schema__.append_message(
+CREATE OR REPLACE FUNCTION __schema__.append_message(
   _id uuid,
   _stream_name text,
   _type text,
@@ -199,7 +199,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION __schema__.append_messages(
+CREATE OR REPLACE FUNCTION __schema__.append_messages(
   _messages __schema__.message[]
 )
   RETURNS void
@@ -219,8 +219,7 @@ FROM unnest(_messages) AS m;
 SELECT pg_notify('beckett:messages', NULL);
 $$;
 
---TODO: return actual stream version regardless of filters
-CREATE FUNCTION __schema__.read_stream(
+CREATE OR REPLACE FUNCTION __schema__.read_stream(
   _stream_name text,
   _starting_stream_position bigint DEFAULT NULL,
   _ending_global_position bigint DEFAULT NULL,
@@ -230,6 +229,7 @@ CREATE FUNCTION __schema__.read_stream(
   RETURNS TABLE (
     id uuid,
     stream_name text,
+    stream_version bigint,
     stream_position bigint,
     global_position bigint,
     type text,
@@ -240,15 +240,21 @@ CREATE FUNCTION __schema__.read_stream(
   LANGUAGE sql
 AS
 $$
+WITH stream_version AS (
+  SELECT max(m.stream_position) as stream_version
+  FROM __schema__.messages m
+  WHERE m.stream_name = _stream_name
+)
 SELECT m.id,
        m.stream_name,
+       sv.stream_version,
        m.stream_position,
        m.global_position,
        m.type,
        m.data,
        m.metadata,
        m.timestamp
-FROM __schema__.messages m
+FROM stream_version sv, __schema__.messages m
 WHERE m.stream_name = _stream_name
 AND (_starting_stream_position IS NULL OR m.stream_position >= _starting_stream_position)
 AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
@@ -257,7 +263,7 @@ ORDER BY CASE WHEN _read_forwards = true THEN stream_position END,
 LIMIT _count;
 $$;
 
-CREATE FUNCTION __schema__.read_stream_changes(
+CREATE OR REPLACE FUNCTION __schema__.read_stream_changes(
   _starting_global_position bigint,
   _batch_size int
 )
@@ -319,9 +325,9 @@ CREATE TABLE __schema__.scheduled_messages
 
 GRANT UPDATE, DELETE ON __schema__.scheduled_messages TO beckett;
 
-CREATE OR REPLACE FUNCTION __schema__.schedule_messages(
+CREATE OR REPLACE FUNCTION __schema__.schedule_message(
   _stream_name text,
-  _scheduled_messages __schema__.scheduled_message[]
+  _scheduled_message __schema__.scheduled_message
 )
   RETURNS void
   LANGUAGE sql
@@ -335,8 +341,14 @@ INSERT INTO __schema__.scheduled_messages (
   metadata,
   deliver_at
 )
-SELECT m.id, _stream_name, m.type, m.data, m.metadata, m.deliver_at
-FROM unnest(_scheduled_messages) as m
+VALUES (
+  _scheduled_message.id,
+  _stream_name,
+  _scheduled_message.type,
+  _scheduled_message.data,
+  _scheduled_message.metadata,
+  _scheduled_message.deliver_at
+)
 ON CONFLICT (id) DO NOTHING;
 $$;
 
@@ -357,6 +369,16 @@ WHERE id IN (
   LIMIT _batch_size
 )
 RETURNING *;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.cancel_scheduled_message(
+  _id uuid
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+DELETE FROM __schema__.scheduled_messages WHERE id = _id;
 $$;
 
 -------------------------------------------------
@@ -397,7 +419,7 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
-CREATE FUNCTION __schema__.add_or_update_subscription(
+CREATE OR REPLACE FUNCTION __schema__.add_or_update_subscription(
   _application text,
   _name text
 )
@@ -416,7 +438,7 @@ FROM __schema__.subscriptions
 WHERE name = _name;
 $$;
 
-CREATE FUNCTION __schema__.get_next_uninitialized_subscription(
+CREATE OR REPLACE FUNCTION __schema__.get_next_uninitialized_subscription(
   _application text
 )
   RETURNS TABLE (
@@ -432,7 +454,7 @@ AND initialized = false
 LIMIT 1;
 $$;
 
-CREATE FUNCTION __schema__.set_subscription_to_initialized(
+CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_initialized(
   _application text,
   _name text
 )
@@ -451,7 +473,7 @@ WHERE application = _application
 AND name = _name;
 $$;
 
-CREATE FUNCTION __schema__.ensure_checkpoint_exists(
+CREATE OR REPLACE FUNCTION __schema__.ensure_checkpoint_exists(
   _application text,
   _name text,
   _stream_name text
@@ -465,7 +487,7 @@ VALUES (_application, _name, _stream_name)
 ON CONFLICT (application, name, stream_name) DO NOTHING;
 $$;
 
-CREATE FUNCTION __schema__.lock_checkpoint(
+CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
   _application text,
   _name text,
   _stream_name text
@@ -490,7 +512,7 @@ FOR UPDATE
 SKIP LOCKED;
 $$;
 
-CREATE FUNCTION beckett.checkpoint_hash(
+CREATE OR REPLACE FUNCTION beckett.checkpoint_hash(
   _application text,
   _name text,
   _stream_name text
@@ -503,7 +525,7 @@ $$
 SELECT abs(hashtextextended(_application || '-' || _name || '-' || _stream_name, 0));
 $$;
 
-CREATE FUNCTION __schema__.lock_next_available_checkpoint(
+CREATE OR REPLACE FUNCTION __schema__.lock_next_available_checkpoint(
   _application text
 )
   RETURNS TABLE (
@@ -553,7 +575,7 @@ SELECT application,
 FROM lock_checkpoint;
 $$;
 
-CREATE FUNCTION __schema__.record_checkpoints(
+CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
   _checkpoints __schema__.checkpoint[]
 )
   RETURNS void
@@ -571,7 +593,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION __schema__.update_checkpoint_status(
+CREATE OR REPLACE FUNCTION __schema__.update_checkpoint_status(
   _application text,
   _name text,
   _stream_name text,
@@ -597,7 +619,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION __schema__.record_checkpoint(
+CREATE OR REPLACE FUNCTION __schema__.record_checkpoint(
   _application text,
   _name text,
   _stream_name text,
@@ -615,7 +637,7 @@ ON CONFLICT (application, name, stream_name) DO UPDATE
       stream_position = excluded.stream_position;
 $$;
 
-CREATE FUNCTION __schema__.lock_next_checkpoint_for_retry(
+CREATE OR REPLACE FUNCTION __schema__.lock_next_checkpoint_for_retry(
   _application text
 )
   RETURNS TABLE (
@@ -649,7 +671,7 @@ AND c.stream_name = r.stream_name
 RETURNING c.application, c.name, c.stream_name, c.stream_position, c.retry_id;
 $$;
 
-CREATE FUNCTION __schema__.get_subscription_lag(
+CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag(
   _application text
 )
   RETURNS bigint
@@ -664,7 +686,7 @@ AND stream_position < stream_version
 AND status = 'active';
 $$;
 
-CREATE FUNCTION __schema__.get_subscription_retry_count(
+CREATE OR REPLACE FUNCTION __schema__.get_subscription_retry_count(
   _application text
 )
   RETURNS bigint
@@ -677,7 +699,7 @@ WHERE application = _application
 AND status = 'retry';
 $$;
 
-CREATE FUNCTION __schema__.get_subscription_failed_count(
+CREATE OR REPLACE FUNCTION __schema__.get_subscription_failed_count(
   _application text
 )
   RETURNS bigint

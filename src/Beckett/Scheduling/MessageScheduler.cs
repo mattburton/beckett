@@ -12,41 +12,44 @@ public class MessageScheduler(
     IInstrumentation instrumentation
 ) : IMessageScheduler
 {
-    public async Task Schedule(
+    public Task Cancel(Guid id, CancellationToken cancellationToken)
+    {
+        return database.Execute(new CancelScheduledMessage(id), cancellationToken);
+    }
+
+    public async Task<Guid> Schedule(
         string streamName,
-        IEnumerable<object> messages,
+        object message,
         DateTimeOffset deliverAt,
         CancellationToken cancellationToken
     )
     {
-        var scheduledMessages = new List<ScheduledMessageType>();
-
         var metadata = new Dictionary<string, object>();
 
         using var activity = instrumentation.StartScheduleMessageActivity(streamName, metadata);
 
-        foreach (var message in messages)
+        var messageToSchedule = message;
+        var messageMetadata = new Dictionary<string, object>(metadata);
+
+        if (message is MessageMetadataWrapper messageWithMetadata)
         {
-            var scheduledMessage = message;
-            var messageMetadata = new Dictionary<string, object>(metadata);
+            foreach (var item in messageWithMetadata.Metadata) messageMetadata.TryAdd(item.Key, item.Value);
 
-            if (message is MessageMetadataWrapper messageWithMetadata)
-            {
-                foreach (var item in messageWithMetadata.Metadata) messageMetadata.TryAdd(item.Key, item.Value);
-
-                scheduledMessage = messageWithMetadata.Message;
-            }
-
-            scheduledMessages.Add(
-                ScheduledMessageType.From(
-                    scheduledMessage,
-                    messageMetadata,
-                    deliverAt,
-                    messageSerializer
-                )
-            );
+            messageToSchedule = messageWithMetadata.Message;
         }
 
-        await database.Execute(new ScheduleMessages(streamName, scheduledMessages.ToArray()), cancellationToken);
+        var id = Guid.NewGuid();
+
+        var scheduledMessage = ScheduledMessageType.From(
+            id,
+            messageToSchedule,
+            messageMetadata,
+            deliverAt,
+            messageSerializer
+        );
+
+        await database.Execute(new ScheduleMessage(streamName, scheduledMessage), cancellationToken);
+
+        return id;
     }
 }

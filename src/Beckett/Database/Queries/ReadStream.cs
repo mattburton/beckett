@@ -18,6 +18,7 @@ public class ReadStream(
         command.CommandText = $@"
             select id,
                    stream_name,
+                   stream_version,
                    stream_position,
                    global_position,
                    type,

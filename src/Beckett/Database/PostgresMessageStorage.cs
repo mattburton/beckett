@@ -36,8 +36,7 @@ public class PostgresMessageStorage(
     {
         var streamMessages = await database.Execute(new ReadStream(streamName, readOptions), cancellationToken);
 
-        //TODO update query to always return actual stream version regardless of read options supplied
-        var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[^1].StreamPosition;
+        var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[0].StreamVersion;
 
         var messages = streamMessages.Select(messageDeserializer.Deserialize).ToList();
 

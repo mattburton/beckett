@@ -1,6 +1,6 @@
 namespace Beckett;
 
-public interface IMessageContext : IMessageStore, IMessageScheduler
+public interface IMessageContext
 {
     Guid Id { get; }
     string StreamName { get; }

@@ -11,6 +11,7 @@ public class ScheduledMessageType
     public DateTimeOffset DeliverAt { get; init; } = DateTimeOffset.UtcNow;
 
     public static ScheduledMessageType From(
+        Guid id,
         object message,
         Dictionary<string, object> metadata,
         DateTimeOffset deliverAt,
@@ -21,7 +22,7 @@ public class ScheduledMessageType
 
         return new ScheduledMessageType
         {
-            Id = Guid.NewGuid(),
+            Id = id,
             Type = result.TypeName,
             Data = result.Data,
             Metadata = result.Metadata,

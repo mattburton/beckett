@@ -12,11 +12,9 @@ namespace Beckett.Subscriptions;
 public class SubscriptionStreamProcessor(
     IPostgresDatabase database,
     IPostgresMessageDeserializer messageDeserializer,
-    IMessageStore messageStore,
     IServiceProvider serviceProvider,
     BeckettOptions options,
     IInstrumentation instrumentation,
-    IMessageScheduler messageScheduler,
     ILogger<SubscriptionStreamProcessor> logger
 ) : ISubscriptionStreamProcessor
 {
@@ -61,8 +59,6 @@ public class SubscriptionStreamProcessor(
                     message,
                     metadata,
                     streamMessage.Timestamp,
-                    messageStore,
-                    messageScheduler,
                     serviceProvider
                 )
             );
