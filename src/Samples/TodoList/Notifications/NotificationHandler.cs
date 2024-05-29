@@ -4,9 +4,9 @@ using TodoList.CreateList;
 
 namespace TodoList.Notifications;
 
-public static class NotificationHandler
+public class NotificationHandler
 {
-    public static Task Handle(IMessageContext context, CancellationToken _)
+    public Task Handle(IMessageContext context, CancellationToken _)
     {
         switch (context.Message)
         {

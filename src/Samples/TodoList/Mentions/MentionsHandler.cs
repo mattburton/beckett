@@ -3,7 +3,7 @@ using TodoList.AddItem;
 
 namespace TodoList.Mentions;
 
-public partial class MentionsHandler(IMessageSession messageSession)
+public partial class MentionsHandler(IMessageStore messageStore)
 {
     public async Task Handle(TodoListItemAdded e, CancellationToken cancellationToken)
     {
@@ -18,19 +18,12 @@ public partial class MentionsHandler(IMessageSession messageSession)
 
         var item = $"Hi {username} - please follow up on {followUpItem}";
 
-        messageSession.AppendToStream(
+        await messageStore.AppendToStream(
             TodoList.StreamName(e.TodoListId),
             ExpectedVersion.StreamExists,
-            e with { Item = item }
+            e with { Item = item },
+            cancellationToken
         );
-
-        messageSession.AppendToStream(
-            TodoList.StreamName(e.TodoListId),
-            ExpectedVersion.StreamExists,
-            new FollowUpItemAdded(e.TodoListId, e.Item, item)
-        );
-
-        await messageSession.SaveChanges(cancellationToken);
     }
 
     [GeneratedRegex(@"(?<!\w)@(\w+)\b", RegexOptions.Compiled)]
