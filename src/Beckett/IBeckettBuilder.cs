@@ -65,6 +65,7 @@ public interface ISubscriptionConfigurationBuilder
     ISubscriptionConfigurationBuilder HandlerName(string name);
     ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition);
     ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount);
+    ISubscriptionConfigurationBuilder MaxRetryCount<TException>(int maxRetryCount) where TException : Exception;
 }
 
 public class BeckettBuilder(
@@ -245,7 +246,20 @@ public class BeckettBuilder(
                 throw new InvalidOperationException($"{nameof(MaxRetryCount)} must be greater than or equal to 0");
             }
 
-            subscription.MaxRetryCount = maxRetryCount;
+            subscription.MaxRetriesByExceptionType[typeof(Exception)] = maxRetryCount;
+
+            return this;
+        }
+
+        public ISubscriptionConfigurationBuilder MaxRetryCount<TException>(int maxRetryCount)
+            where TException : Exception
+        {
+            if (maxRetryCount < 0)
+            {
+                throw new InvalidOperationException($"{nameof(MaxRetryCount)} must be greater than or equal to 0");
+            }
+
+            subscription.MaxRetriesByExceptionType[typeof(TException)] = maxRetryCount;
 
             return this;
         }

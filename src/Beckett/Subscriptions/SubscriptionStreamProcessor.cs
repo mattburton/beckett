@@ -25,7 +25,6 @@ public class SubscriptionStreamProcessor(
         string streamName,
         long streamPosition,
         int batchSize,
-        bool moveToFailedOnError,
         bool throwOnError,
         CancellationToken cancellationToken
     )
@@ -84,7 +83,14 @@ public class SubscriptionStreamProcessor(
 
                 break;
             case MessageBatchResult.Error error:
-                if (moveToFailedOnError)
+                if (throwOnError)
+                {
+                    throw error.Exception;
+                }
+
+                var maxRetries = subscription.GetMaxRetryCount(error.Exception.GetType());
+
+                if (maxRetries == 0)
                 {
                     await database.Execute(
                         new UpdateCheckpointStatus(
@@ -99,15 +105,7 @@ public class SubscriptionStreamProcessor(
                         cancellationToken
                     );
 
-                    if (!throwOnError)
-                    {
-                        return;
-                    }
-                }
-
-                if (throwOnError)
-                {
-                    throw error.Exception;
+                    return;
                 }
 
                 await database.Execute(

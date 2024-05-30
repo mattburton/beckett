@@ -52,8 +52,6 @@ public class SubscriptionConsumer(
                 continue;
             }
 
-            var movedToFailedOnError = subscription.MaxRetryCount == 0;
-
             await subscriptionStreamProcessor.Process(
                 connection,
                 transaction,
@@ -61,7 +59,6 @@ public class SubscriptionConsumer(
                 checkpoint.StreamName,
                 checkpoint.StreamPosition + 1,
                 options.Subscriptions.BatchSize,
-                movedToFailedOnError,
                 false,
                 stoppingToken
             );

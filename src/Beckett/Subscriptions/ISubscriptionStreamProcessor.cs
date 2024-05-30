@@ -11,7 +11,6 @@ public interface ISubscriptionStreamProcessor
         string streamName,
         long streamPosition,
         int batchSize,
-        bool movedToFailedOnError,
         bool throwOnError,
         CancellationToken cancellationToken
     );

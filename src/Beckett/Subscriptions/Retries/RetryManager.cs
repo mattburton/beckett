@@ -56,9 +56,7 @@ public class RetryManager(
 
         var retryStreamName = RetryStreamName.For(id);
 
-        attempts += 1;
-
-        var reachedMaxAttempts = attempts >= subscription.MaxRetryCount;
+        var attemptNumber = attempts + 1;
 
         try
         {
@@ -87,7 +85,6 @@ public class RetryManager(
                 streamName,
                 checkpoint.StreamPosition,
                 1,
-                reachedMaxAttempts,
                 true,
                 cancellationToken
             );
@@ -103,15 +100,17 @@ public class RetryManager(
                     subscriptionName,
                     streamName,
                     streamPosition,
-                    attempts,
+                    attemptNumber,
                     DateTimeOffset.UtcNow
                 ),
                 cancellationToken
             );
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            if (reachedMaxAttempts)
+            var maxRetries = subscription.GetMaxRetryCount(e.GetType());
+
+            if (attemptNumber >= maxRetries)
             {
                 await messageStore.AppendToStream(
                     retryStreamName,
@@ -122,8 +121,8 @@ public class RetryManager(
                         subscriptionName,
                         streamName,
                         streamPosition,
-                        attempts,
-                        ExceptionData.From(ex),
+                        attemptNumber,
+                        ExceptionData.From(e),
                         DateTimeOffset.UtcNow
                     ),
                     cancellationToken
@@ -131,7 +130,7 @@ public class RetryManager(
             }
             else
             {
-                var delay = attempts.GetNextDelayWithExponentialBackoff();
+                var delay = attemptNumber.GetNextDelayWithExponentialBackoff();
 
                 await messageScheduler.ScheduleMessage(
                     retryStreamName,
@@ -141,8 +140,8 @@ public class RetryManager(
                         subscriptionName,
                         streamName,
                         streamPosition,
-                        attempts,
-                        ExceptionData.From(ex),
+                        attemptNumber,
+                        ExceptionData.From(e),
                         DateTimeOffset.UtcNow
                     ),
                     delay,

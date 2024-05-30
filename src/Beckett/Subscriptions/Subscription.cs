@@ -13,7 +13,7 @@ public class Subscription(string name)
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
     internal Func<object, CancellationToken, Task>? StaticMethod { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
-    internal int MaxRetryCount { get; set; } = 10;
+    internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = new() {{typeof(Exception), 10}};
 
     internal bool IsCategoryOnly => MessageTypes.Count == 0;
 
@@ -40,5 +40,15 @@ public class Subscription(string name)
                 $"The subscription {Name} is only expecting the message type {typeof(TMessage).Name} and has additional types mapped to it."
             );
         }
+    }
+
+    internal int GetMaxRetryCount(Type exceptionType)
+    {
+        if (!MaxRetriesByExceptionType.TryGetValue(exceptionType, out var maxRetries))
+        {
+            maxRetries = MaxRetriesByExceptionType[typeof(Exception)];
+        }
+
+        return maxRetries;
     }
 }

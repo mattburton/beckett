@@ -16,7 +16,12 @@ public class NotificationHandler
             case TodoListItemAdded e:
                 if (e.Item.Contains("Error"))
                 {
-                    throw new Exception(e.Item);
+                    throw new RetryableException(e.Item);
+                }
+
+                if (e.Item.Contains("Fail"))
+                {
+                    throw new TerminalException(e.Item);
                 }
 
                 Console.WriteLine($"Item added: {e.Item} [List: {e.TodoListId}]");
@@ -28,4 +33,8 @@ public class NotificationHandler
 
         return Task.CompletedTask;
     }
+
+    public class RetryableException(string message) : Exception(message);
+
+    public class TerminalException(string message) : Exception(message);
 }
