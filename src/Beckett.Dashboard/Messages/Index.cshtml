@@ -1,0 +1,73 @@
+@inherits HtmlTemplate<IndexPage.ViewModel>
+
+@{
+  Layout = new Layout();
+}
+
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb p-3 text-bg-light rounded-3">
+    <li class="breadcrumb-item">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/categories">
+        Categories
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/categories/@Model.Category">
+        @Model.Category
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/categories/@Model.Category/@Model.StreamName">
+        @Model.StreamName
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      @Model.Id
+    </li>
+  </ol>
+</nav>
+
+<div class="row mt-4 w-75 mx-auto">
+  <div class="col-sm-8 mb-3 mb-sm-0">
+    <div class="card ms-4" style="max-height: 75vh">
+      <div class="card-header">
+        @Model.Type
+      </div>
+      <div class="card-body p-3" style="overflow-y: auto">
+    <pre id="event">
+      <code>
+@Model.Data
+      </code>
+    </pre>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card me-4" style="max-height: 75vh">
+      <div class="card-header">
+        Metadata
+      </div>
+      <ul class="list-group list-group-flush">
+        @foreach (var item in Model.Metadata)
+        {
+          if (item.Key == "causation_id")
+          {
+            <li class="list-group-item">causation_id: <a href="@Routes.Prefix/messages/@item.Value">@item.Value</a></li>
+          }
+          else
+          {
+            <li class="list-group-item">@(item.Key): @item.Value</li>
+          }
+        }
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const element = document.getElementById("event");
+    const eventObject = JSON.parse(element.innerText);
+    element.innerHTML = JSON.stringify(eventObject, undefined, 4);
+  })();
+</script>

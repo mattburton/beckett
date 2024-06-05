@@ -11,15 +11,15 @@ var builder = Host.CreateApplicationBuilder(args);
 
 await builder.AddTodoListDatabase();
 
-builder.AddBeckett().TodoListModule();
+builder.AddBeckett().TodoListSubscriptions();
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("todo-list-worker"))
-    // .WithMetrics(
-    //     metrics => metrics
-    //         .AddBeckett()
-    //         .AddConsoleExporter()
-    // )
+    .WithMetrics(
+        metrics => metrics
+            .AddBeckett()
+            .AddConsoleExporter()
+    )
     .WithTracing(
         tracing => tracing
             .AddNpgsql()

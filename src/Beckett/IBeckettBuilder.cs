@@ -13,9 +13,11 @@ public interface IBeckettBuilder
     IHostEnvironment Environment { get; }
     IServiceCollection Services { get; }
 
-    void Map<TMessage>(string name);
-
     ISubscriptionBuilder AddSubscription(string name);
+
+    IBeckettBuilder Build(Action<IBeckettBuilder> configure);
+
+    void Map<TMessage>(string name);
 
     void ScheduleRecurringMessage<TMessage>(
         string name,
@@ -81,8 +83,6 @@ public class BeckettBuilder(
     public IHostEnvironment Environment { get; } = environment;
     public IServiceCollection Services { get; } = services;
 
-    public void Map<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
-
     public ISubscriptionBuilder AddSubscription(string name)
     {
         if (!subscriptionRegistry.TryAdd(name, out var subscription))
@@ -92,6 +92,15 @@ public class BeckettBuilder(
 
         return new SubscriptionBuilder(subscription);
     }
+
+    public IBeckettBuilder Build(Action<IBeckettBuilder> build)
+    {
+        build(this);
+
+        return this;
+    }
+
+    public void Map<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
 
     public void ScheduleRecurringMessage<TMessage>(
         string name,

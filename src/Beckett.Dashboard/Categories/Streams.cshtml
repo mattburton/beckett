@@ -1,0 +1,48 @@
+@inherits HtmlTemplate<StreamsPage.ViewModel>
+
+@{
+  Layout = new Layout();
+}
+
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb p-3 text-bg-light rounded-3">
+    <li class="breadcrumb-item">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/categories">
+        Categories
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      @Model.Category
+    </li>
+  </ol>
+</nav>
+
+<table class="table table-striped">
+  <thead>
+  <tr>
+    <th>Stream Name</th>
+    <th>Last Updated</th>
+  </tr>
+  </thead>
+  <tbody>
+  @foreach(var stream in Model.Streams)
+  {
+    <tr>
+      <td>
+        <a href="@Routes.Prefix/categories/@Model.Category/@stream.StreamName">@stream.StreamName</a>
+      </td>
+      <td>@stream.LastUpdated</td>
+    </tr>
+  }
+  @if (Model.Streams.Count == 0)
+  {
+    <tr>
+      <td colspan="4">
+        No category streams found.
+      </td>
+    </tr>
+  }
+  </tbody>
+</table>
+
+

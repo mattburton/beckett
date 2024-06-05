@@ -1,0 +1,46 @@
+@inherits HtmlTemplate<IndexPage.ViewModel>
+
+@{
+  Layout = new Layout();
+}
+
+<div class="row mt-4 mx-2">
+  <div class="col-sm-4 mb-3 mb-sm-0">
+    <div class="card">
+      <div class="card-header">
+        Subscription Lag
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center h-25"
+           hx-get="@Routes.Prefix/components/lag"
+           hx-trigger="load">
+        <p>...</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card">
+      <div class="card-header">
+        Retries
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center h-25"
+           hx-get="@Routes.Prefix/components/retries"
+           hx-trigger="load">
+        <p>...</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card">
+      <div class="card-header">
+        Failed
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center h-25"
+           hx-get="@Routes.Prefix/components/failed"
+           hx-trigger="load">
+        <p>...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+

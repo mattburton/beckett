@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using TodoList.AddItem;
 using TodoList.Mentions;
 using TodoList.Notifications;
@@ -11,7 +12,7 @@ public static class TodoList
 
     public static string StreamName(Guid id) => $"{Category}-{id}";
 
-    public static IBeckettBuilder TodoListModule(this IBeckettBuilder builder)
+    public static IBeckettBuilder TodoListSubscriptions(this IBeckettBuilder builder)
     {
         builder.Services.AddTransient<MentionsHandler>();
         builder.Services.AddTransient<NotificationHandler>();

@@ -1,12 +1,13 @@
 using System.Text.Json;
 using API;
+using API.TodoList;
 using Beckett;
+using Beckett.Dashboard;
 using Beckett.OpenTelemetry;
 using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using TodoList;
 using TodoList.Infrastructure.Database;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,6 +42,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.MapBeckettDashboard("/beckett");
 
 app.MapGroup("/todos").TodoListRoutes();
 

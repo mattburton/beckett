@@ -1,10 +1,10 @@
 namespace TodoList.AddItem;
 
-public record AddTodoListItem(string Item)
+public record AddTodoListItem(Guid Id, string Item)
 {
-    public async Task<AppendResult> Execute(Guid id, IMessageStore messageStore, CancellationToken cancellationToken)
+    public async Task<AppendResult> Execute(IMessageStore messageStore, CancellationToken cancellationToken)
     {
-        var stream = await messageStore.ReadStream(TodoList.StreamName(id), cancellationToken);
+        var stream = await messageStore.ReadStream(TodoList.StreamName(Id), cancellationToken);
 
         var state = stream.ProjectTo<DecisionState>();
 
@@ -14,7 +14,7 @@ public record AddTodoListItem(string Item)
         }
 
         return await stream.Append(
-            new TodoListItemAdded(id, Item),
+            new TodoListItemAdded(Id, Item),
             cancellationToken
         );
     }

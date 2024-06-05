@@ -1,0 +1,43 @@
+@inherits HtmlTemplate<IndexPage.ViewModel>
+
+@{
+  Layout = new Layout();
+}
+
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb p-3 text-bg-light rounded-3">
+    <li class="breadcrumb-item active" aria-current="page">
+      Categories
+    </li>
+  </ol>
+</nav>
+
+<table class="table table-striped">
+  <thead>
+  <tr>
+    <th>Category</th>
+    <th>Last Updated</th>
+  </tr>
+  </thead>
+  <tbody>
+  @foreach(var category in Model.Categories)
+  {
+    <tr>
+      <td>
+        <a href="@Routes.Prefix/categories/@category.Name">@category.Name</a>
+      </td>
+      <td>@category.LastUpdated</td>
+    </tr>
+  }
+  @if (Model.Categories.Count == 0)
+  {
+    <tr>
+      <td colspan="2">
+        No stream categories found.
+      </td>
+    </tr>
+  }
+  </tbody>
+</table>
+
+
