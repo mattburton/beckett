@@ -27,6 +27,13 @@ public class MessageTypeMap(MessageOptions options, IMessageTypeProvider message
             return name;
         }
 
+        if (!options.AllowDynamicTypeMapping)
+        {
+            throw new Exception(
+                $"{nameof(MessageOptions.AllowDynamicTypeMapping)} is disabled - you must add a type mapping for {type}"
+            );
+        }
+
         //TODO - support custom type names, mapping from old names to new ones, etc...
         if (_nameToTypeMap.TryGetValue(type.Name, out var existingType))
         {
@@ -49,12 +56,16 @@ public class MessageTypeMap(MessageOptions options, IMessageTypeProvider message
             {
                 if (!options.AllowDynamicTypeMapping)
                 {
-                    throw new Exception($"Missing message type mapping for {name}");
+                    throw new Exception(
+                        $"{nameof(MessageOptions.AllowDynamicTypeMapping)} is disabled - you must add a type mapping for {name}"
+                    );
                 }
 
                 return messageTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName));
             }
         );
+
+    public bool IsMapped(Type type) => _typeToNameMap.ContainsKey(type);
 
     private static bool MatchCriteria(Type type, string name) => type.Name == name || type.FullName == name;
 }

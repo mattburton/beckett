@@ -19,73 +19,80 @@ public class BootstrapSubscriptions(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await using var connection = database.CreateConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        await database.Execute(
-            new EnsureCheckpointExists(
-                options.ApplicationName,
-                GlobalCheckpoint.Name,
-                GlobalCheckpoint.StreamName
-            ),
-            connection,
-            cancellationToken
-        );
-
-        var checkpoints = new List<CheckpointType>();
-
-        foreach (var subscription in subscriptionRegistry.All())
+        try
         {
-            EnsureSubscriptionHandlerIsRegistered(subscription);
+            await using var connection = database.CreateConnection();
 
-            subscription.EnsureHandlerIsConfigured();
+            await connection.OpenAsync(cancellationToken);
 
-            subscription.MapMessageTypeNames(messageTypeMap);
-
-            var initialized = await database.Execute(
-                new AddOrUpdateSubscription(
+            await database.Execute(
+                new EnsureCheckpointExists(
                     options.ApplicationName,
-                    subscription.Name
+                    GlobalCheckpoint.Name,
+                    GlobalCheckpoint.StreamName
                 ),
                 connection,
                 cancellationToken
             );
 
-            if (initialized)
-            {
-                continue;
-            }
+            var checkpoints = new List<CheckpointType>();
 
-            if (subscription.StartingPosition == StartingPosition.Latest)
+            foreach (var subscription in subscriptionRegistry.All())
             {
-                await database.Execute(
-                    new SetSubscriptionToInitialized(options.ApplicationName, subscription.Name),
+                EnsureSubscriptionHandlerIsRegistered(subscription);
+
+                subscription.EnsureHandlerIsConfigured();
+
+                subscription.MapMessageTypeNames(messageTypeMap);
+
+                var initialized = await database.Execute(
+                    new AddOrUpdateSubscription(
+                        options.ApplicationName,
+                        subscription.Name
+                    ),
+                    connection,
                     cancellationToken
                 );
 
-                continue;
+                if (initialized)
+                {
+                    continue;
+                }
+
+                if (subscription.StartingPosition == StartingPosition.Latest)
+                {
+                    await database.Execute(
+                        new SetSubscriptionToInitialized(options.ApplicationName, subscription.Name),
+                        cancellationToken
+                    );
+
+                    continue;
+                }
+
+                checkpoints.Add(
+                    new CheckpointType
+                    {
+                        Application = options.ApplicationName,
+                        Name = subscription.Name,
+                        StreamName = InitializationConstants.StreamName,
+                        StreamVersion = 0
+                    }
+                );
             }
 
-            checkpoints.Add(
-                new CheckpointType
-                {
-                    Application = options.ApplicationName,
-                    Name = subscription.Name,
-                    StreamName = InitializationConstants.StreamName,
-                    StreamVersion = 0
-                }
-            );
-        }
+            if (checkpoints.Count == 0)
+            {
+                return;
+            }
 
-        if (checkpoints.Count == 0)
+            await database.Execute(new RecordCheckpoints(checkpoints.ToArray()), connection, cancellationToken);
+
+            subscriptionInitializer.Start(cancellationToken);
+        }
+        catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
-            return;
+            // do nothing
         }
-
-        await database.Execute(new RecordCheckpoints(checkpoints.ToArray()), connection, cancellationToken);
-
-        subscriptionInitializer.Start(cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

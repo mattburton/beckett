@@ -3,7 +3,7 @@
   "scripts": {
     "api": "dotnet run --project src/Samples/API/API.csproj",
     "reset": "docker-compose down -v && docker-compose up -d",
-    "start": "concurrently -k \"npm:api\" \"npm:worker\"",
+    "start": "concurrently --raw -k \"npm:api\" \"npm:worker\"",
     "worker": "dotnet run --project src/Samples/Worker/Worker.csproj"
   },
   "devDependencies": {

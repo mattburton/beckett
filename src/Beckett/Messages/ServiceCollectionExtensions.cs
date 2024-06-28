@@ -1,3 +1,4 @@
+using Beckett.Messages.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Messages;
@@ -13,5 +14,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMessageStore, MessageStore>();
 
         services.AddTransient<IMessageSession, MessageSession>();
+
+        services.AddHostedService<MessageTypeMappingDiagnosticService>();
     }
 }
