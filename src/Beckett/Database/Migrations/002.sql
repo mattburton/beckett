@@ -118,88 +118,6 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.append_message(
-  _id uuid,
-  _stream_name text,
-  _type text,
-  _data jsonb,
-  _metadata jsonb,
-  _expected_version bigint
-)
-  RETURNS void
-  LANGUAGE plpgsql
-AS
-$$
-DECLARE
-  _current_version bigint;
-  _stream_position bigint;
-BEGIN
-  PERFORM pg_advisory_xact_lock(__schema__.stream_hash(_stream_name));
-
-  SELECT coalesce(max(m.stream_position), 0)
-  INTO _current_version
-  FROM __schema__.messages m
-  WHERE m.stream_name = _stream_name;
-
-  IF (_expected_version < -2) THEN
-    RAISE EXCEPTION 'Invalid value for expected version: %', _expected_version;
-  END IF;
-
-  IF (_expected_version = -1 AND _current_version = 0) THEN
-    RAISE EXCEPTION 'Attempted to append to a non-existing stream: %', _stream_name;
-  END IF;
-
-  IF (_expected_version = 0 AND _current_version > 0) THEN
-    RAISE EXCEPTION 'Attempted to start a stream that already exists: %', _stream_name;
-  END IF;
-
-  IF (_expected_version > 0 AND _expected_version != _current_version) THEN
-    RAISE EXCEPTION 'Stream % version % does not match expected version %',
-      _stream_name,
-      _current_version,
-      _expected_version;
-  END IF;
-
-  _stream_position := _current_version + 1;
-
-  INSERT INTO __schema__.messages (
-    id,
-    stream_position,
-    stream_name,
-    type,
-    data,
-    metadata
-  ) VALUES (
-    _id,
-    _stream_position,
-    _stream_name,
-    _type,
-    _data,
-    _metadata
-  );
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.append_messages(
-  _messages __schema__.message[]
-)
-  RETURNS void
-  LANGUAGE sql
-AS
-$$
-SELECT __schema__.append_message(
-  m.id,
-  m.stream_name,
-  m.type,
-  m.data,
-  m.metadata,
-  m.expected_version
-)
-FROM unnest(_messages) AS m;
-
-SELECT pg_notify('beckett:messages', NULL);
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.read_stream(
   _stream_name text,
   _starting_stream_position bigint DEFAULT NULL,
@@ -244,7 +162,7 @@ ORDER BY CASE WHEN _read_forwards = true THEN stream_position END,
 LIMIT _count;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.read_stream_changes(
+CREATE OR REPLACE FUNCTION __schema__.read_stream_change_feed(
   _starting_global_position bigint,
   _batch_size int
 )

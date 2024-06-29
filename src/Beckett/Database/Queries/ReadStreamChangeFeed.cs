@@ -3,10 +3,10 @@ using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class ReadStreamChanges(
+public class ReadStreamChangeFeed(
     long lastGlobalPosition,
     int batchSize
-) : IPostgresDatabaseQuery<IReadOnlyList<ReadStreamChanges.Result>>
+) : IPostgresDatabaseQuery<IReadOnlyList<ReadStreamChangeFeed.Result>>
 {
     public async Task<IReadOnlyList<Result>> Execute(
         NpgsqlCommand command,
@@ -19,7 +19,7 @@ public class ReadStreamChanges(
                    stream_version,
                    global_position,
                    message_types
-            from {schema}.read_stream_changes($1, $2);
+            from {schema}.read_stream_change_feed($1, $2);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });

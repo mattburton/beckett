@@ -50,7 +50,7 @@ public class PostgresMessageStorage(
     )
     {
         var results = await database.Execute(
-            new ReadStreamChanges(lastGlobalPosition, batchSize),
+            new ReadStreamChangeFeed(lastGlobalPosition, batchSize),
             cancellationToken
         );
 
@@ -64,34 +64,5 @@ public class PostgresMessageStorage(
                     x.MessageTypes
                 )
             ).ToList();
-    }
-
-    public async Task SaveSessionChanges(IEnumerable<SessionMessageEnvelope> messages, CancellationToken cancellationToken)
-    {
-        var newMessages = new List<MessageType>();
-
-        foreach (var message in messages)
-        {
-            var messageId = Guid.NewGuid();
-
-            var (_, typeName, data, serializedMetadata) = messageSerializer.Serialize(
-                message.Message,
-                message.Metadata
-            );
-
-            newMessages.Add(
-                new MessageType
-                {
-                    Id = messageId,
-                    StreamName = message.StreamName,
-                    Type = typeName,
-                    Data = data,
-                    Metadata = serializedMetadata,
-                    ExpectedVersion = message.ExpectedVersion
-                }
-            );
-        }
-
-        await database.Execute(new AppendMessages(newMessages.ToArray()), cancellationToken);
     }
 }
