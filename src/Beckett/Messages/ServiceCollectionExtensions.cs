@@ -13,8 +13,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IMessageStore, MessageStore>();
 
-        services.AddTransient<IMessageSession, MessageSession>();
-
         services.AddHostedService<MessageTypeMappingDiagnosticService>();
     }
 }

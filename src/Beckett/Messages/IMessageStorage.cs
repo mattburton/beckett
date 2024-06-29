@@ -21,6 +21,4 @@ public interface IMessageStorage
         int batchSize,
         CancellationToken cancellationToken
     );
-
-    Task SaveSessionChanges(IEnumerable<SessionMessageEnvelope> messages, CancellationToken cancellationToken);
 }
