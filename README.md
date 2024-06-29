@@ -4,8 +4,8 @@ The missing pieces to build event-driven applications. Event sourcing is a power
 but reading and writing events to an event store is only half of the equation. Beckett aims to fill in the gaps:
 
 - Message Store - store messages (events, commands, jobs, etc...) in streams
-  - PostgreSQL storage is provided out of the box, but Beckett is designed to compliment your existing
-    event or message store and can be extended to support other storage mechanisms
+  - PostgreSQL message storage is provided out of the box, but Beckett is designed to compliment your existing
+    event or message store - use your own store and implement the `IMessageStorage` interface to integrate with Beckett
 - Subscriptions - subscribe to messages and process them in order by stream
   - Horizontal scalability - use auto-scaling to have as many workers as needed processing messages in parallel where
     the work is distributed automatically across all available nodes without needing to manage the distribution by way
@@ -14,7 +14,7 @@ but reading and writing events to an event store is only half of the equation. B
     a failed message only blocks a single stream for a subscription at a time and the rest of the streams can continue
     processing for that subscription
 - Scheduled / recurring messages - schedule messages to be sent at a future time with cancellation support, or create a
-  recurring schedule to send messages at a regular interval using cron expressions
+  recurring schedule to send messages at a regular interval using cron expressions for scheduled jobs, etc...
 - Open Telemetry - built-in support to provide tracing and metrics
 - Dashboard - view metrics, browse messages, with future plans for subscription management, retrying failed messages,
   and more
@@ -54,7 +54,7 @@ builder.AddBeckett(
         options.ApplicationName = "todo-list-api";
     });
 ```
-Or in your application settings files:
+Or in `appsettings.json`:
 ```json
 {
   "Beckett": {
