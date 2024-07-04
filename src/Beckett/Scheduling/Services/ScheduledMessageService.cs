@@ -7,7 +7,7 @@ namespace Beckett.Scheduling.Services;
 
 public class ScheduledMessageService(
     IPostgresDatabase database,
-    SchedulingOptions options,
+    BeckettOptions options,
     IPostgresMessageDeserializer messageDeserializer,
     IMessageStore messageStore,
     ILogger<ScheduledMessageService> logger
@@ -26,7 +26,7 @@ public class ScheduledMessageService(
                 await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
                 var results = await database.Execute(
-                    new GetScheduledMessagesToDeliver(options.BatchSize),
+                    new GetScheduledMessagesToDeliver(options.ApplicationName, options.Scheduling.BatchSize),
                     connection,
                     transaction,
                     stoppingToken
@@ -62,7 +62,7 @@ public class ScheduledMessageService(
 
                 await transaction.CommitAsync(stoppingToken);
 
-                await Task.Delay(options.PollingInterval, stoppingToken);
+                await Task.Delay(options.Scheduling.PollingInterval, stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

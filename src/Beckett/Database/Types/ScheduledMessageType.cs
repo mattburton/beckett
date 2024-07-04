@@ -4,6 +4,7 @@ namespace Beckett.Database.Types;
 
 public class ScheduledMessageType
 {
+    public string Application { get; init; } = null!;
     public Guid Id { get; init; }
     public string Type { get; init; } = null!;
     public string Data { get; init; } = null!;
@@ -11,6 +12,7 @@ public class ScheduledMessageType
     public DateTimeOffset DeliverAt { get; init; } = DateTimeOffset.UtcNow;
 
     public static ScheduledMessageType From(
+        string application,
         Guid id,
         object message,
         Dictionary<string, object> metadata,
@@ -22,6 +24,7 @@ public class ScheduledMessageType
 
         return new ScheduledMessageType
         {
+            Application = application,
             Id = id,
             Type = result.TypeName,
             Data = result.Data,
