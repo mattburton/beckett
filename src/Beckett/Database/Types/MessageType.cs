@@ -1,4 +1,5 @@
 using Beckett.Messages;
+using UUIDNext;
 
 namespace Beckett.Database.Types;
 
@@ -21,7 +22,7 @@ public class MessageType
 
         return new MessageType
         {
-            Id = Guid.NewGuid(),
+            Id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql),
             Type = result.TypeName,
             Data = result.Data,
             Metadata = result.Metadata

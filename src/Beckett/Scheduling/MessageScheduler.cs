@@ -4,6 +4,7 @@ using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Cronos;
+using UUIDNext;
 
 namespace Beckett.Scheduling;
 
@@ -77,7 +78,7 @@ public class MessageScheduler(
             messageToSchedule = messageWithMetadata.Message;
         }
 
-        var id = Guid.NewGuid();
+        var id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql);
 
         var scheduledMessage = ScheduledMessageType.From(
             id,
