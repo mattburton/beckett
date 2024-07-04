@@ -1,6 +1,7 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Messages;
+using Beckett.Messages.Storage;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,8 +11,8 @@ using Npgsql;
 namespace Beckett.Subscriptions;
 
 public class SubscriptionStreamProcessor(
+    IMessageStorage messageStorage,
     IPostgresDatabase database,
-    IPostgresMessageDeserializer messageDeserializer,
     IServiceProvider serviceProvider,
     BeckettOptions options,
     IInstrumentation instrumentation,
@@ -29,35 +30,31 @@ public class SubscriptionStreamProcessor(
         CancellationToken cancellationToken
     )
     {
-        var streamMessages = await database.Execute(
-            new ReadStream(
-                streamName,
-                new ReadOptions
-                {
-                    StartingStreamPosition = streamPosition,
-                    Count = batchSize
-                }
-            ),
-            connection,
+        var stream = await messageStorage.ReadStream(
+            streamName,
+            new ReadStreamOptions
+            {
+                StartingStreamPosition = streamPosition,
+                Count = batchSize,
+                Connection = connection
+            },
             cancellationToken
         );
 
         var messages = new List<IMessageContext>();
 
-        foreach (var streamMessage in streamMessages)
+        foreach (var message in stream.Messages)
         {
-            var (type, message, metadata) = messageDeserializer.DeserializeAll(streamMessage);
-
             messages.Add(
                 new MessageContext(
-                    streamMessage.Id,
-                    streamMessage.StreamName,
-                    streamMessage.StreamPosition,
-                    streamMessage.GlobalPosition,
-                    type,
-                    message,
-                    metadata,
-                    streamMessage.Timestamp,
+                    message.Id,
+                    message.StreamName,
+                    message.StreamPosition,
+                    message.GlobalPosition,
+                    message.Type,
+                    message.Message,
+                    message.Metadata,
+                    message.Timestamp,
                     serviceProvider
                 )
             );

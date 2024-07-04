@@ -1,38 +1,38 @@
 using System.Text.Json;
 using Beckett.Database.Models;
 using Beckett.Messages;
+using Beckett.Messages.Storage;
 
 namespace Beckett.Database;
 
 public class PostgresMessageDeserializer(IMessageTypeMap messageTypeMap) : IPostgresMessageDeserializer
 {
-    public object Deserialize(PostgresMessage message)
+    public MessageResult Deserialize(PostgresMessage message)
     {
         var type = messageTypeMap.GetType(message.Type) ??
                    throw new Exception($"Unknown message type: {message.Type}");
 
-        return JsonSerializer.Deserialize(message.Data, type) ?? throw new Exception(
-            $"Unable to deserialize message data for type {message.Type}: {message.Data}"
-        );
-    }
-
-    public (Type Type, object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresMessage message)
-    {
-        var type = messageTypeMap.GetType(message.Type) ??
-                   throw new Exception($"Unknown message type: {message.Type}");
-
-        var deserializedMessage = JsonSerializer.Deserialize(message.Data, type) ?? throw new Exception(
+        var data = JsonSerializer.Deserialize(message.Data, type) ?? throw new Exception(
             $"Unable to deserialize message data for type {message.Type}: {message.Data}"
         );
 
         var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(message.Metadata) ?? throw new Exception(
-            $"Unable to deserialize message metadata for type {message.Type}: {message.Data}"
+            $"Unable to deserialize message metadata for type {message.Type}: {message.Metadata}"
         );
 
-        return (type, deserializedMessage, metadata);
+        return new MessageResult(
+            message.Id.ToString(),
+            message.StreamName,
+            message.StreamPosition,
+            message.GlobalPosition,
+            type,
+            data,
+            metadata,
+            message.Timestamp
+        );
     }
 
-    public (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresRecurringMessage message)
+    public (object Message, Dictionary<string, object> Metadata) Deserialize(PostgresRecurringMessage message)
     {
         var type = messageTypeMap.GetType(message.Type) ??
                    throw new Exception($"Unknown scheduled message type: {message.Type}");
@@ -48,7 +48,7 @@ public class PostgresMessageDeserializer(IMessageTypeMap messageTypeMap) : IPost
         return (deserializedMessage, metadata);
     }
 
-    public (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresScheduledMessage message)
+    public (object Message, Dictionary<string, object> Metadata) Deserialize(PostgresScheduledMessage message)
     {
         var type = messageTypeMap.GetType(message.Type) ??
                    throw new Exception($"Unknown scheduled message type: {message.Type}");

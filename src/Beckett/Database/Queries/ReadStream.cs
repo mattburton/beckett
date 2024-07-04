@@ -1,4 +1,5 @@
 using Beckett.Database.Models;
+using Beckett.Messages.Storage;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -6,7 +7,7 @@ namespace Beckett.Database.Queries;
 
 public class ReadStream(
     string streamName,
-    ReadOptions options
+    ReadStreamOptions options
 ) : IPostgresDatabaseQuery<IReadOnlyList<PostgresMessage>>
 {
     public async Task<IReadOnlyList<PostgresMessage>> Execute(
@@ -25,11 +26,10 @@ public class ReadStream(
                    data,
                    metadata,
                    timestamp
-            from {schema}.read_stream($1, $2, $3, $4, $5);
+            from {schema}.read_stream($1, $2, $3, $4);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
@@ -40,11 +40,8 @@ public class ReadStream(
         command.Parameters[1].Value = options.StartingStreamPosition.HasValue
             ? options.StartingStreamPosition.Value
             : DBNull.Value;
-        command.Parameters[2].Value = options.EndingGlobalPosition.HasValue
-            ? options.EndingGlobalPosition.Value
-            : DBNull.Value;
-        command.Parameters[3].Value = options.Count.HasValue ? options.Count.Value : DBNull.Value;
-        command.Parameters[4].Value = options.ReadForwards.GetValueOrDefault(true);
+        command.Parameters[2].Value = options.Count.HasValue ? options.Count.Value : DBNull.Value;
+        command.Parameters[3].Value = options.ReadForwards.GetValueOrDefault(true);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

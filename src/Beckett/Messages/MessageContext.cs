@@ -1,7 +1,7 @@
 namespace Beckett.Messages;
 
 public readonly record struct MessageContext(
-    Guid Id,
+    string Id,
     string StreamName,
     long StreamPosition,
     long GlobalPosition,

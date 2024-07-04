@@ -121,7 +121,6 @@ $$;
 CREATE OR REPLACE FUNCTION __schema__.read_stream(
   _stream_name text,
   _starting_stream_position bigint DEFAULT NULL,
-  _ending_global_position bigint DEFAULT NULL,
   _count integer DEFAULT NULL,
   _read_forwards boolean DEFAULT true
 )
@@ -156,7 +155,6 @@ SELECT m.id,
 FROM stream_version sv, __schema__.messages m
 WHERE m.stream_name = _stream_name
 AND (_starting_stream_position IS NULL OR m.stream_position >= _starting_stream_position)
-AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
 ORDER BY CASE WHEN _read_forwards = true THEN stream_position END,
          CASE WHEN _read_forwards = false THEN stream_position END DESC
 LIMIT _count;

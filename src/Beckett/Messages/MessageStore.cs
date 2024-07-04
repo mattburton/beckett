@@ -1,3 +1,4 @@
+using Beckett.Messages.Storage;
 using Beckett.OpenTelemetry;
 
 namespace Beckett.Messages;
@@ -7,7 +8,7 @@ public class MessageStore(
     IInstrumentation instrumentation
 ) : IMessageStore
 {
-    public Task<AppendResult> AppendToStream(
+    public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
@@ -36,15 +37,17 @@ public class MessageStore(
             messagesToAppend.Add(new MessageEnvelope(messageToAppend, messageMetadata));
         }
 
-        return messageStorage.AppendToStream(
+        var result = await messageStorage.AppendToStream(
             streamName,
             expectedVersion,
             messagesToAppend,
             cancellationToken
         );
+
+        return new AppendResult(result.StreamVersion);
     }
 
-    public Task<ReadResult> ReadStream(
+    public async Task<ReadResult> ReadStream(
         string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
@@ -52,6 +55,13 @@ public class MessageStore(
     {
         using var activity = instrumentation.StartReadStreamActivity(streamName);
 
-        return messageStorage.ReadStream(streamName, options, AppendToStream, cancellationToken);
+        var result = await messageStorage.ReadStream(streamName, ReadStreamOptions.From(options), cancellationToken);
+
+        return new ReadResult(
+            result.StreamName,
+            result.StreamVersion,
+            result.Messages.Select(x => x.Message).ToList(),
+            AppendToStream
+        );
     }
 }

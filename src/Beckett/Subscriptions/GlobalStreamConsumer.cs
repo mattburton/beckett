@@ -1,7 +1,7 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
-using Beckett.Messages;
+using Beckett.Messages.Storage;
 
 namespace Beckett.Subscriptions;
 
@@ -56,14 +56,14 @@ public class GlobalStreamConsumer(
                 stoppingToken
             );
 
-            if (streamChanges.Count == 0)
+            if (streamChanges.Items.Count == 0)
             {
                 break;
             }
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var streamChange in streamChanges)
+            foreach (var streamChange in streamChanges.Items)
             {
                 var subscriptions = subscriptionRegistry.All().Where(x => streamChange.AppliesTo(x));
 
@@ -88,7 +88,7 @@ public class GlobalStreamConsumer(
                 stoppingToken
             );
 
-            var newGlobalPosition = streamChanges.Max(x => x.GlobalPosition);
+            var newGlobalPosition = streamChanges.Items.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new RecordCheckpoint(

@@ -6,9 +6,3 @@ public delegate Task<AppendResult> AppendToStreamDelegate(
     IEnumerable<object> messages,
     CancellationToken cancellationToken
 );
-
-public delegate void SessionAppendToStreamDelegate(
-    string streamName,
-    ExpectedVersion expectedVersion,
-    IEnumerable<object> messages
-);

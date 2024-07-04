@@ -41,7 +41,6 @@ public class InMemoryMessageStore : IMessageStore
         foreach (var message in messages)
         {
             var streamPosition = stream.StreamVersion + 1;
-            var globalPosition = _messages.Count + 1;
             var data = message;
             var metadata = new Dictionary<string, object>();
 
@@ -58,7 +57,6 @@ public class InMemoryMessageStore : IMessageStore
             var messageToAppend = new Message(
                 streamName,
                 streamPosition,
-                globalPosition,
                 data,
                 new Dictionary<string, object>()
             );
@@ -91,13 +89,6 @@ public class InMemoryMessageStore : IMessageStore
             messages = messages.Skip(count).ToList();
         }
 
-        if (options.EndingGlobalPosition.HasValue)
-        {
-            var endingGlobalPosition = (int)options.EndingGlobalPosition.Value;
-
-            messages = messages.TakeWhile(x => x.GlobalPosition <= endingGlobalPosition).ToList();
-        }
-
         if (!options.ReadForwards.GetValueOrDefault(true))
         {
             messages.Reverse();
@@ -123,14 +114,12 @@ public class InMemoryMessageStore : IMessageStore
     private class Message(
         string streamName,
         long streamPosition,
-        long globalPosition,
         object data,
         Dictionary<string, object> metadata
     )
     {
         public string StreamName { get; } = streamName;
         public long StreamPosition { get; } = streamPosition;
-        public long GlobalPosition { get; } = globalPosition;
         public object Data { get; } = data;
         public Dictionary<string, object> Metadata { get; } = metadata;
     }

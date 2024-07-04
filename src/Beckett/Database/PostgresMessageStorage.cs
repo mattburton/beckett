@@ -1,6 +1,7 @@
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.Messages;
+using Beckett.Messages.Storage;
 
 namespace Beckett.Database;
 
@@ -10,7 +11,7 @@ public class PostgresMessageStorage(
     IPostgresMessageDeserializer messageDeserializer
 ) : IMessageStorage
 {
-    public async Task<AppendResult> AppendToStream(
+    public async Task<AppendToStreamResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<MessageEnvelope> messages,
@@ -24,13 +25,12 @@ public class PostgresMessageStorage(
             cancellationToken
         );
 
-        return new AppendResult(streamVersion);
+        return new AppendToStreamResult(streamVersion);
     }
 
-    public async Task<ReadResult> ReadStream(
+    public async Task<ReadStreamResult> ReadStream(
         string streamName,
-        ReadOptions readOptions,
-        AppendToStreamDelegate appendToStream,
+        ReadStreamOptions readOptions,
         CancellationToken cancellationToken
     )
     {
@@ -40,10 +40,10 @@ public class PostgresMessageStorage(
 
         var messages = streamMessages.Select(messageDeserializer.Deserialize).ToList();
 
-        return new ReadResult(streamName, streamVersion, messages, appendToStream);
+        return new ReadStreamResult(streamName, streamVersion, messages);
     }
 
-    public async Task<IReadOnlyList<StreamChange>> ReadStreamChangeFeed(
+    public async Task<ReadStreamChangeFeedResult> ReadStreamChangeFeed(
         long lastGlobalPosition,
         int batchSize,
         CancellationToken cancellationToken
@@ -54,7 +54,7 @@ public class PostgresMessageStorage(
             cancellationToken
         );
 
-        return results.Count == 0
+        var items = results.Count == 0
             ? []
             : results.Select(
                 x => new StreamChange(
@@ -64,5 +64,7 @@ public class PostgresMessageStorage(
                     x.MessageTypes
                 )
             ).ToList();
+
+        return new ReadStreamChangeFeedResult(items);
     }
 }

@@ -1,22 +1,21 @@
-namespace Beckett.Messages;
+namespace Beckett.Messages.Storage;
 
 public interface IMessageStorage
 {
-    Task<AppendResult> AppendToStream(
+    Task<AppendToStreamResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<MessageEnvelope> messages,
         CancellationToken cancellationToken
     );
 
-    Task<ReadResult> ReadStream(
+    Task<ReadStreamResult> ReadStream(
         string streamName,
-        ReadOptions options,
-        AppendToStreamDelegate appendToStream,
+        ReadStreamOptions options,
         CancellationToken cancellationToken
     );
 
-    Task<IReadOnlyList<StreamChange>> ReadStreamChangeFeed(
+    Task<ReadStreamChangeFeedResult> ReadStreamChangeFeed(
         long lastGlobalPosition,
         int batchSize,
         CancellationToken cancellationToken

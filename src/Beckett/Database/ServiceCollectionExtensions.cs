@@ -2,6 +2,7 @@ using Beckett.Database.Notifications;
 using Beckett.Database.Notifications.Handlers;
 using Beckett.Database.Notifications.Services;
 using Beckett.Messages;
+using Beckett.Messages.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 

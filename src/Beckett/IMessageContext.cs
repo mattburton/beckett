@@ -2,7 +2,7 @@ namespace Beckett;
 
 public interface IMessageContext
 {
-    Guid Id { get; }
+    string Id { get; }
     string StreamName { get; }
     long StreamPosition { get; }
     long GlobalPosition { get; }

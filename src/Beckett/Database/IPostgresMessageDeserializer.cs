@@ -1,14 +1,13 @@
 using Beckett.Database.Models;
+using Beckett.Messages.Storage;
 
 namespace Beckett.Database;
 
 public interface IPostgresMessageDeserializer
 {
-    object Deserialize(PostgresMessage message);
+    MessageResult Deserialize(PostgresMessage message);
 
-    (Type Type, object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresMessage message);
+    (object Message, Dictionary<string, object> Metadata) Deserialize(PostgresRecurringMessage message);
 
-    (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresRecurringMessage message);
-
-    (object Message, Dictionary<string, object> Metadata) DeserializeAll(PostgresScheduledMessage message);
+    (object Message, Dictionary<string, object> Metadata) Deserialize(PostgresScheduledMessage message);
 }
