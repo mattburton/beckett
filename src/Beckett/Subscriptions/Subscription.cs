@@ -42,6 +42,8 @@ public class Subscription(string name)
         }
     }
 
+    internal int GetAdvisoryLockId(string application) => $"{application}:{Name}".GetDeterministicHashCode();
+
     internal int GetMaxRetryCount(Type exceptionType)
     {
         if (!MaxRetriesByExceptionType.TryGetValue(exceptionType, out var maxRetries))

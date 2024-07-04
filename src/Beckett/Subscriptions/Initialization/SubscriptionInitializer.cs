@@ -46,7 +46,7 @@ public class SubscriptionInitializer(
                 continue;
             }
 
-            var advisoryLockId = subscription.Name.GetDeterministicHashCode();
+            var advisoryLockId = subscription.GetAdvisoryLockId(options.ApplicationName);
 
             var locked = await database.Execute(new TryAdvisoryLock(advisoryLockId), cancellationToken);
 
