@@ -25,6 +25,42 @@ Content-Type: application/json
   client.global.set("item", response.body.item)
 %}
 
+### Add Item w/Error (run twice)
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "item": "will return 409 on second attempt"
+}
+> {%
+  client.global.set("item", response.body.item)
+%}
+
+### Add Item w/Retry from NotificationHandler
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "item": "Error"
+}
+> {%
+  client.global.set("item", response.body.item)
+%}
+
+### Add Item w/Failure from NotificationHandler
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "item": "Fail"
+}
+> {%
+  client.global.set("item", response.body.item)
+%}
+
 ### Complete Item
 
 POST {{base_url}}/{{id}}/complete/{{item}}

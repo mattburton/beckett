@@ -33,7 +33,7 @@ public class RetryManager(
                 streamPosition,
                 DateTimeOffset.UtcNow
             ),
-            TimeSpan.FromSeconds(10),
+            0.GetNextDelayWithExponentialBackoff(),
             cancellationToken
         );
     }

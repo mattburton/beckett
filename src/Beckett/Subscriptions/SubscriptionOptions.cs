@@ -1,3 +1,5 @@
+using Beckett.Subscriptions.Retries;
+
 namespace Beckett.Subscriptions;
 
 public class SubscriptionOptions
@@ -8,5 +10,6 @@ public class SubscriptionOptions
     public int GlobalBatchSize { get; set; } = 500;
     public TimeSpan GlobalPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(10);
-    public TimeSpan RetryPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
+
+    public RetryOptions Retries { get; set; } = new();
 }

@@ -60,7 +60,7 @@ public static class ServiceCollectionExtensions
             messageTypeMap,
             subscriptionRegistry,
             recurringMessageRegistry
-        ).SubscriptionRetryModule();
+        ).SubscriptionRetryModule(options.Subscriptions.Retries);
     }
 
     public static IBeckettBuilder AddBeckett(this IHostBuilder builder, Action<BeckettOptions>? configure = null)
@@ -68,7 +68,7 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration = null!;
         IHostEnvironment environment = null!;
         IServiceCollection serviceCollection = null!;
-        BeckettOptions options;
+        BeckettOptions options = null!;
         IMessageTypeMap messageTypeMap = null!;
         ISubscriptionRegistry subscriptionRegistry = null!;
         IRecurringMessageRegistry recurringMessageRegistry = null!;
@@ -122,6 +122,6 @@ public static class ServiceCollectionExtensions
             messageTypeMap,
             subscriptionRegistry,
             recurringMessageRegistry
-        ).SubscriptionRetryModule();
+        ).SubscriptionRetryModule(options.Subscriptions.Retries);
     }
 }

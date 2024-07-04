@@ -6,7 +6,7 @@ namespace Beckett.Subscriptions.Retries.Services;
 
 public class RetryPollingService(
     IRetryMonitor retryMonitor,
-    SubscriptionOptions options,
+    RetryOptions options,
     ILogger<RetryPollingService> logger
 ) : BackgroundService
 {
@@ -18,7 +18,7 @@ public class RetryPollingService(
             {
                 retryMonitor.StartPolling(stoppingToken);
 
-                await Task.Delay(options.RetryPollingInterval, stoppingToken);
+                await Task.Delay(options.PollingInterval, stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

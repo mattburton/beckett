@@ -5,6 +5,7 @@ namespace Tests.Subscriptions.Retries;
 public class ExponentialBackoffTests
 {
     [Theory]
+    [InlineData(0, 1)]
     [InlineData(1, 1)]
     [InlineData(2, 1)]
     [InlineData(3, 2)]

@@ -7,20 +7,28 @@ namespace Beckett.Subscriptions.Retries;
 
 public static class Configuration
 {
-    public static IBeckettBuilder SubscriptionRetryModule(this IBeckettBuilder builder)
+    public static IBeckettBuilder SubscriptionRetryModule(this IBeckettBuilder builder, RetryOptions options)
     {
+        if (!options.Enabled)
+        {
+            return builder;
+        }
+
+        builder.Services.AddSingleton(options);
+
+        builder.Services.AddSingleton<IRetryMonitor, RetryMonitor>();
+        builder.Services.AddSingleton<IRetryManager, RetryManager>();
+
+        builder.Services.AddSingleton<RetryStartedHandler>();
+        builder.Services.AddSingleton<RetryErrorHandler>();
+        builder.Services.AddSingleton<RetryFailedHandler>();
+
+        builder.Services.AddHostedService<RetryPollingService>();
+
         builder.Map<RetryStarted>("$retry_started");
         builder.Map<RetryError>("$retry_error");
         builder.Map<RetryFailed>("$retry_failed");
         builder.Map<RetrySucceeded>("$retry_succeeded");
-
-        builder.Services.AddSingleton<IRetryManager, RetryManager>();
-        builder.Services.AddSingleton<IRetryMonitor, RetryMonitor>();
-        builder.Services.AddHostedService<RetryPollingService>();
-
-        builder.Services.AddScoped<RetryStartedHandler>();
-        builder.Services.AddScoped<RetryErrorHandler>();
-        builder.Services.AddScoped<RetryFailedHandler>();
 
         const string category = "$retry";
 
