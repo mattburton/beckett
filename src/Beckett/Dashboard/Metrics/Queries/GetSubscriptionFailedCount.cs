@@ -1,9 +1,10 @@
+using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Database.Queries;
+namespace Beckett.Dashboard.Metrics.Queries;
 
-public class GetSubscriptionLag(string application) : IPostgresDatabaseQuery<long>
+public class GetSubscriptionFailedCount(string application) : IPostgresDatabaseQuery<long>
 {
     public async Task<long> Execute(
         NpgsqlCommand command,
@@ -11,7 +12,7 @@ public class GetSubscriptionLag(string application) : IPostgresDatabaseQuery<lon
         CancellationToken cancellationToken
     )
     {
-        command.CommandText = $"select {schema}.get_subscription_lag($1);";
+        command.CommandText = $"select {schema}.get_subscription_failed_count($1);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 

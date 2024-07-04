@@ -1,11 +1,12 @@
+using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Queries;
+namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetStreamMessages(string streamName) : IPostgresDatabaseQuery<IReadOnlyList<GetStreamMessages.Result>>
+public class GetStreamMessages(string streamName) : IPostgresDatabaseQuery<GetStreamMessagesResult>
 {
-    public async Task<IReadOnlyList<Result>> Execute(
+    public async Task<GetStreamMessagesResult> Execute(
         NpgsqlCommand command,
         string schema,
         CancellationToken cancellationToken
@@ -26,12 +27,12 @@ public class GetStreamMessages(string streamName) : IPostgresDatabaseQuery<IRead
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<Result>();
+        var results = new List<GetStreamMessagesResult.Message>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
             results.Add(
-                new Result(
+                new GetStreamMessagesResult.Message(
                     reader.GetFieldValue<Guid>(0),
                     reader.GetFieldValue<int>(1),
                     reader.GetFieldValue<string>(2),
@@ -40,7 +41,7 @@ public class GetStreamMessages(string streamName) : IPostgresDatabaseQuery<IRead
             );
         }
 
-        return results;
+        return new GetStreamMessagesResult(results);
     }
 
     public record Result(Guid Id, int StreamPosition, string Type, DateTimeOffset Timestamp);

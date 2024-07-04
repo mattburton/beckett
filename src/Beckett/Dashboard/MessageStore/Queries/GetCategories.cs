@@ -1,10 +1,11 @@
+using Beckett.Database;
 using Npgsql;
 
-namespace Beckett.Dashboard.Queries;
+namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetCategories : IPostgresDatabaseQuery<IReadOnlyList<GetCategories.Result>>
+public class GetCategories : IPostgresDatabaseQuery<GetCategoriesResult>
 {
-    public async Task<IReadOnlyList<Result>> Execute(
+    public async Task<GetCategoriesResult> Execute(
         NpgsqlCommand command,
         string schema,
         CancellationToken cancellationToken
@@ -21,15 +22,13 @@ public class GetCategories : IPostgresDatabaseQuery<IReadOnlyList<GetCategories.
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<Result>();
+        var results = new List<GetCategoriesResult.Category>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            results.Add(new Result(reader.GetFieldValue<string>(0), reader.GetFieldValue<DateTimeOffset>(1)));
+            results.Add(new GetCategoriesResult.Category(reader.GetFieldValue<string>(0), reader.GetFieldValue<DateTimeOffset>(1)));
         }
 
-        return results;
+        return new GetCategoriesResult(results);
     }
-
-    public record Result(string Name, DateTimeOffset LastUpdated);
 }

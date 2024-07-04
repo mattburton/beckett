@@ -1,3 +1,4 @@
+using Beckett.Dashboard;
 using Beckett.Database;
 using Beckett.Messages;
 using Beckett.OpenTelemetry;
@@ -23,6 +24,8 @@ public static class ServiceCollectionExtensions
         configure?.Invoke(options);
 
         builder.Services.AddSingleton(options);
+
+        builder.Services.AddDashboard();
 
         builder.Services.AddMessageSupport(options.Messages);
 

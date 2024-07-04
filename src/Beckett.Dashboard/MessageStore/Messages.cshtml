@@ -7,12 +7,12 @@
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
   <ol class="breadcrumb p-3 text-bg-light rounded-3">
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/categories">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
         Categories
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/categories/@Model.Category">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@Model.Category">
         @Model.Category
       </a>
     </li>
@@ -36,7 +36,7 @@
   {
     <tr>
       <td>
-        <a href="@Routes.Prefix/messages/@message.Id">@message.Id</a>
+        <a href="@Routes.Prefix/message-store/messages/@message.Id">@message.Id</a>
       </td>
       <td>@message.StreamPosition</td>
       <td>@message.Type</td>

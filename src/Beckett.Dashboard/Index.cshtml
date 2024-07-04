@@ -1,4 +1,4 @@
-@inherits HtmlTemplate<IndexPage.ViewModel>
+@inherits HtmlTemplate
 
 @{
   Layout = new Layout();
@@ -11,7 +11,7 @@
         Subscription Lag
       </div>
       <div class="card-body d-flex align-items-center justify-content-center h-25"
-           hx-get="@Routes.Prefix/components/lag"
+           hx-get="@Routes.Prefix/metrics/components/lag"
            hx-trigger="load">
         <p>...</p>
       </div>
@@ -23,7 +23,7 @@
         Retries
       </div>
       <div class="card-body d-flex align-items-center justify-content-center h-25"
-           hx-get="@Routes.Prefix/components/retries"
+           hx-get="@Routes.Prefix/metrics/components/retries"
            hx-trigger="load">
         <p>...</p>
       </div>
@@ -35,7 +35,7 @@
         Failed
       </div>
       <div class="card-body d-flex align-items-center justify-content-center h-25"
-           hx-get="@Routes.Prefix/components/failed"
+           hx-get="@Routes.Prefix/metrics/components/failed"
            hx-trigger="load">
         <p>...</p>
       </div>

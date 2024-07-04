@@ -1,7 +1,8 @@
+using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Database.Queries;
+namespace Beckett.Dashboard.Metrics.Queries;
 
 public class GetSubscriptionRetryCount(string application) : IPostgresDatabaseQuery<long>
 {

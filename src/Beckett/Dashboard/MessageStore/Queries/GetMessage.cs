@@ -1,11 +1,13 @@
+using System.Text.Json;
+using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Queries;
+namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessage.Result?>
+public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessageResult?>
 {
-    public async Task<Result?> Execute(
+    public async Task<GetMessageResult?> Execute(
         NpgsqlCommand command,
         string schema,
         CancellationToken cancellationToken
@@ -28,22 +30,23 @@ public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessage.Result?>
 
         await reader.ReadAsync(cancellationToken);
 
+        if (!reader.HasRows)
+        {
+            return null;
+        }
+
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(4)) ??
+                       throw new InvalidOperationException($"Unable to deserialize metadata for message {id}");
+
         return !reader.HasRows
             ? null
-            : new Result(
+            : new GetMessageResult(
+                id.ToString(),
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<string>(2),
                 reader.GetFieldValue<string>(3),
-                reader.GetFieldValue<string>(4)
+                metadata
             );
     }
-
-    public record Result(
-        string Category,
-        string StreamName,
-        string Type,
-        string Data,
-        string Metadata
-    );
 }

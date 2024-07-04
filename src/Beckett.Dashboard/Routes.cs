@@ -1,13 +1,9 @@
 global using Microsoft.AspNetCore.Builder;
 global using Microsoft.AspNetCore.Routing;
 global using Microsoft.AspNetCore.Http;
-global using System.Text.Json;
 global using RazorBlade.Support;
-global using Beckett.Dashboard.Queries;
-global using Beckett.Database;
-using Beckett.Dashboard.Categories;
-using Beckett.Dashboard.Components;
-using Beckett.Dashboard.Messages;
+using Beckett.Dashboard.MessageStore;
+using Beckett.Dashboard.Metrics;
 
 namespace Beckett.Dashboard;
 
@@ -28,9 +24,8 @@ public static class Routes
 
         return builder.MapGroup(prefix)
             .IndexRoute()
-            .CategoryRoutes(prefix)
-            .ComponentRoutes()
-            .MessageRoutes(prefix);
+            .MessageStoreRoutes(prefix)
+            .MetricsRoutes();
     }
 }
 

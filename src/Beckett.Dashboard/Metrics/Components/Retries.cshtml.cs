@@ -1,25 +1,23 @@
-using Beckett.Database.Queries;
-
-namespace Beckett.Dashboard.Components;
+namespace Beckett.Dashboard.Metrics.Components;
 
 public static class RetriesComponent
 {
     public static RouteGroupBuilder RetriesRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/components/retries", Handler);
+        builder.MapGet("/metrics/components/retries", Handler);
 
         return builder;
     }
 
     public static async Task<IResult> Handler(
-        IPostgresDatabase database,
+        IDashboard dashboard,
         BeckettOptions options,
         CancellationToken cancellationToken
     )
     {
-        var results = await database.Execute(new GetSubscriptionRetryCount(options.ApplicationName), cancellationToken);
+        var result = await dashboard.Metrics.GetSubscriptionRetryCount(options.ApplicationName, cancellationToken);
 
-        return new Retries(new ViewModel(results));
+        return new Retries(new ViewModel(result));
     }
 
     public record ViewModel(long Value);

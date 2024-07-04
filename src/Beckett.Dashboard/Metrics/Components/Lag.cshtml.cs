@@ -1,25 +1,23 @@
-using Beckett.Database.Queries;
-
-namespace Beckett.Dashboard.Components;
+namespace Beckett.Dashboard.Metrics.Components;
 
 public static class LagComponent
 {
     public static RouteGroupBuilder LagRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/components/lag", Handler);
+        builder.MapGet("/metrics/components/lag", Handler);
 
         return builder;
     }
 
     public static async Task<IResult> Handler(
-        IPostgresDatabase database,
+        IDashboard dashboard,
         BeckettOptions options,
         CancellationToken cancellationToken
     )
     {
-        var results = await database.Execute(new GetSubscriptionLag(options.ApplicationName), cancellationToken);
+        var result = await dashboard.Metrics.GetSubscriptionLag(options.ApplicationName, cancellationToken);
 
-        return new Lag(new ViewModel(results));
+        return new Lag(new ViewModel(result));
     }
 
     public record ViewModel(long Value);
