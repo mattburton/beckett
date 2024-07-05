@@ -10,7 +10,7 @@ CREATE TYPE __schema__.checkpoint AS
   stream_version bigint
 );
 
-CREATE TYPE __schema__.checkpoint_status AS ENUM ('active', 'retry', 'failed');
+CREATE TYPE __schema__.checkpoint_status AS ENUM ('active', 'retry', 'pending_failure', 'failed');
 
 CREATE TABLE IF NOT EXISTS __schema__.subscriptions
 (
@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   name text NOT NULL,
   stream_name text NOT NULL,
   status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
+  last_error jsonb NULL,
   retry_id uuid NULL,
   PRIMARY KEY (application, name, stream_name)
 );
@@ -178,7 +179,9 @@ CREATE OR REPLACE FUNCTION __schema__.update_checkpoint_status(
   _name text,
   _stream_name text,
   _stream_position bigint,
-  _status __schema__.checkpoint_status
+  _status __schema__.checkpoint_status,
+  _last_error jsonb DEFAULT NULL,
+  _retry_id uuid DEFAULT NULL
 )
   RETURNS void
   LANGUAGE plpgsql
@@ -188,12 +191,13 @@ BEGIN
   UPDATE __schema__.checkpoints
   SET stream_position = _stream_position,
       status = _status,
-      retry_id = NULL
+      retry_id = _retry_id,
+      last_error = _last_error
   WHERE application = _application
   AND name = _name
   AND stream_name = _stream_name;
 
-  IF (_status = 'retry') THEN
+  IF (_status = 'retry' OR _status = 'pending_failure') THEN
     PERFORM pg_notify('beckett:retries', NULL);
   END IF;
 END;
@@ -225,6 +229,8 @@ CREATE OR REPLACE FUNCTION __schema__.lock_next_checkpoint_for_retry(
     name text,
     stream_name text,
     stream_position bigint,
+    status __schema__.checkpoint_status,
+    last_error jsonb,
     retry_id uuid
   )
   LANGUAGE sql
@@ -236,7 +242,7 @@ WITH retry AS (
          c.stream_name
   FROM __schema__.checkpoints c
   WHERE c.application = _application
-  AND c.status = 'retry'
+  AND (c.status = 'retry' OR c.status = 'pending_failure')
   AND c.retry_id IS NULL
   FOR UPDATE
   SKIP LOCKED
@@ -248,7 +254,7 @@ FROM retry AS r
 WHERE c.application = r.application
 AND c.name = r.name
 AND c.stream_name = r.stream_name
-RETURNING c.application, c.name, c.stream_name, c.stream_position, c.retry_id;
+RETURNING c.application, c.name, c.stream_name, c.stream_position, c.status, c.last_error, c.retry_id;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag(

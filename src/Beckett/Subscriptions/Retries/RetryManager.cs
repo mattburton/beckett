@@ -15,7 +15,7 @@ public class RetryManager(
     IMessageScheduler messageScheduler
 ) : IRetryManager
 {
-    public async Task CreateRetry(
+    public async Task StartRetry(
         Guid id,
         string subscriptionName,
         string streamName,
@@ -38,12 +38,66 @@ public class RetryManager(
         );
     }
 
-    public async Task Retry(
+    public async Task RecordFailure(
+        Guid id,
+        string subscriptionName,
+        string streamName,
+        long streamPosition,
+        string lastError,
+        CancellationToken cancellationToken
+    )
+    {
+        await messageStore.AppendToStream(
+            RetryStreamName.For(id),
+            ExpectedVersion.Any,
+            new RetryFailed(
+                id,
+                options.ApplicationName,
+                subscriptionName,
+                streamName,
+                streamPosition,
+                0,
+                ExceptionData.FromJson(lastError),
+                DateTimeOffset.UtcNow
+            ),
+            cancellationToken
+        );
+    }
+
+    public Task Retry(
         Guid id,
         string subscriptionName,
         string streamName,
         long streamPosition,
         int attempts,
+        CancellationToken cancellationToken
+    ) => AttemptRetry(id, subscriptionName, streamName, streamPosition, attempts, false, cancellationToken);
+
+    public async Task ManualRetry(Guid id, CancellationToken cancellationToken)
+    {
+        var stream = await messageStore.ReadStream(RetryStreamName.For(id), cancellationToken);
+
+        var state = stream.ProjectTo<RetryState>();
+
+        await AttemptRetry(
+            id,
+            state.SubscriptionName,
+            state.StreamName,
+            state.StreamPosition,
+            state.Attempts,
+            true,
+            cancellationToken
+        );
+    }
+
+
+    private async Task AttemptRetry(
+        Guid id,
+        string subscriptionName,
+        string streamName,
+        long streamPosition,
+        int attempts,
+        bool manualRetry,
         CancellationToken cancellationToken
     )
     {
@@ -108,6 +162,27 @@ public class RetryManager(
         }
         catch (Exception e)
         {
+            if (manualRetry)
+            {
+                await messageStore.AppendToStream(
+                    retryStreamName,
+                    ExpectedVersion.StreamExists,
+                    new ManualRetryFailed(
+                        id,
+                        options.ApplicationName,
+                        subscriptionName,
+                        streamName,
+                        streamPosition,
+                        attemptNumber,
+                        ExceptionData.From(e),
+                        DateTimeOffset.UtcNow
+                    ),
+                    cancellationToken
+                );
+
+                return;
+            }
+
             var maxRetries = subscription.GetMaxRetryCount(e.GetType());
 
             if (attemptNumber >= maxRetries)
@@ -134,7 +209,7 @@ public class RetryManager(
 
                 await messageScheduler.ScheduleMessage(
                     retryStreamName,
-                    new RetryError(
+                    new RetryAttempted(
                         id,
                         options.ApplicationName,
                         subscriptionName,
@@ -148,6 +223,54 @@ public class RetryManager(
                     cancellationToken
                 );
             }
+        }
+    }
+
+    private class RetryState : IApply
+    {
+        public string SubscriptionName { get; private set; } = null!;
+        public string StreamName { get; private set; } = null!;
+        public long StreamPosition { get; private set; }
+        public int Attempts { get; private set; }
+
+        public void Apply(object message)
+        {
+            switch (message)
+            {
+                case RetryStarted e:
+                    Apply(e);
+                    break;
+                case RetryAttempted e:
+                    Apply(e);
+                    break;
+                case RetryFailed e:
+                    Apply(e);
+                    break;
+            }
+        }
+
+        private void Apply(RetryStarted e)
+        {
+            SubscriptionName = e.SubscriptionName;
+            StreamName = e.StreamName;
+            StreamPosition = e.StreamPosition;
+            Attempts = 0;
+        }
+
+        private void Apply(RetryAttempted e)
+        {
+            SubscriptionName = e.SubscriptionName;
+            StreamName = e.StreamName;
+            StreamPosition = e.StreamPosition;
+            Attempts = e.Attempts;
+        }
+
+        private void Apply(RetryFailed e)
+        {
+            SubscriptionName = e.SubscriptionName;
+            StreamName = e.StreamName;
+            StreamPosition = e.StreamPosition;
+            Attempts = e.Attempts;
         }
     }
 }

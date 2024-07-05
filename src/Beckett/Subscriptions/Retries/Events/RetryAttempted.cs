@@ -2,13 +2,13 @@ using Beckett.Subscriptions.Retries.Events.Models;
 
 namespace Beckett.Subscriptions.Retries.Events;
 
-public record RetryFailed(
+public record RetryAttempted(
     Guid Id,
     string ApplicationName,
     string SubscriptionName,
     string StreamName,
     long StreamPosition,
     int Attempts,
-    ExceptionData? Exception,
+    ExceptionData Exception,
     DateTimeOffset Timestamp
 );

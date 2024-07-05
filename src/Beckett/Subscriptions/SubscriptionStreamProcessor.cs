@@ -4,6 +4,7 @@ using Beckett.Messages;
 using Beckett.Messages.Storage;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Models;
+using Beckett.Subscriptions.Retries.Events.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -87,31 +88,14 @@ public class SubscriptionStreamProcessor(
 
                 var maxRetries = subscription.GetMaxRetryCount(error.Exception.GetType());
 
-                if (maxRetries == 0)
-                {
-                    await database.Execute(
-                        new UpdateCheckpointStatus(
-                            options.ApplicationName,
-                            subscription.Name,
-                            streamName,
-                            error.StreamPosition,
-                            CheckpointStatus.Failed
-                        ),
-                        connection,
-                        transaction,
-                        cancellationToken
-                    );
-
-                    return;
-                }
-
                 await database.Execute(
                     new UpdateCheckpointStatus(
                         options.ApplicationName,
                         subscription.Name,
                         streamName,
                         error.StreamPosition,
-                        CheckpointStatus.Retry
+                        maxRetries == 0 ? CheckpointStatus.PendingFailure : CheckpointStatus.Retry,
+                        ExceptionData.From(error.Exception).ToJson()
                     ),
                     connection,
                     transaction,
@@ -156,12 +140,16 @@ public class SubscriptionStreamProcessor(
 
                     if (subscription.HandlerType == null)
                     {
-                        throw new InvalidOperationException($"Subscription handler type is not configured for {subscription.Name}");
+                        throw new InvalidOperationException(
+                            $"Subscription handler type is not configured for {subscription.Name}"
+                        );
                     }
 
                     if (subscription.InstanceMethod == null)
                     {
-                        throw new InvalidOperationException($"Subscription handler expression is not configured for {subscription.Name}");
+                        throw new InvalidOperationException(
+                            $"Subscription handler expression is not configured for {subscription.Name}"
+                        );
                     }
 
                     using var scope = serviceProvider.CreateScope();

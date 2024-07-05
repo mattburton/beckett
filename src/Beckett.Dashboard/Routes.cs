@@ -4,6 +4,7 @@ global using Microsoft.AspNetCore.Http;
 global using RazorBlade.Support;
 using Beckett.Dashboard.MessageStore;
 using Beckett.Dashboard.Metrics;
+using Beckett.Dashboard.Subscriptions;
 
 namespace Beckett.Dashboard;
 
@@ -25,7 +26,8 @@ public static class Routes
         return builder.MapGroup(prefix)
             .IndexRoute()
             .MessageStoreRoutes(prefix)
-            .MetricsRoutes();
+            .MetricsRoutes()
+            .SubscriptionsRoutes(prefix);
     }
 }
 

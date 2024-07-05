@@ -2,7 +2,7 @@ using Beckett.Subscriptions.Retries.Events.Models;
 
 namespace Beckett.Subscriptions.Retries.Events;
 
-public record RetryError(
+public record ManualRetryFailed(
     Guid Id,
     string ApplicationName,
     string SubscriptionName,

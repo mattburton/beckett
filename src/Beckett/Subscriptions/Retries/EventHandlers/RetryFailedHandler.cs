@@ -14,7 +14,9 @@ public class RetryFailedHandler(IPostgresDatabase database, BeckettOptions optio
                 message.SubscriptionName,
                 message.StreamName,
                 message.StreamPosition,
-                CheckpointStatus.Failed
+                CheckpointStatus.Failed,
+                message.Exception?.ToJson(),
+                message.Id
             ),
             cancellationToken
         );

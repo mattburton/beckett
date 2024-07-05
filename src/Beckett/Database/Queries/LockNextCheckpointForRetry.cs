@@ -1,3 +1,4 @@
+using Beckett.Subscriptions.Models;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -8,7 +9,7 @@ public class LockNextCheckpointForRetry(string application) : IPostgresDatabaseQ
     public async Task<Result?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select application, name, stream_name, stream_position, retry_id
+            select application, name, stream_name, stream_position, status, last_error, retry_id
             from {schema}.lock_next_checkpoint_for_retry($1);
         ";
 
@@ -29,9 +30,19 @@ public class LockNextCheckpointForRetry(string application) : IPostgresDatabaseQ
                 reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<string>(2),
                 reader.GetFieldValue<long>(3),
-                reader.GetFieldValue<Guid>(4)
+                reader.GetFieldValue<CheckpointStatus>(4),
+                reader.GetFieldValue<string>(5),
+                reader.GetFieldValue<Guid>(6)
             );
     }
 
-    public record Result(string Application, string Name, string StreamName, long StreamPosition, Guid RetryId);
+    public record Result(
+        string Application,
+        string Name,
+        string StreamName,
+        long StreamPosition,
+        CheckpointStatus Status,
+        string LastError,
+        Guid RetryId
+    );
 }

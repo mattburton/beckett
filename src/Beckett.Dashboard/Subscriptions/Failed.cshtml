@@ -1,0 +1,60 @@
+@inherits HtmlTemplate<FailedPage.ViewModel>
+
+@{
+  Layout = new Layout();
+}
+
+<div class="p-2 text-bg-light">
+  <ul class="nav nav-pills">
+    <li class="nav-item">
+      <a class="nav-link" aria-current="page" href="@Routes.Prefix/subscriptions">Subscriptions</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Routes.Prefix/subscriptions/retries">Retries</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link active" href="@Routes.Prefix/subscriptions/failed">Failed</a>
+    </li>
+  </ul>
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Application</th>
+      <th>Name</th>
+      <th>Stream Name</th>
+      <th>Stream Position</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  @foreach(var retry in Model.Failures)
+  {
+    <tr>
+      <td>@retry.Application</td>
+      <td>@retry.Name</td>
+      <td>@retry.StreamName</td>
+      <td>@retry.StreamPosition</td>
+      <td class="text-end">
+        <a href="#"
+           title="Request manual retry"
+           hx-post="@Routes.Prefix/subscriptions/retries/@retry.RetryId/manual-retry"
+           hx-on::after-request="alert('Manual retry requested')">
+          Retry
+        </a>
+      </td>
+    </tr>
+  }
+  @if (Model.Failures.Count == 0)
+  {
+    <tr>
+      <td colspan="4">
+        No failures found.
+      </td>
+    </tr>
+  }
+  </tbody>
+</table>
+
+

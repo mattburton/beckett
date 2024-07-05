@@ -1,5 +1,6 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
+using Beckett.Subscriptions.Models;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -48,13 +49,28 @@ public class RetryMonitor(
                     break;
                 }
 
-                await retryManager.CreateRetry(
-                    checkpoint.RetryId,
-                    checkpoint.Name,
-                    checkpoint.StreamName,
-                    checkpoint.StreamPosition,
-                    stoppingToken
-                );
+                switch (checkpoint.Status)
+                {
+                    case CheckpointStatus.Retry:
+                        await retryManager.StartRetry(
+                            checkpoint.RetryId,
+                            checkpoint.Name,
+                            checkpoint.StreamName,
+                            checkpoint.StreamPosition,
+                            stoppingToken
+                        );
+                        break;
+                    case CheckpointStatus.PendingFailure:
+                        await retryManager.RecordFailure(
+                            checkpoint.RetryId,
+                            checkpoint.Name,
+                            checkpoint.StreamName,
+                            checkpoint.StreamPosition,
+                            checkpoint.LastError,
+                            stoppingToken
+                        );
+                        break;
+                }
 
                 await transaction.CommitAsync(stoppingToken);
             }

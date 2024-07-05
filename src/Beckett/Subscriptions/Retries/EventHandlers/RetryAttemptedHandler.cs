@@ -2,9 +2,9 @@ using Beckett.Subscriptions.Retries.Events;
 
 namespace Beckett.Subscriptions.Retries.EventHandlers;
 
-public class RetryErrorHandler(IRetryManager retryManager)
+public class RetryAttemptedHandler(IRetryManager retryManager)
 {
-    public Task Handle(RetryError e, CancellationToken cancellationToken) =>
+    public Task Handle(RetryAttempted e, CancellationToken cancellationToken) =>
         retryManager.Retry(
             e.Id,
             e.SubscriptionName,

@@ -2,11 +2,20 @@ namespace Beckett.Subscriptions.Retries;
 
 public interface IRetryManager
 {
-    Task CreateRetry(
+    Task StartRetry(
         Guid id,
         string subscriptionName,
         string streamName,
         long streamPosition,
+        CancellationToken cancellationToken
+    );
+
+    Task RecordFailure(
+        Guid id,
+        string subscriptionName,
+        string streamName,
+        long streamPosition,
+        string lastError,
         CancellationToken cancellationToken
     );
 
@@ -18,4 +27,6 @@ public interface IRetryManager
         int attempts,
         CancellationToken cancellationToken
     );
+
+    Task ManualRetry(Guid id, CancellationToken cancellationToken);
 }

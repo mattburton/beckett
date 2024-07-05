@@ -14,7 +14,7 @@ public class NotificationHandler
                 Console.WriteLine($"List created [Id: {e.TodoListId}]");
                 break;
             case TodoListItemAdded e:
-                if (e.Item.Contains("Error"))
+                if (e.Item.Contains("Retry"))
                 {
                     throw new RetryableException(e.Item);
                 }
