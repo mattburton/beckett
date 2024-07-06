@@ -1,4 +1,4 @@
-namespace Beckett.Subscriptions;
+namespace Beckett;
 
 public enum StartingPosition
 {

@@ -1,8 +1,8 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
-using Beckett.Messages;
 using Beckett.Messages.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Initialization;
 
@@ -11,7 +11,7 @@ public class SubscriptionInitializer(
     BeckettOptions options,
     IMessageStorage messageStorage,
     ISubscriptionRegistry subscriptionRegistry,
-    IMessageTypeMap messageTypeMap
+    ILogger<SubscriptionInitializer> logger
 ) : ISubscriptionInitializer
 {
     private Task _task = Task.CompletedTask;
@@ -69,6 +69,8 @@ public class SubscriptionInitializer(
 
     private async Task InitializeSubscription(Subscription subscription, CancellationToken cancellationToken)
     {
+        logger.LogInformation("Initializing subscription {SubscriptionName}", subscription.Name);
+
         while (!cancellationToken.IsCancellationRequested)
         {
             await using var connection = database.CreateConnection();
@@ -135,13 +137,11 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            var subscriptionMessageTypes = subscription.MessageTypes.Select(messageTypeMap.GetName).ToArray();
-
             var checkpoints = new List<CheckpointType>();
 
             foreach (var streamChange in streamChanges.Items)
             {
-                if (!subscriptionMessageTypes.Intersect(streamChange.MessageTypes).Any())
+                if (!streamChange.AppliesTo(subscription))
                 {
                     continue;
                 }
