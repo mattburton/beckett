@@ -5,7 +5,7 @@ namespace Beckett.Subscriptions;
 public class Subscription(string name)
 {
     internal string Name { get; } = name;
-    internal string Category { get; set; } = null!;
+    internal string? Category { get; set; }
     internal Type? HandlerType { get; set; }
     internal string? HandlerName { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];
@@ -15,9 +15,11 @@ public class Subscription(string name)
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = new() {{typeof(Exception), 10}};
 
-    internal bool IsCategoryOnly => MessageTypes.Count == 0;
+    internal bool IsCategoryOnly => Category != null && MessageTypes.Count == 0;
 
-    internal bool CategoryMatches(string streamName) => streamName.StartsWith(Category);
+    internal bool IsMessageTypesOnly => Category == null && MessageTypes.Count > 0;
+
+    internal bool CategoryMatches(string streamName) => Category != null && streamName.StartsWith(Category);
 
     internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || IsCategoryOnly;
 

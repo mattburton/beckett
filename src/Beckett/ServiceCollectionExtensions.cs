@@ -1,3 +1,4 @@
+using Beckett.Configuration;
 using Beckett.Dashboard;
 using Beckett.Database;
 using Beckett.Messages;

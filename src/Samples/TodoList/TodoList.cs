@@ -14,12 +14,11 @@ public static class TodoList
 
     public static IBeckettBuilder TodoListSubscriptions(this IBeckettBuilder builder)
     {
-        builder.Services.AddTransient<MentionsHandler>();
-        builder.Services.AddTransient<NotificationHandler>();
-        builder.Services.AddTransient<HelloWorld>();
+        builder.Services.AddSingleton<MentionsHandler>();
+        builder.Services.AddSingleton<NotificationHandler>();
+        builder.Services.AddSingleton<HelloWorld>();
 
         builder.AddSubscription("Mentions")
-            .Category(Category)
             .Message<TodoListItemAdded>()
             .Handler<MentionsHandler>((handler, message, token) => handler.Handle(message, token));
 
@@ -31,7 +30,6 @@ public static class TodoList
         builder.ScheduleRecurringMessage(nameof(HelloWorld), "* * * * *", nameof(HelloWorld), new HelloWorld());
 
         builder.AddSubscription("HelloWorld")
-            .Category(nameof(HelloWorld))
             .Message<HelloWorld>()
             .Handler<HelloWorld>((handler, message, token) => handler.Handle(message, token));
 
