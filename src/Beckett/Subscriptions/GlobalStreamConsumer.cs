@@ -26,6 +26,8 @@ public class GlobalStreamConsumer(
 
     private async Task Poll(CancellationToken stoppingToken)
     {
+        var emptyResultRetryCount = 0;
+
         while (!stoppingToken.IsCancellationRequested)
         {
             await using var connection = database.CreateConnection();
@@ -58,6 +60,15 @@ public class GlobalStreamConsumer(
 
             if (streamChanges.Items.Count == 0)
             {
+                emptyResultRetryCount++;
+
+                if (emptyResultRetryCount <= options.Subscriptions.GlobalEmptyResultsMaxRetryCount)
+                {
+                    await Task.Delay(options.Subscriptions.GlobalEmptyResultsRetryDelay, stoppingToken);
+
+                    continue;
+                }
+
                 break;
             }
 
