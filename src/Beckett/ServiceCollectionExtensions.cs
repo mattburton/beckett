@@ -16,13 +16,13 @@ public static class ServiceCollectionExtensions
 {
     public static IBeckettBuilder AddBeckett(
         this IHostApplicationBuilder builder,
-        Action<BeckettOptions>? configure = null
+        Action<BeckettOptions>? configureOptions = null
     )
     {
         var options = builder.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
                       new BeckettOptions();
 
-        configure?.Invoke(options);
+        configureOptions?.Invoke(options);
 
         builder.Services.AddSingleton(options);
 
@@ -64,29 +64,26 @@ public static class ServiceCollectionExtensions
         ).SubscriptionRetryModule(options.Subscriptions.Retries);
     }
 
-    public static IBeckettBuilder AddBeckett(this IHostBuilder builder, Action<BeckettOptions>? configure = null)
+    public static void AddBeckett(
+        this IHostBuilder builder,
+        Action<BeckettOptions>? configureOptions = null,
+        Action<IBeckettBuilder>? buildBeckett = null
+    )
     {
-        IConfiguration configuration = null!;
-        IHostEnvironment environment = null!;
-        IServiceCollection serviceCollection = null!;
-        BeckettOptions options = null!;
-        IMessageTypeMap messageTypeMap = null!;
-        ISubscriptionRegistry subscriptionRegistry = null!;
-        IRecurringMessageRegistry recurringMessageRegistry = null!;
-
         builder.ConfigureServices(
             (context, services) =>
             {
-                configuration = context.Configuration;
-                environment = context.HostingEnvironment;
-                serviceCollection = services;
+                var configuration = context.Configuration;
+                var environment = context.HostingEnvironment;
 
-                options = context.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
+                var options = context.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
                           new BeckettOptions();
 
-                configure?.Invoke(options);
+                configureOptions?.Invoke(options);
 
                 services.AddSingleton(options);
+
+                services.AddDashboard();
 
                 services.AddMessageSupport(options.Messages);
 
@@ -102,27 +99,29 @@ public static class ServiceCollectionExtensions
 
                 services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
 
-                messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
+                var messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
 
-                services.AddSingleton(messageTypeMap);
+                services.AddSingleton<IMessageTypeMap>(messageTypeMap);
 
-                subscriptionRegistry = new SubscriptionRegistry();
+                var subscriptionRegistry = new SubscriptionRegistry();
 
-                services.AddSingleton(subscriptionRegistry);
+                services.AddSingleton<ISubscriptionRegistry>(subscriptionRegistry);
 
-                recurringMessageRegistry = new RecurringMessageRegistry();
+                var recurringMessageRegistry = new RecurringMessageRegistry();
 
-                services.AddSingleton(recurringMessageRegistry);
+                services.AddSingleton<IRecurringMessageRegistry>(recurringMessageRegistry);
+
+                var beckettBuilder = new BeckettBuilder(
+                    configuration,
+                    environment,
+                    services,
+                    messageTypeMap,
+                    subscriptionRegistry,
+                    recurringMessageRegistry
+                ).SubscriptionRetryModule(options.Subscriptions.Retries);
+
+                buildBeckett?.Invoke(beckettBuilder);
             }
         );
-
-        return new BeckettBuilder(
-            configuration,
-            environment,
-            serviceCollection,
-            messageTypeMap,
-            subscriptionRegistry,
-            recurringMessageRegistry
-        ).SubscriptionRetryModule(options.Subscriptions.Retries);
     }
 }
