@@ -1,7 +1,6 @@
 using Beckett.Database.Notifications;
 using Beckett.Database.Notifications.Handlers;
 using Beckett.Database.Notifications.Services;
-using Beckett.Messages;
 using Beckett.Messages.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -37,7 +36,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPostgresMessageDeserializer, PostgresMessageDeserializer>();
 
-        services.AddSingleton<IMessageStorage, PostgresMessageStorage>();
+        services.AddSingleton(typeof(IMessageStorage), options.MessageStorageType);
 
         if (options.Notifications)
         {

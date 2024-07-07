@@ -11,6 +11,7 @@ public class PostgresOptions
     public bool Enabled { get; set; } = true;
     public bool Notifications { get; set; } = true;
     public string Schema { get; set; } = DefaultSchema;
+    internal Type MessageStorageType { get; set; } = typeof(PostgresMessageStorage);
 
     public void UseSchema(string schema)
     {
