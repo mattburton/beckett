@@ -8,7 +8,8 @@ namespace Beckett.Database;
 public class PostgresMessageStorage(
     IMessageSerializer messageSerializer,
     IPostgresDatabase database,
-    IPostgresMessageDeserializer messageDeserializer
+    IPostgresMessageDeserializer messageDeserializer,
+    IMessageTypeMap messageTypeMap
 ) : IMessageStorage
 {
     public async Task<AppendToStreamResult> AppendToStream(
@@ -61,7 +62,9 @@ public class PostgresMessageStorage(
                     x.StreamName,
                     x.StreamVersion,
                     x.GlobalPosition,
-                    x.MessageTypes
+                    x.MessageTypes.Select(
+                        t => messageTypeMap.GetType(t) ?? throw new Exception($"Unknown message type: {t}")
+                    ).ToArray()
                 )
             ).ToList();
 

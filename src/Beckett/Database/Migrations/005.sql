@@ -146,13 +146,13 @@ AS
 $$
 SELECT c.application, c.name, c.stream_name, c.stream_position, c.stream_version, c.status
 FROM __schema__.checkpoints c
-       INNER JOIN __schema__.subscriptions s ON c.application = s.application AND c.name = s.name
+INNER JOIN __schema__.subscriptions s ON c.application = s.application AND c.name = s.name
 WHERE s.application = _application
-  AND s.initialized = true
-  AND c.stream_position < c.stream_version
-  AND c.status = 'active'
-  FOR UPDATE
-    SKIP LOCKED
+AND s.initialized = true
+AND c.stream_position < c.stream_version
+AND c.status = 'active'
+FOR UPDATE
+SKIP LOCKED
 LIMIT 1;
 $$;
 

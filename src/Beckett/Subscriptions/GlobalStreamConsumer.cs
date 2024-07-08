@@ -1,6 +1,7 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
+using Beckett.Messages;
 using Beckett.Messages.Storage;
 
 namespace Beckett.Subscriptions;
@@ -9,7 +10,8 @@ public class GlobalStreamConsumer(
     IPostgresDatabase database,
     IMessageStorage messageStorage,
     BeckettOptions options,
-    ISubscriptionRegistry subscriptionRegistry
+    ISubscriptionRegistry subscriptionRegistry,
+    IMessageTypeMap messageTypeMap
 ) : IGlobalStreamConsumer
 {
     private Task _task = Task.CompletedTask;
@@ -76,7 +78,7 @@ public class GlobalStreamConsumer(
 
             foreach (var streamChange in streamChanges.Items)
             {
-                var subscriptions = subscriptionRegistry.All().Where(x => streamChange.AppliesTo(x));
+                var subscriptions = subscriptionRegistry.All().Where(x => streamChange.AppliesTo(x, messageTypeMap));
 
                 checkpoints.AddRange(
                     subscriptions.Select(

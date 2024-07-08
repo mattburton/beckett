@@ -4,14 +4,13 @@ public static class ExponentialBackoff
 {
     private static readonly Random Random = new();
 
-    public static DateTimeOffset GetNextDelayWithExponentialBackoff(this int attempt)
+    public static DateTimeOffset GetNextDelayWithExponentialBackoff(this int attempt, TimeSpan delay, TimeSpan maxDelay)
     {
-        var jitter = Random.Next(20);
+        var jitter = Random.Next(1000);
 
-        var delay = TimeSpan.FromSeconds(
-            Math.Round(Math.Pow(attempt - 1, 4) + 10 + jitter * attempt)
-        );
+        var result = Math.Min(delay.TotalMilliseconds * Math.Pow(2, attempt) / 2, maxDelay.TotalMilliseconds) + jitter;
 
-        return DateTimeOffset.UtcNow.Add(delay);
+        return DateTimeOffset.UtcNow.Add(TimeSpan.FromMilliseconds(result));
+        ;
     }
 }

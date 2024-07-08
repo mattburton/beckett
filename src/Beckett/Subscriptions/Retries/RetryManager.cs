@@ -33,7 +33,10 @@ public class RetryManager(
                 streamPosition,
                 DateTimeOffset.UtcNow
             ),
-            0.GetNextDelayWithExponentialBackoff(),
+            0.GetNextDelayWithExponentialBackoff(
+                options.Subscriptions.Retries.Delay,
+                options.Subscriptions.Retries.MaxDelay
+            ),
             cancellationToken
         );
     }
@@ -205,7 +208,10 @@ public class RetryManager(
             }
             else
             {
-                var delay = attemptNumber.GetNextDelayWithExponentialBackoff();
+                var delay = attemptNumber.GetNextDelayWithExponentialBackoff(
+                    options.Subscriptions.Retries.Delay,
+                    options.Subscriptions.Retries.MaxDelay
+                );
 
                 await messageScheduler.ScheduleMessage(
                     retryStreamName,

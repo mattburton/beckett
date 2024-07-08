@@ -1,6 +1,7 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
+using Beckett.Messages;
 using Beckett.Messages.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,7 @@ public class SubscriptionInitializer(
     BeckettOptions options,
     IMessageStorage messageStorage,
     ISubscriptionRegistry subscriptionRegistry,
+    IMessageTypeMap messageTypeMap,
     ILogger<SubscriptionInitializer> logger
 ) : ISubscriptionInitializer
 {
@@ -141,7 +143,7 @@ public class SubscriptionInitializer(
 
             foreach (var streamChange in streamChanges.Items)
             {
-                if (!streamChange.AppliesTo(subscription))
+                if (!streamChange.AppliesTo(subscription, messageTypeMap))
                 {
                     continue;
                 }

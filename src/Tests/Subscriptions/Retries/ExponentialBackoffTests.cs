@@ -5,22 +5,25 @@ namespace Tests.Subscriptions.Retries;
 public class ExponentialBackoffTests
 {
     [Theory]
-    [InlineData(0, 1)]
-    [InlineData(1, 1)]
-    [InlineData(2, 1)]
-    [InlineData(3, 2)]
-    [InlineData(4, 4)]
-    [InlineData(5, 10)]
-    [InlineData(6, 20)]
-    [InlineData(7, 30)]
-    [InlineData(8, 60)]
-    [InlineData(9, 90)]
-    [InlineData(10, 120)]
-    public void CalculatesNextDelayWithExponentialBackoff(int attempt, int minutes)
+    [InlineData(0, 5000)]
+    [InlineData(1, 10000)]
+    [InlineData(2, 20000)]
+    [InlineData(3, 40000)]
+    [InlineData(4, 80000)]
+    [InlineData(5, 160000)]
+    [InlineData(6, 240000)]
+    [InlineData(7, 240000)]
+    [InlineData(8, 240000)]
+    [InlineData(9, 240000)]
+    [InlineData(10, 240000)]
+    public void CalculatesNextDelayWithExponentialBackoff(int attempt, double backoff)
     {
         var low = DateTimeOffset.UtcNow;
-        var high = low.AddMinutes(minutes);
-        var actual = attempt.GetNextDelayWithExponentialBackoff();
+        var high = low.AddMilliseconds(backoff + 1000);
+        var actual = attempt.GetNextDelayWithExponentialBackoff(
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMinutes(4)
+        );
 
         Assert.InRange(actual, low, high);
     }

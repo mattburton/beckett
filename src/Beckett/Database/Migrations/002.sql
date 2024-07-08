@@ -178,20 +178,30 @@ WITH last_transaction_id AS (
   FROM __schema__.messages
   WHERE global_position = _starting_global_position
   UNION ALL
-  SELECT '0'::xid8 as transaction_id
+  SELECT '0'::xid8 AS transaction_id
   LIMIT 1
+),
+new_events AS (
+  SELECT m.stream_name,
+  m.stream_position,
+  m.global_position,
+  m.type
+  FROM last_transaction_id lti,
+       __schema__.messages m
+  WHERE (
+    (m.transaction_id = lti.transaction_id AND m.global_position > _starting_global_position)
+    OR
+    (m.transaction_id > lti.transaction_id)
+  )
+  AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+  ORDER BY m.transaction_id, m.global_position
+  LIMIT _batch_size
 )
-SELECT m.stream_name,
-       max(m.stream_position) as stream_version,
-       max(m.global_position) as global_position,
-       array_agg(m.type) as message_types
-FROM last_transaction_id lti, __schema__.messages m
-WHERE (
-  (m.transaction_id = lti.transaction_id AND m.global_position > _starting_global_position)
-  OR
-  (m.transaction_id > lti.transaction_id)
-)
-AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-GROUP BY m.stream_name
-LIMIT _batch_size;
+SELECT stream_name,
+       MAX(e.stream_position) AS stream_version,
+       MAX(e.global_position) AS global_position,
+       ARRAY_AGG(e.type)      AS message_types
+FROM new_events e
+GROUP BY e.stream_name
+ORDER BY MAX(e.global_position);
 $$;

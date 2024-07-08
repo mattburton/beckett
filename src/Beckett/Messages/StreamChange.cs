@@ -6,13 +6,14 @@ public record StreamChange(
     string StreamName,
     long StreamVersion,
     long GlobalPosition,
-    string[] MessageTypes
+    Type[] MessageTypes
 )
 {
-    public bool AppliesTo(Subscription subscription)
+    public bool AppliesTo(Subscription subscription, IMessageTypeMap messageTypeMap)
     {
         var categoryMatch = subscription.CategoryMatches(StreamName);
-        var messageTypeMatch = MessageTypes.Intersect(subscription.MessageTypeNames).Any();
+        var messageTypeNames = MessageTypes.Select(messageTypeMap.GetName).ToArray();
+        var messageTypeMatch = messageTypeNames.Intersect(subscription.MessageTypeNames).Any();
 
         if (subscription.IsCategoryOnly)
         {
