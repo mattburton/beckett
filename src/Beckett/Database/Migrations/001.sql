@@ -1,5 +1,5 @@
 -------------------------------------------------
--- CREATE BECKETT ROLE
+-- CREATE BECKETT SCHEMA / ROLE
 -------------------------------------------------
 -- noinspection SqlResolveForFile
 
@@ -13,6 +13,8 @@ BEGIN
   END IF;
 END
 $$;
+
+CREATE SCHEMA IF NOT EXISTS __schema__;
 
 GRANT USAGE ON SCHEMA __schema__ to beckett;
 ALTER DEFAULT PRIVILEGES IN SCHEMA __schema__ GRANT SELECT, INSERT ON TABLES TO beckett;
