@@ -46,6 +46,11 @@ public class SubscriptionStreamProcessor(
 
         foreach (var message in stream.Messages)
         {
+            if (MessageShouldBeExcluded(message))
+            {
+                continue;
+            }
+
             messages.Add(
                 new MessageContext(
                     message.Id,
@@ -61,21 +66,33 @@ public class SubscriptionStreamProcessor(
             );
         }
 
+        if (AllMessagesAreExcluded(messages))
+        {
+            var newStreamPosition = stream.Messages[^1].StreamPosition;
+
+            await UpdateCheckpointStatus(
+                connection,
+                transaction,
+                subscription,
+                streamName,
+                newStreamPosition,
+                cancellationToken
+            );
+
+            return;
+        }
+
         var result = await HandleMessageBatch(subscription, streamName, messages, cancellationToken);
 
         switch (result)
         {
             case MessageBatchResult.Success success:
-                await database.Execute(
-                    new UpdateCheckpointStatus(
-                        options.ApplicationName,
-                        subscription.Name,
-                        streamName,
-                        success.StreamPosition,
-                        CheckpointStatus.Active
-                    ),
+                await UpdateCheckpointStatus(
                     connection,
                     transaction,
+                    subscription,
+                    streamName,
+                    success.StreamPosition,
                     cancellationToken
                 );
 
@@ -105,6 +122,32 @@ public class SubscriptionStreamProcessor(
                 break;
         }
     }
+
+    private bool MessageShouldBeExcluded(MessageResult message) =>
+        options.Subscriptions.MessageTypeExcludeFilter?.Invoke(message.Type) ?? false;
+
+    private static bool AllMessagesAreExcluded(List<IMessageContext> messages) => messages.Count == 0;
+
+    private async Task UpdateCheckpointStatus(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Subscription subscription,
+        string streamName,
+        long streamPosition,
+        CancellationToken cancellationToken
+    ) =>
+        await database.Execute(
+            new UpdateCheckpointStatus(
+                options.ApplicationName,
+                subscription.Name,
+                streamName,
+                streamPosition,
+                CheckpointStatus.Active
+            ),
+            connection,
+            transaction,
+            cancellationToken
+        );
 
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,
