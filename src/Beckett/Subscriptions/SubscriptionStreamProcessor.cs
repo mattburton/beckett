@@ -46,36 +46,34 @@ public class SubscriptionStreamProcessor(
 
         foreach (var message in stream.Messages)
         {
-            if (MessageShouldBeExcluded(message))
+            var context = new MessageContext(
+                message.Id,
+                message.StreamName,
+                message.StreamPosition,
+                message.GlobalPosition,
+                message.Type,
+                message.Message,
+                message.Metadata,
+                message.Timestamp,
+                serviceProvider
+            );
+
+            if (MessageShouldBeExcluded(context))
             {
                 continue;
             }
 
-            messages.Add(
-                new MessageContext(
-                    message.Id,
-                    message.StreamName,
-                    message.StreamPosition,
-                    message.GlobalPosition,
-                    message.Type,
-                    message.Message,
-                    message.Metadata,
-                    message.Timestamp,
-                    serviceProvider
-                )
-            );
+            messages.Add(context);
         }
 
         if (AllMessagesAreExcluded(messages))
         {
-            var newStreamPosition = stream.Messages[^1].StreamPosition;
-
             await UpdateCheckpointStatus(
                 connection,
                 transaction,
                 subscription,
                 streamName,
-                newStreamPosition,
+                stream.StreamVersion,
                 cancellationToken
             );
 
@@ -123,8 +121,8 @@ public class SubscriptionStreamProcessor(
         }
     }
 
-    private bool MessageShouldBeExcluded(MessageResult message) =>
-        options.Subscriptions.MessageTypeExcludeFilter?.Invoke(message.Type) ?? false;
+    private bool MessageShouldBeExcluded(IMessageContext context) =>
+        options.Subscriptions.MessageTypeExcludeFilter?.Invoke(context) ?? false;
 
     private static bool AllMessagesAreExcluded(List<IMessageContext> messages) => messages.Count == 0;
 

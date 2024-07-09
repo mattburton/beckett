@@ -12,7 +12,7 @@ public class SubscriptionOptions
     public TimeSpan GlobalPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
     public TimeSpan GlobalEmptyResultsRetryDelay { get; set; } = TimeSpan.FromMilliseconds(100);
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(10);
-    public Predicate<Type>? MessageTypeExcludeFilter { get; set; }
+    public Predicate<IMessageContext>? MessageTypeExcludeFilter { get; set; }
 
     public RetryOptions Retries { get; set; } = new();
 }
