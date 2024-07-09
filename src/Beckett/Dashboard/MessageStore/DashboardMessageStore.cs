@@ -21,7 +21,7 @@ public class DashboardMessageStore(IPostgresDatabase database) : IDashboardMessa
         {
             throw new InvalidOperationException("Invalid message ID");
         }
-        
+
         return database.Execute(new GetMessage(guid), cancellationToken);
     }
 

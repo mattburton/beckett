@@ -4,11 +4,11 @@ namespace Beckett.Dashboard.Subscriptions;
 
 public static class Routes
 {
-    public static string Prefix { get; private set; } = null!;
+    public static DashboardOptions Options { get; private set; } = null!;
 
-    public static RouteGroupBuilder SubscriptionsRoutes(this RouteGroupBuilder builder, string prefix)
+    public static RouteGroupBuilder SubscriptionsRoutes(this RouteGroupBuilder builder, DashboardOptions options)
     {
-        Prefix = prefix;
+        Options = options;
 
         return builder
             .IndexPageRoute()

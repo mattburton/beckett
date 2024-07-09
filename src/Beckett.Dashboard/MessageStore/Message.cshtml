@@ -8,17 +8,17 @@
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
   <ol class="breadcrumb p-3 text-bg-light rounded-3">
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Options.Prefix/message-store">
         Stream Categories
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@Model.Message.Category">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Options.Prefix/message-store/categories/@Model.Message.Category">
         @Model.Message.Category
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@Model.Message.Category/@Model.Message.StreamName">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Options.Prefix/message-store/categories/@Model.Message.Category/@Model.Message.StreamName">
         @Model.Message.StreamName
       </a>
     </li>
@@ -53,7 +53,7 @@
         {
           if (item.Key == MessageConstants.Metadata.CausationId)
           {
-            <li class="list-group-item">@MessageConstants.Metadata.CausationId: <a href="@Routes.Prefix/message-store/messages/@item.Value">@item.Value</a></li>
+            <li class="list-group-item">@MessageConstants.Metadata.CausationId: <a href="@Routes.Options.Prefix/message-store/messages/@item.Value">@item.Value</a></li>
           }
           else
           {

@@ -10,24 +10,32 @@ namespace Beckett.Dashboard;
 
 public static class Routes
 {
-    public static string Prefix { get; private set; } = null!;
+    public static DashboardOptions Options { get; private set; } = null!;
 
-    public static RouteGroupBuilder MapBeckettDashboard(this IEndpointRouteBuilder builder, string prefix)
+    public static RouteGroupBuilder MapBeckettDashboard(this IEndpointRouteBuilder builder, Action<DashboardOptions>? configure = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+        Options = new DashboardOptions();
 
-        if (!prefix.StartsWith('/'))
+        configure?.Invoke(Options);
+
+        ArgumentNullException.ThrowIfNull(Options.Prefix);
+
+        if (!Options.Prefix.StartsWith('/'))
         {
-            prefix = $"/{prefix}";
+            Options.Prefix = $"/{Options.Prefix}";
         }
 
-        Prefix = prefix;
-
-        return builder.MapGroup(prefix)
+        var routeGroupBuilder = builder.MapGroup(Options.Prefix)
             .IndexRoute()
-            .MessageStoreRoutes(prefix)
             .MetricsRoutes()
-            .SubscriptionsRoutes(prefix);
+            .SubscriptionsRoutes(Options);
+
+        if (Options.MessageStoreEnabled)
+        {
+            routeGroupBuilder.MessageStoreRoutes(Options);
+        }
+
+        return routeGroupBuilder;
     }
 }
 
