@@ -46,7 +46,7 @@ public class SubscriptionStreamProcessor(
 
         foreach (var message in stream.Messages)
         {
-            var context = new MessageContext(
+            messages.Add(new MessageContext(
                 message.Id,
                 message.StreamName,
                 message.StreamPosition,
@@ -56,28 +56,7 @@ public class SubscriptionStreamProcessor(
                 message.Metadata,
                 message.Timestamp,
                 serviceProvider
-            );
-
-            if (MessageShouldBeExcluded(context))
-            {
-                continue;
-            }
-
-            messages.Add(context);
-        }
-
-        if (AllMessagesAreExcluded(messages))
-        {
-            await UpdateCheckpointStatus(
-                connection,
-                transaction,
-                subscription,
-                streamName,
-                stream.StreamVersion,
-                cancellationToken
-            );
-
-            return;
+            ));
         }
 
         var result = await HandleMessageBatch(subscription, streamName, messages, cancellationToken);
@@ -85,12 +64,16 @@ public class SubscriptionStreamProcessor(
         switch (result)
         {
             case MessageBatchResult.Success success:
-                await UpdateCheckpointStatus(
+                await database.Execute(
+                    new UpdateCheckpointStatus(
+                        options.ApplicationName,
+                        subscription.Name,
+                        streamName,
+                        success.StreamPosition,
+                        CheckpointStatus.Active
+                    ),
                     connection,
                     transaction,
-                    subscription,
-                    streamName,
-                    success.StreamPosition,
                     cancellationToken
                 );
 
@@ -120,32 +103,6 @@ public class SubscriptionStreamProcessor(
                 break;
         }
     }
-
-    private bool MessageShouldBeExcluded(IMessageContext context) =>
-        options.Subscriptions.MessageTypeExcludeFilter?.Invoke(context) ?? false;
-
-    private static bool AllMessagesAreExcluded(List<IMessageContext> messages) => messages.Count == 0;
-
-    private async Task UpdateCheckpointStatus(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        Subscription subscription,
-        string streamName,
-        long streamPosition,
-        CancellationToken cancellationToken
-    ) =>
-        await database.Execute(
-            new UpdateCheckpointStatus(
-                options.ApplicationName,
-                subscription.Name,
-                streamName,
-                streamPosition,
-                CheckpointStatus.Active
-            ),
-            connection,
-            transaction,
-            cancellationToken
-        );
 
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,
