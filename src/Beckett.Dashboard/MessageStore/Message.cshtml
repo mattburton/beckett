@@ -1,3 +1,4 @@
+@using Beckett.Messages
 @inherits HtmlTemplate<MessagePage.ViewModel>
 
 @{
@@ -50,9 +51,9 @@
       <ul class="list-group list-group-flush">
         @foreach (var item in Model.Message.Metadata)
         {
-          if (item.Key == "causation_id")
+          if (item.Key == MessageConstants.Metadata.CausationId)
           {
-            <li class="list-group-item">causation_id: <a href="@Routes.Prefix/message-store/messages/@item.Value">@item.Value</a></li>
+            <li class="list-group-item">@MessageConstants.Metadata.CausationId: <a href="@Routes.Prefix/message-store/messages/@item.Value">@item.Value</a></li>
           }
           else
           {

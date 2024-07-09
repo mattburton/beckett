@@ -8,6 +8,5 @@ public interface IInstrumentation
     Activity? StartAppendToStreamActivity(string streamName, Dictionary<string, object> metadata);
     Activity? StartHandleMessageActivity(Subscription subscription, IMessageContext messageContext);
     Activity? StartReadStreamActivity(string streamName);
-    Activity? StartSaveChangesActivity(Dictionary<string, object> metadata);
     Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, object> metadata);
 }
