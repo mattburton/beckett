@@ -73,22 +73,9 @@
     </div>
     @if (attempt.Exception != null)
     {
-      <ul class="list-group list-group-flush">
-        <li class="list-group-item">Exception: @attempt.Exception.Type</li>
-        <li class="list-group-item">Message: @attempt.Exception.Message</li>
-        @if (attempt.Exception.StackTrace?.Count > 0)
-        {
-          <li class="list-group-item">
-            Stack Trace:
-            <ul style="list-style: none;">
-              @foreach (var line in attempt.Exception.StackTrace)
-              {
-                <li>@line</li>
-              }
-            </ul>
-          </li>
-        }
-      </ul>
+      <div class="card-body">
+        @(new Exception((attempt.Exception, true)))
+      </div>
     }
   </div>
 }
