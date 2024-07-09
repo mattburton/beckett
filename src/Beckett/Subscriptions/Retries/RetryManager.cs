@@ -24,8 +24,9 @@ public class RetryManager(
         CancellationToken cancellationToken
     )
     {
-        await messageScheduler.ScheduleMessage(
+        await messageStore.AppendToStream(
             RetryStreamName.For(id),
+            ExpectedVersion.Any,
             new RetryStarted(
                 id,
                 applicationName,
@@ -33,10 +34,6 @@ public class RetryManager(
                 streamName,
                 streamPosition,
                 DateTimeOffset.UtcNow
-            ),
-            0.GetNextDelayWithExponentialBackoff(
-                options.Subscriptions.Retries.Delay,
-                options.Subscriptions.Retries.MaxDelay
             ),
             cancellationToken
         );
@@ -202,8 +199,6 @@ public class RetryManager(
                 cancellationToken
             );
 
-            await transaction.CommitAsync(cancellationToken);
-
             await messageStore.AppendToStream(
                 retryStreamName,
                 ExpectedVersion.StreamExists,
@@ -218,6 +213,8 @@ public class RetryManager(
                 ),
                 cancellationToken
             );
+
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception e)
         {

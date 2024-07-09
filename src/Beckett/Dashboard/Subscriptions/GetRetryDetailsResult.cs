@@ -135,13 +135,14 @@ public static class RetryStatusExtensions
 {
     public static string ToDisplayName(this GetRetryDetailsResult.RetryStatus status)
     {
+        const string started = "Pending Retry";
         const string manualRetryRequested = "Manual Retry Requested";
         const string manualRetryFailed = "Manual Retry Failed";
         const string deleteRequested = "Delete Requested";
 
         return status switch
         {
-            GetRetryDetailsResult.RetryStatus.Started => nameof(GetRetryDetailsResult.RetryStatus.Started),
+            GetRetryDetailsResult.RetryStatus.Started => started,
             GetRetryDetailsResult.RetryStatus.Retrying => nameof(GetRetryDetailsResult.RetryStatus.Retrying),
             GetRetryDetailsResult.RetryStatus.Success => nameof(GetRetryDetailsResult.RetryStatus.Success),
             GetRetryDetailsResult.RetryStatus.Failed => nameof(GetRetryDetailsResult.RetryStatus.Failed),
