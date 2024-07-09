@@ -18,7 +18,7 @@ builder.Services.AddOpenTelemetry()
     .WithMetrics(
         metrics => metrics
             .AddBeckett()
-            //.AddConsoleExporter()
+            .AddConsoleExporter()
     )
     .WithTracing(
         tracing => tracing
