@@ -13,6 +13,7 @@ public static class Routes
         return builder
             .IndexPageRoute()
             .RetriesPageRoute()
+            .RetryPageRoute()
             .FailedPageRoute()
             .ActionRoutes();
     }

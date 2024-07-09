@@ -23,15 +23,18 @@ public static class Configuration
         builder.Services.AddSingleton<RetryAttemptedHandler>();
         builder.Services.AddSingleton<RetryFailedHandler>();
         builder.Services.AddSingleton<ManualRetryRequestedHandler>();
+        builder.Services.AddSingleton<DeleteRetryRequestedHandler>();
 
         builder.Services.AddHostedService<RetryPollingService>();
 
         builder.Map<RetryStarted>("$retry_started");
         builder.Map<RetryAttempted>("$retry_attempted");
+        builder.Map<RetrySucceeded>("$retry_succeeded");
         builder.Map<RetryFailed>("$retry_failed");
+        builder.Map<DeleteRetryRequested>("$delete_retry_requested");
+        builder.Map<RetryDeleted>("$retry_deleted");
         builder.Map<ManualRetryRequested>("$manual_retry_requested");
         builder.Map<ManualRetryFailed>("$manual_retry_failed");
-        builder.Map<RetrySucceeded>("$retry_succeeded");
 
         const string category = "$retry";
 
@@ -57,6 +60,12 @@ public static class Configuration
             .Category(category)
             .Message<ManualRetryRequested>()
             .Handler<ManualRetryRequestedHandler>((handler, message, token) => handler.Handle(message, token))
+            .MaxRetryCount(0);
+
+        builder.AddSubscription("$delete_retry_requested")
+            .Category(category)
+            .Message<DeleteRetryRequested>()
+            .Handler<DeleteRetryRequestedHandler>((handler, message, token) => handler.Handle(message, token))
             .MaxRetryCount(0);
 
         return builder;

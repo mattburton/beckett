@@ -17,6 +17,7 @@ public class RetryManager(
 {
     public async Task StartRetry(
         Guid id,
+        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -27,7 +28,7 @@ public class RetryManager(
             RetryStreamName.For(id),
             new RetryStarted(
                 id,
-                options.ApplicationName,
+                applicationName,
                 subscriptionName,
                 streamName,
                 streamPosition,
@@ -43,6 +44,7 @@ public class RetryManager(
 
     public async Task RecordFailure(
         Guid id,
+        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -55,7 +57,7 @@ public class RetryManager(
             ExpectedVersion.Any,
             new RetryFailed(
                 id,
-                options.ApplicationName,
+                applicationName,
                 subscriptionName,
                 streamName,
                 streamPosition,
@@ -69,12 +71,22 @@ public class RetryManager(
 
     public Task Retry(
         Guid id,
+        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
         int attempts,
         CancellationToken cancellationToken
-    ) => AttemptRetry(id, subscriptionName, streamName, streamPosition, attempts, false, cancellationToken);
+    ) => AttemptRetry(
+        id,
+        applicationName,
+        subscriptionName,
+        streamName,
+        streamPosition,
+        attempts,
+        false,
+        cancellationToken
+    );
 
     public async Task ManualRetry(Guid id, CancellationToken cancellationToken)
     {
@@ -84,6 +96,7 @@ public class RetryManager(
 
         await AttemptRetry(
             id,
+            state.ApplicationName,
             state.SubscriptionName,
             state.StreamName,
             state.StreamPosition,
@@ -93,9 +106,52 @@ public class RetryManager(
         );
     }
 
+    public async Task DeleteRetry(Guid id, CancellationToken cancellationToken)
+    {
+        var streamName = RetryStreamName.For(id);
+
+        var stream = await messageStore.ReadStream(streamName, cancellationToken);
+
+        var state = stream.ProjectTo<RetryState>();
+
+        if (state.Status == CheckpointStatus.Deleted)
+        {
+            return;
+        }
+
+        await using var connection = database.CreateConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        await database.Execute(
+            new UpdateCheckpointStatus(
+                state.ApplicationName,
+                state.SubscriptionName,
+                state.StreamName,
+                state.StreamPosition,
+                CheckpointStatus.Deleted,
+                retryId: id
+            ),
+            connection,
+            transaction,
+            cancellationToken
+        );
+
+        await messageStore.AppendToStream(
+            streamName,
+            ExpectedVersion.StreamExists,
+            new RetryDeleted(id, DateTimeOffset.UtcNow),
+            cancellationToken
+        );
+
+        await transaction.CommitAsync(cancellationToken);
+    }
 
     private async Task AttemptRetry(
         Guid id,
+        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -124,7 +180,7 @@ public class RetryManager(
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             var checkpoint = await database.Execute(
-                new LockCheckpoint(options.ApplicationName, subscription.Name, streamName),
+                new LockCheckpoint(applicationName, subscription.Name, streamName),
                 connection,
                 transaction,
                 cancellationToken
@@ -153,7 +209,7 @@ public class RetryManager(
                 ExpectedVersion.StreamExists,
                 new RetrySucceeded(
                     id,
-                    options.ApplicationName,
+                    applicationName,
                     subscriptionName,
                     streamName,
                     streamPosition,
@@ -172,7 +228,7 @@ public class RetryManager(
                     ExpectedVersion.StreamExists,
                     new ManualRetryFailed(
                         id,
-                        options.ApplicationName,
+                        applicationName,
                         subscriptionName,
                         streamName,
                         streamPosition,
@@ -195,7 +251,7 @@ public class RetryManager(
                     ExpectedVersion.StreamExists,
                     new RetryFailed(
                         id,
-                        options.ApplicationName,
+                        applicationName,
                         subscriptionName,
                         streamName,
                         streamPosition,
@@ -217,7 +273,7 @@ public class RetryManager(
                     retryStreamName,
                     new RetryAttempted(
                         id,
-                        options.ApplicationName,
+                        applicationName,
                         subscriptionName,
                         streamName,
                         streamPosition,
@@ -234,10 +290,12 @@ public class RetryManager(
 
     private class RetryState : IApply
     {
+        public string ApplicationName { get; private set; } = null!;
         public string SubscriptionName { get; private set; } = null!;
         public string StreamName { get; private set; } = null!;
         public long StreamPosition { get; private set; }
         public int Attempts { get; private set; }
+        public CheckpointStatus Status { get; private set; }
 
         public void Apply(object message)
         {
@@ -249,7 +307,13 @@ public class RetryManager(
                 case RetryAttempted e:
                     Apply(e);
                     break;
+                case RetrySucceeded e:
+                    Apply(e);
+                    break;
                 case RetryFailed e:
+                    Apply(e);
+                    break;
+                case RetryDeleted e:
                     Apply(e);
                     break;
             }
@@ -257,26 +321,39 @@ public class RetryManager(
 
         private void Apply(RetryStarted e)
         {
+            ApplicationName = e.ApplicationName;
             SubscriptionName = e.SubscriptionName;
             StreamName = e.StreamName;
             StreamPosition = e.StreamPosition;
             Attempts = 0;
+            Status = CheckpointStatus.Retry;
         }
 
         private void Apply(RetryAttempted e)
         {
-            SubscriptionName = e.SubscriptionName;
-            StreamName = e.StreamName;
-            StreamPosition = e.StreamPosition;
             Attempts = e.Attempts;
+            Status = CheckpointStatus.Retry;
+        }
+
+        private void Apply(RetrySucceeded e)
+        {
+            Attempts = e.Attempts;
+            Status = CheckpointStatus.Active;
         }
 
         private void Apply(RetryFailed e)
         {
+            ApplicationName = e.ApplicationName;
             SubscriptionName = e.SubscriptionName;
             StreamName = e.StreamName;
             StreamPosition = e.StreamPosition;
             Attempts = e.Attempts;
+            Status = CheckpointStatus.Failed;
+        }
+
+        private void Apply(RetryDeleted _)
+        {
+            Status = CheckpointStatus.Deleted;
         }
     }
 }

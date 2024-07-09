@@ -4,6 +4,8 @@ public static class Routes
 {
     public static RouteGroupBuilder ActionRoutes(this RouteGroupBuilder builder)
     {
-        return builder.ManualRetryRoute();
+        return builder
+            .DeleteRetryRoute()
+            .ManualRetryRoute();
     }
 }

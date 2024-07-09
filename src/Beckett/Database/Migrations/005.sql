@@ -10,7 +10,7 @@ CREATE TYPE __schema__.checkpoint AS
   stream_version bigint
 );
 
-CREATE TYPE __schema__.checkpoint_status AS ENUM ('active', 'retry', 'pending_failure', 'failed');
+CREATE TYPE __schema__.checkpoint_status AS ENUM ('active', 'retry', 'pending_failure', 'failed', 'deleted');
 
 CREATE TABLE IF NOT EXISTS __schema__.subscriptions
 (
@@ -268,8 +268,8 @@ SELECT count(*)
 FROM __schema__.checkpoints
 WHERE application = _application
 AND starts_with(name, '$') = false
-AND stream_position < stream_version
-AND status = 'active';
+AND status = 'active'
+AND stream_position < stream_version;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_retry_count(

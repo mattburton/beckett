@@ -25,7 +25,6 @@
       <th>Name</th>
       <th>Stream Name</th>
       <th>Stream Position</th>
-      <th></th>
     </tr>
   </thead>
   <tbody>
@@ -34,16 +33,10 @@
     <tr>
       <td>@retry.Application</td>
       <td>@retry.Name</td>
-      <td>@retry.StreamName</td>
-      <td>@retry.StreamPosition</td>
-      <td class="text-end">
-        <a href="#"
-           title="Request manual retry"
-           hx-post="@Routes.Options.Prefix/subscriptions/retries/@retry.RetryId/manual-retry"
-           hx-on::after-request="alert('Manual retry requested')">
-          Retry
-        </a>
+      <td>
+        <a href="@Routes.Options.Prefix/subscriptions/retry/@retry.RetryId">@retry.StreamName</a>
       </td>
+      <td>@retry.StreamPosition</td>
     </tr>
   }
   @if (Model.Failures.Count == 0)

@@ -28,12 +28,14 @@
     </tr>
   </thead>
   <tbody>
-  @foreach(var retry in Model.Retries)
+  @foreach (var retry in Model.Retries)
   {
     <tr>
       <td>@retry.Application</td>
       <td>@retry.Name</td>
-      <td>@retry.StreamName</td>
+      <td>
+        <a href="@Routes.Options.Prefix/subscriptions/retry/@retry.RetryId">@retry.StreamName</a>
+      </td>
       <td>@retry.StreamPosition</td>
     </tr>
   }
@@ -47,5 +49,3 @@
   }
   </tbody>
 </table>
-
-

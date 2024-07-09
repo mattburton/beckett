@@ -54,6 +54,7 @@ public class RetryMonitor(
                     case CheckpointStatus.Retry:
                         await retryManager.StartRetry(
                             checkpoint.RetryId,
+                            checkpoint.Application,
                             checkpoint.Name,
                             checkpoint.StreamName,
                             checkpoint.StreamPosition,
@@ -63,6 +64,7 @@ public class RetryMonitor(
                     case CheckpointStatus.PendingFailure:
                         await retryManager.RecordFailure(
                             checkpoint.RetryId,
+                            checkpoint.Application,
                             checkpoint.Name,
                             checkpoint.StreamName,
                             checkpoint.StreamPosition,

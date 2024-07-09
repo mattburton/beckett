@@ -4,6 +4,7 @@ public interface IRetryManager
 {
     Task StartRetry(
         Guid id,
+        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -12,6 +13,7 @@ public interface IRetryManager
 
     Task RecordFailure(
         Guid id,
+        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -21,6 +23,7 @@ public interface IRetryManager
 
     Task Retry(
         Guid id,
+        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -28,5 +31,8 @@ public interface IRetryManager
         CancellationToken cancellationToken
     );
 
+
     Task ManualRetry(Guid id, CancellationToken cancellationToken);
+
+    Task DeleteRetry(Guid id, CancellationToken cancellationToken);
 }

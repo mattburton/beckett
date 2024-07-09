@@ -1,0 +1,93 @@
+@inherits HtmlTemplate<RetryPage.ViewModel>
+
+@{
+  Layout = new Layout();
+}
+
+<div class="p-2 text-bg-light">
+  <ul class="nav nav-pills">
+    <li class="nav-item">
+      <a class="nav-link" aria-current="page" href="@Routes.Options.Prefix/subscriptions">Subscriptions</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Routes.Options.Prefix/subscriptions/retries">Retries</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Routes.Options.Prefix/subscriptions/failed">Failed</a>
+    </li>
+  </ul>
+</div>
+
+<div class="card m-4">
+  <div class="card-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="fs-3">Status: @Model.Details.Status.ToDisplayName()</div>
+      <div>
+        <a href="#"
+           class="btn btn-primary"
+           title="Request manual retry"
+           hx-post="@Routes.Options.Prefix/subscriptions/retries/@Model.Details.Id/manual-retry"
+           hx-on::after-request="alert('Manual retry requested')">
+          Retry
+        </a>
+        <a href="#"
+           class="btn btn-danger"
+           title="Request delete"
+           hx-delete="@Routes.Options.Prefix/subscriptions/retries/@Model.Details.Id"
+           hx-on::after-request="alert('Delete requested')">
+          Delete
+        </a>
+      </div>
+    </div>
+  </div>
+  <ul class="list-group list-group-flush">
+    <li class="list-group-item">Application: @Model.Details.ApplicationName</li>
+    <li class="list-group-item">Subscription: @Model.Details.SubscriptionName</li>
+    <li class="list-group-item">
+      Stream:
+      @if (Routes.Options.MessageStoreEnabled)
+      {
+        <a href="@Routes.Options.Prefix/message-store/categories/@Model.Details.StreamCategory/@Model.Details.StreamName">
+          @Model.Details.StreamName
+        </a>
+      }
+      else
+      {
+        @Model.Details.StreamName
+      }
+    </li>
+    <li class="list-group-item">Stream Position: @Model.Details.StreamPosition</li>
+    <li class="list-group-item">Attempts: @Model.Details.Attempts.Count</li>
+  </ul>
+</div>
+
+@foreach(var attempt in Model.Details.Attempts)
+{
+  <div class="card m-4">
+    <div class="card-header d-flex justify-content-between align-items-center @(attempt.Success ? "text-bg-success" : "text-bg-danger") bg-opacity-10 text-dark">
+      <div>@attempt.Status.ToDisplayName()</div>
+      <div>@attempt.Timestamp</div>
+    </div>
+    @if (attempt.Exception != null)
+    {
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item">Exception: @attempt.Exception.Type</li>
+        <li class="list-group-item">Message: @attempt.Exception.Message</li>
+        @if (attempt.Exception.StackTrace?.Count > 0)
+        {
+          <li class="list-group-item">
+            Stack Trace:
+            <ul style="list-style: none;">
+              @foreach (var line in attempt.Exception.StackTrace)
+              {
+                <li>@line</li>
+              }
+            </ul>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}
+
+

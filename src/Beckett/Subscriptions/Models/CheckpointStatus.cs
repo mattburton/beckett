@@ -5,5 +5,6 @@ public enum CheckpointStatus
     Active,
     Retry,
     PendingFailure,
-    Failed
+    Failed,
+    Deleted
 }
