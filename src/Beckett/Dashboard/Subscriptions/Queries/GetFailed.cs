@@ -25,6 +25,11 @@ public class GetFailed : IPostgresDatabaseQuery<GetFailedResult>
 
         while (await reader.ReadAsync(cancellationToken))
         {
+            if (reader.IsDBNull(4))
+            {
+                continue;
+            }
+
             results.Add(
                 new GetFailedResult.Failure(
                     reader.GetFieldValue<string>(0),

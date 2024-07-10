@@ -35,8 +35,6 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   PRIMARY KEY (application, name, stream_name)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_status ON __schema__.checkpoints (status);
-
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
 CREATE OR REPLACE FUNCTION __schema__.add_or_update_subscription(
