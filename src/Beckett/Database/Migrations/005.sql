@@ -257,43 +257,33 @@ AND c.stream_name = r.stream_name
 RETURNING c.application, c.name, c.stream_name, c.stream_position, c.status, c.last_error, c.retry_id;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag(
-  _application text
-)
+CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag()
   RETURNS bigint
   LANGUAGE sql
 AS
 $$
 SELECT count(*)
 FROM __schema__.checkpoints
-WHERE application = _application
-AND starts_with(name, '$') = false
-AND status = 'active'
+WHERE status = 'active'
 AND stream_position < stream_version;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.get_subscription_retry_count(
-  _application text
-)
+CREATE OR REPLACE FUNCTION __schema__.get_subscription_retry_count()
   RETURNS bigint
   LANGUAGE sql
 AS
 $$
 SELECT count(*)
 FROM __schema__.checkpoints
-WHERE application = _application
-AND status = 'retry';
+WHERE status = 'retry';
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.get_subscription_failed_count(
-  _application text
-)
+CREATE OR REPLACE FUNCTION __schema__.get_subscription_failed_count()
   RETURNS bigint
   LANGUAGE sql
 AS
 $$
 SELECT count(*)
 FROM __schema__.checkpoints
-WHERE application = _application
-AND status = 'failed';
+WHERE status = 'failed';
 $$;

@@ -9,13 +9,9 @@ public static class RetriesComponent
         return builder;
     }
 
-    public static async Task<IResult> Handler(
-        IDashboard dashboard,
-        BeckettOptions options,
-        CancellationToken cancellationToken
-    )
+    public static async Task<IResult> Handler(IDashboard dashboard, CancellationToken cancellationToken)
     {
-        var result = await dashboard.Metrics.GetSubscriptionRetryCount(options.ApplicationName, cancellationToken);
+        var result = await dashboard.Metrics.GetSubscriptionRetryCount(cancellationToken);
 
         return new Retries(new ViewModel(result));
     }

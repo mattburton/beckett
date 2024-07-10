@@ -9,13 +9,9 @@ public static class LagComponent
         return builder;
     }
 
-    public static async Task<IResult> Handler(
-        IDashboard dashboard,
-        BeckettOptions options,
-        CancellationToken cancellationToken
-    )
+    public static async Task<IResult> Handler(IDashboard dashboard, CancellationToken cancellationToken)
     {
-        var result = await dashboard.Metrics.GetSubscriptionLag(options.ApplicationName, cancellationToken);
+        var result = await dashboard.Metrics.GetSubscriptionLag(cancellationToken);
 
         return new Lag(new ViewModel(result));
     }

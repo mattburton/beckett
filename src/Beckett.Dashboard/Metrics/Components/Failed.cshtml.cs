@@ -9,13 +9,9 @@ public static class FailedComponent
         return builder;
     }
 
-    public static async Task<IResult> Handler(
-        IDashboard dashboard,
-        BeckettOptions options,
-        CancellationToken cancellationToken
-    )
+    public static async Task<IResult> Handler(IDashboard dashboard, CancellationToken cancellationToken)
     {
-        var result = await dashboard.Metrics.GetSubscriptionFailedCount(options.ApplicationName, cancellationToken);
+        var result = await dashboard.Metrics.GetSubscriptionFailedCount(cancellationToken);
 
         return new Failed(new ViewModel(result));
     }

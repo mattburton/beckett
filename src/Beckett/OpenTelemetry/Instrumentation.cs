@@ -5,8 +5,6 @@ using Beckett.Database;
 using Beckett.Messages;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.Logging;
-using Npgsql;
-using NpgsqlTypes;
 using OpenTelemetry.Context.Propagation;
 
 namespace Beckett.OpenTelemetry;
@@ -175,13 +173,9 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_lag($1);";
-
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_lag();";
 
         command.Prepare();
-
-        command.Parameters[0].Value = _options.ApplicationName;
 
         return (long)command.ExecuteScalar()!;
     }
@@ -194,13 +188,9 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_retry_count($1);";
-
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_retry_count();";
 
         command.Prepare();
-
-        command.Parameters[0].Value = _options.ApplicationName;
 
         return (long)command.ExecuteScalar()!;
     }
@@ -213,13 +203,9 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_failed_count($1);";
-
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_failed_count();";
 
         command.Prepare();
-
-        command.Parameters[0].Value = _options.ApplicationName;
 
         return (long)command.ExecuteScalar()!;
     }
