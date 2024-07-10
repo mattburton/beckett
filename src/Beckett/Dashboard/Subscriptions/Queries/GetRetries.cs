@@ -14,7 +14,8 @@ public class GetRetries : IPostgresDatabaseQuery<GetRetriesResult>
         command.CommandText = $@"
             SELECT application, name, stream_name, stream_position, retry_id
             FROM {schema}.checkpoints
-            WHERE status = 'retry';
+            WHERE status = 'retry'
+            AND retry_id IS NOT NULL;
         ";
 
         await command.PrepareAsync(cancellationToken);
