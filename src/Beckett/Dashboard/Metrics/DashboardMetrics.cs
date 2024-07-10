@@ -17,6 +17,6 @@ public class DashboardMetrics(IPostgresDatabase database) : IDashboardMetrics
 
     public Task<long> GetSubscriptionRetryCount(CancellationToken cancellationToken)
     {
-        return database.Execute(new GetSubscriptionFailedCount(), cancellationToken);
+        return database.Execute(new GetSubscriptionRetryCount(), cancellationToken);
     }
 }
