@@ -1,10 +1,10 @@
-namespace Beckett.Dashboard.Metrics.Components;
+namespace Beckett.Dashboard.Metrics;
 
 public static class RetriesComponent
 {
     public static RouteGroupBuilder RetriesRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/metrics/components/retries", Handler);
+        builder.MapGet("/metrics/retries", Handler);
 
         return builder;
     }

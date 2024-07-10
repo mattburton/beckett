@@ -1,10 +1,10 @@
-namespace Beckett.Dashboard.Metrics.Components;
+namespace Beckett.Dashboard.Metrics;
 
 public static class LagComponent
 {
     public static RouteGroupBuilder LagRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/metrics/components/lag", Handler);
+        builder.MapGet("/metrics/lag", Handler);
 
         return builder;
     }

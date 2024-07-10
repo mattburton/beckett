@@ -1,0 +1,42 @@
+@inherits HtmlTemplate<(PageName ActivePage, bool MessageStoreEnabled)>
+
+<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+  <li class="nav-item">
+    <a class="nav-link @(Model.ActivePage == PageName.Home ? "active" : "")" aria-current="page" href="@Routes.Options.Prefix">Home</a>
+  </li>
+  @if (Model.MessageStoreEnabled)
+  {
+  <li class="nav-item">
+    <a class="nav-link @(Model.ActivePage == PageName.MessageStore ? "active" : "")" href="@Routes.Options.Prefix/message-store">Message Store</a>
+  </li>
+  }
+  <li class="nav-item">
+    <a class="nav-link @(Model.ActivePage == PageName.Subscriptions ? "active" : "")" href="@Routes.Options.Prefix/subscriptions">
+      Subscriptions
+      <span class="badge text-bg-info"
+            title="Subscription Lag"
+            hx-get="@Routes.Options.Prefix/metrics/lag"
+            hx-trigger="load, every 10s">
+        0
+      </span>
+      <span class="badge text-bg-warning"
+            title="Retries"
+            hx-get="@Routes.Options.Prefix/metrics/retries"
+            hx-trigger="load, every 10s">
+        0
+      </span>
+      <span class="badge text-bg-danger"
+            title="Failed"
+            hx-get="@Routes.Options.Prefix/metrics/failed"
+            hx-trigger="load, every 10s">
+        0
+      </span>
+    </a>
+  </li>
+</ul>
+@* <form class="d-flex" role="search"> *@
+@*   <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search"> *@
+@*   <button class="btn btn-primary" type="submit">Search</button> *@
+@* </form> *@
+
+

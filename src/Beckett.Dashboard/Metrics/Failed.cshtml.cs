@@ -1,10 +1,10 @@
-namespace Beckett.Dashboard.Metrics.Components;
+namespace Beckett.Dashboard.Metrics;
 
 public static class FailedComponent
 {
     public static RouteGroupBuilder FailedRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/metrics/components/failed", Handler);
+        builder.MapGet("/metrics/failed", Handler);
 
         return builder;
     }

@@ -1,5 +1,3 @@
-using Beckett.Dashboard.Metrics.Components;
-
 namespace Beckett.Dashboard.Metrics;
 
 public static class Routes

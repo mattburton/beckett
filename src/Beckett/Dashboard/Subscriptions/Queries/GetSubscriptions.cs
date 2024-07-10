@@ -17,9 +17,9 @@ public class GetSubscriptions : IPostgresDatabaseQuery<GetSubscriptionsResult>
                 FROM {schema}.checkpoints
                 GROUP BY name, application
             )
-            SELECT s.application, s.name, c.lag AS total_lag
+            SELECT s.application, s.name, COALESCE(c.lag, 0) AS total_lag
             FROM {schema}.subscriptions s
-            INNER JOIN lagging_checkpoints c ON s.application = c.application AND s.name = c.name
+            LEFT JOIN lagging_checkpoints c ON s.application = c.application AND s.name = c.name
             ORDER BY application, name;
         ";
 
