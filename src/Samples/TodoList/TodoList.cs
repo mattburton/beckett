@@ -27,7 +27,7 @@ public static class TodoList
             .Handler<NotificationHandler>((handler, context, token) => handler.Handle(context, token))
             .MaxRetryCount<NotificationHandler.TerminalException>(0);
 
-        builder.ScheduleRecurringMessage(nameof(HelloWorld), "* * * * *", nameof(HelloWorld), new HelloWorld());
+        builder.AddRecurringMessage(nameof(HelloWorld), "* * * * *", nameof(HelloWorld), new HelloWorld());
 
         builder.AddSubscription("HelloWorld")
             .Message<HelloWorld>()

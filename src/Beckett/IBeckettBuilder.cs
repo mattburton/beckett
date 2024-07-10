@@ -17,7 +17,7 @@ public interface IBeckettBuilder
 
     void Map<TMessage>(string name);
 
-    void ScheduleRecurringMessage<TMessage>(
+    void AddRecurringMessage<TMessage>(
         string name,
         string cronExpression,
         string streamName,
