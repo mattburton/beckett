@@ -58,6 +58,7 @@ public class RetryMonitor(
                             checkpoint.Name,
                             checkpoint.StreamName,
                             checkpoint.StreamPosition,
+                            checkpoint.LastError,
                             stoppingToken
                         );
                         break;
@@ -85,6 +86,10 @@ public class RetryMonitor(
                 logger.LogError(e, "Database error - will retry in 10 seconds");
 
                 await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Unhandled exception in retry monitor");
             }
         }
     }

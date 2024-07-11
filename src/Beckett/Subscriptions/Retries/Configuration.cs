@@ -44,7 +44,7 @@ public static class Configuration
             .Handler<RetryStartedHandler>((handler, message, token) => handler.Handle(message, token))
             .MaxRetryCount(0);
 
-        builder.AddSubscription("$retry_error")
+        builder.AddSubscription("$retry_attempted")
             .Category(category)
             .Message<RetryAttempted>()
             .Handler<RetryAttemptedHandler>((handler, message, token) => handler.Handle(message, token))

@@ -8,6 +8,7 @@ public interface IRetryManager
         string subscriptionName,
         string streamName,
         long streamPosition,
+        string lastError,
         CancellationToken cancellationToken
     );
 

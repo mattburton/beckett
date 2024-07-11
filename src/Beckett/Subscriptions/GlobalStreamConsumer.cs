@@ -28,6 +28,8 @@ public class GlobalStreamConsumer(
 
     private async Task Poll(CancellationToken stoppingToken)
     {
+        var registeredSubscriptions = subscriptionRegistry.All().ToArray();
+
         var emptyResultRetryCount = 0;
 
         while (!stoppingToken.IsCancellationRequested)
@@ -54,13 +56,13 @@ public class GlobalStreamConsumer(
                 break;
             }
 
-            var streamChanges = await messageStorage.ReadStreamChangeFeed(
+            var globalStream = await messageStorage.ReadGlobalStream(
                 checkpoint.StreamPosition,
                 options.Subscriptions.GlobalBatchSize,
                 stoppingToken
             );
 
-            if (streamChanges.Items.Count == 0)
+            if (globalStream.Items.Count == 0)
             {
                 emptyResultRetryCount++;
 
@@ -76,9 +78,9 @@ public class GlobalStreamConsumer(
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var streamChange in streamChanges.Items)
+            foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
             {
-                var subscriptions = subscriptionRegistry.All().Where(x => streamChange.AppliesTo(x, messageTypeMap));
+                var subscriptions = registeredSubscriptions.Where(s => stream.Any(m => m.AppliesTo(s, messageTypeMap)));
 
                 checkpoints.AddRange(
                     subscriptions.Select(
@@ -87,8 +89,8 @@ public class GlobalStreamConsumer(
                             {
                                 Application = options.ApplicationName,
                                 Name = subscription.Name,
-                                StreamName = streamChange.StreamName,
-                                StreamVersion = streamChange.StreamVersion
+                                StreamName = stream.Key,
+                                StreamVersion = stream.Max(x => x.StreamPosition)
                             }
                     )
                 );
@@ -101,7 +103,7 @@ public class GlobalStreamConsumer(
                 stoppingToken
             );
 
-            var newGlobalPosition = streamChanges.Items.Max(x => x.GlobalPosition);
+            var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new RecordCheckpoint(

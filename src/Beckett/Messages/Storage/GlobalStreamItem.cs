@@ -1,19 +1,19 @@
 using Beckett.Subscriptions;
 
-namespace Beckett.Messages;
+namespace Beckett.Messages.Storage;
 
-public record StreamChange(
+public record GlobalStreamItem(
     string StreamName,
-    long StreamVersion,
+    long StreamPosition,
     long GlobalPosition,
-    Type[] MessageTypes
+    Type MessageType
 )
 {
     public bool AppliesTo(Subscription subscription, IMessageTypeMap messageTypeMap)
     {
         var categoryMatch = subscription.CategoryMatches(StreamName);
-        var messageTypeNames = MessageTypes.Select(messageTypeMap.GetName).ToArray();
-        var messageTypeMatch = messageTypeNames.Intersect(subscription.MessageTypeNames).Any();
+        var messageTypeName = messageTypeMap.GetName(MessageType);
+        var messageTypeMatch = subscription.MessageTypeNames.Contains(messageTypeName);
 
         if (subscription.IsCategoryOnly)
         {

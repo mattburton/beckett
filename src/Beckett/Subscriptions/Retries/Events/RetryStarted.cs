@@ -1,3 +1,5 @@
+using Beckett.Subscriptions.Retries.Events.Models;
+
 namespace Beckett.Subscriptions.Retries.Events;
 
 public interface IRetryInformation
@@ -15,5 +17,6 @@ public record RetryStarted(
     string SubscriptionName,
     string StreamName,
     long StreamPosition,
+    ExceptionData? Exception,
     DateTimeOffset Timestamp
 ) : IRetryInformation;

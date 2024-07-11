@@ -97,13 +97,13 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            var streamChanges = await messageStorage.ReadStreamChangeFeed(
+            var globalStream = await messageStorage.ReadGlobalStream(
                 checkpoint.StreamPosition,
                 options.Subscriptions.BatchSize,
                 cancellationToken
             );
 
-            if (streamChanges.Items.Count == 0)
+            if (globalStream.Items.Count == 0)
             {
                 await database.Execute(
                     new LockCheckpoint(
@@ -116,13 +116,13 @@ public class SubscriptionInitializer(
                     cancellationToken
                 );
 
-                var newStreamChanges = await messageStorage.ReadStreamChangeFeed(
+                var globalStreamUpdates = await messageStorage.ReadGlobalStream(
                     checkpoint.StreamPosition,
                     options.Subscriptions.BatchSize,
                     cancellationToken
                 );
 
-                if (newStreamChanges.Items.Any())
+                if (globalStreamUpdates.Items.Any())
                 {
                     continue;
                 }
@@ -141,9 +141,9 @@ public class SubscriptionInitializer(
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var streamChange in streamChanges.Items)
+            foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
             {
-                if (!streamChange.AppliesTo(subscription, messageTypeMap))
+                if (stream.All(x => !x.AppliesTo(subscription, messageTypeMap)))
                 {
                     continue;
                 }
@@ -153,8 +153,8 @@ public class SubscriptionInitializer(
                     {
                         Application = options.ApplicationName,
                         Name = subscription.Name,
-                        StreamName = streamChange.StreamName,
-                        StreamVersion = streamChange.StreamVersion
+                        StreamName = stream.Key,
+                        StreamVersion = stream.Max(x => x.StreamPosition)
                     }
                 );
             }
@@ -166,7 +166,7 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            var newGlobalPosition = streamChanges.Items.Max(x => x.GlobalPosition);
+            var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new RecordCheckpoint(

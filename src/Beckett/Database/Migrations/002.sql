@@ -160,15 +160,15 @@ ORDER BY CASE WHEN _read_forwards = true THEN stream_position END,
 LIMIT _count;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.read_stream_change_feed(
+CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
   _starting_global_position bigint,
   _batch_size int
 )
   RETURNS TABLE (
     stream_name text,
-    stream_version bigint,
+    stream_position bigint,
     global_position bigint,
-    message_types text[]
+    type text
   )
   LANGUAGE sql
 AS
@@ -180,28 +180,15 @@ WITH last_transaction_id AS (
   UNION ALL
   SELECT '0'::xid8 AS transaction_id
   LIMIT 1
-),
-new_events AS (
-  SELECT m.stream_name,
-  m.stream_position,
-  m.global_position,
-  m.type
-  FROM last_transaction_id lti,
-       __schema__.messages m
-  WHERE (
-    (m.transaction_id = lti.transaction_id AND m.global_position > _starting_global_position)
-    OR
-    (m.transaction_id > lti.transaction_id)
-  )
-  AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-  ORDER BY m.transaction_id, m.global_position
-  LIMIT _batch_size
 )
-SELECT stream_name,
-       MAX(e.stream_position) AS stream_version,
-       MAX(e.global_position) AS global_position,
-       ARRAY_AGG(e.type)      AS message_types
-FROM new_events e
-GROUP BY e.stream_name
-ORDER BY MAX(e.global_position);
+SELECT m.stream_name, m.stream_position, m.global_position, m.type
+FROM last_transaction_id lti, __schema__.messages m
+WHERE (
+  (m.transaction_id = lti.transaction_id AND m.global_position > _starting_global_position)
+  OR
+  (m.transaction_id > lti.transaction_id)
+)
+AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+ORDER BY m.transaction_id, m.global_position
+LIMIT _batch_size;
 $$;

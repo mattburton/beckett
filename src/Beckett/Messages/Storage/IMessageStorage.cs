@@ -15,7 +15,7 @@ public interface IMessageStorage
         CancellationToken cancellationToken
     );
 
-    Task<ReadStreamChangeFeedResult> ReadStreamChangeFeed(
+    Task<ReadGlobalStreamResult> ReadGlobalStream(
         long lastGlobalPosition,
         int batchSize,
         CancellationToken cancellationToken

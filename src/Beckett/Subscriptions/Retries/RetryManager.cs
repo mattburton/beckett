@@ -21,6 +21,7 @@ public class RetryManager(
         string subscriptionName,
         string streamName,
         long streamPosition,
+        string lastError,
         CancellationToken cancellationToken
     )
     {
@@ -33,6 +34,7 @@ public class RetryManager(
                 subscriptionName,
                 streamName,
                 streamPosition,
+                ExceptionData.FromJson(lastError),
                 DateTimeOffset.UtcNow
             ),
             cancellationToken
@@ -177,7 +179,7 @@ public class RetryManager(
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             var checkpoint = await database.Execute(
-                new LockCheckpoint(applicationName, subscription.Name, streamName),
+                new LockCheckpoint(options.ApplicationName, subscription.Name, streamName),
                 connection,
                 transaction,
                 cancellationToken

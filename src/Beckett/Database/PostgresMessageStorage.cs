@@ -44,30 +44,26 @@ public class PostgresMessageStorage(
         return new ReadStreamResult(streamName, streamVersion, messages);
     }
 
-    public async Task<ReadStreamChangeFeedResult> ReadStreamChangeFeed(
+    public async Task<ReadGlobalStreamResult> ReadGlobalStream(
         long lastGlobalPosition,
         int batchSize,
         CancellationToken cancellationToken
     )
     {
-        var results = await database.Execute(
-            new ReadStreamChangeFeed(lastGlobalPosition, batchSize),
-            cancellationToken
-        );
+        var results = await database.Execute(new ReadGlobalStream(lastGlobalPosition, batchSize), cancellationToken);
 
         var items = results.Count == 0
             ? []
             : results.Select(
-                x => new StreamChange(
+                x => new GlobalStreamItem(
                     x.StreamName,
-                    x.StreamVersion,
+                    x.StreamPosition,
                     x.GlobalPosition,
-                    x.MessageTypes.Select(
-                        t => messageTypeMap.GetType(t) ?? throw new Exception($"Unknown message type: {t}")
-                    ).ToArray()
+                    messageTypeMap.GetType(x.MessageType) ??
+                    throw new Exception($"Unknown message type: {x.MessageType}")
                 )
             ).ToList();
 
-        return new ReadStreamChangeFeedResult(items);
+        return new ReadGlobalStreamResult(items);
     }
 }

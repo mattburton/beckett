@@ -53,7 +53,8 @@ ON CONFLICT (application, name) DO NOTHING;
 
 SELECT initialized
 FROM __schema__.subscriptions
-WHERE name = _name;
+WHERE application = _application
+AND name = _name;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_next_uninitialized_subscription(
@@ -262,10 +263,14 @@ CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag()
   LANGUAGE sql
 AS
 $$
+WITH lagging_subscriptions AS (
+  SELECT name, application, SUM(stream_version - stream_position) AS total_lag
+  FROM __schema__.checkpoints
+  WHERE (stream_version - stream_position) > 0
+  GROUP BY name, application
+)
 SELECT count(*)
-FROM __schema__.checkpoints
-WHERE status = 'active'
-AND stream_position < stream_version;
+FROM lagging_subscriptions;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_retry_count()
