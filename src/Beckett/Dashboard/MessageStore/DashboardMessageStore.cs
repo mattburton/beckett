@@ -25,6 +25,15 @@ public class DashboardMessageStore(IPostgresDatabase database) : IDashboardMessa
         return database.Execute(new GetMessage(guid), cancellationToken);
     }
 
+    public Task<GetMessageResult?> GetMessage(
+        string streamName,
+        long streamPosition,
+        CancellationToken cancellationToken
+    )
+    {
+        return database.Execute(new GetMessageByStreamPosition(streamName, streamPosition), cancellationToken);
+    }
+
     public Task<GetStreamMessagesResult> GetStreamMessages(string streamName, CancellationToken cancellationToken)
     {
         return database.Execute(new GetStreamMessages(streamName), cancellationToken);

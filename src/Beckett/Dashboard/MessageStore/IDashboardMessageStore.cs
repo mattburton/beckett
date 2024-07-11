@@ -8,5 +8,7 @@ public interface IDashboardMessageStore
 
     Task<GetMessageResult?> GetMessage(string id, CancellationToken cancellationToken);
 
+    Task<GetMessageResult?> GetMessage(string streamName, long streamPosition, CancellationToken cancellationToken);
+
     Task<GetStreamMessagesResult> GetStreamMessages(string streamName, CancellationToken cancellationToken);
 }

@@ -10,6 +10,9 @@
       <a class="nav-link active" aria-current="page" href="@Routes.Options.Prefix/subscriptions">Subscriptions</a>
     </li>
     <li class="nav-item">
+      <a class="nav-link" href="@Routes.Options.Prefix/subscriptions/lagging">Lagging</a>
+    </li>
+    <li class="nav-item">
       <a class="nav-link" href="@Routes.Options.Prefix/subscriptions/retries">Retries</a>
     </li>
     <li class="nav-item">
@@ -23,7 +26,6 @@
     <tr>
       <th>Application</th>
       <th>Name</th>
-      <th>Total Lag</th>
     </tr>
   </thead>
   <tbody>
@@ -32,13 +34,12 @@
     <tr>
       <td>@subscription.Application</td>
       <td>@subscription.Name</td>
-      <td>@subscription.TotalLag</td>
     </tr>
   }
   @if (Model.Subscriptions.Count == 0)
   {
     <tr>
-      <td colspan="3">
+      <td colspan="2">
         No subscriptions found.
       </td>
     </tr>

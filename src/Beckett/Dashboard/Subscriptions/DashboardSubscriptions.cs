@@ -11,6 +11,11 @@ public class DashboardSubscriptions(IPostgresDatabase database, IMessageStore me
         return database.Execute(new GetSubscriptions(), cancellationToken);
     }
 
+    public Task<GetLaggingSubscriptionsResult> GetLaggingSubscriptions(CancellationToken cancellationToken)
+    {
+        return database.Execute(new GetLaggingSubscriptions(), cancellationToken);
+    }
+
     public Task<GetRetriesResult> GetRetries(CancellationToken cancellationToken)
     {
         return database.Execute(new GetRetries(), cancellationToken);

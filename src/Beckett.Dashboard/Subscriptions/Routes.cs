@@ -12,6 +12,7 @@ public static class Routes
 
         return builder
             .IndexPageRoute()
+            .LaggingPageRoute()
             .RetriesPageRoute()
             .RetryPageRoute()
             .FailedPageRoute()

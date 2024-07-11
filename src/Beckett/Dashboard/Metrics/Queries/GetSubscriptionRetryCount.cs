@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace Beckett.Dashboard.Metrics.Queries;
 
-public class GetSubscriptionRetryCount() : IPostgresDatabaseQuery<long>
+public class GetSubscriptionRetryCount : IPostgresDatabaseQuery<long>
 {
     public async Task<long> Execute(
         NpgsqlCommand command,

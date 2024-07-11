@@ -11,6 +11,8 @@ public class GetRetryDetailsResult : IApply
     public string StreamName { get; set; } = null!;
     public long StreamPosition { get; set; }
     public RetryStatus Status { get; set; }
+    public ExceptionData? Exception { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
     public List<Attempt> Attempts { get; set; } = [];
 
     public string StreamCategory
@@ -61,6 +63,8 @@ public class GetRetryDetailsResult : IApply
         SubscriptionName = e.SubscriptionName;
         StreamName = e.StreamName;
         StreamPosition = e.StreamPosition;
+        Exception = e.Exception;
+        StartedAt = e.Timestamp;
         Status = RetryStatus.Started;
     }
 
@@ -85,6 +89,8 @@ public class GetRetryDetailsResult : IApply
         SubscriptionName = e.SubscriptionName;
         StreamName = e.StreamName;
         StreamPosition = e.StreamPosition;
+        Exception = e.Exception;
+        StartedAt = e.Timestamp;
         Status = RetryStatus.Failed;
 
         Attempts.Add(new Attempt(Status, false, e.Timestamp, e.Exception));

@@ -6,7 +6,7 @@
 
 @* ReSharper disable once Razor.SectionNotResolved *@
 @section Navbar {
-@(new Navbar((PageName.Subscriptions, Routes.Options.MessageStoreEnabled)))
+  @(new Navbar((Area.Subscriptions, Routes.Options.MessageStoreEnabled)))
 }
 
 @RenderBody()

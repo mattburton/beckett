@@ -12,14 +12,8 @@ public class GetSubscriptions : IPostgresDatabaseQuery<GetSubscriptionsResult>
     )
     {
         command.CommandText = $@"
-            WITH lagging_checkpoints AS (
-                SELECT name, application, SUM(stream_version - stream_position) AS lag
-                FROM {schema}.checkpoints
-                GROUP BY name, application
-            )
-            SELECT s.application, s.name, COALESCE(c.lag, 0) AS total_lag
+            SELECT s.application, s.name
             FROM {schema}.subscriptions s
-            LEFT JOIN lagging_checkpoints c ON s.application = c.application AND s.name = c.name
             ORDER BY application, name;
         ";
 
@@ -34,8 +28,7 @@ public class GetSubscriptions : IPostgresDatabaseQuery<GetSubscriptionsResult>
             results.Add(
                 new GetSubscriptionsResult.Subscription(
                     reader.GetFieldValue<string>(0),
-                    reader.GetFieldValue<string>(1),
-                    reader.GetFieldValue<int>(2)
+                    reader.GetFieldValue<string>(1)
                 )
             );
         }

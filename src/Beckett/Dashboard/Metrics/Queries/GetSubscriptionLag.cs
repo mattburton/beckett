@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace Beckett.Dashboard.Metrics.Queries;
 
-public class GetSubscriptionLag() : IPostgresDatabaseQuery<long>
+public class GetSubscriptionLag : IPostgresDatabaseQuery<long>
 {
     public async Task<long> Execute(
         NpgsqlCommand command,

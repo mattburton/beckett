@@ -4,7 +4,7 @@ public static class RetryPage
 {
     public static RouteGroupBuilder RetryPageRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/subscriptions/retry/{id:guid}", Handler);
+        builder.MapGet("/subscriptions/retries/{id:guid}", Handler);
 
         return builder;
     }
