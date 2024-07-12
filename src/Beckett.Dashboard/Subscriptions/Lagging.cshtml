@@ -7,23 +7,23 @@
 <div class="p-2 text-bg-light">
   <ul class="nav nav-pills">
     <li class="nav-item">
-      <a class="nav-link" href="@Routes.Options.Prefix/subscriptions">Subscriptions</a>
+      <a class="nav-link" href="@Routes.Prefix/subscriptions">Subscriptions</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link active" aria-current="page" href="@Routes.Options.Prefix/subscriptions/lagging">Lagging</a>
+      <a class="nav-link active" aria-current="page" href="@Routes.Prefix/subscriptions/lagging">Lagging</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="@Routes.Options.Prefix/subscriptions/retries">Retries</a>
+      <a class="nav-link" href="@Routes.Prefix/subscriptions/retries">Retries</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="@Routes.Options.Prefix/subscriptions/failed">Failed</a>
+      <a class="nav-link" href="@Routes.Prefix/subscriptions/failed">Failed</a>
     </li>
   </ul>
 </div>
 
 <table id="list-view"
        class="table table-striped"
-       hx-get="@Routes.Options.Prefix/subscriptions/lagging"
+       hx-get="@Routes.Prefix/subscriptions/lagging"
        hx-trigger="every 10s"
        hx-select="#list-view"
        hx-swap="outerHTML">

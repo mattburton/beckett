@@ -139,24 +139,29 @@ public class GetRetryDetailsResult : IApply
 
 public static class RetryStatusExtensions
 {
-    public static string ToDisplayName(this GetRetryDetailsResult.RetryStatus status)
+    public static string ToRetryStatus(this GetRetryDetailsResult.RetryStatus status)
     {
-        const string started = "Pending Retry";
-        const string manualRetryRequested = "Manual Retry Requested";
-        const string manualRetryFailed = "Manual Retry Failed";
-        const string deleteRequested = "Delete Requested";
-
         return status switch
         {
-            GetRetryDetailsResult.RetryStatus.Started => started,
-            GetRetryDetailsResult.RetryStatus.Retrying => nameof(GetRetryDetailsResult.RetryStatus.Retrying),
-            GetRetryDetailsResult.RetryStatus.Success => nameof(GetRetryDetailsResult.RetryStatus.Success),
-            GetRetryDetailsResult.RetryStatus.Failed => nameof(GetRetryDetailsResult.RetryStatus.Failed),
-            GetRetryDetailsResult.RetryStatus.ManualRetryRequested => manualRetryRequested,
-            GetRetryDetailsResult.RetryStatus.ManualRetryFailed => manualRetryFailed,
-            GetRetryDetailsResult.RetryStatus.DeleteRequested => deleteRequested,
-            GetRetryDetailsResult.RetryStatus.Deleted => nameof(GetRetryDetailsResult.RetryStatus.Deleted),
+            GetRetryDetailsResult.RetryStatus.Started => "Pending Retry",
+            GetRetryDetailsResult.RetryStatus.Retrying => "Retrying",
+            GetRetryDetailsResult.RetryStatus.Success => "Success",
+            GetRetryDetailsResult.RetryStatus.Failed => "Failed",
+            GetRetryDetailsResult.RetryStatus.ManualRetryRequested => "Manual Retry Requested",
+            GetRetryDetailsResult.RetryStatus.ManualRetryFailed => "Manual Retry Failed",
+            GetRetryDetailsResult.RetryStatus.DeleteRequested => "Delete Requested",
+            GetRetryDetailsResult.RetryStatus.Deleted => "Deleted",
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+        };
+    }
+
+    public static string ToAttemptStatus(this GetRetryDetailsResult.RetryStatus status)
+    {
+        return status switch
+        {
+            GetRetryDetailsResult.RetryStatus.Retrying => "Retried",
+            GetRetryDetailsResult.RetryStatus.Success => "Succeeded",
+            _ => ToRetryStatus(status)
         };
     }
 }

@@ -1,36 +1,41 @@
 @inherits HtmlTemplate<(Area Area, bool MessageStoreEnabled)>
 
-<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+<ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-center">
   <li class="nav-item">
-    <a class="nav-link @(Model.Area == Area.Home ? "active" : "")" aria-current="page" href="@Routes.Options.Prefix">Home</a>
+    <a class="nav-link @(Model.Area == Area.Home ? "active" : "")" aria-current="page" href="@Routes.Prefix">Home</a>
   </li>
   @if (Model.MessageStoreEnabled)
   {
   <li class="nav-item">
-    <a class="nav-link @(Model.Area == Area.MessageStore ? "active" : "")" href="@Routes.Options.Prefix/message-store">Message Store</a>
+    <a class="nav-link @(Model.Area == Area.MessageStore ? "active" : "")" href="@Routes.Prefix/message-store">Message Store</a>
   </li>
   }
   <li class="nav-item">
-    <a class="nav-link @(Model.Area == Area.Subscriptions ? "active" : "")" href="@Routes.Options.Prefix/subscriptions">
+    <a class="nav-link @(Model.Area == Area.Subscriptions ? "active" : "")" href="@Routes.Prefix/subscriptions">
       Subscriptions
-      <span class="badge text-bg-info"
-            title="Subscription Lag"
-            hx-get="@Routes.Options.Prefix/metrics/lag"
-            hx-trigger="load, every 10s">
-        0
-      </span>
-      <span class="badge text-bg-warning"
-            title="Retries"
-            hx-get="@Routes.Options.Prefix/metrics/retries"
-            hx-trigger="load, every 10s">
-        0
-      </span>
-      <span class="badge text-bg-danger"
-            title="Failed"
-            hx-get="@Routes.Options.Prefix/metrics/failed"
-            hx-trigger="load, every 10s">
-        0
-      </span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a href="@Routes.Prefix/subscriptions/lagging"
+       class="badge text-bg-info text-decoration-none"
+       title="Lagging Subscriptions"
+       hx-get="@Routes.Prefix/metrics/lag"
+       hx-trigger="load, every 10s">
+      0
+    </a>
+    <a href="@Routes.Prefix/subscriptions/retries"
+       class="badge text-bg-warning text-decoration-none"
+       title="Retries"
+       hx-get="@Routes.Prefix/metrics/retries"
+       hx-trigger="load, every 10s">
+      0
+    </a>
+    <a href="@Routes.Prefix/subscriptions/failed"
+       class="badge text-bg-danger text-decoration-none"
+       title="Failed"
+       hx-get="@Routes.Prefix/metrics/failed"
+       hx-trigger="load, every 10s">
+      0
     </a>
   </li>
 </ul>

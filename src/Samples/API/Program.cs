@@ -43,7 +43,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapBeckettDashboard();
+app.MapBeckettDashboard("/beckett");
 
 app.MapGroup("/todos").TodoListRoutes();
 

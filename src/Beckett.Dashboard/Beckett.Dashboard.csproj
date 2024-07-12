@@ -4,21 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <PackageId>Beckett.Dashboard</PackageId>
-    <PackageVersion>0.7.7</PackageVersion>
-    <Authors>Matt Burton</Authors>
-    <Description>Beckett Dashboard</Description>
-    <PackageProjectUrl>https://github.com/mattburton/beckett</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/mattburton/beckett</RepositoryUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>messaging, event sourcing, event modeling, event store, message store</PackageTags>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <EnablePackageValidation>true</EnablePackageValidation>
   </PropertyGroup>
 
   <ItemGroup>
