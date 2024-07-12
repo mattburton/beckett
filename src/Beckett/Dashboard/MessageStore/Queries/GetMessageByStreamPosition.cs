@@ -39,7 +39,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition)
             return null;
         }
 
-        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(4)) ??
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(5)) ??
                        throw new InvalidOperationException(
                            $"Unable to deserialize metadata for message at {streamName} and stream_position {streamPosition}"
                        );
