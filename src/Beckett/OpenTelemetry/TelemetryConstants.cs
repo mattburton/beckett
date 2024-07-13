@@ -28,7 +28,7 @@ public static class TelemetryConstants
 
     public static class Subscription
     {
-        public const string Group = "subscription.group";
+        public const string GroupName = "subscription.group_name";
         public const string Name = "subscription.name";
         public const string Category = "subscription.category";
         public const string Handler = "subscription.handler";
