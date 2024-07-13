@@ -17,7 +17,7 @@ public class MessageScheduler(
 {
     public Task CancelScheduledMessage(Guid id, CancellationToken cancellationToken)
     {
-        return database.Execute(new CancelScheduledMessage(options.ApplicationName, id), cancellationToken);
+        return database.Execute(new CancelScheduledMessage(id), cancellationToken);
     }
 
     public async Task RecurringMessage(
@@ -81,7 +81,6 @@ public class MessageScheduler(
         var id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql);
 
         var scheduledMessage = ScheduledMessageType.From(
-            options.ApplicationName,
             id,
             messageToSchedule,
             messageMetadata,
@@ -89,7 +88,7 @@ public class MessageScheduler(
             messageSerializer
         );
 
-        await database.Execute(new ScheduleMessage(options.ApplicationName, streamName, scheduledMessage), cancellationToken);
+        await database.Execute(new ScheduleMessage(streamName, scheduledMessage), cancellationToken);
 
         return id;
     }

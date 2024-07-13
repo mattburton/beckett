@@ -4,7 +4,6 @@
 
 CREATE TYPE __schema__.scheduled_message AS
 (
-  application text,
   id uuid,
   type text,
   data jsonb,
@@ -14,21 +13,20 @@ CREATE TYPE __schema__.scheduled_message AS
 
 CREATE TABLE __schema__.scheduled_messages
 (
-  application text NOT NULL,
-  id uuid NOT NULL,
+  id uuid NOT NULL PRIMARY KEY,
   stream_name text NOT NULL,
   type text NOT NULL,
   data jsonb NOT NULL,
   metadata jsonb NOT NULL,
   deliver_at timestamp with time zone NOT NULL,
-  timestamp timestamp with time zone DEFAULT now() NOT NULL,
-  PRIMARY KEY (application, id)
+  timestamp timestamp with time zone DEFAULT now() NOT NULL
 );
+
+CREATE INDEX ix_scheduled_messages_deliver_at ON __schema__.scheduled_messages (deliver_at ASC);
 
 GRANT UPDATE, DELETE ON __schema__.scheduled_messages TO beckett;
 
 CREATE OR REPLACE FUNCTION __schema__.schedule_message(
-  _application text,
   _stream_name text,
   _scheduled_message __schema__.scheduled_message
 )
@@ -37,7 +35,6 @@ CREATE OR REPLACE FUNCTION __schema__.schedule_message(
 AS
 $$
 INSERT INTO __schema__.scheduled_messages (
-  application,
   id,
   stream_name,
   type,
@@ -46,7 +43,6 @@ INSERT INTO __schema__.scheduled_messages (
   deliver_at
 )
 VALUES (
-  _application,
   _scheduled_message.id,
   _stream_name,
   _scheduled_message.type,
@@ -54,11 +50,10 @@ VALUES (
   _scheduled_message.metadata,
   _scheduled_message.deliver_at
 )
-ON CONFLICT (application, id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_scheduled_messages_to_deliver(
-  _application text,
   _batch_size int
 )
   RETURNS setof __schema__.scheduled_messages
@@ -69,8 +64,7 @@ DELETE FROM __schema__.scheduled_messages
 WHERE id IN (
   SELECT id
   FROM __schema__.scheduled_messages
-  WHERE application = _application
-  AND deliver_at <= CURRENT_TIMESTAMP
+  WHERE deliver_at <= CURRENT_TIMESTAMP
   FOR UPDATE
   SKIP LOCKED
   LIMIT _batch_size
@@ -79,12 +73,11 @@ RETURNING *;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.cancel_scheduled_message(
-  _application text,
   _id uuid
 )
   RETURNS void
   LANGUAGE sql
 AS
 $$
-DELETE FROM __schema__.scheduled_messages WHERE application = _application AND id = _id;
+DELETE FROM __schema__.scheduled_messages WHERE id = _id;
 $$;
