@@ -5,7 +5,6 @@ using NpgsqlTypes;
 namespace Beckett.Database.Queries;
 
 public class GetRecurringMessagesToDeliver(
-    string application,
     int batchSize
 ) : IPostgresDatabaseQuery<IReadOnlyList<PostgresRecurringMessage>>
 {
@@ -16,8 +15,7 @@ public class GetRecurringMessagesToDeliver(
     )
     {
         command.CommandText = $@"
-            select application,
-                   name,
+            select name,
                    cron_expression,
                    stream_name,
                    type,
@@ -25,16 +23,14 @@ public class GetRecurringMessagesToDeliver(
                    metadata,
                    next_occurrence,
                    timestamp
-            from {schema}.get_recurring_messages_to_deliver($1, $2);
+            from {schema}.get_recurring_messages_to_deliver($1);
         ";
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = application;
-        command.Parameters[1].Value = batchSize;
+        command.Parameters[0].Value = batchSize;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

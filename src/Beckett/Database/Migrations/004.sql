@@ -4,7 +4,6 @@
 
 CREATE TABLE __schema__.recurring_messages
 (
-  application text NOT NULL,
   name text NOT NULL,
   cron_expression text NOT NULL,
   stream_name text NOT NULL,
@@ -12,15 +11,15 @@ CREATE TABLE __schema__.recurring_messages
   data jsonb NOT NULL,
   metadata jsonb NOT NULL,
   next_occurrence timestamp with time zone NULL,
-  complete boolean DEFAULT false NOT NULL,
   timestamp timestamp with time zone DEFAULT now() NOT NULL,
-  PRIMARY KEY (application, name)
+  PRIMARY KEY (name)
 );
+
+CREATE INDEX ix_recurring_messages_next_occurrence ON __schema__.recurring_messages (next_occurrence ASC) WHERE next_occurrence IS NOT NULL;
 
 GRANT UPDATE, DELETE ON __schema__.recurring_messages TO beckett;
 
 CREATE OR REPLACE FUNCTION __schema__.add_or_update_recurring_message(
-  _application text,
   _name text,
   _cron_expression text,
   _stream_name text,
@@ -34,7 +33,6 @@ CREATE OR REPLACE FUNCTION __schema__.add_or_update_recurring_message(
 AS
 $$
 INSERT INTO __schema__.recurring_messages (
-  application,
   name,
   cron_expression,
   stream_name,
@@ -43,8 +41,8 @@ INSERT INTO __schema__.recurring_messages (
   metadata,
   next_occurrence
 )
-VALUES (_application, _name, _cron_expression, _stream_name, _type, _data, _metadata, _next_occurrence)
-ON CONFLICT (application, name) DO UPDATE
+VALUES (_name, _cron_expression, _stream_name, _type, _data, _metadata, _next_occurrence)
+ON CONFLICT (name) DO UPDATE
   SET cron_expression = excluded.cron_expression,
       stream_name = excluded.stream_name,
       data = excluded.data,
@@ -53,36 +51,29 @@ ON CONFLICT (application, name) DO UPDATE
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_recurring_messages_to_deliver(
-  _application text,
   _batch_size int
 )
   RETURNS setof __schema__.recurring_messages
   LANGUAGE sql
 AS
 $$
-SELECT application, name, cron_expression, stream_name, type, data, metadata, next_occurrence, complete, timestamp
+SELECT name, cron_expression, stream_name, type, data, metadata, next_occurrence, timestamp
 FROM __schema__.recurring_messages
-WHERE application = _application
-AND complete = false
-AND next_occurrence <= CURRENT_TIMESTAMP
+WHERE next_occurrence <= CURRENT_TIMESTAMP
 FOR UPDATE
 SKIP LOCKED
 LIMIT _batch_size;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.update_recurring_message_next_occurrence(
-  _application text,
   _name text,
-  _next_occurrence timestamp with time zone,
-  _complete boolean
+  _next_occurrence timestamp with time zone
 )
   RETURNS void
   LANGUAGE sql
 AS
 $$
 UPDATE __schema__.recurring_messages
-SET next_occurrence = _next_occurrence,
-    complete = _complete
-WHERE application = _application
-AND name = _name;
+SET next_occurrence = _next_occurrence
+WHERE name = _name;
 $$;

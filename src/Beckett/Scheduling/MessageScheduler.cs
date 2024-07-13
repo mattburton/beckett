@@ -9,7 +9,6 @@ using UUIDNext;
 namespace Beckett.Scheduling;
 
 public class MessageScheduler(
-    BeckettOptions options,
     IPostgresDatabase database,
     IMessageSerializer messageSerializer,
     IInstrumentation instrumentation
@@ -44,7 +43,6 @@ public class MessageScheduler(
 
         await database.Execute(
             new AddOrUpdateRecurringMessage(
-                options.ApplicationName,
                 name,
                 cronExpression,
                 streamName,

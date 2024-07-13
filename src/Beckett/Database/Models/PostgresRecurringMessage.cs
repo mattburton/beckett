@@ -4,7 +4,6 @@ namespace Beckett.Database.Models;
 
 public class PostgresRecurringMessage
 {
-    public required string Application { get; init; }
     public required string Name { get; init; }
     public required string CronExpression { get; init; }
     public required string StreamName { get; init; }
@@ -17,14 +16,13 @@ public class PostgresRecurringMessage
     public static PostgresRecurringMessage From(NpgsqlDataReader reader) =>
         new()
         {
-            Application = reader.GetFieldValue<string>(0),
-            Name = reader.GetFieldValue<string>(1),
-            CronExpression = reader.GetFieldValue<string>(2),
-            StreamName = reader.GetFieldValue<string>(3),
-            Type = reader.GetFieldValue<string>(4),
-            Data = reader.GetFieldValue<string>(5),
-            Metadata = reader.GetFieldValue<string>(6),
-            NextOccurrence = reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset?>(7),
-            Timestamp = reader.GetFieldValue<DateTimeOffset>(8)
+            Name = reader.GetFieldValue<string>(0),
+            CronExpression = reader.GetFieldValue<string>(1),
+            StreamName = reader.GetFieldValue<string>(2),
+            Type = reader.GetFieldValue<string>(3),
+            Data = reader.GetFieldValue<string>(4),
+            Metadata = reader.GetFieldValue<string>(5),
+            NextOccurrence = reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset?>(6),
+            Timestamp = reader.GetFieldValue<DateTimeOffset>(7)
         };
 }

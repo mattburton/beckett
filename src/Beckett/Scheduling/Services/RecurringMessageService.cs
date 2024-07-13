@@ -35,7 +35,7 @@ public class RecurringMessageService(
                 await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
                 var results = await database.Execute(
-                    new GetRecurringMessagesToDeliver(options.ApplicationName, options.Scheduling.RecurringBatchSize),
+                    new GetRecurringMessagesToDeliver(options.Scheduling.RecurringBatchSize),
                     connection,
                     transaction,
                     stoppingToken
@@ -124,16 +124,14 @@ public class RecurringMessageService(
         var command = batch.CreateBatchCommand();
 
         command.CommandText =
-            $"select {options.Postgres.Schema}.update_recurring_message_next_occurrence($1, $2, $3, $4);";
+            $"select {options.Postgres.Schema}.update_recurring_message_next_occurrence($1, $2);";
 
         var cronExpression = CronExpression.Parse(recurringMessage.CronExpression);
 
         var nextOccurrence = cronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, TimeZoneInfo.Utc);
 
-        command.Parameters.Add(new NpgsqlParameter<string> { Value = recurringMessage.Application });
         command.Parameters.Add(new NpgsqlParameter<string> { Value = recurringMessage.Name });
-        command.Parameters.Add(new NpgsqlParameter<DateTimeOffset?> { Value = nextOccurrence });
-        command.Parameters.Add(new NpgsqlParameter<bool> { Value = nextOccurrence == null });
+        command.Parameters.Add(new NpgsqlParameter<DateTimeOffset> { Value = nextOccurrence, IsNullable = true });
 
         batch.BatchCommands.Add(command);
     }
