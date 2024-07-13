@@ -51,14 +51,17 @@ There are a number of options available in Beckett which can be configured inlin
 builder.AddBeckett(
     options =>
     {
-        options.ApplicationName = "todo-list-api";
+        options.WithSubscriptions("TodoList");
     });
 ```
 Or in `appsettings.json`:
 ```json
 {
   "Beckett": {
-    "ApplicationName": "todo-list-api"
+    "Subscriptions": {
+      "Enabled": true,
+      "GroupName": "TodoList"
+    }
   }
 }
 ```

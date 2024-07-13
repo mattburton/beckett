@@ -26,4 +26,12 @@ public class BeckettOptions
 
         configure?.Invoke(Postgres);
     }
+
+    public void WithSubscriptions(string groupName, Action<SubscriptionOptions>? configure = null)
+    {
+        Subscriptions.Enabled = true;
+        Subscriptions.GroupName = groupName;
+
+        configure?.Invoke(Subscriptions);
+    }
 }
