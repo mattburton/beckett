@@ -12,11 +12,11 @@ public class GetFailed : IPostgresDatabaseQuery<GetFailedResult>
     )
     {
         command.CommandText = $@"
-            SELECT application, name, stream_name, stream_position, retry_id
+            SELECT group_name, name, stream_name, stream_position, retry_id
             FROM {schema}.checkpoints
             WHERE status = 'failed'
             AND retry_id IS NOT NULL
-            ORDER BY application, name, stream_name, stream_position;
+            ORDER BY group_name, name, stream_name, stream_position;
         ";
 
         await command.PrepareAsync(cancellationToken);

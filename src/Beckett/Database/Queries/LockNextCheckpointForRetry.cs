@@ -4,12 +4,12 @@ using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class LockNextCheckpointForRetry(string application) : IPostgresDatabaseQuery<LockNextCheckpointForRetry.Result?>
+public class LockNextCheckpointForRetry(string groupName) : IPostgresDatabaseQuery<LockNextCheckpointForRetry.Result?>
 {
     public async Task<Result?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select application, name, stream_name, stream_position, status, last_error, retry_id
+            select group_name, name, stream_name, stream_position, status, last_error, retry_id
             from {schema}.lock_next_checkpoint_for_retry($1);
         ";
 
@@ -17,7 +17,7 @@ public class LockNextCheckpointForRetry(string application) : IPostgresDatabaseQ
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = application;
+        command.Parameters[0].Value = groupName;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -37,7 +37,7 @@ public class LockNextCheckpointForRetry(string application) : IPostgresDatabaseQ
     }
 
     public record Result(
-        string Application,
+        string GroupName,
         string Name,
         string StreamName,
         long StreamPosition,

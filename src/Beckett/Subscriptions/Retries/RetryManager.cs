@@ -179,7 +179,7 @@ public class RetryManager(
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             var checkpoint = await database.Execute(
-                new LockCheckpoint(options.ApplicationName, subscription.Name, streamName),
+                new LockCheckpoint(options.Subscriptions.GroupName, subscription.Name, streamName),
                 connection,
                 transaction,
                 cancellationToken

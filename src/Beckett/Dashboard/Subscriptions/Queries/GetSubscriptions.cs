@@ -12,9 +12,9 @@ public class GetSubscriptions : IPostgresDatabaseQuery<GetSubscriptionsResult>
     )
     {
         command.CommandText = $@"
-            SELECT s.application, s.name
-            FROM {schema}.subscriptions s
-            ORDER BY application, name;
+            SELECT group_name, name
+            FROM {schema}.subscriptions
+            ORDER BY group_name, name;
         ";
 
         await command.PrepareAsync(cancellationToken);

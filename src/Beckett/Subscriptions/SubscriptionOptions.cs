@@ -4,6 +4,7 @@ namespace Beckett.Subscriptions;
 
 public class SubscriptionOptions
 {
+    public string GroupName { get; set; } = "default";
     public bool Enabled { get; set; }
     public int BatchSize { get; set; } = 500;
     public int Concurrency { get; set; } = Math.Min(Environment.ProcessorCount * 5, 20);

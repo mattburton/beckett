@@ -5,7 +5,7 @@ using NpgsqlTypes;
 namespace Beckett.Database.Queries;
 
 public class LockCheckpoint(
-    string application,
+    string groupName,
     string name,
     string streamName
 ) : IPostgresDatabaseQuery<Checkpoint?>
@@ -13,7 +13,7 @@ public class LockCheckpoint(
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select application,
+            select group_name,
                    name,
                    stream_name,
                    stream_position,
@@ -28,7 +28,7 @@ public class LockCheckpoint(
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = application;
+        command.Parameters[0].Value = groupName;
         command.Parameters[1].Value = name;
         command.Parameters[2].Value = streamName;
 

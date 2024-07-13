@@ -4,7 +4,7 @@ using NpgsqlTypes;
 namespace Beckett.Database.Queries;
 
 public class RecordCheckpoint(
-    string application,
+    string groupName,
     string name,
     string streamName,
     long streamPosition,
@@ -23,7 +23,7 @@ public class RecordCheckpoint(
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = application;
+        command.Parameters[0].Value = groupName;
         command.Parameters[1].Value = name;
         command.Parameters[2].Value = streamName;
         command.Parameters[3].Value = streamPosition;

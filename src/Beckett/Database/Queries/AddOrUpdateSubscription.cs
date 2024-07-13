@@ -3,7 +3,7 @@ using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class AddOrUpdateSubscription(string application, string name) : IPostgresDatabaseQuery<bool>
+public class AddOrUpdateSubscription(string groupName, string name) : IPostgresDatabaseQuery<bool>
 {
     public async Task<bool> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
@@ -14,7 +14,7 @@ public class AddOrUpdateSubscription(string application, string name) : IPostgre
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = application;
+        command.Parameters[0].Value = groupName;
         command.Parameters[1].Value = name;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);

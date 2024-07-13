@@ -66,7 +66,7 @@ public class SubscriptionStreamProcessor(
             case MessageBatchResult.Success success:
                 await database.Execute(
                     new UpdateCheckpointStatus(
-                        options.ApplicationName,
+                        options.Subscriptions.GroupName,
                         subscription.Name,
                         streamName,
                         success.StreamPosition,
@@ -88,7 +88,7 @@ public class SubscriptionStreamProcessor(
 
                 await database.Execute(
                     new UpdateCheckpointStatus(
-                        options.ApplicationName,
+                        options.Subscriptions.GroupName,
                         subscription.Name,
                         streamName,
                         error.StreamPosition,

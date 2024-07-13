@@ -10,7 +10,7 @@ public class RetryFailedHandler(IPostgresDatabase database, BeckettOptions optio
     public async Task Handle(RetryFailed message, CancellationToken cancellationToken) =>
         await database.Execute(
             new UpdateCheckpointStatus(
-                options.ApplicationName,
+                options.Subscriptions.GroupName,
                 message.SubscriptionName,
                 message.StreamName,
                 message.StreamPosition,

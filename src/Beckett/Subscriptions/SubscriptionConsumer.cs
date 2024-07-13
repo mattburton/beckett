@@ -34,7 +34,7 @@ public class SubscriptionConsumer(
             await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
             var checkpoint = await database.Execute(
-                new LockNextAvailableCheckpoint(options.ApplicationName),
+                new LockNextAvailableCheckpoint(options.Subscriptions.GroupName),
                 connection,
                 transaction,
                 stoppingToken

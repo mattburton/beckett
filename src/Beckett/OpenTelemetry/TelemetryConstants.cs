@@ -18,7 +18,6 @@ public static class TelemetryConstants
     {
         public const string AppendToStream = $"{ActivitySource.Name}.{nameof(AppendToStream)}";
         public const string ReadStream = $"{ActivitySource.Name}.{nameof(ReadStream)}";
-        public const string SaveChanges = $"{ActivitySource.Name}.{nameof(SaveChanges)}";
         public const string ScheduleMessage = $"{ActivitySource.Name}.{nameof(ScheduleMessage)}";
     }
 
@@ -27,13 +26,9 @@ public static class TelemetryConstants
         public const string Name = "stream_name";
     }
 
-    public static class Application
-    {
-        public const string Name = "application.name";
-    }
-
     public static class Subscription
     {
+        public const string Group = "subscription.group";
         public const string Name = "subscription.name";
         public const string Category = "subscription.category";
         public const string Handler = "subscription.handler";

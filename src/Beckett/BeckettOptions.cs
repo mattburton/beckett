@@ -10,7 +10,6 @@ public class BeckettOptions
 {
     public const string SectionName = "Beckett";
 
-    public string ApplicationName { get; set; } = "default";
     public MessageOptions Messages { get; } = new();
     public SchedulingOptions Scheduling { get; } = new();
     public SubscriptionOptions Subscriptions { get; } = new();

@@ -38,7 +38,7 @@ public class RetryMonitor(
                 await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
                 var checkpoint = await database.Execute(
-                    new LockNextCheckpointForRetry(options.ApplicationName),
+                    new LockNextCheckpointForRetry(options.Subscriptions.GroupName),
                     connection,
                     transaction,
                     stoppingToken
@@ -54,7 +54,7 @@ public class RetryMonitor(
                     case CheckpointStatus.Retry:
                         await retryManager.StartRetry(
                             checkpoint.RetryId,
-                            checkpoint.Application,
+                            checkpoint.GroupName,
                             checkpoint.Name,
                             checkpoint.StreamName,
                             checkpoint.StreamPosition,
@@ -65,7 +65,7 @@ public class RetryMonitor(
                     case CheckpointStatus.PendingFailure:
                         await retryManager.RecordFailure(
                             checkpoint.RetryId,
-                            checkpoint.Application,
+                            checkpoint.GroupName,
                             checkpoint.Name,
                             checkpoint.StreamName,
                             checkpoint.StreamPosition,

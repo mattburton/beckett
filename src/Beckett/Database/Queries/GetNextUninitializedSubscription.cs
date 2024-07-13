@@ -3,7 +3,7 @@ using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class GetNextUninitializedSubscription(string application) : IPostgresDatabaseQuery<string?>
+public class GetNextUninitializedSubscription(string groupName) : IPostgresDatabaseQuery<string?>
 {
     public async Task<string?> Execute(
         NpgsqlCommand command,
@@ -17,7 +17,7 @@ public class GetNextUninitializedSubscription(string application) : IPostgresDat
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = application;
+        command.Parameters[0].Value = groupName;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

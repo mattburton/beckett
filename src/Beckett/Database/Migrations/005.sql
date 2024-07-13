@@ -4,7 +4,7 @@
 
 CREATE TYPE __schema__.checkpoint AS
 (
-  application text,
+  group_name text,
   name text,
   stream_name text,
   stream_version bigint
@@ -14,10 +14,10 @@ CREATE TYPE __schema__.checkpoint_status AS ENUM ('active', 'retry', 'pending_fa
 
 CREATE TABLE IF NOT EXISTS __schema__.subscriptions
 (
-  application text NOT NULL,
+  group_name text NOT NULL,
   name text NOT NULL,
   initialized boolean DEFAULT false NOT NULL,
-  PRIMARY KEY (application, name)
+  PRIMARY KEY (group_name, name)
 );
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
@@ -26,19 +26,19 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 (
   stream_version bigint DEFAULT 0 NOT NULL,
   stream_position bigint DEFAULT 0 NOT NULL,
-  application text NOT NULL,
+  group_name text NOT NULL,
   name text NOT NULL,
   stream_name text NOT NULL,
   status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
   last_error jsonb NULL,
   retry_id uuid NULL,
-  PRIMARY KEY (application, name, stream_name)
+  PRIMARY KEY (group_name, name, stream_name)
 );
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
 CREATE OR REPLACE FUNCTION __schema__.add_or_update_subscription(
-  _application text,
+  _group_name text,
   _name text
 )
   RETURNS TABLE (
@@ -47,18 +47,18 @@ CREATE OR REPLACE FUNCTION __schema__.add_or_update_subscription(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.subscriptions (application, name)
-VALUES (_application, _name)
-ON CONFLICT (application, name) DO NOTHING;
+INSERT INTO __schema__.subscriptions (group_name, name)
+VALUES (_group_name, _name)
+ON CONFLICT (group_name, name) DO NOTHING;
 
 SELECT initialized
 FROM __schema__.subscriptions
-WHERE application = _application
+WHERE group_name = _group_name
 AND name = _name;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_next_uninitialized_subscription(
-  _application text
+  _group_name text
 )
   RETURNS TABLE (
     name text
@@ -68,13 +68,13 @@ AS
 $$
 SELECT name
 FROM __schema__.subscriptions
-WHERE application = _application
+WHERE group_name = _group_name
 AND initialized = false
 LIMIT 1;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_initialized(
-  _application text,
+  _group_name text,
   _name text
 )
   RETURNS void
@@ -82,18 +82,18 @@ CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_initialized(
 AS
 $$
 DELETE FROM __schema__.checkpoints
-WHERE application = _application
+WHERE group_name = _group_name
 AND name = _name
 AND stream_name = '$initializing';
 
 UPDATE __schema__.subscriptions
 SET initialized = true
-WHERE application = _application
+WHERE group_name = _group_name
 AND name = _name;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.ensure_checkpoint_exists(
-  _application text,
+  _group_name text,
   _name text,
   _stream_name text
 )
@@ -101,18 +101,18 @@ CREATE OR REPLACE FUNCTION __schema__.ensure_checkpoint_exists(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (application, name, stream_name)
-VALUES (_application, _name, _stream_name)
-ON CONFLICT (application, name, stream_name) DO NOTHING;
+INSERT INTO __schema__.checkpoints (group_name, name, stream_name)
+VALUES (_group_name, _name, _stream_name)
+ON CONFLICT (group_name, name, stream_name) DO NOTHING;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
-  _application text,
+  _group_name text,
   _name text,
   _stream_name text
 )
   RETURNS TABLE (
-    application text,
+    group_name text,
     name text,
     stream_name text,
     stream_position bigint,
@@ -122,9 +122,9 @@ CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT application, name, checkpoints.stream_name, stream_position, stream_version, status
+SELECT group_name, name, stream_name, stream_position, stream_version, status
 FROM __schema__.checkpoints
-WHERE application = _application
+WHERE group_name = _group_name
 AND name = _name
 AND stream_name = _stream_name
 FOR UPDATE
@@ -132,10 +132,10 @@ SKIP LOCKED;
 $$;
 
 CREATE FUNCTION __schema__.lock_next_available_checkpoint(
-  _application text
+  _group_name text
 )
   RETURNS TABLE (
-    application text,
+    group_name text,
     name text,
     stream_name text,
     stream_position bigint,
@@ -145,10 +145,10 @@ CREATE FUNCTION __schema__.lock_next_available_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT c.application, c.name, c.stream_name, c.stream_position, c.stream_version, c.status
+SELECT c.group_name, c.name, c.stream_name, c.stream_position, c.stream_version, c.status
 FROM __schema__.checkpoints c
-INNER JOIN __schema__.subscriptions s ON c.application = s.application AND c.name = s.name
-WHERE s.application = _application
+INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+WHERE s.group_name = _group_name
 AND s.initialized = true
 AND c.stream_position < c.stream_version
 AND c.status = 'active'
@@ -165,10 +165,10 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
 AS
 $$
 BEGIN
-  INSERT INTO __schema__.checkpoints (stream_version, application, name, stream_name)
-  SELECT c.stream_version, c.application, c.name, c.stream_name
+  INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
+  SELECT c.stream_version, c.group_name, c.name, c.stream_name
   FROM unnest(_checkpoints) c
-  ON CONFLICT (application, name, stream_name) DO UPDATE
+  ON CONFLICT (group_name, name, stream_name) DO UPDATE
     SET stream_version = excluded.stream_version;
 
   PERFORM pg_notify('beckett:checkpoints', NULL);
@@ -176,7 +176,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.update_checkpoint_status(
-  _application text,
+  _group_name text,
   _name text,
   _stream_name text,
   _stream_position bigint,
@@ -194,7 +194,7 @@ BEGIN
       status = _status,
       retry_id = _retry_id,
       last_error = _last_error
-  WHERE application = _application
+  WHERE group_name = _group_name
   AND name = _name
   AND stream_name = _stream_name;
 
@@ -205,7 +205,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.record_checkpoint(
-  _application text,
+  _group_name text,
   _name text,
   _stream_name text,
   _stream_position bigint,
@@ -215,18 +215,18 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoint(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (stream_version, stream_position, application, name, stream_name)
-VALUES (_stream_version, _stream_position, _application, _name, _stream_name)
-ON CONFLICT (application, name, stream_name) DO UPDATE
+INSERT INTO __schema__.checkpoints (stream_version, stream_position, group_name, name, stream_name)
+VALUES (_stream_version, _stream_position, _group_name, _name, _stream_name)
+ON CONFLICT (group_name, name, stream_name) DO UPDATE
   SET stream_version = excluded.stream_version,
       stream_position = excluded.stream_position;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.lock_next_checkpoint_for_retry(
-  _application text
+  _group_name text
 )
   RETURNS TABLE (
-    application text,
+    group_name text,
     name text,
     stream_name text,
     stream_position bigint,
@@ -238,11 +238,11 @@ CREATE OR REPLACE FUNCTION __schema__.lock_next_checkpoint_for_retry(
 AS
 $$
 WITH retry AS (
-  SELECT c.application,
+  SELECT c.group_name,
          c.name,
          c.stream_name
   FROM __schema__.checkpoints c
-  WHERE c.application = _application
+  WHERE c.group_name = _group_name
   AND (c.status = 'retry' OR c.status = 'pending_failure')
   AND c.retry_id IS NULL
   FOR UPDATE
@@ -252,10 +252,10 @@ WITH retry AS (
 UPDATE __schema__.checkpoints AS c
 SET retry_id = gen_random_uuid()
 FROM retry AS r
-WHERE c.application = r.application
+WHERE c.group_name = r.group_name
 AND c.name = r.name
 AND c.stream_name = r.stream_name
-RETURNING c.application, c.name, c.stream_name, c.stream_position, c.status, c.last_error, c.retry_id;
+RETURNING c.group_name, c.name, c.stream_name, c.stream_position, c.status, c.last_error, c.retry_id;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag()
@@ -264,10 +264,10 @@ CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag()
 AS
 $$
 WITH lagging_subscriptions AS (
-  SELECT name, application, SUM(stream_version - stream_position) AS total_lag
+  SELECT name, group_name, SUM(stream_version - stream_position) AS total_lag
   FROM __schema__.checkpoints
   WHERE (stream_version - stream_position) > 0
-  GROUP BY name, application
+  GROUP BY name, group_name
 )
 SELECT count(*)
 FROM lagging_subscriptions;

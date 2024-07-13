@@ -13,6 +13,4 @@ public static class DataTypeNames
     public static string MessageArray(string schema) => $"{schema}.message[]";
 
     public static string ScheduledMessage(string schema) => $"{schema}.scheduled_message";
-
-    public static string ScheduledMessageArray(string schema) => $"{schema}.scheduled_message[]";
 }

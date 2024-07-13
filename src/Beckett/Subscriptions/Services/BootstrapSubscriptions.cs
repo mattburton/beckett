@@ -27,7 +27,7 @@ public class BootstrapSubscriptions(
 
             await database.Execute(
                 new EnsureCheckpointExists(
-                    options.ApplicationName,
+                    options.Subscriptions.GroupName,
                     GlobalCheckpoint.Name,
                     GlobalCheckpoint.StreamName
                 ),
@@ -47,7 +47,7 @@ public class BootstrapSubscriptions(
 
                 var initialized = await database.Execute(
                     new AddOrUpdateSubscription(
-                        options.ApplicationName,
+                        options.Subscriptions.GroupName,
                         subscription.Name
                     ),
                     connection,
@@ -62,7 +62,7 @@ public class BootstrapSubscriptions(
                 if (subscription.StartingPosition == StartingPosition.Latest)
                 {
                     await database.Execute(
-                        new SetSubscriptionToInitialized(options.ApplicationName, subscription.Name),
+                        new SetSubscriptionToInitialized(options.Subscriptions.GroupName, subscription.Name),
                         cancellationToken
                     );
 
@@ -72,7 +72,7 @@ public class BootstrapSubscriptions(
                 checkpoints.Add(
                     new CheckpointType
                     {
-                        Application = options.ApplicationName,
+                        GroupName = options.Subscriptions.GroupName,
                         Name = subscription.Name,
                         StreamName = InitializationConstants.StreamName,
                         StreamVersion = 0

@@ -42,7 +42,7 @@ public class GlobalStreamConsumer(
 
             var checkpoint = await database.Execute(
                 new LockCheckpoint(
-                    options.ApplicationName,
+                    options.Subscriptions.GroupName,
                     GlobalCheckpoint.Name,
                     GlobalCheckpoint.StreamName
                 ),
@@ -87,7 +87,7 @@ public class GlobalStreamConsumer(
                         subscription =>
                             new CheckpointType
                             {
-                                Application = options.ApplicationName,
+                                GroupName = options.Subscriptions.GroupName,
                                 Name = subscription.Name,
                                 StreamName = stream.Key,
                                 StreamVersion = stream.Max(x => x.StreamPosition)
@@ -107,7 +107,7 @@ public class GlobalStreamConsumer(
 
             await database.Execute(
                 new RecordCheckpoint(
-                    options.ApplicationName,
+                    options.Subscriptions.GroupName,
                     GlobalCheckpoint.Name,
                     GlobalCheckpoint.StreamName,
                     newGlobalPosition,
