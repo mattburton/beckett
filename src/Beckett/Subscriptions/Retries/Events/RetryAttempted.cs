@@ -4,7 +4,7 @@ namespace Beckett.Subscriptions.Retries.Events;
 
 public record RetryAttempted(
     Guid Id,
-    string ApplicationName,
+    string SubscriptionGroupName,
     string SubscriptionName,
     string StreamName,
     long StreamPosition,

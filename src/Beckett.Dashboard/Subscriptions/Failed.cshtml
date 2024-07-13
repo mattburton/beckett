@@ -29,7 +29,7 @@
        hx-swap="outerHTML">
   <thead>
     <tr>
-      <th>Application</th>
+      <th>Group</th>
       <th>Name</th>
       <th>Stream Name</th>
       <th>Stream Position</th>
@@ -39,7 +39,7 @@
   @foreach(var retry in Model.Failures)
   {
     <tr>
-      <td>@retry.Application</td>
+      <td>@retry.GroupName</td>
       <td>@retry.Name</td>
       <td>
         <a href="@Routes.Prefix/subscriptions/retries/@retry.RetryId">@retry.StreamName</a>

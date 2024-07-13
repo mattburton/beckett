@@ -29,7 +29,7 @@
        hx-swap="outerHTML">
   <thead>
     <tr>
-      <th>Application</th>
+      <th>Group</th>
       <th>Name</th>
       <th>Total Lag</th>
     </tr>
@@ -38,7 +38,7 @@
   @foreach(var subscription in Model.Subscriptions)
   {
     <tr>
-      <td>@subscription.Application</td>
+      <td>@subscription.GroupName</td>
       <td>@subscription.Name</td>
       <td>@subscription.TotalLag</td>
     </tr>

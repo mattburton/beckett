@@ -17,7 +17,6 @@ public class RetryManager(
 {
     public async Task StartRetry(
         Guid id,
-        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -30,7 +29,7 @@ public class RetryManager(
             ExpectedVersion.Any,
             new RetryStarted(
                 id,
-                applicationName,
+                options.Subscriptions.GroupName,
                 subscriptionName,
                 streamName,
                 streamPosition,
@@ -43,7 +42,6 @@ public class RetryManager(
 
     public async Task RecordFailure(
         Guid id,
-        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -56,7 +54,7 @@ public class RetryManager(
             ExpectedVersion.Any,
             new RetryFailed(
                 id,
-                applicationName,
+                options.Subscriptions.GroupName,
                 subscriptionName,
                 streamName,
                 streamPosition,
@@ -70,7 +68,6 @@ public class RetryManager(
 
     public Task Retry(
         Guid id,
-        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -78,7 +75,6 @@ public class RetryManager(
         CancellationToken cancellationToken
     ) => AttemptRetry(
         id,
-        applicationName,
         subscriptionName,
         streamName,
         streamPosition,
@@ -95,7 +91,6 @@ public class RetryManager(
 
         await AttemptRetry(
             id,
-            state.ApplicationName,
             state.SubscriptionName,
             state.StreamName,
             state.StreamPosition,
@@ -126,7 +121,7 @@ public class RetryManager(
 
         await database.Execute(
             new UpdateCheckpointStatus(
-                state.ApplicationName,
+                options.Subscriptions.GroupName,
                 state.SubscriptionName,
                 state.StreamName,
                 state.StreamPosition,
@@ -150,7 +145,6 @@ public class RetryManager(
 
     private async Task AttemptRetry(
         Guid id,
-        string applicationName,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -206,7 +200,7 @@ public class RetryManager(
                 ExpectedVersion.StreamExists,
                 new RetrySucceeded(
                     id,
-                    applicationName,
+                    options.Subscriptions.GroupName,
                     subscriptionName,
                     streamName,
                     streamPosition,
@@ -227,7 +221,7 @@ public class RetryManager(
                     ExpectedVersion.StreamExists,
                     new ManualRetryFailed(
                         id,
-                        applicationName,
+                        options.Subscriptions.GroupName,
                         subscriptionName,
                         streamName,
                         streamPosition,
@@ -250,7 +244,7 @@ public class RetryManager(
                     ExpectedVersion.StreamExists,
                     new RetryFailed(
                         id,
-                        applicationName,
+                        options.Subscriptions.GroupName,
                         subscriptionName,
                         streamName,
                         streamPosition,
@@ -272,7 +266,7 @@ public class RetryManager(
                     retryStreamName,
                     new RetryAttempted(
                         id,
-                        applicationName,
+                        options.Subscriptions.GroupName,
                         subscriptionName,
                         streamName,
                         streamPosition,
@@ -289,7 +283,6 @@ public class RetryManager(
 
     private class RetryState : IApply
     {
-        public string ApplicationName { get; private set; } = null!;
         public string SubscriptionName { get; private set; } = null!;
         public string StreamName { get; private set; } = null!;
         public long StreamPosition { get; private set; }
@@ -320,7 +313,6 @@ public class RetryManager(
 
         private void Apply(RetryStarted e)
         {
-            ApplicationName = e.ApplicationName;
             SubscriptionName = e.SubscriptionName;
             StreamName = e.StreamName;
             StreamPosition = e.StreamPosition;
@@ -342,7 +334,6 @@ public class RetryManager(
 
         private void Apply(RetryFailed e)
         {
-            ApplicationName = e.ApplicationName;
             SubscriptionName = e.SubscriptionName;
             StreamName = e.StreamName;
             StreamPosition = e.StreamPosition;

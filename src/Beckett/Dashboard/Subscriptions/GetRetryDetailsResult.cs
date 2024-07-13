@@ -6,7 +6,7 @@ namespace Beckett.Dashboard.Subscriptions;
 public class GetRetryDetailsResult : IApply
 {
     public Guid Id { get; set; }
-    public string ApplicationName { get; set; } = null!;
+    public string GroupName { get; set; } = null!;
     public string SubscriptionName { get; set; } = null!;
     public string StreamName { get; set; } = null!;
     public long StreamPosition { get; set; }
@@ -59,7 +59,7 @@ public class GetRetryDetailsResult : IApply
     private void Apply(RetryStarted e)
     {
         Id = e.Id;
-        ApplicationName = e.ApplicationName;
+        GroupName = e.SubscriptionGroupName;
         SubscriptionName = e.SubscriptionName;
         StreamName = e.StreamName;
         StreamPosition = e.StreamPosition;
@@ -85,7 +85,7 @@ public class GetRetryDetailsResult : IApply
     private void Apply(RetryFailed e)
     {
         Id = e.Id;
-        ApplicationName = e.ApplicationName;
+        GroupName = e.SubscriptionGroupName;
         SubscriptionName = e.SubscriptionName;
         StreamName = e.StreamName;
         StreamPosition = e.StreamPosition;
