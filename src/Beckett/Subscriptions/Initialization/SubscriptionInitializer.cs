@@ -105,7 +105,7 @@ public class SubscriptionInitializer(
 
             if (globalStream.Items.Count == 0)
             {
-                await database.Execute(
+                var globalStreamCheck = await database.Execute(
                     new LockCheckpoint(
                         options.Subscriptions.GroupName,
                         GlobalCheckpoint.Name,
@@ -115,6 +115,11 @@ public class SubscriptionInitializer(
                     transaction,
                     cancellationToken
                 );
+
+                if (globalStreamCheck == null)
+                {
+                    continue;
+                }
 
                 var globalStreamUpdates = await messageStorage.ReadGlobalStream(
                     checkpoint.StreamPosition,
@@ -135,6 +140,11 @@ public class SubscriptionInitializer(
                 );
 
                 await transaction.CommitAsync(cancellationToken);
+
+                logger.LogInformation(
+                    "Finished initializing subscription {SubscriptionName}",
+                    subscription.Name
+                );
 
                 break;
             }
@@ -182,6 +192,12 @@ public class SubscriptionInitializer(
             );
 
             await transaction.CommitAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Initializing subscription {SubscriptionName} - current global position {GlobalPosition}",
+                subscription.Name,
+                newGlobalPosition
+            );
         }
     }
 }
