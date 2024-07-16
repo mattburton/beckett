@@ -17,7 +17,7 @@ public class GetLaggingSubscriptions : IPostgresDatabaseQuery<GetLaggingSubscrip
             WHERE status = 'active'
             AND (stream_version - stream_position) > 0
             GROUP BY group_name, name
-            ORDER BY SUM(stream_version - stream_position) DESC;
+            ORDER BY group_name, SUM(stream_version - stream_position) DESC, name;
         ";
 
         await command.PrepareAsync(cancellationToken);
