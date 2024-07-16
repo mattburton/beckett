@@ -1,3 +1,4 @@
+@using System.Web
 @inherits HtmlTemplate<IndexPage.ViewModel>
 
 @{
@@ -24,7 +25,7 @@
   {
     <tr>
       <td>
-        <a href="@Routes.Prefix/message-store/categories/@category.Name">@category.Name</a>
+        <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(category.Name)">@category.Name</a>
       </td>
       <td>@category.LastUpdated</td>
     </tr>

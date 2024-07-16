@@ -59,7 +59,7 @@
         Stream:
         @if (Routes.Options.MessageStoreEnabled)
         {
-          <a href="@Routes.Prefix/message-store/categories/@Model.Details.StreamCategory/@Model.Details.StreamName">
+          <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamName)">
             @Model.Details.StreamName
           </a>
         }

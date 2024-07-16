@@ -14,12 +14,12 @@
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@Model.Message.Category">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Message.Category)">
         @Model.Message.Category
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@Model.Message.Category/@HttpUtility.UrlEncode(Model.Message.StreamName)">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Message.Category)/@HttpUtility.UrlEncode(Model.Message.StreamName)">
         @Model.Message.StreamName
       </a>
     </li>
