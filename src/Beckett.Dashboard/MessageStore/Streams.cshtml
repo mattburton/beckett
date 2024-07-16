@@ -1,3 +1,4 @@
+@using System.Web
 @inherits HtmlTemplate<StreamsPage.ViewModel>
 
 @{
@@ -29,7 +30,7 @@
   {
     <tr>
       <td>
-        <a href="@Routes.Prefix/message-store/categories/@Model.Category/@stream.StreamName">@stream.StreamName</a>
+        <a href="@Routes.Prefix/message-store/categories/@Model.Category/@HttpUtility.UrlEncode(stream.StreamName)">@stream.StreamName</a>
       </td>
       <td>@stream.LastUpdated</td>
     </tr>

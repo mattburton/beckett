@@ -1,3 +1,4 @@
+@using System.Web
 @using Beckett.Messages
 @inherits HtmlTemplate<MessagePage.ViewModel>
 
@@ -18,7 +19,7 @@
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@Model.Message.Category/@Model.Message.StreamName">
+      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@Model.Message.Category/@HttpUtility.UrlEncode(Model.Message.StreamName)">
         @Model.Message.StreamName
       </a>
     </li>

@@ -1,3 +1,4 @@
+@using System.Web
 @inherits HtmlTemplate<RetryPage.ViewModel>
 
 @{
@@ -71,7 +72,7 @@
         Stream Position:
         @if (Routes.Options.MessageStoreEnabled)
         {
-        <a href="@Routes.Prefix/message-store/streams/@Model.Details.StreamName/@Model.Details.StreamPosition">
+        <a href="@Routes.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamName)/@Model.Details.StreamPosition">
           @Model.Details.StreamPosition
         </a>
         }
