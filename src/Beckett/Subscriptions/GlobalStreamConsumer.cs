@@ -68,6 +68,8 @@ public class GlobalStreamConsumer(
 
                 if (emptyResultRetryCount <= options.Subscriptions.GlobalEmptyResultsMaxRetryCount)
                 {
+                    await transaction.RollbackAsync(stoppingToken);
+
                     await Task.Delay(options.Subscriptions.GlobalEmptyResultsRetryDelay, stoppingToken);
 
                     continue;
