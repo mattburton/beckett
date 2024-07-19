@@ -32,8 +32,14 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
   last_error jsonb NULL,
   retry_id uuid NULL,
+  lagging boolean GENERATED ALWAYS AS ((status = 'active') AND ((stream_version - stream_position) > 0)) STORED,
+  retry boolean GENERATED ALWAYS AS ((status = 'retry' OR status = 'pending_failure') AND (retry_id IS NULL)) STORED,
   PRIMARY KEY (group_name, name, stream_name)
 );
+
+CREATE INDEX IF NOT EXISTS ix_checkpoints_lagging ON __schema__.checkpoints (lagging);
+
+CREATE INDEX IF NOT EXISTS ix_checkpoints_retry ON __schema__.checkpoints (retry);
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
@@ -150,8 +156,7 @@ FROM __schema__.checkpoints c
 INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
 WHERE s.group_name = _group_name
 AND s.initialized = true
-AND c.stream_position < c.stream_version
-AND c.status = 'active'
+AND c.lagging = true
 FOR UPDATE
 SKIP LOCKED
 LIMIT 1;
@@ -243,8 +248,7 @@ WITH retry AS (
          c.stream_name
   FROM __schema__.checkpoints c
   WHERE c.group_name = _group_name
-  AND (c.status = 'retry' OR c.status = 'pending_failure')
-  AND c.retry_id IS NULL
+  AND c.retry = true
   FOR UPDATE
   SKIP LOCKED
   LIMIT 1
