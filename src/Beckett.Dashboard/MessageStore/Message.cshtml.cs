@@ -1,3 +1,5 @@
+using System.Web;
+
 namespace Beckett.Dashboard.MessageStore;
 
 public static class MessagePage
@@ -29,7 +31,9 @@ public static class MessagePage
         CancellationToken cancellationToken
     )
     {
-        var result = await dashboard.MessageStore.GetMessage(streamName, streamPosition, cancellationToken);
+        var decodedStreamName = HttpUtility.UrlDecode(streamName);
+
+        var result = await dashboard.MessageStore.GetMessage(decodedStreamName, streamPosition, cancellationToken);
 
         return result is null ? Results.NotFound() : new Message(new ViewModel(result));
     }

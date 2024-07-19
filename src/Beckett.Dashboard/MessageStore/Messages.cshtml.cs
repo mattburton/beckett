@@ -1,3 +1,5 @@
+using System.Web;
+
 namespace Beckett.Dashboard.MessageStore;
 
 public static class MessagesPage
@@ -16,9 +18,11 @@ public static class MessagesPage
         CancellationToken cancellationToken
     )
     {
-        var result = await dashboard.MessageStore.GetStreamMessages(streamName, cancellationToken);
+        var decodedStreamName = HttpUtility.UrlDecode(streamName);
 
-        return new Messages(new ViewModel(category, streamName, result.Messages));
+        var result = await dashboard.MessageStore.GetStreamMessages(decodedStreamName, cancellationToken);
+
+        return new Messages(new ViewModel(category, decodedStreamName, result.Messages));
     }
 
     public record ViewModel(

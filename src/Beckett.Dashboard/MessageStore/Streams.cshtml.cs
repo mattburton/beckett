@@ -1,3 +1,5 @@
+using System.Web;
+
 namespace Beckett.Dashboard.MessageStore;
 
 public static class StreamsPage
@@ -15,9 +17,11 @@ public static class StreamsPage
         CancellationToken cancellationToken
     )
     {
-        var result = await dashboard.MessageStore.GetCategoryStreams(category, cancellationToken);
+        var decodedCategory = HttpUtility.UrlDecode(category);
 
-        return new Streams(new ViewModel(category, result.Streams));
+        var result = await dashboard.MessageStore.GetCategoryStreams(decodedCategory, cancellationToken);
+
+        return new Streams(new ViewModel(decodedCategory, result.Streams));
     }
 
     public record ViewModel(string Category, IReadOnlyList<GetCategoryStreamsResult.Stream> Streams);
