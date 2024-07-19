@@ -12,6 +12,7 @@ public class SubscriptionOptions
     public int GlobalEmptyResultsMaxRetryCount { get; set; } = 1;
     public TimeSpan GlobalPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
     public TimeSpan GlobalEmptyResultsRetryDelay { get; set; } = TimeSpan.FromMilliseconds(100);
+    public int InitializationBatchSize { get; set; } = 1000;
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(10);
 
     public RetryOptions Retries { get; set; } = new();

@@ -99,7 +99,7 @@ public class SubscriptionInitializer(
 
             var globalStream = await messageStorage.ReadGlobalStream(
                 checkpoint.StreamPosition,
-                options.Subscriptions.BatchSize,
+                options.Subscriptions.InitializationBatchSize,
                 cancellationToken
             );
 
@@ -123,7 +123,7 @@ public class SubscriptionInitializer(
 
                 var globalStreamUpdates = await messageStorage.ReadGlobalStream(
                     checkpoint.StreamPosition,
-                    options.Subscriptions.BatchSize,
+                    1,
                     cancellationToken
                 );
 
