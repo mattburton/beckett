@@ -18,7 +18,7 @@ public class SubscriptionPollingService(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            consumerGroup.StartPolling();
+            consumerGroup.StartPolling(options.GroupName);
 
             await Task.Delay(options.PollingInterval, stoppingToken);
         }

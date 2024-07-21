@@ -28,15 +28,15 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddDashboard();
 
-        builder.Services.AddMessageSupport(options.Messages);
+        builder.Services.AddMessageSupport(options);
 
         builder.Services.AddOpenTelemetrySupport();
 
-        builder.Services.AddPostgresSupport(options.Postgres);
+        builder.Services.AddPostgresSupport(options);
 
-        builder.Services.AddScheduledMessageSupport(options.Scheduling);
+        builder.Services.AddScheduledMessageSupport(options);
 
-        builder.Services.AddSubscriptionSupport(options.Subscriptions);
+        builder.Services.AddSubscriptionSupport(options);
 
         var messageTypeProvider = new MessageTypeProvider();
 
@@ -54,14 +54,18 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddSingleton<IRecurringMessageRegistry>(recurringMessageRegistry);
 
-        return new BeckettBuilder(
+        var beckettBuilder = new BeckettBuilder(
             builder.Configuration,
             builder.Environment,
             builder.Services,
             messageTypeMap,
             subscriptionRegistry,
             recurringMessageRegistry
-        ).SubscriptionRetryModule(options.Subscriptions.Retries);
+        );
+
+        return !options.Subscriptions.Enabled
+            ? beckettBuilder
+            : beckettBuilder.SubscriptionRetryModule(options.Subscriptions.Retries);
     }
 
     public static void AddBeckett(
@@ -77,7 +81,7 @@ public static class ServiceCollectionExtensions
                 var environment = context.HostingEnvironment;
 
                 var options = context.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
-                          new BeckettOptions();
+                              new BeckettOptions();
 
                 configureOptions?.Invoke(options);
 
@@ -85,15 +89,15 @@ public static class ServiceCollectionExtensions
 
                 services.AddDashboard();
 
-                services.AddMessageSupport(options.Messages);
+                services.AddMessageSupport(options);
 
                 services.AddOpenTelemetrySupport();
 
-                services.AddPostgresSupport(options.Postgres);
+                services.AddPostgresSupport(options);
 
-                services.AddScheduledMessageSupport(options.Scheduling);
+                services.AddScheduledMessageSupport(options);
 
-                services.AddSubscriptionSupport(options.Subscriptions);
+                services.AddSubscriptionSupport(options);
 
                 var messageTypeProvider = new MessageTypeProvider();
 
@@ -118,7 +122,12 @@ public static class ServiceCollectionExtensions
                     messageTypeMap,
                     subscriptionRegistry,
                     recurringMessageRegistry
-                ).SubscriptionRetryModule(options.Subscriptions.Retries);
+                );
+
+                if (options.Subscriptions.Enabled)
+                {
+                    beckettBuilder.SubscriptionRetryModule(options.Subscriptions.Retries);
+                }
 
                 buildBeckett?.Invoke(beckettBuilder);
             }

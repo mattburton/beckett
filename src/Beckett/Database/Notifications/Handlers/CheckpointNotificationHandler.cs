@@ -8,5 +8,6 @@ public class CheckpointNotificationHandler(
 {
     public string Channel => "beckett:checkpoints";
 
-    public void Handle(string payload, CancellationToken cancellationToken) => subscriptionConsumerGroup.StartPolling();
+    public void Handle(string payload, CancellationToken cancellationToken) =>
+        subscriptionConsumerGroup.StartPolling(payload);
 }

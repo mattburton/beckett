@@ -5,11 +5,16 @@ namespace Beckett.Scheduling;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddScheduledMessageSupport(this IServiceCollection services, SchedulingOptions options)
+    public static void AddScheduledMessageSupport(this IServiceCollection services, BeckettOptions options)
     {
-        services.AddSingleton(options);
+        services.AddSingleton(options.Scheduling);
 
         services.AddSingleton<IMessageScheduler, MessageScheduler>();
+
+        if (!options.Subscriptions.Enabled)
+        {
+            return;
+        }
 
         services.AddHostedService<BootstrapRecurringMessages>();
 

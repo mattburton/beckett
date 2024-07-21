@@ -9,9 +9,9 @@ namespace Beckett.Database;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddPostgresSupport(this IServiceCollection services, PostgresOptions options)
+    public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
     {
-        if (!options.Enabled)
+        if (!options.Postgres.Enabled)
         {
             return;
         }
@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPostgresDatabase>(
             provider =>
             {
-                var dataSource = options.DataSource ?? provider.GetService<NpgsqlDataSource>();
+                var dataSource = options.Postgres.DataSource ?? provider.GetService<NpgsqlDataSource>();
 
                 if (dataSource is null)
                 {
@@ -30,15 +30,15 @@ public static class ServiceCollectionExtensions
                     );
                 }
 
-                return new PostgresDatabase(dataSource, options);
+                return new PostgresDatabase(dataSource, options.Postgres);
             }
         );
 
         services.AddSingleton<IPostgresMessageDeserializer, PostgresMessageDeserializer>();
 
-        services.AddSingleton(typeof(IMessageStorage), options.MessageStorageType);
+        services.AddSingleton(typeof(IMessageStorage), options.Postgres.MessageStorageType);
 
-        if (options.Notifications)
+        if (options.Postgres.Notifications && options.Subscriptions.Enabled)
         {
             AddPostgresNotifications(services);
         }

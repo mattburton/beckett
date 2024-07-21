@@ -17,8 +17,13 @@ public class SubscriptionConsumerGroup(
 
     public void Initialize(CancellationToken stoppingToken) => _stoppingToken = stoppingToken;
 
-    public void StartPolling()
+    public void StartPolling(string groupName)
     {
+        if (options.Subscriptions.GroupName != groupName)
+        {
+            return;
+        }
+
         foreach (var instance in Enumerable.Range(1, _concurrency))
         {
             var consumer = _consumers.GetOrAdd(

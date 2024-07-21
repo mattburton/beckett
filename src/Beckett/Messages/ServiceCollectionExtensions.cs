@@ -5,9 +5,9 @@ namespace Beckett.Messages;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddMessageSupport(this IServiceCollection services, MessageOptions options)
+    public static void AddMessageSupport(this IServiceCollection services, BeckettOptions options)
     {
-        services.AddSingleton(options);
+        services.AddSingleton(options.Messages);
 
         services.AddSingleton<IMessageSerializer, MessageSerializer>();
 

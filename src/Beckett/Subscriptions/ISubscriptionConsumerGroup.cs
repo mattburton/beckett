@@ -4,5 +4,5 @@ public interface ISubscriptionConsumerGroup
 {
     void Initialize(CancellationToken stoppingToken);
 
-    void StartPolling();
+    void StartPolling(string groupName);
 }

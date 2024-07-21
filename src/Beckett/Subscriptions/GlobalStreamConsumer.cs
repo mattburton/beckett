@@ -98,12 +98,15 @@ public class GlobalStreamConsumer(
                 );
             }
 
-            await database.Execute(
-                new RecordCheckpoints(checkpoints.ToArray()),
-                connection,
-                transaction,
-                stoppingToken
-            );
+            if (checkpoints.Count > 0)
+            {
+                await database.Execute(
+                    new RecordCheckpoints(checkpoints.ToArray()),
+                    connection,
+                    transaction,
+                    stoppingToken
+                );
+            }
 
             var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
 

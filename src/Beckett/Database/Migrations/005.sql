@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   PRIMARY KEY (group_name, name, stream_name)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_lagging ON __schema__.checkpoints (lagging);
+CREATE INDEX IF NOT EXISTS ix_checkpoints_lagging ON __schema__.checkpoints (group_name, name, lagging);
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_retry ON __schema__.checkpoints (retry);
 
@@ -154,9 +154,9 @@ $$
 SELECT c.group_name, c.name, c.stream_name, c.stream_position, c.stream_version, c.status
 FROM __schema__.checkpoints c
 INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-WHERE s.group_name = _group_name
-AND s.initialized = true
+WHERE c.group_name = _group_name
 AND c.lagging = true
+AND s.initialized = true
 FOR UPDATE
 SKIP LOCKED
 LIMIT 1;
@@ -170,13 +170,17 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
 AS
 $$
 BEGIN
+  IF array_length(_checkpoints, 1) = 0 THEN
+    RETURN;
+  END IF;
+
   INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
   SELECT c.stream_version, c.group_name, c.name, c.stream_name
   FROM unnest(_checkpoints) c
   ON CONFLICT (group_name, name, stream_name) DO UPDATE
     SET stream_version = excluded.stream_version;
 
-  PERFORM pg_notify('beckett:checkpoints', NULL);
+  PERFORM pg_notify('beckett:checkpoints', _checkpoints[1].group_name);
 END;
 $$;
 
