@@ -39,7 +39,9 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_lagging ON __schema__.checkpoints (group_name, name, lagging);
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_retry ON __schema__.checkpoints (retry);
+CREATE INDEX IF NOT EXISTS ix_checkpoints_retry ON __schema__.checkpoints (group_name, retry);
+
+CREATE INDEX IF NOT EXISTS ix_checkpoints_status ON __schema__.checkpoints (status);
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
@@ -274,8 +276,7 @@ $$
 WITH lagging_subscriptions AS (
   SELECT name, group_name, SUM(stream_version - stream_position) AS total_lag
   FROM __schema__.checkpoints
-  WHERE status = 'active'
-  AND (stream_version - stream_position) > 0
+  WHERE lagging = true
   GROUP BY name, group_name
 )
 SELECT count(*)
