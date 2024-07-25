@@ -10,6 +10,7 @@ public class SubscriptionOptions
     public int Concurrency { get; set; } = Math.Min(Environment.ProcessorCount * 5, 20);
     public int GlobalBatchSize { get; set; } = 500;
     public int GlobalEmptyResultsMaxRetryCount { get; set; } = 1;
+    public TimeSpan GlobalLockRetryInterval { get; set; } = TimeSpan.FromMilliseconds(100);
     public TimeSpan GlobalPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
     public TimeSpan GlobalEmptyResultsRetryDelay { get; set; } = TimeSpan.FromMilliseconds(100);
     public int InitializationBatchSize { get; set; } = 1000;

@@ -137,6 +137,12 @@ public class GlobalStreamConsumer(
             catch (NpgsqlException e) when (e.SqlState == PostgresLockNotAvailable)
             {
                 //unable to lock checkpoint(s) for update - retry
+                if (options.Subscriptions.GlobalLockRetryInterval == TimeSpan.Zero)
+                {
+                    continue;
+                }
+
+                await Task.Delay(options.Subscriptions.GlobalLockRetryInterval, stoppingToken);
             }
         }
     }
