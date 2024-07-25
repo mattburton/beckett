@@ -171,10 +171,17 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
   LANGUAGE plpgsql
 AS
 $$
+DECLARE
+  _value int;
 BEGIN
   IF array_length(_checkpoints, 1) = 0 THEN
     RETURN;
   END IF;
+
+  SELECT 1 INTO _value
+  FROM __schema__.checkpoints c
+  INNER JOIN unnest(_checkpoints) i ON i.group_name = c.group_name AND i.name = c.name AND i.stream_name = c.stream_name
+  FOR UPDATE NOWAIT;
 
   INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
   SELECT c.stream_version, c.group_name, c.name, c.stream_name
