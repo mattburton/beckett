@@ -5,14 +5,14 @@ namespace Beckett.Dashboard.MessageStore;
 
 public class DashboardMessageStore(IPostgresDatabase database) : IDashboardMessageStore
 {
-    public Task<GetCategoriesResult> GetCategories(CancellationToken cancellationToken)
+    public Task<GetCategoriesResult> GetCategories(string? query, CancellationToken cancellationToken)
     {
-        return database.Execute(new GetCategories(), cancellationToken);
+        return database.Execute(new GetCategories(query), cancellationToken);
     }
 
-    public Task<GetCategoryStreamsResult> GetCategoryStreams(string category, CancellationToken cancellationToken)
+    public Task<GetCategoryStreamsResult> GetCategoryStreams(string category, string? query, CancellationToken cancellationToken)
     {
-        return database.Execute(new GetCategoryStreams(category), cancellationToken);
+        return database.Execute(new GetCategoryStreams(category, query), cancellationToken);
     }
 
     public Task<GetMessageResult?> GetMessage(string id, CancellationToken cancellationToken)
@@ -34,8 +34,8 @@ public class DashboardMessageStore(IPostgresDatabase database) : IDashboardMessa
         return database.Execute(new GetMessageByStreamPosition(streamName, streamPosition), cancellationToken);
     }
 
-    public Task<GetStreamMessagesResult> GetStreamMessages(string streamName, CancellationToken cancellationToken)
+    public Task<GetStreamMessagesResult> GetStreamMessages(string streamName, string? query, CancellationToken cancellationToken)
     {
-        return database.Execute(new GetStreamMessages(streamName), cancellationToken);
+        return database.Execute(new GetStreamMessages(streamName, query), cancellationToken);
     }
 }

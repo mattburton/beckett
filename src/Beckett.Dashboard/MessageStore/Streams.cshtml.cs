@@ -13,16 +13,17 @@ public static class StreamsPage
 
     public static async Task<IResult> Handler(
         string category,
+        string? query,
         IDashboard dashboard,
         CancellationToken cancellationToken
     )
     {
         var decodedCategory = HttpUtility.UrlDecode(category);
 
-        var result = await dashboard.MessageStore.GetCategoryStreams(decodedCategory, cancellationToken);
+        var result = await dashboard.MessageStore.GetCategoryStreams(decodedCategory, query, cancellationToken);
 
-        return new Streams(new ViewModel(decodedCategory, result.Streams));
+        return new Streams(new ViewModel(decodedCategory, query, result.Streams));
     }
 
-    public record ViewModel(string Category, IReadOnlyList<GetCategoryStreamsResult.Stream> Streams);
+    public record ViewModel(string Category, string? Query, IReadOnlyList<GetCategoryStreamsResult.Stream> Streams);
 }

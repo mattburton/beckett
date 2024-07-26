@@ -9,9 +9,9 @@ public static class IndexPage
         return builder;
     }
 
-    public static async Task<IResult> Handler(IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handler(string? query, IDashboard dashboard, CancellationToken cancellationToken)
     {
-        var result = await dashboard.MessageStore.GetCategories(cancellationToken);
+        var result = await dashboard.MessageStore.GetCategories(query, cancellationToken);
 
         return new Index(new ViewModel(result.Categories));
     }

@@ -14,19 +14,21 @@ public static class MessagesPage
     public static async Task<IResult> Handler(
         string category,
         string streamName,
+        string? query,
         IDashboard dashboard,
         CancellationToken cancellationToken
     )
     {
         var decodedStreamName = HttpUtility.UrlDecode(streamName);
 
-        var result = await dashboard.MessageStore.GetStreamMessages(decodedStreamName, cancellationToken);
+        var result = await dashboard.MessageStore.GetStreamMessages(decodedStreamName, query, cancellationToken);
 
-        return new Messages(new ViewModel(category, decodedStreamName, result.Messages));
+        return new Messages(new ViewModel(category, decodedStreamName, query, result.Messages));
     }
 
     public record ViewModel(
         string Category,
         string StreamName,
+        string? Query,
         IReadOnlyList<GetStreamMessagesResult.Message> Messages);
 }
