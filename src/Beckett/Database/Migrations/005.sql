@@ -45,6 +45,17 @@ CREATE INDEX IF NOT EXISTS ix_checkpoints_status ON __schema__.checkpoints (stat
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
+CREATE TABLE IF NOT EXISTS __schema__.pending_checkpoint_updates
+(
+  stream_version bigint DEFAULT 0 NOT NULL,
+  group_name text NOT NULL,
+  name text NOT NULL,
+  stream_name text NOT NULL,
+  PRIMARY KEY (group_name, name, stream_name)
+);
+
+GRANT UPDATE, DELETE ON __schema__.pending_checkpoint_updates TO beckett;
+
 CREATE OR REPLACE FUNCTION __schema__.add_or_update_subscription(
   _group_name text,
   _name text
@@ -164,43 +175,89 @@ SKIP LOCKED
 LIMIT 1;
 $$;
 
+CREATE OR REPLACE FUNCTION __schema__.apply_pending_checkpoint_updates()
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+WITH update_existing AS (
+  UPDATE __schema__.checkpoints c
+  SET stream_version = CASE WHEN u.stream_version > c.stream_version THEN u.stream_version ELSE c.stream_version END
+  FROM (
+    SELECT c2.group_name, c2.name, c2.stream_name, p.stream_version
+    FROM __schema__.checkpoints c2
+    INNER JOIN __schema__.pending_checkpoint_updates p ON c2.group_name = p.group_name AND c2.name = p.name AND c2.stream_name = p.stream_name
+    FOR UPDATE SKIP LOCKED
+  ) u
+  WHERE c.group_name = u.group_name
+  AND c.name = u.name
+  AND c.stream_name = u.stream_name
+  RETURNING c.group_name, c.name, c.stream_name
+)
+DELETE FROM __schema__.pending_checkpoint_updates as p
+USING update_existing u
+WHERE p.group_name = u.group_name
+AND p.name = u.name
+AND p.stream_name = u.stream_name;
+$$;
+
 CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
   _checkpoints __schema__.checkpoint[]
 )
   RETURNS void
-  LANGUAGE plpgsql
+  LANGUAGE sql
 AS
 $$
-DECLARE
-  _value int;
-BEGIN
-  IF array_length(_checkpoints, 1) = 0 THEN
-    RETURN;
-  END IF;
-
-  SELECT 1 INTO _value
-  FROM __schema__.checkpoints c
-  INNER JOIN unnest(_checkpoints) i ON i.group_name = c.group_name AND i.name = c.name AND i.stream_name = c.stream_name
-  FOR UPDATE NOWAIT;
-
-  INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
-  SELECT c.stream_version, c.group_name, c.name, c.stream_name
+WITH input AS (
+  SELECT c.group_name, c.name, c.stream_name, c.stream_version
   FROM unnest(_checkpoints) c
-  ON CONFLICT (group_name, name, stream_name) DO UPDATE
-    SET stream_version = excluded.stream_version;
+),
+update_existing AS (
+  UPDATE __schema__.checkpoints c
+  SET stream_version = u.stream_version
+  FROM (
+    SELECT c2.group_name, c2.name, c2.stream_name, i.stream_version
+    FROM __schema__.checkpoints c2
+    INNER JOIN input i ON c2.group_name = i.group_name AND c2.name = i.name AND c2.stream_name = i.stream_name
+    FOR UPDATE SKIP LOCKED
+  ) u
+  WHERE c.group_name = u.group_name
+  AND c.name = u.name
+  AND c.stream_name = u.stream_name
+  RETURNING c.stream_version, c.group_name, c.name, c.stream_name
+),
+insert_new AS (
+  INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
+  SELECT i.stream_version, i.group_name, i.name, i.stream_name
+  FROM input i
+  ON CONFLICT (group_name, name, stream_name) DO NOTHING
+  RETURNING stream_version, group_name, name, stream_name
+)
+INSERT INTO __schema__.pending_checkpoint_updates (stream_version, group_name, name, stream_name)
+SELECT i.stream_version, i.group_name, i.name, i.stream_name
+FROM input i
+EXCEPT
+SELECT n.stream_version, n.group_name, n.name, n.stream_name
+FROM insert_new n
+EXCEPT
+SELECT u.stream_version, u.group_name, u.name, u.stream_name
+FROM update_existing u
+ON CONFLICT (group_name, name, stream_name) DO UPDATE
+  SET stream_version = excluded.stream_version;
 
-  PERFORM pg_notify('beckett:checkpoints', _checkpoints[1].group_name);
-END;
+SELECT __schema__.apply_pending_checkpoint_updates();
+
+SELECT pg_notify('beckett:checkpoints', _checkpoints[1].group_name);
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.update_checkpoint_status(
+CREATE FUNCTION update_checkpoint_status(
   _group_name text,
   _name text,
   _stream_name text,
   _stream_position bigint,
   _status __schema__.checkpoint_status,
-  _last_error jsonb DEFAULT NULL,
-  _retry_id uuid DEFAULT NULL
+  _last_error jsonb default null,
+  _retry_id uuid default null
 )
   RETURNS void
   LANGUAGE plpgsql
@@ -215,6 +272,8 @@ BEGIN
   WHERE group_name = _group_name
   AND name = _name
   AND stream_name = _stream_name;
+
+  PERFORM __schema__.apply_pending_checkpoint_updates();
 
   IF (_status = 'retry' OR _status = 'pending_failure') THEN
     PERFORM pg_notify('beckett:retries', NULL);
