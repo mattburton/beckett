@@ -4,15 +4,15 @@ namespace Beckett.Database.Models;
 
 public class PostgresMessage
 {
-    public Guid Id { get; init; }
-    public string StreamName { get; init; } = null!;
-    public long StreamVersion { get; init; }
-    public long StreamPosition { get; init; }
-    public long GlobalPosition { get; init; }
-    public string Type { get; init; } = null!;
-    public string Data { get; init; } = null!;
-    public string Metadata { get; init; } = null!;
-    public DateTimeOffset Timestamp { get; init; }
+    public required Guid Id { get; init; }
+    public required string StreamName { get; init; }
+    public required long StreamVersion { get; init; }
+    public required long StreamPosition { get; init; }
+    public required long GlobalPosition { get; init; }
+    public required string Type { get; init; }
+    public required string Data { get; init; }
+    public required string Metadata { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
 
     public static PostgresMessage From(NpgsqlDataReader reader) =>
         new()

@@ -19,7 +19,8 @@ public class PostgresMessageStorage(
         CancellationToken cancellationToken
     )
     {
-        var newMessages = messages.Select(x => MessageType.From(x.Message, x.Metadata, messageSerializer)).ToArray();
+        var newMessages = messages.Select(x => MessageType.From(streamName, x.Message, x.Metadata, messageSerializer))
+            .ToArray();
 
         var streamVersion = await database.Execute(
             new AppendToStream(streamName, expectedVersion.Value, newMessages),
