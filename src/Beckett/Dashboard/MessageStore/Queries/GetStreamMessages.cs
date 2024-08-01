@@ -17,6 +17,7 @@ public class GetStreamMessages(string streamName, string? query) : IPostgresData
             from {schema}.messages
             where stream_name = $1
             and ($2 is null or (id::text ilike '%' || $2 || '%' or type ilike '%' || $2 || '%'))
+            and deleted = false
             order by stream_position;
         ";
 

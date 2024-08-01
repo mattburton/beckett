@@ -25,19 +25,30 @@ $$;
 
 CREATE TABLE IF NOT EXISTS __schema__.messages
 (
-  id uuid NOT NULL UNIQUE,
-  global_position bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id uuid NOT NULL,
+  global_position bigint GENERATED ALWAYS AS IDENTITY,
   stream_position bigint NOT NULL,
   transaction_id xid8 DEFAULT pg_current_xact_id() NOT NULL,
   timestamp timestamp with time zone DEFAULT now() NOT NULL,
+  deleted boolean NOT NULL DEFAULT false,
   stream_name text NOT NULL,
   type text NOT NULL,
   data jsonb NOT NULL,
   metadata jsonb NOT NULL,
-  UNIQUE (stream_name, stream_position)
-);
+  PRIMARY KEY (global_position, deleted),
+  UNIQUE (id, deleted),
+  UNIQUE (stream_name, stream_position, deleted)
+) PARTITION BY LIST (deleted);
 
-CREATE INDEX IF NOT EXISTS ix_messages_stream_category ON __schema__.messages (
+GRANT UPDATE ON __schema__.messages TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.messages_active PARTITION OF __schema__.messages FOR VALUES IN (false);
+
+CREATE TABLE IF NOT EXISTS __schema__.messages_deleted PARTITION OF __schema__.messages FOR VALUES IN (true);
+
+CREATE INDEX ix_messages_active_global_read_stream ON beckett.messages_active (transaction_id, global_position, deleted);
+
+CREATE INDEX IF NOT EXISTS ix_messages_active_stream_category ON __schema__.messages_active (
   __schema__.stream_category(stream_name)
 );
 
@@ -70,7 +81,8 @@ BEGIN
   SELECT coalesce(max(m.stream_position), 0)
   INTO _current_version
   FROM __schema__.messages m
-  WHERE m.stream_name = _stream_name;
+  WHERE m.stream_name = _stream_name
+  AND m.deleted = false;
 
   IF (_expected_version < -2) THEN
     RAISE EXCEPTION 'Invalid value for expected version: %', _expected_version;
@@ -142,6 +154,7 @@ WITH stream_version AS (
   SELECT max(m.stream_position) as stream_version
   FROM __schema__.messages m
   WHERE m.stream_name = _stream_name
+  AND m.deleted = false
 )
 SELECT m.id,
        m.stream_name,
@@ -155,6 +168,7 @@ SELECT m.id,
 FROM stream_version sv, __schema__.messages m
 WHERE m.stream_name = _stream_name
 AND (_starting_stream_position IS NULL OR m.stream_position >= _starting_stream_position)
+AND m.deleted = false
 ORDER BY CASE WHEN _read_forwards = true THEN stream_position END,
          CASE WHEN _read_forwards = false THEN stream_position END DESC
 LIMIT _count;
@@ -177,6 +191,7 @@ WITH last_transaction_id AS (
   SELECT transaction_id
   FROM __schema__.messages
   WHERE global_position = _starting_global_position
+  AND deleted = false
   UNION ALL
   SELECT '0'::xid8 AS transaction_id
   LIMIT 1
@@ -189,6 +204,7 @@ WHERE (
   (m.transaction_id > lti.transaction_id)
 )
 AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+AND m.deleted = false
 ORDER BY m.transaction_id, m.global_position
 LIMIT _batch_size;
 $$;

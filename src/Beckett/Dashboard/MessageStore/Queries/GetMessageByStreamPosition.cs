@@ -19,6 +19,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition)
             from {schema}.messages
             where stream_name = $1
             and stream_position = $2
+            and deleted = false
             order by stream_position;
         ";
 

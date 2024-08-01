@@ -17,6 +17,7 @@ public class GetCategoryStreams(string category, string? query) : IPostgresDatab
             from {schema}.messages
             where {schema}.stream_category(stream_name) = $1
             and ($2 is null or stream_name ilike '%' || $2 || '%')
+            and deleted = false
             group by stream_name
             order by max(timestamp) desc;
         ";

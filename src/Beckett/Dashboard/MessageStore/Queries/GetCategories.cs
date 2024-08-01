@@ -16,6 +16,7 @@ public class GetCategories(string? query) : IPostgresDatabaseQuery<GetCategories
             select {schema}.stream_category(stream_name) as name, max(timestamp) as last_updated
             from {schema}.messages
             where ($1 is null or {schema}.stream_category(stream_name) ilike '%' || $1 || '%')
+            and deleted = false
             group by {schema}.stream_category(stream_name)
             order by {schema}.stream_category(stream_name);
         ";

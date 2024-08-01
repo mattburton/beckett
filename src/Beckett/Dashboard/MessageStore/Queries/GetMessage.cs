@@ -17,6 +17,7 @@ public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessageResult?>
             select {schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
             from {schema}.messages
             where id = $1
+            and deleted = false
             order by stream_position;
         ";
 

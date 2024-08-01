@@ -250,7 +250,7 @@ SELECT __schema__.apply_pending_checkpoint_updates();
 SELECT pg_notify('beckett:checkpoints', _checkpoints[1].group_name);
 $$;
 
-CREATE FUNCTION update_checkpoint_status(
+CREATE FUNCTION __schema__.update_checkpoint_status(
   _group_name text,
   _name text,
   _stream_name text,
