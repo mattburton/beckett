@@ -7,7 +7,21 @@ namespace Beckett.Subscriptions.Retries;
 
 public static class Configuration
 {
-    public static IBeckettBuilder SubscriptionRetryModule(this IBeckettBuilder builder, RetryOptions options)
+    public static IBeckettBuilder RetryClientSupport(this IBeckettBuilder builder)
+    {
+        builder.Map<RetryStarted>("$retry_started");
+        builder.Map<RetryAttempted>("$retry_attempted");
+        builder.Map<RetrySucceeded>("$retry_succeeded");
+        builder.Map<RetryFailed>("$retry_failed");
+        builder.Map<DeleteRetryRequested>("$delete_retry_requested");
+        builder.Map<RetryDeleted>("$retry_deleted");
+        builder.Map<ManualRetryRequested>("$manual_retry_requested");
+        builder.Map<ManualRetryFailed>("$manual_retry_failed");
+
+        return builder;
+    }
+
+    public static IBeckettBuilder RetryServerSupport(this IBeckettBuilder builder, RetryOptions options)
     {
         if (!options.Enabled)
         {

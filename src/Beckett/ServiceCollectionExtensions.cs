@@ -61,11 +61,11 @@ public static class ServiceCollectionExtensions
             messageTypeMap,
             subscriptionRegistry,
             recurringMessageRegistry
-        );
+        ).RetryClientSupport();
 
         return !options.Subscriptions.Enabled
             ? beckettBuilder
-            : beckettBuilder.SubscriptionRetryModule(options.Subscriptions.Retries);
+            : beckettBuilder.RetryServerSupport(options.Subscriptions.Retries);
     }
 
     public static void AddBeckett(
@@ -122,11 +122,11 @@ public static class ServiceCollectionExtensions
                     messageTypeMap,
                     subscriptionRegistry,
                     recurringMessageRegistry
-                );
+                ).RetryClientSupport();
 
                 if (options.Subscriptions.Enabled)
                 {
-                    beckettBuilder.SubscriptionRetryModule(options.Subscriptions.Retries);
+                    beckettBuilder.RetryServerSupport(options.Subscriptions.Retries);
                 }
 
                 buildBeckett?.Invoke(beckettBuilder);
