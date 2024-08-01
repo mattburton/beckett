@@ -4,15 +4,15 @@ using Beckett.Database;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionConsumerGroup(
+public class SubscriptionStreamConsumerGroup(
     BeckettOptions options,
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
     ISubscriptionStreamProcessor subscriptionStreamProcessor
-) : ISubscriptionConsumerGroup
+) : ISubscriptionStreamConsumerGroup
 {
     private readonly int _concurrency = Debugger.IsAttached ? 1 : options.Subscriptions.Concurrency;
-    private readonly ConcurrentDictionary<int, ISubscriptionConsumer> _consumers = new();
+    private readonly ConcurrentDictionary<int, ISubscriptionStreamConsumer> _consumers = new();
     private CancellationToken? _stoppingToken;
 
     public void Initialize(CancellationToken stoppingToken) => _stoppingToken = stoppingToken;
@@ -28,7 +28,7 @@ public class SubscriptionConsumerGroup(
         {
             var consumer = _consumers.GetOrAdd(
                 instance,
-                new SubscriptionConsumer(
+                new SubscriptionStreamConsumer(
                     database,
                     subscriptionRegistry,
                     subscriptionStreamProcessor,

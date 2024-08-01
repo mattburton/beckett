@@ -21,12 +21,14 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ISubscriptionStreamProcessor, SubscriptionStreamProcessor>();
 
-        services.AddSingleton<ISubscriptionConsumerGroup, SubscriptionConsumerGroup>();
+        services.AddSingleton<ISubscriptionStreamConsumerGroup, SubscriptionStreamConsumerGroup>();
 
         services.AddHostedService<BootstrapSubscriptions>();
 
-        services.AddHostedService<GlobalPollingService>();
+        services.AddHostedService<GlobalStreamPollingService>();
 
-        services.AddHostedService<SubscriptionPollingService>();
+        services.AddHostedService<RecoverExpiredCheckpointReservationsService>();
+
+        services.AddHostedService<SubscriptionStreamPollingService>();
     }
 }

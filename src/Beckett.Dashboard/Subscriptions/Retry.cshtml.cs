@@ -4,12 +4,12 @@ public static class RetryPage
 {
     public static RouteGroupBuilder RetryPageRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/subscriptions/retries/{id:guid}", Handler);
+        builder.MapGet("/subscriptions/retries/{id:long}", Handler);
 
         return builder;
     }
 
-    public static async Task<IResult> Handler(Guid id, IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handler(long id, IDashboard dashboard, CancellationToken cancellationToken)
     {
         var result = await dashboard.Subscriptions.GetRetryDetails(id, cancellationToken);
 

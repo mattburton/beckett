@@ -1,7 +1,7 @@
 namespace Beckett.Subscriptions.Retries.Events;
 
 public record RetrySucceeded(
-    Guid Id,
+    long CheckpointId,
     string SubscriptionGroupName,
     string SubscriptionName,
     string StreamName,

@@ -60,7 +60,14 @@ public static class Postgres
                 continue;
             }
 
-            await ApplyMigration(schema, migration.Name, migration.Script, connection, cancellationToken);
+            try
+            {
+                await ApplyMigration(schema, migration.Name, migration.Script, connection, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Error while applying migration: {migration.Name}", e);
+            }
         }
     }
 

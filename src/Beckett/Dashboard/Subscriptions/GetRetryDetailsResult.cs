@@ -5,7 +5,7 @@ namespace Beckett.Dashboard.Subscriptions;
 
 public class GetRetryDetailsResult : IApply
 {
-    public Guid Id { get; set; }
+    public long CheckpointId { get; set; }
     public string GroupName { get; set; } = null!;
     public string SubscriptionName { get; set; } = null!;
     public string StreamName { get; set; } = null!;
@@ -58,7 +58,7 @@ public class GetRetryDetailsResult : IApply
 
     private void Apply(RetryStarted e)
     {
-        Id = e.Id;
+        CheckpointId = e.CheckpointId;
         GroupName = e.SubscriptionGroupName;
         SubscriptionName = e.SubscriptionName;
         StreamName = e.StreamName;
@@ -84,7 +84,7 @@ public class GetRetryDetailsResult : IApply
 
     private void Apply(RetryFailed e)
     {
-        Id = e.Id;
+        CheckpointId = e.CheckpointId;
         GroupName = e.SubscriptionGroupName;
         SubscriptionName = e.SubscriptionName;
         StreamName = e.StreamName;
@@ -92,8 +92,6 @@ public class GetRetryDetailsResult : IApply
         Exception = e.Exception;
         StartedAt = e.Timestamp;
         Status = RetryStatus.Failed;
-
-        Attempts.Add(new Attempt(Status, false, e.Timestamp, e.Exception));
     }
 
     private void Apply(ManualRetryRequested _)

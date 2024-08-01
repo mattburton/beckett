@@ -3,8 +3,11 @@ namespace Beckett.Subscriptions.Models;
 public enum CheckpointStatus
 {
     Active,
-    Retry,
-    PendingFailure,
+    Lagging,
+    Reserved,
+    RetryPending,
+    Retrying,
+    FailurePending,
     Failed,
     Deleted
 }

@@ -6,7 +6,7 @@ public class RetryAttemptedHandler(IRetryManager retryManager)
 {
     public Task Handle(RetryAttempted e, CancellationToken cancellationToken) =>
         retryManager.Retry(
-            e.Id,
+            e.CheckpointId,
             e.SubscriptionName,
             e.StreamName,
             e.StreamPosition,

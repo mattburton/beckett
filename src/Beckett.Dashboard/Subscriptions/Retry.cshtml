@@ -23,7 +23,7 @@
 </div>
 
 <div id="retry-details"
-     hx-get="@Routes.Prefix/subscriptions/retries/@Model.Details.Id"
+     hx-get="@Routes.Prefix/subscriptions/retries/@Model.Details.CheckpointId"
      hx-trigger="every 10s"
      hx-select="#retry-details"
      hx-swap="outerHTML">
@@ -37,14 +37,14 @@
             <a href="#"
                class="btn btn-primary"
                title="Request manual retry"
-               hx-post="@Routes.Prefix/subscriptions/retries/@Model.Details.Id/manual-retry"
+               hx-post="@Routes.Prefix/subscriptions/retries/@Model.Details.CheckpointId/manual-retry"
                hx-on::after-request="alert('Manual retry requested')">
               Retry
             </a>
             <a href="#"
                class="btn btn-danger"
                title="Request delete"
-               hx-delete="@Routes.Prefix/subscriptions/retries/@Model.Details.Id"
+               hx-delete="@Routes.Prefix/subscriptions/retries/@Model.Details.CheckpointId"
                hx-on::after-request="alert('Delete requested')">
               Delete
             </a>

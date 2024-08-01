@@ -9,7 +9,7 @@ public class LockNextCheckpointForRetry(string subscriptionGroupName) : IPostgre
     public async Task<Result?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select name, stream_name, stream_position, status, last_error, retry_id
+            select id, name, stream_name, stream_position, status, last_error
             from {schema}.lock_next_checkpoint_for_retry($1);
         ";
 
@@ -26,21 +26,21 @@ public class LockNextCheckpointForRetry(string subscriptionGroupName) : IPostgre
         return !reader.HasRows
             ? null
             : new Result(
-                reader.GetFieldValue<string>(0),
+                reader.GetFieldValue<long>(0),
                 reader.GetFieldValue<string>(1),
-                reader.GetFieldValue<long>(2),
-                reader.GetFieldValue<CheckpointStatus>(3),
-                reader.GetFieldValue<string>(4),
-                reader.GetFieldValue<Guid>(5)
+                reader.GetFieldValue<string>(2),
+                reader.GetFieldValue<long>(3),
+                reader.GetFieldValue<CheckpointStatus>(4),
+                reader.GetFieldValue<string>(5)
             );
     }
 
     public record Result(
+        long Id,
         string Name,
         string StreamName,
         long StreamPosition,
         CheckpointStatus Status,
-        string LastError,
-        Guid RetryId
+        string LastError
     );
 }

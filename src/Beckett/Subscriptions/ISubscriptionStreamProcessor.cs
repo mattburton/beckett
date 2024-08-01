@@ -6,8 +6,8 @@ public interface ISubscriptionStreamProcessor
 {
     Task Process(
         NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
         Subscription subscription,
+        long checkpointId,
         string streamName,
         long streamPosition,
         int batchSize,

@@ -3,7 +3,6 @@ using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.Messages.Storage;
-using Npgsql;
 
 namespace Beckett.Subscriptions;
 
@@ -15,8 +14,6 @@ public class GlobalStreamConsumer(
     IMessageTypeMap messageTypeMap
 ) : IGlobalStreamConsumer
 {
-    private const string PostgresLockNotAvailable = "55P03";
-
     private Task _task = Task.CompletedTask;
 
     public void StartPolling(CancellationToken stoppingToken)
@@ -37,113 +34,96 @@ public class GlobalStreamConsumer(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            try
+            await using var connection = database.CreateConnection();
+
+            await connection.OpenAsync(stoppingToken);
+
+            await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
+
+            var checkpoint = await database.Execute(
+                new LockCheckpoint(
+                    options.Subscriptions.GroupName,
+                    GlobalCheckpoint.Name,
+                    GlobalCheckpoint.StreamName
+                ),
+                connection,
+                transaction,
+                stoppingToken
+            );
+
+            if (checkpoint == null)
             {
-                await using var connection = database.CreateConnection();
-
-                await connection.OpenAsync(stoppingToken);
-
-                await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
-
-                var checkpoint = await database.Execute(
-                    new LockCheckpoint(
-                        options.Subscriptions.GroupName,
-                        GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName
-                    ),
-                    connection,
-                    transaction,
-                    stoppingToken
-                );
-
-                if (checkpoint == null)
-                {
-                    break;
-                }
-
-                var globalStream = await messageStorage.ReadGlobalStream(
-                    checkpoint.StreamPosition,
-                    options.Subscriptions.GlobalBatchSize,
-                    stoppingToken
-                );
-
-                if (globalStream.Items.Count == 0)
-                {
-                    emptyResultRetryCount++;
-
-                    if (emptyResultRetryCount <= options.Subscriptions.GlobalEmptyResultsMaxRetryCount)
-                    {
-                        await transaction.RollbackAsync(stoppingToken);
-
-                        await Task.Delay(options.Subscriptions.GlobalEmptyResultsRetryDelay, stoppingToken);
-
-                        continue;
-                    }
-
-                    break;
-                }
-
-                var checkpoints = new List<CheckpointType>();
-
-                foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
-                {
-                    var subscriptions = registeredSubscriptions.Where(s => stream.Any(m => m.AppliesTo(s, messageTypeMap)));
-
-                    checkpoints.AddRange(
-                        subscriptions.Select(
-                            subscription =>
-                                new CheckpointType
-                                {
-                                    GroupName = options.Subscriptions.GroupName,
-                                    Name = subscription.Name,
-                                    StreamName = stream.Key,
-                                    StreamVersion = stream.Max(x => x.StreamPosition)
-                                }
-                        )
-                    );
-                }
-
-                if (checkpoints.Count > 0)
-                {
-                    await database.Execute(
-                        new RecordCheckpoints(checkpoints.ToArray()),
-                        connection,
-                        transaction,
-                        stoppingToken
-                    );
-                }
-
-                var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
-
-                await database.Execute(
-                    new RecordCheckpoint(
-                        options.Subscriptions.GroupName,
-                        GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName,
-                        newGlobalPosition,
-                        newGlobalPosition
-                    ),
-                    connection,
-                    transaction,
-                    stoppingToken
-                );
-
-                await transaction.CommitAsync(stoppingToken);
+                break;
             }
-            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+
+            var globalStream = await messageStorage.ReadGlobalStream(
+                checkpoint.StreamPosition,
+                options.Subscriptions.GlobalStreamBatchSize,
+                stoppingToken
+            );
+
+            if (globalStream.Items.Count == 0)
             {
-                throw;
-            }
-            catch (NpgsqlException e) when (e.SqlState == PostgresLockNotAvailable)
-            {
-                //unable to lock checkpoint(s) for update - retry
-                if (options.Subscriptions.GlobalLockRetryInterval == TimeSpan.Zero)
+                emptyResultRetryCount++;
+
+                if (emptyResultRetryCount <= options.Subscriptions.GlobalStreamEmptyResultsMaxRetryCount)
                 {
+                    await transaction.RollbackAsync(stoppingToken);
+
+                    await Task.Delay(options.Subscriptions.GlobalStreamEmptyResultsRetryDelay, stoppingToken);
+
                     continue;
                 }
 
-                await Task.Delay(options.Subscriptions.GlobalLockRetryInterval, stoppingToken);
+                break;
             }
+
+            var checkpoints = new List<CheckpointType>();
+
+            foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
+            {
+                var subscriptions = registeredSubscriptions.Where(s => stream.Any(m => m.AppliesTo(s, messageTypeMap)));
+
+                checkpoints.AddRange(
+                    subscriptions.Select(
+                        subscription =>
+                            new CheckpointType
+                            {
+                                GroupName = options.Subscriptions.GroupName,
+                                Name = subscription.Name,
+                                StreamName = stream.Key,
+                                StreamVersion = stream.Max(x => x.StreamPosition)
+                            }
+                    )
+                );
+            }
+
+            if (checkpoints.Count > 0)
+            {
+                await database.Execute(
+                    new RecordCheckpoints(checkpoints.ToArray()),
+                    connection,
+                    transaction,
+                    stoppingToken
+                );
+            }
+
+            var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
+
+            await database.Execute(
+                new RecordCheckpoint(
+                    options.Subscriptions.GroupName,
+                    GlobalCheckpoint.Name,
+                    GlobalCheckpoint.StreamName,
+                    newGlobalPosition,
+                    newGlobalPosition
+                ),
+                connection,
+                transaction,
+                stoppingToken
+            );
+
+            await transaction.CommitAsync(stoppingToken);
         }
     }
 }

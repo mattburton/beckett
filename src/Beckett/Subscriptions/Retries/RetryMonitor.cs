@@ -51,23 +51,27 @@ public class RetryMonitor(
 
                 switch (checkpoint.Status)
                 {
-                    case CheckpointStatus.Retry:
+                    case CheckpointStatus.RetryPending:
                         await retryManager.StartRetry(
-                            checkpoint.RetryId,
+                            checkpoint.Id,
                             checkpoint.Name,
                             checkpoint.StreamName,
                             checkpoint.StreamPosition,
                             checkpoint.LastError,
+                            connection,
+                            transaction,
                             stoppingToken
                         );
                         break;
-                    case CheckpointStatus.PendingFailure:
+                    case CheckpointStatus.FailurePending:
                         await retryManager.RecordFailure(
-                            checkpoint.RetryId,
+                            checkpoint.Id,
                             checkpoint.Name,
                             checkpoint.StreamName,
                             checkpoint.StreamPosition,
                             checkpoint.LastError,
+                            connection,
+                            transaction,
                             stoppingToken
                         );
                         break;

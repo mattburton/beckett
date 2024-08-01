@@ -1,27 +1,33 @@
+using Npgsql;
+
 namespace Beckett.Subscriptions.Retries;
 
 public interface IRetryManager
 {
     Task StartRetry(
-        Guid id,
+        long checkpointId,
         string subscriptionName,
         string streamName,
         long streamPosition,
         string lastError,
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
         CancellationToken cancellationToken
     );
 
     Task RecordFailure(
-        Guid id,
+        long checkpointId,
         string subscriptionName,
         string streamName,
         long streamPosition,
         string lastError,
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
         CancellationToken cancellationToken
     );
 
     Task Retry(
-        Guid id,
+        long checkpointId,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -30,7 +36,7 @@ public interface IRetryManager
     );
 
 
-    Task ManualRetry(Guid id, CancellationToken cancellationToken);
+    Task ManualRetry(long checkpointId, CancellationToken cancellationToken);
 
-    Task DeleteRetry(Guid id, CancellationToken cancellationToken);
+    Task DeleteRetry(long checkpointId, CancellationToken cancellationToken);
 }

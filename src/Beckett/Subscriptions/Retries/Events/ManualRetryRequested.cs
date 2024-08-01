@@ -1,6 +1,6 @@
 namespace Beckett.Subscriptions.Retries.Events;
 
 public record ManualRetryRequested(
-    Guid Id,
+    long CheckpointId,
     DateTimeOffset Timestamp
 );

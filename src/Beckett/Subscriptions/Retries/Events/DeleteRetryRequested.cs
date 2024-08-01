@@ -1,6 +1,6 @@
 namespace Beckett.Subscriptions.Retries.Events;
 
 public record DeleteRetryRequested(
-    Guid Id,
+    long CheckpointId,
     DateTimeOffset Timestamp
 );

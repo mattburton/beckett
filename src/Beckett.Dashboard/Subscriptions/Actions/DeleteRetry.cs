@@ -8,12 +8,12 @@ public static class DeleteRetry
 {
     public static RouteGroupBuilder DeleteRetryRoute(this RouteGroupBuilder builder)
     {
-        builder.MapDelete("/subscriptions/retries/{id:guid}", Handler);
+        builder.MapDelete("/subscriptions/retries/{id:long}", Handler);
 
         return builder;
     }
 
-    private static async Task<IResult> Handler(HttpContext context, Guid id, IMessageStore messageStore, CancellationToken cancellationToken)
+    private static async Task<IResult> Handler(HttpContext context, long id, IMessageStore messageStore, CancellationToken cancellationToken)
     {
         await messageStore.AppendToStream(
             RetryStreamName.For(id),

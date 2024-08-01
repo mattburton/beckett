@@ -4,10 +4,10 @@ using Npgsql;
 
 namespace Beckett.Subscriptions.Services;
 
-public class GlobalPollingService(
+public class GlobalStreamPollingService(
     IGlobalStreamConsumer globalStreamConsumer,
     SubscriptionOptions options,
-    ILogger<GlobalPollingService> logger
+    ILogger<GlobalStreamPollingService> logger
 ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -18,7 +18,7 @@ public class GlobalPollingService(
             {
                 globalStreamConsumer.StartPolling(stoppingToken);
 
-                await Task.Delay(options.GlobalPollingInterval, stoppingToken);
+                await Task.Delay(options.GlobalStreamPollingInterval, stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

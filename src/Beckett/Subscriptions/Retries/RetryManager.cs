@@ -3,6 +3,7 @@ using Beckett.Database.Queries;
 using Beckett.Subscriptions.Models;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Events.Models;
+using Npgsql;
 
 namespace Beckett.Subscriptions.Retries;
 
@@ -16,19 +17,32 @@ public class RetryManager(
 ) : IRetryManager
 {
     public async Task StartRetry(
-        Guid id,
+        long checkpointId,
         string subscriptionName,
         string streamName,
         long streamPosition,
         string lastError,
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
         CancellationToken cancellationToken
     )
     {
+        await database.Execute(
+            new UpdateCheckpointStatus(
+                checkpointId,
+                streamPosition,
+                CheckpointStatus.Retrying
+            ),
+            connection,
+            transaction,
+            cancellationToken
+        );
+
         await messageStore.AppendToStream(
-            RetryStreamName.For(id),
+            RetryStreamName.For(checkpointId),
             ExpectedVersion.Any,
             new RetryStarted(
-                id,
+                checkpointId,
                 options.Subscriptions.GroupName,
                 subscriptionName,
                 streamName,
@@ -41,19 +55,32 @@ public class RetryManager(
     }
 
     public async Task RecordFailure(
-        Guid id,
+        long checkpointId,
         string subscriptionName,
         string streamName,
         long streamPosition,
         string lastError,
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
         CancellationToken cancellationToken
     )
     {
+        await database.Execute(
+            new UpdateCheckpointStatus(
+                checkpointId,
+                streamPosition,
+                CheckpointStatus.Failed
+            ),
+            connection,
+            transaction,
+            cancellationToken
+        );
+
         await messageStore.AppendToStream(
-            RetryStreamName.For(id),
+            RetryStreamName.For(checkpointId),
             ExpectedVersion.Any,
             new RetryFailed(
-                id,
+                checkpointId,
                 options.Subscriptions.GroupName,
                 subscriptionName,
                 streamName,
@@ -67,14 +94,14 @@ public class RetryManager(
     }
 
     public Task Retry(
-        Guid id,
+        long checkpointId,
         string subscriptionName,
         string streamName,
         long streamPosition,
         int attempts,
         CancellationToken cancellationToken
     ) => AttemptRetry(
-        id,
+        checkpointId,
         subscriptionName,
         streamName,
         streamPosition,
@@ -83,14 +110,14 @@ public class RetryManager(
         cancellationToken
     );
 
-    public async Task ManualRetry(Guid id, CancellationToken cancellationToken)
+    public async Task ManualRetry(long checkpointId, CancellationToken cancellationToken)
     {
-        var stream = await messageStore.ReadStream(RetryStreamName.For(id), cancellationToken);
+        var stream = await messageStore.ReadStream(RetryStreamName.For(checkpointId), cancellationToken);
 
         var state = stream.ProjectTo<RetryState>();
 
         await AttemptRetry(
-            id,
+            checkpointId,
             state.SubscriptionName,
             state.StreamName,
             state.StreamPosition,
@@ -100,9 +127,9 @@ public class RetryManager(
         );
     }
 
-    public async Task DeleteRetry(Guid id, CancellationToken cancellationToken)
+    public async Task DeleteRetry(long checkpointId, CancellationToken cancellationToken)
     {
-        var streamName = RetryStreamName.For(id);
+        var streamName = RetryStreamName.For(checkpointId);
 
         var stream = await messageStore.ReadStream(streamName, cancellationToken);
 
@@ -121,12 +148,9 @@ public class RetryManager(
 
         await database.Execute(
             new UpdateCheckpointStatus(
-                options.Subscriptions.GroupName,
-                state.SubscriptionName,
-                state.StreamName,
+                checkpointId,
                 state.StreamPosition,
-                CheckpointStatus.Deleted,
-                retryId: id
+                CheckpointStatus.Deleted
             ),
             connection,
             transaction,
@@ -136,7 +160,7 @@ public class RetryManager(
         await messageStore.AppendToStream(
             streamName,
             ExpectedVersion.StreamExists,
-            new RetryDeleted(id, DateTimeOffset.UtcNow),
+            new RetryDeleted(checkpointId, DateTimeOffset.UtcNow),
             cancellationToken
         );
 
@@ -144,7 +168,7 @@ public class RetryManager(
     }
 
     private async Task AttemptRetry(
-        Guid id,
+        long checkpointId,
         string subscriptionName,
         string streamName,
         long streamPosition,
@@ -160,7 +184,7 @@ public class RetryManager(
             return;
         }
 
-        var retryStreamName = RetryStreamName.For(id);
+        var retryStreamName = RetryStreamName.For(checkpointId);
 
         var attemptNumber = attempts + 1;
 
@@ -170,12 +194,12 @@ public class RetryManager(
 
             await connection.OpenAsync(cancellationToken);
 
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-
             var checkpoint = await database.Execute(
-                new LockCheckpoint(options.Subscriptions.GroupName, subscription.Name, streamName),
+                new ReserveCheckpoint(
+                    checkpointId,
+                    options.Subscriptions.CheckpointReservationTimeout
+                ),
                 connection,
-                transaction,
                 cancellationToken
             );
 
@@ -186,8 +210,8 @@ public class RetryManager(
 
             await subscriptionStreamProcessor.Process(
                 connection,
-                transaction,
                 subscription,
+                checkpoint.Id,
                 streamName,
                 checkpoint.StreamPosition,
                 1,
@@ -199,7 +223,7 @@ public class RetryManager(
                 retryStreamName,
                 ExpectedVersion.StreamExists,
                 new RetrySucceeded(
-                    id,
+                    checkpointId,
                     options.Subscriptions.GroupName,
                     subscriptionName,
                     streamName,
@@ -209,18 +233,18 @@ public class RetryManager(
                 ),
                 cancellationToken
             );
-
-            await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception e)
         {
+            await database.Execute(new ReleaseCheckpointReservation(checkpointId), CancellationToken.None);
+
             if (manualRetry)
             {
                 await messageStore.AppendToStream(
                     retryStreamName,
                     ExpectedVersion.StreamExists,
                     new ManualRetryFailed(
-                        id,
+                        checkpointId,
                         options.Subscriptions.GroupName,
                         subscriptionName,
                         streamName,
@@ -243,7 +267,7 @@ public class RetryManager(
                     retryStreamName,
                     ExpectedVersion.StreamExists,
                     new RetryFailed(
-                        id,
+                        checkpointId,
                         options.Subscriptions.GroupName,
                         subscriptionName,
                         streamName,
@@ -265,7 +289,7 @@ public class RetryManager(
                 await messageScheduler.ScheduleMessage(
                     retryStreamName,
                     new RetryAttempted(
-                        id,
+                        checkpointId,
                         options.Subscriptions.GroupName,
                         subscriptionName,
                         streamName,
@@ -317,13 +341,13 @@ public class RetryManager(
             StreamName = e.StreamName;
             StreamPosition = e.StreamPosition;
             Attempts = 0;
-            Status = CheckpointStatus.Retry;
+            Status = CheckpointStatus.Retrying;
         }
 
         private void Apply(RetryAttempted e)
         {
             Attempts = e.Attempts;
-            Status = CheckpointStatus.Retry;
+            Status = CheckpointStatus.Retrying;
         }
 
         private void Apply(RetrySucceeded e)

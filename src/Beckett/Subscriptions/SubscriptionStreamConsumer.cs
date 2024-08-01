@@ -3,13 +3,13 @@ using Beckett.Database.Queries;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionConsumer(
+public class SubscriptionStreamConsumer(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
     BeckettOptions options,
     CancellationToken stoppingToken
-) : ISubscriptionConsumer
+) : ISubscriptionStreamConsumer
 {
     private Task _task = null!;
 
@@ -31,12 +31,12 @@ public class SubscriptionConsumer(
 
             await connection.OpenAsync(stoppingToken);
 
-            await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
-
             var checkpoint = await database.Execute(
-                new LockNextAvailableCheckpoint(options.Subscriptions.GroupName),
+                new ReserveNextAvailableCheckpoint(
+                    options.Subscriptions.GroupName,
+                    options.Subscriptions.CheckpointReservationTimeout
+                ),
                 connection,
-                transaction,
                 stoppingToken
             );
 
@@ -54,16 +54,14 @@ public class SubscriptionConsumer(
 
             await subscriptionStreamProcessor.Process(
                 connection,
-                transaction,
                 subscription,
+                checkpoint.Id,
                 checkpoint.StreamName,
                 checkpoint.StreamPosition + 1,
-                options.Subscriptions.BatchSize,
+                options.Subscriptions.SubscriptionStreamBatchSize,
                 false,
                 stoppingToken
             );
-
-            await transaction.CommitAsync(stoppingToken);
         }
     }
 }

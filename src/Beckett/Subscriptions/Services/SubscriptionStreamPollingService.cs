@@ -2,14 +2,14 @@ using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Subscriptions.Services;
 
-public class SubscriptionPollingService(
+public class SubscriptionStreamPollingService(
     SubscriptionOptions options,
-    ISubscriptionConsumerGroup consumerGroup
+    ISubscriptionStreamConsumerGroup consumerGroup
 ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (options.PollingInterval == TimeSpan.Zero)
+        if (options.SubscriptionStreamPollingInterval == TimeSpan.Zero)
         {
             return;
         }
@@ -20,7 +20,7 @@ public class SubscriptionPollingService(
         {
             consumerGroup.StartPolling(options.GroupName);
 
-            await Task.Delay(options.PollingInterval, stoppingToken);
+            await Task.Delay(options.SubscriptionStreamPollingInterval, stoppingToken);
         }
     }
 }

@@ -10,7 +10,16 @@ CREATE TYPE __schema__.checkpoint AS
   stream_version bigint
 );
 
-CREATE TYPE __schema__.checkpoint_status AS ENUM ('active', 'retry', 'pending_failure', 'failed', 'deleted');
+CREATE TYPE __schema__.checkpoint_status AS ENUM (
+  'active',
+  'lagging',
+  'reserved',
+  'retry_pending',
+  'retrying',
+  'failure_pending',
+  'failed',
+  'deleted'
+);
 
 CREATE TABLE IF NOT EXISTS __schema__.subscriptions
 (
@@ -24,37 +33,22 @@ GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   stream_version bigint DEFAULT 0 NOT NULL,
   stream_position bigint DEFAULT 0 NOT NULL,
+  reserved_until timestamp with time zone,
+  status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
+  previous_status __schema__.checkpoint_status NULL,
   group_name text NOT NULL,
   name text NOT NULL,
   stream_name text NOT NULL,
-  status __schema__.checkpoint_status DEFAULT 'active' NOT NULL,
   last_error jsonb NULL,
-  retry_id uuid NULL,
-  lagging boolean GENERATED ALWAYS AS ((status = 'active') AND ((stream_version - stream_position) > 0)) STORED,
-  retry boolean GENERATED ALWAYS AS ((status = 'retry' OR status = 'pending_failure') AND (retry_id IS NULL)) STORED,
-  PRIMARY KEY (group_name, name, stream_name)
+  UNIQUE (group_name, name, stream_name)
 );
-
-CREATE INDEX IF NOT EXISTS ix_checkpoints_lagging ON __schema__.checkpoints (group_name, name, lagging);
-
-CREATE INDEX IF NOT EXISTS ix_checkpoints_retry ON __schema__.checkpoints (group_name, retry);
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_status ON __schema__.checkpoints (status);
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
-
-CREATE TABLE IF NOT EXISTS __schema__.pending_checkpoint_updates
-(
-  stream_version bigint DEFAULT 0 NOT NULL,
-  group_name text NOT NULL,
-  name text NOT NULL,
-  stream_name text NOT NULL,
-  PRIMARY KEY (group_name, name, stream_name)
-);
-
-GRANT UPDATE, DELETE ON __schema__.pending_checkpoint_updates TO beckett;
 
 CREATE OR REPLACE FUNCTION __schema__.add_or_update_subscription(
   _group_name text,
@@ -131,6 +125,7 @@ CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
   _stream_name text
 )
   RETURNS TABLE (
+    id bigint,
     group_name text,
     name text,
     stream_name text,
@@ -141,7 +136,7 @@ CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT group_name, name, stream_name, stream_position, stream_version, status
+SELECT id, group_name, name, stream_name, stream_position, stream_version, status
 FROM __schema__.checkpoints
 WHERE group_name = _group_name
 AND name = _name
@@ -150,10 +145,12 @@ FOR UPDATE
 SKIP LOCKED;
 $$;
 
-CREATE FUNCTION __schema__.lock_next_available_checkpoint(
-  _group_name text
+CREATE OR REPLACE FUNCTION __schema__.reserve_checkpoint(
+  _id bigint,
+  _reservation_timeout interval
 )
   RETURNS TABLE (
+    id bigint,
     group_name text,
     name text,
     stream_name text,
@@ -164,41 +161,53 @@ CREATE FUNCTION __schema__.lock_next_available_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT c.group_name, c.name, c.stream_name, c.stream_position, c.stream_version, c.status
-FROM __schema__.checkpoints c
-INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-WHERE c.group_name = _group_name
-AND c.lagging = true
-AND s.initialized = true
-FOR UPDATE
-SKIP LOCKED
-LIMIT 1;
+UPDATE __schema__.checkpoints c
+SET status = 'reserved',
+    previous_status = status,
+    reserved_until = now() + _reservation_timeout
+FROM (
+  SELECT c.id
+  FROM __schema__.checkpoints c
+  INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+  WHERE c.id = _id
+  AND c.status != 'reserved'
+  LIMIT 1 FOR UPDATE SKIP LOCKED
+) as d
+WHERE c.id = d.id
+RETURNING c.id, c.group_name, c.name, c.stream_name, c.stream_position, c.stream_version, c.status;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.apply_pending_checkpoint_updates()
-  RETURNS void
+CREATE OR REPLACE FUNCTION __schema__.reserve_next_available_checkpoint(
+  _group_name text,
+  _reservation_timeout interval
+)
+  RETURNS TABLE (
+    id bigint,
+    group_name text,
+    name text,
+    stream_name text,
+    stream_position bigint,
+    stream_version bigint,
+    status __schema__.checkpoint_status
+  )
   LANGUAGE sql
 AS
 $$
-WITH update_existing AS (
-  UPDATE __schema__.checkpoints c
-  SET stream_version = CASE WHEN u.stream_version > c.stream_version THEN u.stream_version ELSE c.stream_version END
-  FROM (
-    SELECT c2.group_name, c2.name, c2.stream_name, p.stream_version
-    FROM __schema__.checkpoints c2
-    INNER JOIN __schema__.pending_checkpoint_updates p ON c2.group_name = p.group_name AND c2.name = p.name AND c2.stream_name = p.stream_name
-    FOR UPDATE SKIP LOCKED
-  ) u
-  WHERE c.group_name = u.group_name
-  AND c.name = u.name
-  AND c.stream_name = u.stream_name
-  RETURNING c.group_name, c.name, c.stream_name
-)
-DELETE FROM __schema__.pending_checkpoint_updates as p
-USING update_existing u
-WHERE p.group_name = u.group_name
-AND p.name = u.name
-AND p.stream_name = u.stream_name;
+UPDATE __schema__.checkpoints c
+SET status = 'reserved',
+    previous_status = status,
+    reserved_until = now() + _reservation_timeout
+FROM (
+  SELECT c.id
+  FROM __schema__.checkpoints c
+  INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+  WHERE c.group_name = _group_name
+  AND c.status = 'lagging'
+  AND s.initialized = true
+  LIMIT 1 FOR UPDATE SKIP LOCKED
+) as d
+WHERE c.id = d.id
+RETURNING c.id, c.group_name, c.name, c.stream_name, c.stream_position, c.stream_version, c.status;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
@@ -208,56 +217,38 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
   LANGUAGE sql
 AS
 $$
-WITH input AS (
-  SELECT c.group_name, c.name, c.stream_name, c.stream_version
-  FROM unnest(_checkpoints) c
-),
-update_existing AS (
-  UPDATE __schema__.checkpoints c
-  SET stream_version = u.stream_version
-  FROM (
-    SELECT c2.group_name, c2.name, c2.stream_name, i.stream_version
-    FROM __schema__.checkpoints c2
-    INNER JOIN input i ON c2.group_name = i.group_name AND c2.name = i.name AND c2.stream_name = i.stream_name
-    FOR UPDATE SKIP LOCKED
-  ) u
-  WHERE c.group_name = u.group_name
-  AND c.name = u.name
-  AND c.stream_name = u.stream_name
-  RETURNING c.stream_version, c.group_name, c.name, c.stream_name
-),
-insert_new AS (
-  INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
-  SELECT i.stream_version, i.group_name, i.name, i.stream_name
-  FROM input i
-  ON CONFLICT (group_name, name, stream_name) DO NOTHING
-  RETURNING stream_version, group_name, name, stream_name
-)
-INSERT INTO __schema__.pending_checkpoint_updates (stream_version, group_name, name, stream_name)
-SELECT i.stream_version, i.group_name, i.name, i.stream_name
-FROM input i
-EXCEPT
-SELECT n.stream_version, n.group_name, n.name, n.stream_name
-FROM insert_new n
-EXCEPT
-SELECT u.stream_version, u.group_name, u.name, u.stream_name
-FROM update_existing u
+INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name, status)
+SELECT c.stream_version, c.group_name, c.name, c.stream_name, 'lagging'
+FROM unnest(_checkpoints) c
 ON CONFLICT (group_name, name, stream_name) DO UPDATE
-  SET stream_version = excluded.stream_version;
-
-SELECT __schema__.apply_pending_checkpoint_updates();
+  SET status = (CASE WHEN excluded.stream_version > checkpoints.stream_position THEN 'lagging' ELSE 'active' END)::__schema__.checkpoint_status,
+      stream_version = excluded.stream_version;
 
 SELECT pg_notify('beckett:checkpoints', _checkpoints[1].group_name);
 $$;
 
-CREATE FUNCTION __schema__.update_checkpoint_status(
-  _group_name text,
-  _name text,
-  _stream_name text,
+CREATE OR REPLACE FUNCTION __schema__.release_checkpoint_reservation(
+  _id bigint
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.checkpoints
+  SET status = previous_status,
+      previous_status = NULL,
+      reserved_until = NULL
+  WHERE id = _id
+  AND previous_status IS NOT NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.update_checkpoint_status(
+  _id bigint,
   _stream_position bigint,
   _status __schema__.checkpoint_status,
-  _last_error jsonb default null,
-  _retry_id uuid default null
+  _last_error jsonb default NULL
 )
   RETURNS void
   LANGUAGE plpgsql
@@ -266,16 +257,13 @@ $$
 BEGIN
   UPDATE __schema__.checkpoints
   SET stream_position = _stream_position,
-      status = _status,
-      retry_id = _retry_id,
+      reserved_until = NULL,
+      status = CASE WHEN _status = 'active' AND stream_version > _stream_position THEN 'lagging' ELSE _status END,
+      previous_status = NULL,
       last_error = _last_error
-  WHERE group_name = _group_name
-  AND name = _name
-  AND stream_name = _stream_name;
+  WHERE id = _id;
 
-  PERFORM __schema__.apply_pending_checkpoint_updates();
-
-  IF (_status = 'retry' OR _status = 'pending_failure') THEN
+  IF (_status = 'retry_pending' OR _status = 'failure_pending') THEN
     PERFORM pg_notify('beckett:retries', NULL);
   END IF;
 END;
@@ -292,10 +280,18 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoint(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (stream_version, stream_position, group_name, name, stream_name)
-VALUES (_stream_version, _stream_position, _group_name, _name, _stream_name)
+INSERT INTO __schema__.checkpoints (stream_version, stream_position, group_name, name, stream_name, status)
+VALUES (
+  _stream_version,
+  _stream_position,
+  _group_name, _name,
+  _stream_name,
+  (CASE WHEN _stream_version > _stream_position THEN 'lagging' ELSE 'active' END)::__schema__.checkpoint_status
+)
 ON CONFLICT (group_name, name, stream_name) DO UPDATE
-  SET stream_version = excluded.stream_version,
+  SET status = (CASE WHEN _stream_version > _stream_position THEN 'lagging' ELSE 'active' END)::__schema__.checkpoint_status,
+      previous_status = NULL,
+      stream_version = excluded.stream_version,
       stream_position = excluded.stream_position;
 $$;
 
@@ -303,35 +299,30 @@ CREATE OR REPLACE FUNCTION __schema__.lock_next_checkpoint_for_retry(
   _group_name text
 )
   RETURNS TABLE (
+    id bigint,
     group_name text,
     name text,
     stream_name text,
     stream_position bigint,
     status __schema__.checkpoint_status,
-    last_error jsonb,
-    retry_id uuid
+    last_error jsonb
   )
   LANGUAGE sql
 AS
 $$
-WITH retry AS (
-  SELECT c.group_name,
-         c.name,
-         c.stream_name
-  FROM __schema__.checkpoints c
-  WHERE c.group_name = _group_name
-  AND c.retry = true
-  FOR UPDATE
-  SKIP LOCKED
-  LIMIT 1
-)
-UPDATE __schema__.checkpoints AS c
-SET retry_id = gen_random_uuid()
-FROM retry AS r
-WHERE c.group_name = r.group_name
-AND c.name = r.name
-AND c.stream_name = r.stream_name
-RETURNING c.group_name, c.name, c.stream_name, c.stream_position, c.status, c.last_error, c.retry_id;
+SELECT c.id,
+       c.group_name,
+       c.name,
+       c.stream_name,
+       c.stream_position,
+       c.status,
+       c.last_error
+FROM __schema__.checkpoints c
+WHERE c.group_name = _group_name
+AND (c.status = 'retry_pending' OR c.status = 'failure_pending')
+FOR UPDATE
+SKIP LOCKED
+LIMIT 1;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_lag()
@@ -342,7 +333,7 @@ $$
 WITH lagging_subscriptions AS (
   SELECT name, group_name, SUM(stream_version - stream_position) AS total_lag
   FROM __schema__.checkpoints
-  WHERE lagging = true
+  WHERE status = 'lagging'
   GROUP BY name, group_name
 )
 SELECT count(*)
@@ -356,7 +347,7 @@ AS
 $$
 SELECT count(*)
 FROM __schema__.checkpoints
-WHERE status = 'retry';
+WHERE status = 'retrying';
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_failed_count()

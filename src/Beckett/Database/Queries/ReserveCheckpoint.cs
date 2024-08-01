@@ -4,10 +4,9 @@ using NpgsqlTypes;
 
 namespace Beckett.Database.Queries;
 
-public class LockCheckpoint(
-    string groupName,
-    string name,
-    string streamName
+public class ReserveCheckpoint(
+    long checkpointId,
+    TimeSpan reservationTimeout
 ) : IPostgresDatabaseQuery<Checkpoint?>
 {
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
@@ -20,18 +19,16 @@ public class LockCheckpoint(
                    stream_position,
                    stream_version,
                    status
-            from {schema}.lock_checkpoint($1, $2, $3);
+            from {schema}.reserve_checkpoint($1, $2);
         ";
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Interval });
 
         await command.PrepareAsync(cancellationToken);
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
-        command.Parameters[2].Value = streamName;
+        command.Parameters[0].Value = checkpointId;
+        command.Parameters[1].Value = reservationTimeout;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

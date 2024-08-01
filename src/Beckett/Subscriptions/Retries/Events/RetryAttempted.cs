@@ -3,7 +3,7 @@ using Beckett.Subscriptions.Retries.Events.Models;
 namespace Beckett.Subscriptions.Retries.Events;
 
 public record RetryAttempted(
-    Guid Id,
+    long CheckpointId,
     string SubscriptionGroupName,
     string SubscriptionName,
     string StreamName,

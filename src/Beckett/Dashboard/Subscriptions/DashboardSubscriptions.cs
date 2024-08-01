@@ -21,9 +21,9 @@ public class DashboardSubscriptions(IPostgresDatabase database, IMessageStore me
         return database.Execute(new GetRetries(), cancellationToken);
     }
 
-    public async Task<GetRetryDetailsResult?> GetRetryDetails(Guid id, CancellationToken cancellationToken)
+    public async Task<GetRetryDetailsResult?> GetRetryDetails(long checkpointId, CancellationToken cancellationToken)
     {
-        var stream = await messageStore.ReadStream(RetryStreamName.For(id), cancellationToken);
+        var stream = await messageStore.ReadStream(RetryStreamName.For(checkpointId), cancellationToken);
 
         return stream.IsEmpty ? null : stream.ProjectTo<GetRetryDetailsResult>();
     }

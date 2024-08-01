@@ -15,15 +15,14 @@ public class SubscriptionStreamProcessor(
     IMessageStorage messageStorage,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
-    BeckettOptions options,
     IInstrumentation instrumentation,
     ILogger<SubscriptionStreamProcessor> logger
 ) : ISubscriptionStreamProcessor
 {
     public async Task Process(
         NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
         Subscription subscription,
+        long checkpointId,
         string streamName,
         long streamPosition,
         int batchSize,
@@ -66,14 +65,11 @@ public class SubscriptionStreamProcessor(
             case MessageBatchResult.Success success:
                 await database.Execute(
                     new UpdateCheckpointStatus(
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        streamName,
+                        checkpointId,
                         success.StreamPosition,
                         CheckpointStatus.Active
                     ),
                     connection,
-                    transaction,
                     cancellationToken
                 );
 
@@ -88,15 +84,12 @@ public class SubscriptionStreamProcessor(
 
                 await database.Execute(
                     new UpdateCheckpointStatus(
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        streamName,
+                        checkpointId,
                         error.StreamPosition,
-                        maxRetries == 0 ? CheckpointStatus.PendingFailure : CheckpointStatus.Retry,
+                        maxRetries == 0 ? CheckpointStatus.FailurePending : CheckpointStatus.RetryPending,
                         ExceptionData.From(error.Exception).ToJson()
                     ),
                     connection,
-                    transaction,
                     cancellationToken
                 );
 

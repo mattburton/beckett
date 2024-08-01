@@ -35,7 +35,6 @@ public static class Configuration
 
         builder.Services.AddSingleton<RetryStartedHandler>();
         builder.Services.AddSingleton<RetryAttemptedHandler>();
-        builder.Services.AddSingleton<RetryFailedHandler>();
         builder.Services.AddSingleton<ManualRetryRequestedHandler>();
         builder.Services.AddSingleton<DeleteRetryRequestedHandler>();
 
@@ -62,12 +61,6 @@ public static class Configuration
             .Category(category)
             .Message<RetryAttempted>()
             .Handler<RetryAttemptedHandler>((handler, message, token) => handler.Handle(message, token))
-            .MaxRetryCount(0);
-
-        builder.AddSubscription("$retry_failed")
-            .Category(category)
-            .Message<RetryFailed>()
-            .Handler<RetryFailedHandler>((handler, message, token) => handler.Handle(message, token))
             .MaxRetryCount(0);
 
         builder.AddSubscription("$manual_retry_requested")

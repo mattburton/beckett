@@ -8,12 +8,12 @@ public static class ManualRetry
 {
     public static RouteGroupBuilder ManualRetryRoute(this RouteGroupBuilder builder)
     {
-        builder.MapPost("/subscriptions/retries/{id:guid}/manual-retry", Handler);
+        builder.MapPost("/subscriptions/retries/{id:long}/manual-retry", Handler);
 
         return builder;
     }
 
-    private static async Task<IResult> Handler(HttpContext context, Guid id, IMessageStore messageStore, CancellationToken cancellationToken)
+    private static async Task<IResult> Handler(HttpContext context, long id, IMessageStore messageStore, CancellationToken cancellationToken)
     {
         await messageStore.AppendToStream(
             RetryStreamName.For(id),
