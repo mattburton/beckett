@@ -197,6 +197,7 @@ public class RetryManager(
             var checkpoint = await database.Execute(
                 new ReserveCheckpoint(
                     checkpointId,
+                    options.Subscriptions.GroupName,
                     options.Subscriptions.CheckpointReservationTimeout
                 ),
                 connection,

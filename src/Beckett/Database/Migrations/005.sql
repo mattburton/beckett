@@ -147,6 +147,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION __schema__.reserve_checkpoint(
   _id bigint,
+  _group_name text,
   _reservation_timeout interval
 )
   RETURNS TABLE (
@@ -170,6 +171,7 @@ FROM (
   FROM __schema__.checkpoints c
   INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
   WHERE c.id = _id
+  AND c.group_name = _group_name
   AND c.status != 'reserved'
   LIMIT 1 FOR UPDATE SKIP LOCKED
 ) as d
