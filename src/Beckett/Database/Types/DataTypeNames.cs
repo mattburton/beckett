@@ -12,5 +12,7 @@ public static class DataTypeNames
 
     public static string MessageArray(string schema) => $"{schema}.message[]";
 
+    public static string RetryStatus(string schema) => $"{schema}.retry_status";
+
     public static string ScheduledMessage(string schema) => $"{schema}.scheduled_message";
 }

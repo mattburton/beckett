@@ -15,7 +15,7 @@ public static class ServiceCollectionExtensions
         var applicationConnectionString = builder.Configuration.GetConnectionString("TodoList") ??
                                           throw new Exception("Missing TodoList connection string");
 
-        await Postgres.UpgradeSchema(migrationsConnectionString);
+        await PostgresMigrator.UpgradeSchema(migrationsConnectionString);
 
         await TodoListApplicationUser.EnsureExists(migrationsConnectionString);
 

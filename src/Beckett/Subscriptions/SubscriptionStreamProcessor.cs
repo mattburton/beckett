@@ -1,13 +1,11 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
 using Beckett.Messages;
-using Beckett.Messages.Storage;
+using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
-using Beckett.Subscriptions.Models;
-using Beckett.Subscriptions.Retries.Events.Models;
+using Beckett.Subscriptions.Queries;
+using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Beckett.Subscriptions;
 
@@ -15,18 +13,17 @@ public class SubscriptionStreamProcessor(
     IMessageStorage messageStorage,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
+    BeckettOptions options,
     IInstrumentation instrumentation,
     ILogger<SubscriptionStreamProcessor> logger
 ) : ISubscriptionStreamProcessor
 {
     public async Task Process(
-        NpgsqlConnection connection,
         Subscription subscription,
-        long checkpointId,
         string streamName,
         long streamPosition,
         int batchSize,
-        bool throwOnError,
+        bool isRetry,
         CancellationToken cancellationToken
     )
     {
@@ -35,8 +32,7 @@ public class SubscriptionStreamProcessor(
             new ReadStreamOptions
             {
                 StartingStreamPosition = streamPosition,
-                Count = batchSize,
-                Connection = connection
+                Count = batchSize
             },
             cancellationToken
         );
@@ -63,19 +59,25 @@ public class SubscriptionStreamProcessor(
         switch (result)
         {
             case MessageBatchResult.Success success:
+                if (isRetry)
+                {
+                    return;
+                }
+
                 await database.Execute(
                     new UpdateCheckpointStatus(
-                        checkpointId,
+                        options.Subscriptions.GroupName,
+                        subscription.Name,
+                        streamName,
                         success.StreamPosition,
                         CheckpointStatus.Active
                     ),
-                    connection,
                     cancellationToken
                 );
 
                 break;
             case MessageBatchResult.Error error:
-                if (throwOnError)
+                if (isRetry)
                 {
                     throw error.Exception;
                 }
@@ -84,12 +86,14 @@ public class SubscriptionStreamProcessor(
 
                 await database.Execute(
                     new UpdateCheckpointStatus(
-                        checkpointId,
+                        options.Subscriptions.GroupName,
+                        subscription.Name,
+                        streamName,
                         error.StreamPosition,
-                        maxRetries == 0 ? CheckpointStatus.FailurePending : CheckpointStatus.RetryPending,
+                        CheckpointStatus.Retry,
+                        maxRetries,
                         ExceptionData.From(error.Exception).ToJson()
                     ),
-                    connection,
                     cancellationToken
                 );
 

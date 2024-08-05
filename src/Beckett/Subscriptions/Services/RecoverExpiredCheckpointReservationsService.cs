@@ -1,5 +1,5 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
+using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -20,15 +20,15 @@ public class RecoverExpiredCheckpointReservationsService(
             {
                 var recovered = await database.Execute(
                     new RecoverExpiredCheckpointReservations(
-                        options.Subscriptions.CheckpointReservationTimeout,
-                        options.Subscriptions.CheckpointReservationRecoveryBatchSize
+                        options.Subscriptions.ReservationTimeout,
+                        options.Subscriptions.ReservationRecoveryBatchSize
                     ),
                     stoppingToken
                 );
 
                 if (recovered <= 0)
                 {
-                    await Task.Delay(options.Subscriptions.CheckpointReservationRecoveryInterval, stoppingToken);
+                    await Task.Delay(options.Subscriptions.ReservationRecoveryInterval, stoppingToken);
                 }
                 else
                 {

@@ -1,5 +1,5 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
+using Beckett.Subscriptions.Queries;
 
 namespace Beckett.Subscriptions;
 
@@ -27,16 +27,11 @@ public class SubscriptionStreamConsumer(
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            await using var connection = database.CreateConnection();
-
-            await connection.OpenAsync(stoppingToken);
-
             var checkpoint = await database.Execute(
                 new ReserveNextAvailableCheckpoint(
                     options.Subscriptions.GroupName,
-                    options.Subscriptions.CheckpointReservationTimeout
+                    options.Subscriptions.ReservationTimeout
                 ),
-                connection,
                 stoppingToken
             );
 
@@ -53,9 +48,7 @@ public class SubscriptionStreamConsumer(
             }
 
             await subscriptionStreamProcessor.Process(
-                connection,
                 subscription,
-                checkpoint.Id,
                 checkpoint.StreamName,
                 checkpoint.StreamPosition + 1,
                 options.Subscriptions.SubscriptionStreamBatchSize,

@@ -23,28 +23,28 @@
 </div>
 
 <div id="retry-details"
-     hx-get="@Routes.Prefix/subscriptions/retries/@Model.Details.CheckpointId"
+     hx-get="@Routes.Prefix/subscriptions/retries/@Model.Details.Id"
      hx-trigger="every 10s"
      hx-select="#retry-details"
      hx-swap="outerHTML">
   <div class="card m-4">
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
-        <div class="fs-3">Status: @Model.Details.Status.ToRetryStatus()</div>
-        @if (Model.Details.Status != GetRetryDetailsResult.RetryStatus.Success)
+        <div class="fs-3">Status: @Model.Details.Status.ToDisplayStatus()</div>
+        @if (Model.Details.ShowControls)
         {
           <div>
             <a href="#"
                class="btn btn-primary"
                title="Request manual retry"
-               hx-post="@Routes.Prefix/subscriptions/retries/@Model.Details.CheckpointId/manual-retry"
+               hx-post="@Routes.Prefix/subscriptions/retries/@Model.Details.Id/manual-retry"
                hx-on::after-request="alert('Manual retry requested')">
               Retry
             </a>
             <a href="#"
                class="btn btn-danger"
                title="Request delete"
-               hx-delete="@Routes.Prefix/subscriptions/retries/@Model.Details.CheckpointId"
+               hx-delete="@Routes.Prefix/subscriptions/retries/@Model.Details.Id"
                hx-on::after-request="alert('Delete requested')">
               Delete
             </a>
@@ -81,7 +81,7 @@
           @Model.Details.StreamPosition
         }
       </li>
-      <li class="list-group-item">Attempts: @Model.Details.Attempts.Count</li>
+      <li class="list-group-item">Attempts: @Model.Details.TotalAttempts</li>
     </ul>
   </div>
 
@@ -104,7 +104,7 @@
   @foreach(var attempt in Model.Details.Attempts)
   {
     <div class="card m-4">
-      <div class="card-header d-flex justify-content-between align-items-center @(attempt.Success ? "text-bg-success" : "text-bg-danger") bg-opacity-10 text-dark">
+      <div class="card-header d-flex justify-content-between align-items-center @attempt.BackgroundColor bg-opacity-10 text-dark">
         <div>@attempt.Status.ToAttemptStatus()</div>
         <div>@attempt.Timestamp</div>
       </div>

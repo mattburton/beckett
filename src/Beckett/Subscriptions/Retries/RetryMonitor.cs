@@ -1,6 +1,5 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
-using Beckett.Subscriptions.Models;
+using Beckett.Subscriptions.Retries.Queries;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -9,7 +8,7 @@ namespace Beckett.Subscriptions.Retries;
 public class RetryMonitor(
     IPostgresDatabase database,
     BeckettOptions options,
-    IRetryManager retryManager,
+    IRetryProcessor retryProcessor,
     ILogger<RetryMonitor> logger
 ) : IRetryMonitor
 {
@@ -31,53 +30,56 @@ public class RetryMonitor(
         {
             try
             {
-                await using var connection = database.CreateConnection();
-
-                await connection.OpenAsync(stoppingToken);
-
-                await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
-
-                var checkpoint = await database.Execute(
-                    new LockNextCheckpointForRetry(options.Subscriptions.GroupName),
-                    connection,
-                    transaction,
+                var retry = await database.Execute(
+                    new ReserveNextAvailableRetry(
+                        options.Subscriptions.GroupName,
+                        options.Subscriptions.ReservationTimeout
+                    ),
                     stoppingToken
                 );
 
-                if (checkpoint == null)
+                if (retry == null)
                 {
                     break;
                 }
 
-                switch (checkpoint.Status)
+                switch (retry.Status)
                 {
-                    case CheckpointStatus.RetryPending:
-                        await retryManager.StartRetry(
-                            checkpoint.Id,
-                            checkpoint.Name,
-                            checkpoint.StreamName,
-                            checkpoint.StreamPosition,
-                            checkpoint.LastError,
-                            connection,
-                            transaction,
-                            stoppingToken
-                        );
+                    case RetryStatus.Started:
+                        if (retry.MaxRetryCount == 0)
+                        {
+                            await database.Execute(
+                                new RecordRetryEvent(retry.Id, RetryStatus.Failed, retry.Attempts),
+                                stoppingToken
+                            );
+                        }
+                        else
+                        {
+                            var retryAt = 1.GetNextDelayWithExponentialBackoff(
+                                options.Subscriptions.Retries.InitialDelay,
+                                options.Subscriptions.Retries.MaxDelay
+                            );
+
+                            await database.Execute(
+                                new RecordRetryEvent(retry.Id, RetryStatus.Scheduled, retry.Attempts, retryAt),
+                                stoppingToken
+                            );
+                        }
                         break;
-                    case CheckpointStatus.FailurePending:
-                        await retryManager.RecordFailure(
-                            checkpoint.Id,
-                            checkpoint.Name,
-                            checkpoint.StreamName,
-                            checkpoint.StreamPosition,
-                            checkpoint.LastError,
-                            connection,
-                            transaction,
+                    case RetryStatus.Scheduled:
+                    case RetryStatus.ManualRetryRequested:
+                        await retryProcessor.Retry(
+                            retry.Id,
+                            retry.Name,
+                            retry.StreamName,
+                            retry.StreamPosition,
+                            retry.Attempts.GetValueOrDefault(),
+                            retry.MaxRetryCount,
+                            retry.Status == RetryStatus.ManualRetryRequested,
                             stoppingToken
                         );
                         break;
                 }
-
-                await transaction.CommitAsync(stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

@@ -12,9 +12,10 @@ public class GetFailed : IPostgresDatabaseQuery<GetFailedResult>
     )
     {
         command.CommandText = $@"
-            SELECT id, group_name, name, stream_name, stream_position
+            SELECT group_name, name, stream_name, stream_position, retry_id
             FROM {schema}.checkpoints
             WHERE status = 'failed'
+            AND retry_id IS NOT NULL
             ORDER BY group_name, name, stream_name, stream_position;
         ";
 
@@ -33,11 +34,11 @@ public class GetFailed : IPostgresDatabaseQuery<GetFailedResult>
 
             results.Add(
                 new GetFailedResult.Failure(
-                    reader.GetFieldValue<long>(0),
+                    reader.GetFieldValue<string>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
-                    reader.GetFieldValue<string>(3),
-                    reader.GetFieldValue<long>(4)
+                    reader.GetFieldValue<long>(3),
+                    reader.GetFieldValue<Guid>(4)
                 )
             );
         }

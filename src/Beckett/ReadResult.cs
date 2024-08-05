@@ -1,5 +1,3 @@
-using Beckett.Messages;
-
 namespace Beckett;
 
 public readonly struct ReadResult(
@@ -26,3 +24,10 @@ public readonly struct ReadResult(
 
     public TState ProjectTo<TState>() where TState : IApply, new() => Messages.ProjectTo<TState>();
 }
+
+public delegate Task<AppendResult> AppendToStreamDelegate(
+    string streamName,
+    ExpectedVersion expectedVersion,
+    IEnumerable<object> messages,
+    CancellationToken cancellationToken
+);

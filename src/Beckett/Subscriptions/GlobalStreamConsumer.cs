@@ -1,8 +1,8 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.Messages;
-using Beckett.Messages.Storage;
+using Beckett.MessageStorage;
+using Beckett.Subscriptions.Queries;
 
 namespace Beckett.Subscriptions;
 
@@ -29,8 +29,6 @@ public class GlobalStreamConsumer(
     private async Task Poll(CancellationToken stoppingToken)
     {
         var registeredSubscriptions = subscriptionRegistry.All().ToArray();
-
-        var emptyResultRetryCount = 0;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -64,17 +62,6 @@ public class GlobalStreamConsumer(
 
             if (globalStream.Items.Count == 0)
             {
-                emptyResultRetryCount++;
-
-                if (emptyResultRetryCount <= options.Subscriptions.GlobalStreamEmptyResultsMaxRetryCount)
-                {
-                    await transaction.RollbackAsync(stoppingToken);
-
-                    await Task.Delay(options.Subscriptions.GlobalStreamEmptyResultsRetryDelay, stoppingToken);
-
-                    continue;
-                }
-
                 break;
             }
 

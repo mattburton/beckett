@@ -8,7 +8,7 @@ public interface IDashboardSubscriptions
 
     Task<GetRetriesResult> GetRetries(CancellationToken cancellationToken);
 
-    Task<GetRetryDetailsResult?> GetRetryDetails(long checkpointId, CancellationToken cancellationToken);
+    Task<GetRetryDetailsResult?> GetRetryDetails(Guid id, CancellationToken cancellationToken);
 
     Task<GetFailedResult> GetFailed(CancellationToken cancellationToken);
 }

@@ -2,6 +2,8 @@ using Beckett.Configuration;
 using Beckett.Dashboard;
 using Beckett.Database;
 using Beckett.Messages;
+using Beckett.MessageStorage;
+using Beckett.MessageStorage.Postgres;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling;
 using Beckett.Subscriptions;
@@ -26,13 +28,19 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddSingleton(options);
 
-        builder.Services.AddDashboard();
+        builder.Services.AddDashboardSupport();
 
         builder.Services.AddMessageSupport(options);
 
+        builder.Services.AddMessageStorageSupport(options);
+
         builder.Services.AddOpenTelemetrySupport();
 
+        builder.Services.AddPostgresMessageStorageSupport(options);
+
         builder.Services.AddPostgresSupport(options);
+
+        builder.Services.AddRetrySupport(options);
 
         builder.Services.AddScheduledMessageSupport(options);
 
@@ -54,18 +62,14 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddSingleton<IRecurringMessageRegistry>(recurringMessageRegistry);
 
-        var beckettBuilder = new BeckettBuilder(
+        return new BeckettBuilder(
             builder.Configuration,
             builder.Environment,
             builder.Services,
             messageTypeMap,
             subscriptionRegistry,
             recurringMessageRegistry
-        ).RetryClientSupport();
-
-        return !options.Subscriptions.Enabled
-            ? beckettBuilder
-            : beckettBuilder.RetryServerSupport(options.Subscriptions.Retries);
+        );
     }
 
     public static void AddBeckett(
@@ -87,13 +91,19 @@ public static class ServiceCollectionExtensions
 
                 services.AddSingleton(options);
 
-                services.AddDashboard();
+                services.AddDashboardSupport();
 
                 services.AddMessageSupport(options);
 
+                services.AddMessageStorageSupport(options);
+
                 services.AddOpenTelemetrySupport();
 
+                services.AddPostgresMessageStorageSupport(options);
+
                 services.AddPostgresSupport(options);
+
+                services.AddRetrySupport(options);
 
                 services.AddScheduledMessageSupport(options);
 
@@ -122,12 +132,7 @@ public static class ServiceCollectionExtensions
                     messageTypeMap,
                     subscriptionRegistry,
                     recurringMessageRegistry
-                ).RetryClientSupport();
-
-                if (options.Subscriptions.Enabled)
-                {
-                    beckettBuilder.RetryServerSupport(options.Subscriptions.Retries);
-                }
+                );
 
                 buildBeckett?.Invoke(beckettBuilder);
             }

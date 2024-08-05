@@ -1,19 +1,19 @@
-using Beckett.Subscriptions.Retries.Events;
-using Beckett.Subscriptions.Retries.Events.Models;
+using Beckett.Subscriptions.Retries;
 
 namespace Beckett.Dashboard.Subscriptions;
 
-public class GetRetryDetailsResult : IApply
+public class GetRetryDetailsResult
 {
-    public long CheckpointId { get; set; }
-    public string GroupName { get; set; } = null!;
-    public string SubscriptionName { get; set; } = null!;
-    public string StreamName { get; set; } = null!;
-    public long StreamPosition { get; set; }
-    public RetryStatus Status { get; set; }
-    public ExceptionData? Exception { get; set; }
-    public DateTimeOffset StartedAt { get; set; }
-    public List<Attempt> Attempts { get; set; } = [];
+    public required Guid Id { get; init; }
+    public required string GroupName { get; init; }
+    public required string SubscriptionName { get; init; }
+    public required string StreamName { get; init; }
+    public required long StreamPosition { get; init; }
+    public required RetryStatus Status { get; init; }
+    public ExceptionData? Exception { get; init; }
+    public required DateTimeOffset StartedAt { get; init; }
+    public required int TotalAttempts { get; init; }
+    public required List<Attempt> Attempts { get; init; } = [];
 
     public string StreamCategory
     {
@@ -25,141 +25,47 @@ public class GetRetryDetailsResult : IApply
         }
     }
 
-    public void Apply(object message)
-    {
-        switch (message)
-        {
-            case RetryStarted e:
-                Apply(e);
-                break;
-            case RetryAttempted e:
-                Apply(e);
-                break;
-            case RetrySucceeded e:
-                Apply(e);
-                break;
-            case RetryFailed e:
-                Apply(e);
-                break;
-            case ManualRetryRequested e:
-                Apply(e);
-                break;
-            case ManualRetryFailed e:
-                Apply(e);
-                break;
-            case DeleteRetryRequested e:
-                Apply(e);
-                break;
-            case RetryDeleted e:
-                Apply(e);
-                break;
-        }
-    }
-
-    private void Apply(RetryStarted e)
-    {
-        CheckpointId = e.CheckpointId;
-        GroupName = e.SubscriptionGroupName;
-        SubscriptionName = e.SubscriptionName;
-        StreamName = e.StreamName;
-        StreamPosition = e.StreamPosition;
-        Exception = e.Exception;
-        StartedAt = e.Timestamp;
-        Status = RetryStatus.Started;
-    }
-
-    private void Apply(RetryAttempted e)
-    {
-        Status = RetryStatus.Retrying;
-
-        Attempts.Add(new Attempt(Status, false, e.Timestamp, e.Exception));
-    }
-
-    private void Apply(RetrySucceeded e)
-    {
-        Status = RetryStatus.Success;
-
-        Attempts.Add(new Attempt(Status, true, e.Timestamp, null));
-    }
-
-    private void Apply(RetryFailed e)
-    {
-        CheckpointId = e.CheckpointId;
-        GroupName = e.SubscriptionGroupName;
-        SubscriptionName = e.SubscriptionName;
-        StreamName = e.StreamName;
-        StreamPosition = e.StreamPosition;
-        Exception = e.Exception;
-        StartedAt = e.Timestamp;
-        Status = RetryStatus.Failed;
-    }
-
-    private void Apply(ManualRetryRequested _)
-    {
-        Status = RetryStatus.ManualRetryRequested;
-    }
-
-    private void Apply(ManualRetryFailed e)
-    {
-        Status = RetryStatus.ManualRetryFailed;
-
-        Attempts.Add(new Attempt(Status, false, e.Timestamp, e.Exception));
-    }
-
-    private void Apply(DeleteRetryRequested _)
-    {
-        Status = RetryStatus.DeleteRequested;
-    }
-
-    private void Apply(RetryDeleted _)
-    {
-        Status = RetryStatus.Deleted;
-    }
+    public bool ShowControls => Status is RetryStatus.Failed or RetryStatus.ManualRetryFailed;
 
     public record Attempt(
         RetryStatus Status,
-        bool Success,
         DateTimeOffset Timestamp,
-        ExceptionData? Exception);
-
-    public enum RetryStatus
+        ExceptionData? Exception
+    )
     {
-        Started,
-        Retrying,
-        Success,
-        Failed,
-        ManualRetryRequested,
-        ManualRetryFailed,
-        DeleteRequested,
-        Deleted
+        public string BackgroundColor => Status switch
+        {
+            RetryStatus.Succeeded => "text-bg-success",
+            RetryStatus.ManualRetryRequested => "text-bg-secondary",
+            _ => "text-bg-danger"
+        };
     }
 }
 
 public static class RetryStatusExtensions
 {
-    public static string ToRetryStatus(this GetRetryDetailsResult.RetryStatus status)
+    public static string ToDisplayStatus(this RetryStatus status)
     {
         return status switch
         {
-            GetRetryDetailsResult.RetryStatus.Started => "Pending Retry",
-            GetRetryDetailsResult.RetryStatus.Retrying => "Retrying",
-            GetRetryDetailsResult.RetryStatus.Success => "Success",
-            GetRetryDetailsResult.RetryStatus.Failed => "Failed",
-            GetRetryDetailsResult.RetryStatus.ManualRetryRequested => "Manual Retry Requested",
-            GetRetryDetailsResult.RetryStatus.ManualRetryFailed => "Manual Retry Failed",
-            GetRetryDetailsResult.RetryStatus.DeleteRequested => "Delete Requested",
-            GetRetryDetailsResult.RetryStatus.Deleted => "Deleted",
+            RetryStatus.Started => "Pending Retry",
+            RetryStatus.Scheduled => "Retrying",
+            RetryStatus.Succeeded => "Succeeded",
+            RetryStatus.Failed => "Failed",
+            RetryStatus.ManualRetryRequested => "Manual Retry Requested",
+            RetryStatus.ManualRetryFailed => "Manual Retry Failed",
+            RetryStatus.Deleted => "Deleted",
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
     }
 
-    public static string ToAttemptStatus(this GetRetryDetailsResult.RetryStatus status)
+    public static string ToAttemptStatus(this RetryStatus status)
     {
         return status switch
         {
-            GetRetryDetailsResult.RetryStatus.Retrying => "Retried",
-            GetRetryDetailsResult.RetryStatus.Success => "Succeeded",
-            _ => ToRetryStatus(status)
+            RetryStatus.Scheduled => "Retried",
+            RetryStatus.Succeeded => "Succeeded",
+            _ => ToDisplayStatus(status)
         };
     }
 }

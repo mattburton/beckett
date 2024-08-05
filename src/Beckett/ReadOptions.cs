@@ -7,4 +7,10 @@ public class ReadOptions
     public long? StartingStreamPosition { get; set; }
     public long? Count { get; set; }
     public bool? ReadForwards { get; set; }
+
+    public static ReadOptions Last() => new()
+    {
+        Count = 1,
+        ReadForwards = false
+    };
 }
