@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_status ON __schema__.checkpoints (status);
 
+CREATE INDEX IF NOT EXISTS ix_checkpoints_reserve_next_available ON beckett.checkpoints (group_name, status) WHERE status = 'lagging';
+
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.retries
