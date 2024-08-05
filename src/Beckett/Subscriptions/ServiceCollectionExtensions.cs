@@ -1,4 +1,7 @@
+using Beckett.Database.Notifications;
 using Beckett.Subscriptions.Initialization;
+using Beckett.Subscriptions.NotificationHandlers;
+using Beckett.Subscriptions.Retries;
 using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,10 +13,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton(options.Subscriptions);
 
-        if (!options.Subscriptions.Enabled)
-        {
-            return;
-        }
+        services.AddSingleton<IRetryClient, RetryClient>();
 
         services.AddSingleton<ISubscriptionInitializer, SubscriptionInitializer>();
 
@@ -21,12 +21,23 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ISubscriptionStreamProcessor, SubscriptionStreamProcessor>();
 
-        services.AddSingleton<ISubscriptionConsumerGroup, SubscriptionConsumerGroup>();
+        services.AddSingleton<ISubscriptionStreamConsumerGroup, SubscriptionStreamConsumerGroup>();
+
+        services.AddSingleton<IPostgresNotificationHandler, CheckpointNotificationHandler>();
+
+        services.AddSingleton<IPostgresNotificationHandler, MessageNotificationHandler>();
+
+        if (!options.Subscriptions.Enabled)
+        {
+            return;
+        }
 
         services.AddHostedService<BootstrapSubscriptions>();
 
-        services.AddHostedService<GlobalPollingService>();
+        services.AddHostedService<GlobalStreamPollingService>();
 
-        services.AddHostedService<SubscriptionPollingService>();
+        services.AddHostedService<SubscriptionStreamPollingService>();
+
+        services.AddHostedService<RecoverExpiredCheckpointReservationsService>();
     }
 }

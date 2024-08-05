@@ -1,5 +1,6 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
+using Beckett.MessageStorage.Postgres;
+using Beckett.Scheduling.Queries;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

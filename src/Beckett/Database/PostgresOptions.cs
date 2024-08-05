@@ -6,12 +6,11 @@ public class PostgresOptions
 {
     public const string DefaultSchema = "beckett";
 
-    internal NpgsqlDataSource? DataSource { get; private set; }
-
     public bool Enabled { get; set; } = true;
     public bool Notifications { get; set; } = true;
     public string Schema { get; set; } = DefaultSchema;
-    internal Type MessageStorageType { get; set; } = typeof(PostgresMessageStorage);
+
+    internal NpgsqlDataSource? DataSource { get; private set; }
 
     public void UseSchema(string schema)
     {

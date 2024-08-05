@@ -7,7 +7,7 @@ namespace Beckett.Dashboard;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddDashboard(this IServiceCollection services)
+    public static void AddDashboardSupport(this IServiceCollection services)
     {
         services.AddSingleton<IDashboardMessageStore, DashboardMessageStore>();
         services.AddSingleton<IDashboardMetrics, DashboardMetrics>();

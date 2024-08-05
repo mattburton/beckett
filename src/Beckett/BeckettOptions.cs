@@ -1,6 +1,6 @@
 using Beckett.Database;
 using Beckett.Messages;
-using Beckett.Messages.Storage;
+using Beckett.MessageStorage;
 using Beckett.Scheduling;
 using Beckett.Subscriptions;
 
@@ -11,13 +11,14 @@ public class BeckettOptions
     public const string SectionName = "Beckett";
 
     public MessageOptions Messages { get; } = new();
+    public MessageStorageOptions MessageStorage { get; } = new();
     public SchedulingOptions Scheduling { get; } = new();
     public SubscriptionOptions Subscriptions { get; } = new();
     public PostgresOptions Postgres { get; } = new();
 
     public void UseMessageStorage<T>() where T : IMessageStorage
     {
-        Postgres.MessageStorageType = typeof(T);
+        MessageStorage.MessageStorageType = typeof(T);
     }
 
     public void UsePostgres(Action<PostgresOptions>? configure = null)

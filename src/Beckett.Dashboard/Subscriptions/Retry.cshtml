@@ -1,4 +1,5 @@
 @using System.Web
+@using Beckett.Subscriptions.Retries
 @inherits HtmlTemplate<RetryPage.ViewModel>
 
 @{
@@ -30,8 +31,8 @@
   <div class="card m-4">
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
-        <div class="fs-3">Status: @Model.Details.Status.ToRetryStatus()</div>
-        @if (Model.Details.Status != GetRetryDetailsResult.RetryStatus.Success)
+        <div class="fs-3">Status: @Model.Details.Status.ToDisplayStatus()</div>
+        @if (Model.Details.Status != RetryStatus.Succeeded)
         {
           <div>
             <a href="#"

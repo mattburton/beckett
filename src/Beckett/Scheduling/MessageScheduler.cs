@@ -1,8 +1,8 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.OpenTelemetry;
+using Beckett.Scheduling.Queries;
 using Cronos;
 using UUIDNext;
 
@@ -86,7 +86,10 @@ public class MessageScheduler(
             messageSerializer
         );
 
-        await database.Execute(new ScheduleMessage(streamName, scheduledMessage), cancellationToken);
+        await database.Execute(
+            new ScheduleMessage(streamName, scheduledMessage),
+            cancellationToken
+        );
 
         return id;
     }

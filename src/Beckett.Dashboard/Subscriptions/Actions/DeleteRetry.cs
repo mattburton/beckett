@@ -1,5 +1,4 @@
 using Beckett.Subscriptions.Retries;
-using Beckett.Subscriptions.Retries.Events;
 using Microsoft.Extensions.Primitives;
 
 namespace Beckett.Dashboard.Subscriptions.Actions;
@@ -13,14 +12,14 @@ public static class DeleteRetry
         return builder;
     }
 
-    private static async Task<IResult> Handler(HttpContext context, Guid id, IMessageStore messageStore, CancellationToken cancellationToken)
+    private static async Task<IResult> Handler(
+        HttpContext context,
+        Guid id,
+        IRetryClient retryClient,
+        CancellationToken cancellationToken
+    )
     {
-        await messageStore.AppendToStream(
-            RetryStreamName.For(id),
-            ExpectedVersion.Any,
-            new DeleteRetryRequested(id, DateTimeOffset.UtcNow),
-            cancellationToken
-        );
+        await retryClient.DeleteRetry(id, cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
 

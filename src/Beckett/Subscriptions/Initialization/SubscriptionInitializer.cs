@@ -1,8 +1,8 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.Messages;
-using Beckett.Messages.Storage;
+using Beckett.MessageStorage;
+using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Initialization;

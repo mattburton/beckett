@@ -1,8 +1,8 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.Subscriptions.Initialization;
+using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
