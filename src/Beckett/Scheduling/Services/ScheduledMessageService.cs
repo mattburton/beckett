@@ -38,13 +38,18 @@ public class ScheduledMessageService(
                 foreach (var streamGroup in results.GroupBy(x => x.StreamName))
                 foreach (var scheduledMessage in streamGroup)
                 {
-                    var (data, metadata) = messageDeserializer.Deserialize(scheduledMessage);
+                    var result = messageDeserializer.Deserialize(scheduledMessage);
+
+                    if (result == null)
+                    {
+                        continue;
+                    }
 
                     scheduledMessages.Add(
                         new ScheduledMessageContext(
                             scheduledMessage.StreamName,
-                            data,
-                            metadata
+                            result.Value.Message,
+                            result.Value.Metadata
                         )
                     );
                 }

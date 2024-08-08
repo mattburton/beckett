@@ -2,6 +2,7 @@ using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.MessageStorage.Postgres.Queries;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.MessageStorage.Postgres;
 
@@ -9,7 +10,8 @@ public class PostgresMessageStorage(
     IMessageSerializer messageSerializer,
     IPostgresDatabase database,
     IPostgresMessageDeserializer messageDeserializer,
-    IMessageTypeMap messageTypeMap
+    IMessageTypeMap messageTypeMap,
+    ILoggerFactory loggerFactory
 ) : IMessageStorage
 {
     public async Task<AppendToStreamResult> AppendToStream(
@@ -40,7 +42,19 @@ public class PostgresMessageStorage(
 
         var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[0].StreamVersion;
 
-        var messages = streamMessages.Select(messageDeserializer.Deserialize).ToList();
+        var messages = new List<MessageResult>();
+
+        foreach (var streamMessage in streamMessages)
+        {
+            var message = messageDeserializer.Deserialize(streamMessage);
+
+            if (message is null)
+            {
+                continue;
+            }
+
+            messages.Add(message.Value);
+        }
 
         return new ReadStreamResult(streamName, streamVersion, messages);
     }
@@ -53,17 +67,31 @@ public class PostgresMessageStorage(
     {
         var results = await database.Execute(new ReadGlobalStream(lastGlobalPosition, batchSize), cancellationToken);
 
-        var items = results.Count == 0
-            ? []
-            : results.Select(
-                x => new GlobalStreamItem(
-                    x.StreamName,
-                    x.StreamPosition,
-                    x.GlobalPosition,
-                    messageTypeMap.GetType(x.MessageType) ??
-                    throw new Exception($"Unknown message type: {x.MessageType}")
-                )
-            ).ToList();
+        var items = new List<GlobalStreamItem>();
+
+        if (results.Count <= 0)
+        {
+            return new ReadGlobalStreamResult(items);
+        }
+
+        foreach (var result in results)
+        {
+            var messageType = messageTypeMap.GetType(result.MessageType, loggerFactory);
+
+            if (messageType == null)
+            {
+                continue;
+            }
+
+            var item = new GlobalStreamItem(
+                result.StreamName,
+                result.StreamPosition,
+                result.GlobalPosition,
+                messageType
+            );
+
+            items.Add(item);
+        }
 
         return new ReadGlobalStreamResult(items);
     }

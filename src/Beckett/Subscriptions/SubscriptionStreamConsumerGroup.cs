@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Beckett.Database;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
 
@@ -8,7 +9,8 @@ public class SubscriptionStreamConsumerGroup(
     BeckettOptions options,
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
-    ISubscriptionStreamProcessor subscriptionStreamProcessor
+    ISubscriptionStreamProcessor subscriptionStreamProcessor,
+    ILogger<SubscriptionStreamConsumer> logger
 ) : ISubscriptionStreamConsumerGroup
 {
     private readonly int _concurrency = Debugger.IsAttached ? 1 : options.Subscriptions.Concurrency;
@@ -33,6 +35,7 @@ public class SubscriptionStreamConsumerGroup(
                     subscriptionRegistry,
                     subscriptionStreamProcessor,
                     options,
+                    logger,
                     _stoppingToken ?? default
                 )
             );

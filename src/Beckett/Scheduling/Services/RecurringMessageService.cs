@@ -57,13 +57,18 @@ public class RecurringMessageService(
                 {
                     foreach (var recurringMessage in streamGroup)
                     {
-                        var (data, metadata) = messageDeserializer.Deserialize(recurringMessage);
+                        var result = messageDeserializer.Deserialize(recurringMessage);
+
+                        if (result == null)
+                        {
+                            continue;
+                        }
 
                         recurringMessages.Add(
                             new ScheduledMessageContext(
                                 recurringMessage.StreamName,
-                                data,
-                                metadata
+                                result.Value.Message,
+                                result.Value.Metadata
                             )
                         );
                     }

@@ -1,5 +1,6 @@
 using Beckett.Database;
 using Beckett.Subscriptions.Queries;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
 
@@ -8,6 +9,7 @@ public class SubscriptionStreamConsumer(
     ISubscriptionRegistry subscriptionRegistry,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
     BeckettOptions options,
+    ILogger<SubscriptionStreamConsumer> logger,
     CancellationToken stoppingToken
 ) : ISubscriptionStreamConsumer
 {
@@ -27,34 +29,47 @@ public class SubscriptionStreamConsumer(
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var checkpoint = await database.Execute(
-                new ReserveNextAvailableCheckpoint(
-                    options.Subscriptions.GroupName,
-                    options.Subscriptions.ReservationTimeout
-                ),
-                stoppingToken
-            );
-
-            if (checkpoint == null)
+            try
             {
-                break;
+                var checkpoint = await database.Execute(
+                    new ReserveNextAvailableCheckpoint(
+                        options.Subscriptions.GroupName,
+                        options.Subscriptions.ReservationTimeout
+                    ),
+                    stoppingToken
+                );
+
+                if (checkpoint == null)
+                {
+                    break;
+                }
+
+                var subscription = subscriptionRegistry.GetSubscription(checkpoint.Name);
+
+                if (subscription == null)
+                {
+                    continue;
+                }
+
+                await subscriptionStreamProcessor.Process(
+                    subscription,
+                    checkpoint.StreamName,
+                    checkpoint.StreamPosition + 1,
+                    options.Subscriptions.SubscriptionStreamBatchSize,
+                    false,
+                    stoppingToken
+                );
             }
-
-            var subscription = subscriptionRegistry.GetSubscription(checkpoint.Name);
-
-            if (subscription == null)
+            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {
-                continue;
+                throw;
             }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Error processing subscription stream");
 
-            await subscriptionStreamProcessor.Process(
-                subscription,
-                checkpoint.StreamName,
-                checkpoint.StreamPosition + 1,
-                options.Subscriptions.SubscriptionStreamBatchSize,
-                false,
-                stoppingToken
-            );
+                throw;
+            }
         }
     }
 }

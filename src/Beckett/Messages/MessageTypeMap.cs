@@ -1,8 +1,12 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Messages;
 
-public class MessageTypeMap(MessageOptions options, IMessageTypeProvider messageTypeProvider) : IMessageTypeMap
+public class MessageTypeMap(
+    MessageOptions options,
+    IMessageTypeProvider messageTypeProvider
+) : IMessageTypeMap
 {
     private readonly ConcurrentDictionary<string, Type?> _nameToTypeMap = new();
     private readonly ConcurrentDictionary<Type, string> _typeToNameMap = new();
@@ -49,8 +53,9 @@ public class MessageTypeMap(MessageOptions options, IMessageTypeProvider message
         return _typeToNameMap[type];
     }
 
-    public Type? GetType(string name) =>
-        _nameToTypeMap.GetOrAdd(
+    public Type? GetType(string name, ILoggerFactory loggerFactory)
+    {
+        var messageType = _nameToTypeMap.GetOrAdd(
             name,
             typeName =>
             {
@@ -64,6 +69,37 @@ public class MessageTypeMap(MessageOptions options, IMessageTypeProvider message
                 return messageTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName));
             }
         );
+
+        if (messageType != null)
+        {
+            return messageType;
+        }
+
+        switch (options.UnknownMessageTypePolicy)
+        {
+            case UnknownMessageTypePolicy.IgnoreAndContinue:
+            {
+                return null;
+            }
+            case UnknownMessageTypePolicy.LogErrorAndContinue:
+                var loggerForContinue = loggerFactory.CreateLogger<MessageTypeMap>();
+
+                loggerForContinue.LogError("Unknown message type: {MessageType} - continuing", name);
+
+                return null;
+            case UnknownMessageTypePolicy.LogErrorAndExitApplication:
+                var loggerForExit = loggerFactory.CreateLogger<MessageTypeMap>();
+
+                loggerForExit.LogError("Unknown message type: {MessageType} - exiting application", name);
+
+                Environment.Exit(-1);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        return null;
+    }
 
     public bool IsMapped(Type type) => _typeToNameMap.ContainsKey(type);
 
