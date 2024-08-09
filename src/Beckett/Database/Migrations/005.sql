@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_status ON __schema__.checkpoints (status);
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_reserve_next_available ON beckett.checkpoints (group_name, status) WHERE status = 'lagging';
+CREATE INDEX IF NOT EXISTS ix_checkpoints_reserve_next_available ON __schema__.checkpoints (group_name, name, status) WHERE status = 'lagging';
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
@@ -431,7 +431,12 @@ BEGIN
 
   IF (_status = 'succeeded') THEN
     UPDATE __schema__.checkpoints
-    SET status = 'active',
+    SET status = CASE
+          WHEN (stream_version > stream_position) THEN
+            'lagging'::__schema__.checkpoint_status
+          ELSE
+            'active'::__schema__.checkpoint_status
+        END,
         retry_id = NULL
     WHERE retry_id = _retry_id;
   END IF;
