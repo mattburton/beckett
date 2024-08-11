@@ -85,22 +85,6 @@
     </ul>
   </div>
 
-  @if (Model.Details.Exception != null)
-  {
-    <div class="card m-4">
-      <div class="card-header d-flex justify-content-between align-items-center text-bg-danger bg-opacity-10 text-dark">
-        <div>Error</div>
-        <div>@Model.Details.StartedAt</div>
-      </div>
-      @if (Model.Details.Exception != null)
-      {
-        <div class="card-body">
-          @(new Exception((Model.Details.Exception, true)))
-        </div>
-      }
-    </div>
-  }
-
   @foreach(var attempt in Model.Details.Attempts)
   {
     <div class="card m-4">
@@ -113,6 +97,22 @@
         <div class="card-body">
           @(new Exception((attempt.Exception, true)))
         </div>
+      }
+    </div>
+  }
+
+  @if (Model.Details.Exception != null)
+  {
+    <div class="card m-4">
+      <div class="card-header d-flex justify-content-between align-items-center text-bg-danger bg-opacity-10 text-dark">
+        <div>Original Error</div>
+        <div>@Model.Details.StartedAt</div>
+      </div>
+      @if (Model.Details.Exception != null)
+      {
+      <div class="card-body">
+        @(new Exception((Model.Details.Exception, true)))
+      </div>
       }
     </div>
   }

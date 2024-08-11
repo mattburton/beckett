@@ -12,26 +12,29 @@ public class GetRetryDetails(Guid id) : IPostgresDatabaseQuery<GetRetryDetailsRe
         var batch = new NpgsqlBatch(command.Connection);
 
         var retryRow = new NpgsqlBatchCommand($@"
-            select id,
+            SELECT id,
                    group_name,
                    name,
                    stream_name,
                    stream_position,
-                   case when status = 'reserved' then previous_status else status end as status,
+                   CASE WHEN status = 'reserved' THEN previous_status ELSE status END AS status,
                    error,
                    started_at,
                    attempts
-            from {schema}.retries where id = $1
+            FROM {schema}.retries
+            WHERE id = $1;
         ");
 
         retryRow.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid, Value = id });
 
         var eventRows = new NpgsqlBatchCommand($@"
-            select status,
+            SELECT status,
                    timestamp,
                    error
-            from {schema}.retry_events where retry_id = $1
-            order by timestamp;
+            FROM {schema}.retry_events
+            WHERE retry_id = $1
+            AND attempt > 0
+            ORDER BY timestamp DESC;
         ");
 
         eventRows.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid, Value = id });
