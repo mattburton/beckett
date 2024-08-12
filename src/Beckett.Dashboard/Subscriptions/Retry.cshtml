@@ -82,6 +82,10 @@
         }
       </li>
       <li class="list-group-item">Attempts: @Model.Details.TotalAttempts</li>
+      @if (Model.Details.RetryAt.HasValue)
+      {
+        <li class="list-group-item">Retry In: @Model.Details.RetryAt.Value.ToRetryTimeDisplay()</li>
+      }
     </ul>
   </div>
 

@@ -20,6 +20,7 @@ public class GetRetryDetails(Guid id) : IPostgresDatabaseQuery<GetRetryDetailsRe
                    CASE WHEN status = 'reserved' THEN previous_status ELSE status END AS status,
                    error,
                    started_at,
+                   retry_at,
                    attempts
             FROM {schema}.retries
             WHERE id = $1;
@@ -61,7 +62,8 @@ public class GetRetryDetails(Guid id) : IPostgresDatabaseQuery<GetRetryDetailsRe
             Status = reader.GetFieldValue<RetryStatus>(5),
             Exception = reader.IsDBNull(6) ? null : ExceptionData.FromJson(reader.GetFieldValue<string>(6)),
             StartedAt = reader.GetFieldValue<DateTimeOffset>(7),
-            TotalAttempts = reader.GetFieldValue<int>(8),
+            RetryAt = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
+            TotalAttempts = reader.GetFieldValue<int>(9),
             Attempts = []
         };
 

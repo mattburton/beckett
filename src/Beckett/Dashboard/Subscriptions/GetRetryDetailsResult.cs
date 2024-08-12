@@ -12,6 +12,7 @@ public class GetRetryDetailsResult
     public required RetryStatus Status { get; init; }
     public ExceptionData? Exception { get; init; }
     public required DateTimeOffset StartedAt { get; init; }
+    public required DateTimeOffset? RetryAt { get; init; }
     public required int TotalAttempts { get; init; }
     public required List<Attempt> Attempts { get; init; } = [];
 
