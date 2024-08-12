@@ -8,7 +8,7 @@
     <RepositoryUrl>https://github.com/mattburton/beckett</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>messaging, event sourcing, event modeling, event store, message store</PackageTags>
+    <PackageTags>Messaging, EventSourcing, EventStore, MessageStore, CQRS, Subscriptions, EventHandlers, Reactors, Projections</PackageTags>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <EnablePackageValidation>true</EnablePackageValidation>
