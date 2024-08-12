@@ -8,7 +8,7 @@ public static class DateTimeOffsetExtensions
 
         if (timestamp < now)
         {
-            return "Pending";
+            return "Waiting";
         }
 
         var difference = timestamp - now;

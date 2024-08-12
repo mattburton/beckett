@@ -69,8 +69,6 @@ public class GetRetryDetails(Guid id) : IPostgresDatabaseQuery<GetRetryDetailsRe
 
         await reader.NextResultAsync(cancellationToken);
 
-        await reader.ReadAsync(cancellationToken);
-
         while (await reader.ReadAsync(cancellationToken))
         {
             result.Attempts.Add(new GetRetryDetailsResult.Attempt(

@@ -68,6 +68,7 @@ public class RetryMonitor(
                         break;
                     case RetryStatus.Scheduled:
                     case RetryStatus.ManualRetryRequested:
+                    case RetryStatus.ManualRetryFailed:
                         await retryProcessor.Retry(
                             retry.Id,
                             retry.Name,

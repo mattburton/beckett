@@ -22,6 +22,7 @@ public static class ManualRetry
         await retryClient.RequestManualRetry(id, cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
+        context.Response.Headers.Append("HX-Trigger", new StringValues("manual_retry_requested"));
 
         return Results.Ok();
     }

@@ -5,6 +5,16 @@
   Layout = new Layout();
 }
 
+<script type="text/javascript">
+  document.body.addEventListener("manual_retry_requested", function(){
+    alert('Manual retry requested');
+  });
+
+  document.body.addEventListener("delete_requested", function(){
+    alert('Delete requested');
+  });
+</script>
+
 <div class="p-2 text-bg-light">
   <ul class="nav nav-pills">
     <li class="nav-item">
@@ -38,14 +48,14 @@
                class="btn btn-primary"
                title="Request manual retry"
                hx-post="@Routes.Prefix/subscriptions/retries/@Model.Details.Id/manual-retry"
-               hx-on::after-request="alert('Manual retry requested')">
+               hx-on::response-error="alert('Unable to request a manual retry at this time - please try again later')">
               Retry
             </a>
             <a href="#"
                class="btn btn-danger"
                title="Request delete"
                hx-delete="@Routes.Prefix/subscriptions/retries/@Model.Details.Id"
-               hx-on::after-request="alert('Delete requested')">
+               hx-on::response-error="alert('Unable to request deletion at this time - please try again later')">
               Delete
             </a>
           </div>

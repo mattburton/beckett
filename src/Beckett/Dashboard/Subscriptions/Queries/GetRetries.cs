@@ -1,4 +1,5 @@
 using Beckett.Database;
+using Beckett.Subscriptions.Retries;
 using Npgsql;
 
 namespace Beckett.Dashboard.Subscriptions.Queries;
@@ -12,7 +13,7 @@ public class GetRetries : IPostgresDatabaseQuery<GetRetriesResult>
     )
     {
         command.CommandText = $@"
-            SELECT c.group_name, c.name, c.stream_name, c.stream_position, c.retry_id, r.attempts, r.retry_at
+            SELECT c.group_name, c.name, c.stream_name, c.stream_position, c.retry_id, r.attempts, r.retry_at, r.status
             FROM {schema}.checkpoints c
             INNER JOIN {schema}.retries r ON c.retry_id = r.id
             WHERE c.status = 'retry'
@@ -41,7 +42,8 @@ public class GetRetries : IPostgresDatabaseQuery<GetRetriesResult>
                     reader.GetFieldValue<long>(3),
                     reader.GetFieldValue<Guid>(4),
                     reader.GetFieldValue<int>(5),
-                    reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset>(6)
+                    reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset>(6),
+                    reader.GetFieldValue<RetryStatus>(7)
                 )
             );
         }

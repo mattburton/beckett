@@ -47,12 +47,34 @@ public class RetryProcessor(
         {
             var error = ExceptionData.From(e).ToJson();
 
+            var retryAt = attemptNumber.GetNextDelayWithExponentialBackoff(
+                options.Subscriptions.Retries.InitialDelay,
+                options.Subscriptions.Retries.MaxDelay
+            );
+
             if (manualRetry)
             {
-                await database.Execute(
-                    new RecordRetryEvent(id, RetryStatus.ManualRetryFailed, attemptNumber, error: error),
-                    cancellationToken
-                );
+                if (attemptNumber >= maxRetryCount)
+                {
+                    await database.Execute(
+                        new RecordRetryEvent(id, RetryStatus.Failed, attemptNumber, error: error),
+                        cancellationToken
+                    );
+                }
+                else if (attemptNumber < maxRetryCount)
+                {
+                    await database.Execute(
+                        new RecordRetryEvent(id, RetryStatus.ManualRetryFailed, attemptNumber, retryAt, error),
+                        cancellationToken
+                    );
+                }
+                else
+                {
+                    await database.Execute(
+                        new RecordRetryEvent(id, RetryStatus.ManualRetryFailed, attemptNumber, error: error),
+                        cancellationToken
+                    );
+                }
 
                 return;
             }
@@ -66,11 +88,6 @@ public class RetryProcessor(
             }
             else
             {
-                var retryAt = attemptNumber.GetNextDelayWithExponentialBackoff(
-                    options.Subscriptions.Retries.InitialDelay,
-                    options.Subscriptions.Retries.MaxDelay
-                );
-
                 await database.Execute(
                     new RecordRetryEvent(id, RetryStatus.Scheduled, attemptNumber, retryAt, error),
                     cancellationToken

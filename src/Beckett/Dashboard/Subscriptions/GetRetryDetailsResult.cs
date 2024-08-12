@@ -26,7 +26,20 @@ public class GetRetryDetailsResult
         }
     }
 
-    public bool ShowControls => Status is RetryStatus.Failed or RetryStatus.ManualRetryFailed;
+    public bool ShowControls => Status switch
+    {
+        RetryStatus.Started => false,
+        RetryStatus.Reserved => false,
+        RetryStatus.Scheduled => RetryAllowed,
+        RetryStatus.Succeeded => false,
+        RetryStatus.Failed => true,
+        RetryStatus.ManualRetryRequested => false,
+        RetryStatus.ManualRetryFailed => RetryAt == null || RetryAllowed,
+        RetryStatus.Deleted => false,
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    private bool RetryAllowed => RetryAt.HasValue && RetryAt.Value > DateTimeOffset.UtcNow;
 
     public record Attempt(
         RetryStatus Status,

@@ -22,6 +22,7 @@ public static class DeleteRetry
         await retryClient.DeleteRetry(id, cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
+        context.Response.Headers.Append("HX-Trigger", new StringValues("delete_requested"));
 
         return Results.Ok();
     }

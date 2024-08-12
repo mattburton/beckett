@@ -417,7 +417,21 @@ CREATE OR REPLACE FUNCTION __schema__.record_retry_event(
   LANGUAGE plpgsql
 AS
 $$
+DECLARE
+  _current_status __schema__.retry_status;
+  _max_retry_count int;
 BEGIN
+  IF (_status = 'manual_retry_requested' OR _status = 'deleted') THEN
+    SELECT status
+    INTO _current_status
+    FROM __schema__.retries
+    WHERE id = _retry_id;
+
+    IF (_current_status = 'reserved') THEN
+      RAISE EXCEPTION 'Retry is currently in progress, please try again later';
+    END IF;
+  END IF;
+
   UPDATE __schema__.retries
   SET attempts = COALESCE(_attempt, attempts),
       status = _status,
@@ -445,6 +459,19 @@ BEGIN
     UPDATE __schema__.checkpoints
     SET status = 'failed'
     WHERE retry_id = _retry_id;
+  END IF;
+
+  IF (_status = 'manual_retry_failed') THEN
+    SELECT max_retry_count
+    INTO _max_retry_count
+    FROM __schema__.retries
+    WHERE id = _retry_id;
+
+    IF (_attempt >= _max_retry_count) THEN
+      UPDATE __schema__.checkpoints
+      SET status = 'failed'
+      WHERE retry_id = _retry_id;
+    END IF;
   END IF;
 
   IF (_status = 'deleted') THEN

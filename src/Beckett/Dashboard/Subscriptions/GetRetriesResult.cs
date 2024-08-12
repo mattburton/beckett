@@ -1,3 +1,5 @@
+using Beckett.Subscriptions.Retries;
+
 namespace Beckett.Dashboard.Subscriptions;
 
 public record GetRetriesResult(List<GetRetriesResult.Retry> Retries)
@@ -9,9 +11,20 @@ public record GetRetriesResult(List<GetRetriesResult.Retry> Retries)
         long StreamPosition,
         Guid RetryId,
         int Attempts,
-        DateTimeOffset? RetryAt
+        DateTimeOffset? RetryAt,
+        RetryStatus Status
     )
     {
-        public string RetryIn => RetryAt == null ? "" : RetryAt.Value.ToRetryTimeDisplay();
+        public string RetryIn => DetermineRetryTimeDisplay();
+
+        private string DetermineRetryTimeDisplay()
+        {
+            if (Status == RetryStatus.Reserved)
+            {
+                return "In progress";
+            }
+
+            return RetryAt == null ? "" : RetryAt.Value.ToRetryTimeDisplay();
+        }
     }
 }
