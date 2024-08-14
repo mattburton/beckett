@@ -25,6 +25,8 @@ public class BootstrapSubscriptions(
 
             await connection.OpenAsync(cancellationToken);
 
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
             await database.Execute(
                 new EnsureCheckpointExists(
                     options.Subscriptions.GroupName,
@@ -32,6 +34,7 @@ public class BootstrapSubscriptions(
                     GlobalCheckpoint.StreamName
                 ),
                 connection,
+                transaction,
                 cancellationToken
             );
 
@@ -51,6 +54,7 @@ public class BootstrapSubscriptions(
                         subscription.Name
                     ),
                     connection,
+                    transaction,
                     cancellationToken
                 );
 
@@ -63,6 +67,8 @@ public class BootstrapSubscriptions(
                 {
                     await database.Execute(
                         new SetSubscriptionToInitialized(options.Subscriptions.GroupName, subscription.Name),
+                        connection,
+                        transaction,
                         cancellationToken
                     );
 
@@ -80,12 +86,17 @@ public class BootstrapSubscriptions(
                 );
             }
 
-            if (checkpoints.Count == 0)
+            if (checkpoints.Count > 0)
             {
-                return;
+                await database.Execute(
+                    new RecordCheckpoints(checkpoints.ToArray()),
+                    connection,
+                    transaction,
+                    cancellationToken
+                );
             }
 
-            await database.Execute(new RecordCheckpoints(checkpoints.ToArray()), connection, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
 
             subscriptionInitializer.Start(cancellationToken);
         }
