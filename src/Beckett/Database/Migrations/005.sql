@@ -496,7 +496,7 @@ $$
 WITH lagging_subscriptions AS (
   SELECT name, group_name, SUM(stream_version - stream_position) AS total_lag
   FROM __schema__.checkpoints
-  WHERE status = 'lagging'
+  WHERE (status = 'lagging' OR (status = 'reserved' and previous_status = 'lagging'))
   GROUP BY name, group_name
 )
 SELECT count(*)

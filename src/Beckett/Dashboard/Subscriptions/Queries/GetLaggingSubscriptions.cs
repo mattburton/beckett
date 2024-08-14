@@ -14,7 +14,7 @@ public class GetLaggingSubscriptions : IPostgresDatabaseQuery<GetLaggingSubscrip
         command.CommandText = $@"
             SELECT group_name, name, SUM(stream_version - stream_position) AS total_lag
             FROM {schema}.checkpoints
-            WHERE status = 'lagging'
+            WHERE (status = 'lagging' OR (status = 'reserved' and previous_status = 'lagging'))
             GROUP BY group_name, name
             ORDER BY group_name, SUM(stream_version - stream_position) DESC, name;
         ";
