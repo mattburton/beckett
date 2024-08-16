@@ -1,5 +1,6 @@
 using Beckett.Database;
 using Beckett.Subscriptions.Retries.Queries;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Retries;
 
@@ -7,7 +8,8 @@ public class RetryProcessor(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
     BeckettOptions options,
-    ISubscriptionStreamProcessor subscriptionStreamProcessor
+    ISubscriptionStreamProcessor subscriptionStreamProcessor,
+    ILogger<RetryProcessor> logger
 ) : IRetryProcessor
 {
     public async Task Retry(
@@ -42,6 +44,16 @@ public class RetryProcessor(
             );
 
             await database.Execute(new RecordRetryEvent(id, RetryStatus.Succeeded, attemptNumber), cancellationToken);
+
+            logger.LogTrace(
+                "Retry succeeded for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount}",
+                options.Subscriptions.GroupName,
+                subscription.Name,
+                streamName,
+                streamPosition,
+                attemptNumber,
+                maxRetryCount
+            );
         }
         catch (Exception e)
         {
@@ -56,6 +68,16 @@ public class RetryProcessor(
             {
                 if (attemptNumber >= maxRetryCount)
                 {
+                    logger.LogTrace(
+                        "Manual retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting to Failed",
+                        options.Subscriptions.GroupName,
+                        subscription.Name,
+                        streamName,
+                        streamPosition,
+                        attemptNumber,
+                        maxRetryCount
+                    );
+
                     await database.Execute(
                         new RecordRetryEvent(id, RetryStatus.Failed, attemptNumber, error: error),
                         cancellationToken
@@ -63,6 +85,17 @@ public class RetryProcessor(
                 }
                 else if (attemptNumber < maxRetryCount)
                 {
+                    logger.LogTrace(
+                        "Manual retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - will retry at {RetryAt}",
+                        options.Subscriptions.GroupName,
+                        subscription.Name,
+                        streamName,
+                        streamPosition,
+                        attemptNumber,
+                        maxRetryCount,
+                        retryAt
+                    );
+
                     await database.Execute(
                         new RecordRetryEvent(id, RetryStatus.ManualRetryFailed, attemptNumber, retryAt, error),
                         cancellationToken
@@ -70,6 +103,16 @@ public class RetryProcessor(
                 }
                 else
                 {
+                    logger.LogTrace(
+                        "Manual retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount}",
+                        options.Subscriptions.GroupName,
+                        subscription.Name,
+                        streamName,
+                        streamPosition,
+                        attemptNumber,
+                        maxRetryCount
+                    );
+
                     await database.Execute(
                         new RecordRetryEvent(id, RetryStatus.ManualRetryFailed, attemptNumber, error: error),
                         cancellationToken
@@ -81,6 +124,16 @@ public class RetryProcessor(
 
             if (attemptNumber >= maxRetryCount)
             {
+                logger.LogTrace(
+                    "Retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting to Failed",
+                    options.Subscriptions.GroupName,
+                    subscription.Name,
+                    streamName,
+                    streamPosition,
+                    attemptNumber,
+                    maxRetryCount
+                );
+
                 await database.Execute(
                     new RecordRetryEvent(id, RetryStatus.Failed, attemptNumber, error: error),
                     cancellationToken
@@ -88,6 +141,17 @@ public class RetryProcessor(
             }
             else
             {
+                logger.LogTrace(
+                    "Retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - will retry at {RetryAt}",
+                    options.Subscriptions.GroupName,
+                    subscription.Name,
+                    streamName,
+                    streamPosition,
+                    attemptNumber,
+                    maxRetryCount,
+                    retryAt
+                );
+
                 await database.Execute(
                     new RecordRetryEvent(id, RetryStatus.Scheduled, attemptNumber, retryAt, error),
                     cancellationToken

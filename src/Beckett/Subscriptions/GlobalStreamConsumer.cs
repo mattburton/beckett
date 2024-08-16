@@ -66,27 +66,46 @@ public class GlobalStreamConsumer(
 
                 if (globalStream.Items.Count == 0)
                 {
+                    logger.LogTrace(
+                        "No new messages found for global stream after position {Position} - exiting",
+                        checkpoint.StreamPosition
+                    );
+
                     break;
                 }
+
+                logger.LogTrace(
+                    "Found {Count} new global stream message(s) to process after position {Position}",
+                    globalStream.Items.Count,
+                    checkpoint.StreamPosition
+                );
 
                 var checkpoints = new List<CheckpointType>();
 
                 foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
                 {
-                    var subscriptions = registeredSubscriptions.Where(s => stream.Any(m => m.AppliesTo(s, messageTypeMap)));
+                    var subscriptions = registeredSubscriptions
+                        .Where(s => stream.Any(m => m.AppliesTo(s, messageTypeMap))).ToArray();
 
-                    checkpoints.AddRange(
-                        subscriptions.Select(
-                            subscription =>
-                                new CheckpointType
-                                {
-                                    GroupName = options.Subscriptions.GroupName,
-                                    Name = subscription.Name,
-                                    StreamName = stream.Key,
-                                    StreamVersion = stream.Max(x => x.StreamPosition)
-                                }
-                        )
-                    );
+                    foreach (var subscription in subscriptions)
+                    {
+                        logger.LogTrace(
+                            "Subscription {Name} in group {GroupName} is subscribed to new messages found in stream {StreamName} - updating checkpoint",
+                            subscription.Name,
+                            options.Subscriptions.GroupName,
+                            stream.Key
+                        );
+
+                        checkpoints.Add(
+                            new CheckpointType
+                            {
+                                GroupName = options.Subscriptions.GroupName,
+                                Name = subscription.Name,
+                                StreamName = stream.Key,
+                                StreamVersion = stream.Max(x => x.StreamPosition)
+                            }
+                        );
+                    }
                 }
 
                 if (checkpoints.Count > 0)
@@ -97,6 +116,12 @@ public class GlobalStreamConsumer(
                         transaction,
                         stoppingToken
                     );
+
+                    logger.LogTrace("Recording checkpoints for {Count} checkpoints", checkpoints.Count);
+                }
+                else
+                {
+                    logger.LogTrace("No new checkpoints to record");
                 }
 
                 var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
@@ -115,6 +140,8 @@ public class GlobalStreamConsumer(
                 );
 
                 await transaction.CommitAsync(stoppingToken);
+
+                logger.LogTrace("Updated global stream to position {Position}", newGlobalPosition);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {

@@ -5,6 +5,7 @@ using Beckett.Subscriptions.Initialization;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Services;
 
@@ -14,7 +15,8 @@ public class BootstrapSubscriptions(
     IMessageTypeMap messageTypeMap,
     BeckettOptions options,
     ISubscriptionInitializer subscriptionInitializer,
-    IServiceProvider serviceProvider
+    IServiceProvider serviceProvider,
+    ILogger<BootstrapSubscriptions> logger
 ) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -48,6 +50,12 @@ public class BootstrapSubscriptions(
 
                 subscription.MapMessageTypeNames(messageTypeMap);
 
+                logger.LogTrace(
+                    "Adding or updating subscription {Name} in group {GroupName}",
+                    subscription.Name,
+                    options.Subscriptions.GroupName
+                );
+
                 var initialized = await database.Execute(
                     new AddOrUpdateSubscription(
                         options.Subscriptions.GroupName,
@@ -60,11 +68,24 @@ public class BootstrapSubscriptions(
 
                 if (initialized)
                 {
+                    logger.LogTrace(
+                        "Subscription {Name} in group {GroupName} is already initialized - no need for further action.",
+                        subscription.Name,
+                        options.Subscriptions.GroupName
+                    );
+
                     continue;
                 }
 
                 if (subscription.StartingPosition == StartingPosition.Latest)
                 {
+                    logger.LogTrace(
+                        "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will be set to initialized and will start processing new messages going forward.",
+                        subscription.Name,
+                        options.Subscriptions.GroupName,
+                        subscription.StartingPosition
+                    );
+
                     await database.Execute(
                         new SetSubscriptionToInitialized(options.Subscriptions.GroupName, subscription.Name),
                         connection,
@@ -74,6 +95,13 @@ public class BootstrapSubscriptions(
 
                     continue;
                 }
+
+                logger.LogTrace(
+                    "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will need to be initialized before it can start processing new messages.",
+                    subscription.Name,
+                    options.Subscriptions.GroupName,
+                    subscription.StartingPosition
+                );
 
                 checkpoints.Add(
                     new CheckpointType

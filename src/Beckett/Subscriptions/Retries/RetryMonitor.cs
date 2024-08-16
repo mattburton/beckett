@@ -48,6 +48,14 @@ public class RetryMonitor(
                     case RetryStatus.Started:
                         if (retry.MaxRetryCount == 0)
                         {
+                            logger.LogTrace(
+                                "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - max retry count is set to zero so setting it to failed immediately",
+                                options.Subscriptions.GroupName,
+                                retry.Name,
+                                retry.StreamName,
+                                retry.StreamPosition
+                            );
+
                             await database.Execute(
                                 new RecordRetryEvent(retry.Id, RetryStatus.Failed, retry.Attempts),
                                 stoppingToken
@@ -60,6 +68,15 @@ public class RetryMonitor(
                                 options.Subscriptions.Retries.MaxDelay
                             );
 
+                            logger.LogTrace(
+                                "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - will begin retrying at {RetryAt}",
+                                options.Subscriptions.GroupName,
+                                retry.Name,
+                                retry.StreamName,
+                                retry.StreamPosition,
+                                retryAt
+                            );
+
                             await database.Execute(
                                 new RecordRetryEvent(retry.Id, RetryStatus.Scheduled, retry.Attempts, retryAt),
                                 stoppingToken
@@ -69,6 +86,16 @@ public class RetryMonitor(
                     case RetryStatus.Scheduled:
                     case RetryStatus.ManualRetryRequested:
                     case RetryStatus.ManualRetryFailed:
+                        logger.LogTrace(
+                            "Retry reserved for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount}",
+                            options.Subscriptions.GroupName,
+                            retry.Name,
+                            retry.StreamName,
+                            retry.StreamPosition,
+                            retry.Attempts.GetValueOrDefault(),
+                            retry.MaxRetryCount
+                        );
+
                         await retryProcessor.Retry(
                             retry.Id,
                             retry.Name,

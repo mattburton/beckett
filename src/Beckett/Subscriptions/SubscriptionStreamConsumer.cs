@@ -48,8 +48,23 @@ public class SubscriptionStreamConsumer(
 
                 if (subscription == null)
                 {
+                    logger.LogTrace(
+                        "Subscription {Name} not registered for group {GroupName} - skipping",
+                        checkpoint.Name,
+                        options.Subscriptions.GroupName
+                    );
+
                     continue;
                 }
+
+                logger.LogTrace(
+                    "Processing checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} and version {StreamVersion}",
+                    checkpoint.Name,
+                    options.Subscriptions.GroupName,
+                    checkpoint.StreamName,
+                    checkpoint.StreamPosition,
+                    checkpoint.StreamVersion
+                );
 
                 await subscriptionStreamProcessor.Process(
                     subscription,

@@ -37,21 +37,31 @@ public class SubscriptionStreamProcessor(
             cancellationToken
         );
 
+        logger.LogTrace(
+            "Found {Count} messages to process for checkpoint {GroupName}:{Name}:{StreamName}",
+            stream.Messages.Count,
+            subscription.Name,
+            options.Subscriptions.GroupName,
+            streamName
+        );
+
         var messages = new List<IMessageContext>();
 
         foreach (var message in stream.Messages)
         {
-            messages.Add(new MessageContext(
-                message.Id,
-                message.StreamName,
-                message.StreamPosition,
-                message.GlobalPosition,
-                message.Type,
-                message.Message,
-                message.Metadata,
-                message.Timestamp,
-                serviceProvider
-            ));
+            messages.Add(
+                new MessageContext(
+                    message.Id,
+                    message.StreamName,
+                    message.StreamPosition,
+                    message.GlobalPosition,
+                    message.Type,
+                    message.Message,
+                    message.Metadata,
+                    message.Timestamp,
+                    serviceProvider
+                )
+            );
         }
 
         var result = await HandleMessageBatch(subscription, streamName, messages, cancellationToken);
@@ -73,6 +83,14 @@ public class SubscriptionStreamProcessor(
                         CheckpointStatus.Active
                     ),
                     cancellationToken
+                );
+
+                logger.LogTrace(
+                    "Checkpoint {GroupName}:{Name}:{StreamName} processed successfully up to position {StreamPosition}",
+                    subscription.Name,
+                    options.Subscriptions.GroupName,
+                    streamName,
+                    success.StreamPosition
                 );
 
                 break;
