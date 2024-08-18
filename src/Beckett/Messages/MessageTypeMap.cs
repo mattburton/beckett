@@ -15,6 +15,11 @@ public class MessageTypeMap(
     {
         var type = typeof(TMessage);
 
+        Map(type, name);
+    }
+
+    public void Map(Type type, string name)
+    {
         if (_nameToTypeMap.TryGetValue(name, out var existingType) && existingType != type)
         {
             throw new Exception($"Message type name {type.Name} for {type} already mapped to {existingType}");
@@ -38,7 +43,6 @@ public class MessageTypeMap(
             );
         }
 
-        //TODO - support custom type names, mapping from old names to new ones, etc...
         if (_nameToTypeMap.TryGetValue(type.Name, out var existingType))
         {
             if (existingType != type)

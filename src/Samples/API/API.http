@@ -7,7 +7,7 @@ Content-Type: application/json
 
 {
   "id": "{{$random.uuid}}",
-  "name": "{{$random.alphabetic(10)}}"
+  "name": "{{$random.uuid}}"
 }
 > {%
   client.global.set("id", response.body.id)
@@ -19,7 +19,7 @@ POST {{base_url}}/{{id}}
 Content-Type: application/json
 
 {
-  "item": "{{$random.alphabetic(10)}}"
+  "item": "{{$random.uuid}}"
 }
 > {%
   client.global.set("item", response.body.item)
@@ -72,7 +72,7 @@ POST {{base_url}}/{{id}}
 Content-Type: application/json
 
 {
-  "item": "{{$random.alphabetic(10)}} cc: @bob"
+  "item": "{{$random.uuid}} cc: @bob"
 }
 
 ### Get List

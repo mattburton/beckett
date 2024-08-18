@@ -2,15 +2,18 @@ using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.MessageStorage.Postgres.Queries;
+using Beckett.OpenTelemetry;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.MessageStorage.Postgres;
 
 public class PostgresMessageStorage(
+    BeckettOptions options,
     IMessageSerializer messageSerializer,
     IPostgresDatabase database,
     IPostgresMessageDeserializer messageDeserializer,
     IMessageTypeMap messageTypeMap,
+    IInstrumentation instrumentation,
     ILoggerFactory loggerFactory
 ) : IMessageStorage
 {
@@ -32,32 +35,11 @@ public class PostgresMessageStorage(
         return new AppendToStreamResult(streamVersion);
     }
 
-    public async Task<ReadStreamResult> ReadStream(
-        string streamName,
-        ReadStreamOptions readOptions,
-        CancellationToken cancellationToken
-    )
-    {
-        var streamMessages = await database.Execute(new ReadStream(streamName, readOptions), cancellationToken);
+    public IMessageStoreSession CreateSession() =>
+        new PostgresMessageStoreSession(options, database, messageSerializer, instrumentation);
 
-        var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[0].StreamVersion;
-
-        var messages = new List<MessageResult>();
-
-        foreach (var streamMessage in streamMessages)
-        {
-            var message = messageDeserializer.Deserialize(streamMessage);
-
-            if (message is null)
-            {
-                continue;
-            }
-
-            messages.Add(message.Value);
-        }
-
-        return new ReadStreamResult(streamName, streamVersion, messages);
-    }
+    public IMessageStreamBatch CreateStreamBatch(AppendToStreamDelegate appendToStream) =>
+        new PostgresMessageStreamBatch(options, database, messageDeserializer, instrumentation, appendToStream);
 
     public async Task<ReadGlobalStreamResult> ReadGlobalStream(
         long lastGlobalPosition,
@@ -94,5 +76,32 @@ public class PostgresMessageStorage(
         }
 
         return new ReadGlobalStreamResult(items);
+    }
+
+    public async Task<MessageStreamResult> ReadStream(
+        string streamName,
+        ReadStreamOptions readOptions,
+        CancellationToken cancellationToken
+    )
+    {
+        var streamMessages = await database.Execute(new ReadStream(streamName, readOptions), cancellationToken);
+
+        var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[0].StreamVersion;
+
+        var messages = new List<MessageResult>();
+
+        foreach (var streamMessage in streamMessages)
+        {
+            var message = messageDeserializer.Deserialize(streamMessage);
+
+            if (message is null)
+            {
+                continue;
+            }
+
+            messages.Add(message.Value);
+        }
+
+        return new MessageStreamResult(streamName, streamVersion, messages);
     }
 }

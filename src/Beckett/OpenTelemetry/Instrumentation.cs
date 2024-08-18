@@ -89,6 +89,33 @@ public class Instrumentation : IInstrumentation, IDisposable
         return activity;
     }
 
+    public Activity? StartSessionAppendToStreamActivity(string streamName, Dictionary<string, object> metadata)
+    {
+        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.SessionAppendToStream);
+
+        if (activity == null)
+        {
+            return activity;
+        }
+
+        activity.AddTag(TelemetryConstants.Streams.Name, streamName);
+
+        _propagator.Inject(
+            new PropagationContext(activity.Context, default),
+            metadata,
+            (meta, key, value) => meta[key] = value
+        );
+
+        var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
+
+        if (causationId != null)
+        {
+            metadata.Add(MessageConstants.Metadata.CausationId, causationId);
+        }
+
+        return activity;
+    }
+
     public Activity? StartReadStreamActivity(string streamName)
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.ReadStream);
@@ -97,6 +124,9 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         return activity;
     }
+
+    public Activity? StartReadStreamBatchActivity() =>
+        _activitySource.StartActivity(TelemetryConstants.Activities.ReadStreamBatch);
 
     public Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, object> metadata)
     {
@@ -124,6 +154,9 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         return activity;
     }
+
+    public Activity? StartSessionSaveChangesActivity() =>
+        _activitySource.StartActivity(TelemetryConstants.Activities.SessionSaveChanges);
 
     public Activity? StartHandleMessageActivity(Subscription subscription, IMessageContext messageContext)
     {

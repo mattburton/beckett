@@ -39,6 +39,8 @@ public class BeckettBuilder(
 
     public void Map<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
 
+    public void Map(Type type, string name) => messageTypeMap.Map(type, name);
+
     public void AddRecurringMessage<TMessage>(
         string name,
         string cronExpression,

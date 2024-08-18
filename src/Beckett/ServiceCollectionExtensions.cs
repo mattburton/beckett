@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddOpenTelemetrySupport();
 
-        builder.Services.AddPostgresMessageStorageSupport(options);
+        builder.Services.AddPostgresMessageStorageSupport();
 
         builder.Services.AddPostgresSupport(options);
 
@@ -99,7 +99,7 @@ public static class ServiceCollectionExtensions
 
                 services.AddOpenTelemetrySupport();
 
-                services.AddPostgresMessageStorageSupport(options);
+                services.AddPostgresMessageStorageSupport();
 
                 services.AddPostgresSupport(options);
 

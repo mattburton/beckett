@@ -11,15 +11,19 @@ public interface IMessageStorage
         CancellationToken cancellationToken
     );
 
-    Task<ReadStreamResult> ReadStream(
-        string streamName,
-        ReadStreamOptions options,
-        CancellationToken cancellationToken
-    );
+    IMessageStoreSession CreateSession();
+
+    IMessageStreamBatch CreateStreamBatch(AppendToStreamDelegate appendToStream);
 
     Task<ReadGlobalStreamResult> ReadGlobalStream(
         long lastGlobalPosition,
         int batchSize,
+        CancellationToken cancellationToken
+    );
+
+    Task<MessageStreamResult> ReadStream(
+        string streamName,
+        ReadStreamOptions options,
         CancellationToken cancellationToken
     );
 }

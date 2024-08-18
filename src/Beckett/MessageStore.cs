@@ -9,6 +9,15 @@ public class MessageStore(
     IInstrumentation instrumentation
 ) : IMessageStore
 {
+    public IAdvancedOperations Advanced => new AdvancedOperations(messageStorage, AppendToStream);
+
+    public Task<AppendResult> AppendToStream(
+        string streamName,
+        ExpectedVersion expectedVersion,
+        object message,
+        CancellationToken cancellationToken
+    ) => AppendToStream(streamName, expectedVersion, [message], cancellationToken);
+
     public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
@@ -48,7 +57,10 @@ public class MessageStore(
         return new AppendResult(result.StreamVersion);
     }
 
-    public async Task<ReadResult> ReadStream(
+    public Task<MessageStream> ReadStream(string streamName, CancellationToken cancellationToken) =>
+        ReadStream(streamName, ReadOptions.Default, cancellationToken);
+
+    public async Task<MessageStream> ReadStream(
         string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
@@ -58,11 +70,22 @@ public class MessageStore(
 
         var result = await messageStorage.ReadStream(streamName, ReadStreamOptions.From(options), cancellationToken);
 
-        return new ReadResult(
+        return new MessageStream(
             result.StreamName,
             result.StreamVersion,
-            result.Messages.Select(x => x.Message).ToList(),
+            result.Messages,
             AppendToStream
         );
     }
 }
+
+public class AdvancedOperations(
+    IMessageStorage messageStorage,
+    AppendToStreamDelegate appendToStream
+) : IAdvancedOperations
+{
+    public IMessageStoreSession CreateSession() => messageStorage.CreateSession();
+
+    public IMessageStreamBatch ReadStreamBatch() => messageStorage.CreateStreamBatch(appendToStream);
+}
+
