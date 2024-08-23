@@ -17,12 +17,12 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IRetryProcessor, RetryProcessor>();
 
-        services.AddSingleton<IPostgresNotificationHandler, RetryNotificationHandler>();
-
         if (!options.Subscriptions.Retries.Enabled)
         {
             return;
         }
+
+        services.AddSingleton<IPostgresNotificationHandler, RetryNotificationHandler>();
 
         services.AddHostedService<RetryPollingService>();
 
