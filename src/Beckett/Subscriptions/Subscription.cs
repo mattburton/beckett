@@ -13,7 +13,7 @@ public class Subscription(string name)
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
     internal Func<object, CancellationToken, Task>? StaticMethod { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
-    internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = new() {{typeof(Exception), 10}};
+    internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
 
     internal bool IsCategoryOnly => Category != null && MessageTypes.Count == 0;
 
@@ -46,13 +46,25 @@ public class Subscription(string name)
 
     internal int GetAdvisoryLockId(string groupName) => $"{groupName}:{Name}".GetDeterministicHashCode();
 
-    internal int GetMaxRetryCount(Type exceptionType)
+    internal int GetMaxRetryCount(BeckettOptions options, Type exceptionType)
     {
-        if (!MaxRetriesByExceptionType.TryGetValue(exceptionType, out var maxRetries))
+        var defaultIsConfigured = options.Subscriptions.MaxRetriesByExceptionType.TryGetValue(
+            exceptionType,
+            out var defaultMaxRetries
+        );
+
+        var subscriptionIsConfigured = MaxRetriesByExceptionType.TryGetValue(
+            exceptionType,
+            out var subscriptionMaxRetries
+        );
+
+        if (subscriptionIsConfigured)
         {
-            maxRetries = MaxRetriesByExceptionType[typeof(Exception)];
+            return subscriptionMaxRetries;
         }
 
-        return maxRetries;
+        return defaultIsConfigured
+            ? defaultMaxRetries
+            : options.Subscriptions.MaxRetriesByExceptionType[typeof(Exception)];
     }
 }

@@ -49,7 +49,7 @@ public class RetryMonitor(
                         if (retry.MaxRetryCount == 0)
                         {
                             logger.LogTrace(
-                                "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - max retry count is set to zero so setting it to failed immediately",
+                                "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - max retry count is set to zero, setting it to failed immediately",
                                 options.Subscriptions.GroupName,
                                 retry.Name,
                                 retry.StreamName,

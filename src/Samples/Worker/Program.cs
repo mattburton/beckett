@@ -15,6 +15,10 @@ builder.AddBeckett(
     options =>
     {
         options.WithSubscriptions("TodoList");
+
+        options.Subscriptions.MaxRetryCount<RetryableException>(10);
+
+        options.Subscriptions.MaxRetryCount<TerminalException>(0);
     }).TodoListSubscriptions();
 
 builder.Services.AddOpenTelemetry()

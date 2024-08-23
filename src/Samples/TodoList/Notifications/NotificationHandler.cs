@@ -33,8 +33,4 @@ public class NotificationHandler
 
         return Task.CompletedTask;
     }
-
-    public class RetryableException(string message) : Exception(message);
-
-    public class TerminalException(string message) : Exception(message);
 }

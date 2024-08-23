@@ -15,6 +15,12 @@ public class SubscriptionOptions
     public TimeSpan ReservationRecoveryInterval { get; set; } = TimeSpan.FromMinutes(1);
     public int SubscriptionStreamBatchSize { get; set; } = 500;
     public TimeSpan SubscriptionStreamPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
+    internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = new() {{typeof(Exception), 10}};
 
     public RetryOptions Retries { get; set; } = new();
+
+    public void MaxRetryCount<TException>(int maxRetryCount) where TException : Exception
+    {
+        MaxRetriesByExceptionType[typeof(TException)] = maxRetryCount;
+    }
 }
