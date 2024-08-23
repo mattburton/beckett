@@ -45,7 +45,7 @@ public class SubscriptionStreamProcessor(
             streamName
         );
 
-        var messages = new List<IMessageContext>();
+        var messages = new List<MessageContext>();
 
         foreach (var message in stream.Messages)
         {
@@ -122,7 +122,7 @@ public class SubscriptionStreamProcessor(
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,
         string streamName,
-        IReadOnlyList<IMessageContext> messages,
+        IReadOnlyList<MessageContext> messages,
         CancellationToken cancellationToken
     )
     {
@@ -169,7 +169,9 @@ public class SubscriptionStreamProcessor(
 
                     var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
 
-                    await subscription.InstanceMethod(handler, messageContext, cancellationToken);
+                    IMessageContext messageContextForScope = messageContext with { Services = scope.ServiceProvider };
+
+                    await subscription.InstanceMethod(handler, messageContextForScope, cancellationToken);
                 }
                 catch (Exception e)
                 {
