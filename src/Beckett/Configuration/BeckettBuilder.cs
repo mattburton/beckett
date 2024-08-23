@@ -30,13 +30,6 @@ public class BeckettBuilder(
         return new SubscriptionBuilder(subscription);
     }
 
-    public IBeckettBuilder Build(Action<IBeckettBuilder> build)
-    {
-        build(this);
-
-        return this;
-    }
-
     public void Map<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
 
     public void Map(Type type, string name) => messageTypeMap.Map(type, name);

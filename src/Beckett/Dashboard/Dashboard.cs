@@ -4,7 +4,10 @@ using Beckett.Dashboard.Subscriptions;
 
 namespace Beckett.Dashboard;
 
-public class Dashboard(IDashboardMessageStore messageStore, IDashboardMetrics metrics, IDashboardSubscriptions subscriptions) : IDashboard
+public class Dashboard(
+    IDashboardMessageStore messageStore,
+    IDashboardMetrics metrics,
+    IDashboardSubscriptions subscriptions) : IDashboard
 {
     public IDashboardMessageStore MessageStore => messageStore;
     public IDashboardMetrics Metrics => metrics;

@@ -16,6 +16,15 @@ namespace Beckett;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Add Beckett support to the host. Without configuring any options Beckett will use the registered
+    /// <see cref="Npgsql.NpgsqlDataSource"/> and register those dependencies required to run in a client configuration
+    /// - <see cref="IMessageStore"/>, and so on. Subscription support must be enabled explicitly by supplying an action
+    /// to configure Beckett options.
+    /// </summary>
+    /// <param name="builder">The .NET host application builder</param>
+    /// <param name="configureOptions">Action to configure Beckett options</param>
+    /// <returns>Beckett builder that can be used to configure individual application modules</returns>
     public static IBeckettBuilder AddBeckett(
         this IHostApplicationBuilder builder,
         Action<BeckettOptions>? configureOptions = null
@@ -72,6 +81,16 @@ public static class ServiceCollectionExtensions
         );
     }
 
+    /// <summary>
+    /// Add Beckett support to the host. Without configuring any options Beckett will use the registered
+    /// <see cref="Npgsql.NpgsqlDataSource"/> and register those dependencies required to run in a client configuration
+    /// - <see cref="IMessageStore"/>, and so on. Subscription support must be enabled explicitly by supplying an action
+    /// to configure Beckett options.
+    /// </summary>
+    /// <param name="builder">The .NET host builder</param>
+    /// <param name="configureOptions">Configure Beckett options</param>
+    /// <param name="buildBeckett">Apply Beckett builders to configure individual application modules</param>
+    /// <returns></returns>
     public static void AddBeckett(
         this IHostBuilder builder,
         Action<BeckettOptions>? configureOptions = null,
