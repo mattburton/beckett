@@ -24,7 +24,7 @@ public class SubscriptionConfigurationBuilder(Subscription subscription) : ISubs
     {
         if (maxRetryCount < 0)
         {
-            throw new InvalidOperationException($"{nameof(MaxRetryCount)} must be greater than or equal to 0");
+            throw new ArgumentException("The max retry count must be greater than or equal to 0", nameof(maxRetryCount));
         }
 
         subscription.MaxRetriesByExceptionType[typeof(Exception)] = maxRetryCount;
@@ -37,7 +37,7 @@ public class SubscriptionConfigurationBuilder(Subscription subscription) : ISubs
     {
         if (maxRetryCount < 0)
         {
-            throw new InvalidOperationException($"{nameof(MaxRetryCount)} must be greater than or equal to 0");
+            throw new ArgumentException("The max retry count must be greater than or equal to 0", nameof(maxRetryCount));
         }
 
         subscription.MaxRetriesByExceptionType[typeof(TException)] = maxRetryCount;
