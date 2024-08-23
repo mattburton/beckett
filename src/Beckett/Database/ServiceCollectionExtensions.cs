@@ -9,11 +9,6 @@ public static class ServiceCollectionExtensions
 {
     public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
     {
-        if (!options.Postgres.Enabled)
-        {
-            return;
-        }
-
         services.AddSingleton(options);
 
         services.AddSingleton<IPostgresDatabase>(
