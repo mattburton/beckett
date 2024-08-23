@@ -1,16 +1,20 @@
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Services;
 
 public class SubscriptionStreamPollingService(
     SubscriptionOptions options,
-    ISubscriptionStreamConsumerGroup consumerGroup
+    ISubscriptionStreamConsumerGroup consumerGroup,
+    ILogger<SubscriptionStreamPollingService> logger
 ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (options.SubscriptionStreamPollingInterval == TimeSpan.Zero)
         {
+            logger.LogInformation("Disabling subscription stream polling - the polling interval is set to zero.");
+
             return;
         }
 

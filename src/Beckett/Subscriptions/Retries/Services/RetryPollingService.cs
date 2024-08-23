@@ -12,6 +12,13 @@ public class RetryPollingService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (options.PollingInterval == TimeSpan.Zero)
+        {
+            logger.LogInformation("Disabling retry polling - the polling interval is set to zero.");
+
+            return;
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try

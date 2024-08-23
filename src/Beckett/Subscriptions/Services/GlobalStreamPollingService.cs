@@ -12,6 +12,13 @@ public class GlobalStreamPollingService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (options.GlobalStreamPollingInterval == TimeSpan.Zero)
+        {
+            logger.LogInformation("Disabling global stream polling - the polling interval is set to zero.");
+
+            return;
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
