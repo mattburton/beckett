@@ -100,16 +100,12 @@ public class SubscriptionStreamProcessor(
                     throw error.Exception;
                 }
 
-                var maxRetries = subscription.GetMaxRetryCount(options, error.Exception.GetType());
-
                 await database.Execute(
-                    new UpdateCheckpointStatus(
+                    new RecordCheckpointError(
                         options.Subscriptions.GroupName,
                         subscription.Name,
                         streamName,
                         error.StreamPosition,
-                        CheckpointStatus.Retry,
-                        maxRetries,
                         ExceptionData.From(error.Exception).ToJson()
                     ),
                     cancellationToken

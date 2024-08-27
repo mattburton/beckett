@@ -1,4 +1,8 @@
 using Beckett.Database;
+using Beckett.Messages;
+using Beckett.Subscriptions.Queries;
+using Beckett.Subscriptions.Retries.Events;
+using Beckett.Subscriptions.Retries.Models;
 using Beckett.Subscriptions.Retries.Queries;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -8,7 +12,9 @@ namespace Beckett.Subscriptions.Retries;
 public class RetryMonitor(
     IPostgresDatabase database,
     BeckettOptions options,
-    IRetryProcessor retryProcessor,
+    ISubscriptionRegistry subscriptionRegistry,
+    IMessageTypeProvider messageTypeProvider,
+    IMessageStore messageStore,
     ILogger<RetryMonitor> logger
 ) : IRetryMonitor
 {
@@ -30,11 +36,16 @@ public class RetryMonitor(
         {
             try
             {
+                await using var connection = database.CreateConnection();
+
+                await connection.OpenAsync(stoppingToken);
+
+                await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
+
                 var retry = await database.Execute(
-                    new ReserveNextAvailableRetry(
-                        options.Subscriptions.GroupName,
-                        options.Subscriptions.ReservationTimeout
-                    ),
+                    new LockNextPendingRetry(options.Subscriptions.GroupName),
+                    connection,
+                    transaction,
                     stoppingToken
                 );
 
@@ -43,71 +54,45 @@ public class RetryMonitor(
                     break;
                 }
 
-                switch (retry.Status)
+                var subscription = subscriptionRegistry.GetSubscription(retry.Name);
+
+                if (subscription == null)
                 {
-                    case RetryStatus.Started:
-                        if (retry.MaxRetryCount == 0)
-                        {
-                            logger.LogTrace(
-                                "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - max retry count is set to zero, setting it to failed immediately",
-                                options.Subscriptions.GroupName,
-                                retry.Name,
-                                retry.StreamName,
-                                retry.StreamPosition
-                            );
+                    logger.LogWarning("Skipping unknown subscription: {Name}", retry.Name);
 
-                            await database.Execute(
-                                new RecordRetryEvent(retry.Id, RetryStatus.Failed, retry.Attempts),
-                                stoppingToken
-                            );
-                        }
-                        else
-                        {
-                            var retryAt = 1.GetNextDelayWithExponentialBackoff(
-                                options.Subscriptions.Retries.InitialDelay,
-                                options.Subscriptions.Retries.MaxDelay
-                            );
-
-                            logger.LogTrace(
-                                "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - will begin retrying at {RetryAt}",
-                                options.Subscriptions.GroupName,
-                                retry.Name,
-                                retry.StreamName,
-                                retry.StreamPosition,
-                                retryAt
-                            );
-
-                            await database.Execute(
-                                new RecordRetryEvent(retry.Id, RetryStatus.Scheduled, retry.Attempts, retryAt),
-                                stoppingToken
-                            );
-                        }
-                        break;
-                    case RetryStatus.Scheduled:
-                    case RetryStatus.ManualRetryRequested:
-                    case RetryStatus.ManualRetryFailed:
-                        logger.LogTrace(
-                            "Retry reserved for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount}",
-                            options.Subscriptions.GroupName,
-                            retry.Name,
-                            retry.StreamName,
-                            retry.StreamPosition,
-                            retry.Attempts.GetValueOrDefault(),
-                            retry.MaxRetryCount
-                        );
-
-                        await retryProcessor.Retry(
-                            retry.Id,
-                            retry.Name,
-                            retry.StreamName,
-                            retry.StreamPosition,
-                            retry.Attempts.GetValueOrDefault(),
-                            retry.MaxRetryCount,
-                            retry.Status == RetryStatus.ManualRetryRequested,
-                            stoppingToken
-                        );
-                        break;
+                    continue;
                 }
+
+                var exceptionType = messageTypeProvider.FindMatchFor(x => x.FullName == retry.Error.Type);
+
+                if (exceptionType == null)
+                {
+                    logger.LogWarning("Unknown exception type: {Type} - using Exception instead", retry.Error.Type);
+
+                    exceptionType = typeof(Exception);
+                }
+
+                var retryStreamName = RetryStreamName.For(retry.Id);
+
+                var maxRetryCount = subscription.GetMaxRetryCount(options, exceptionType);
+
+                if (maxRetryCount == 0)
+                {
+                    await RecordImmediateFailure(connection, transaction, retryStreamName, retry, stoppingToken);
+                }
+                else
+                {
+                    await ScheduleFirstAttempt(
+                        connection,
+                        transaction,
+                        retryStreamName,
+                        retry,
+                        maxRetryCount,
+                        stoppingToken
+                    );
+                }
+
+                await transaction.CommitAsync(stoppingToken);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {
@@ -124,5 +109,113 @@ public class RetryMonitor(
                 logger.LogError(e, "Unhandled exception in retry monitor");
             }
         }
+    }
+
+    private async Task ScheduleFirstAttempt(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        string retryStreamName,
+        Retry retry,
+        int maxRetryCount,
+        CancellationToken stoppingToken
+    )
+    {
+        var retryAt = 1.GetNextDelayWithExponentialBackoff(
+            options.Subscriptions.Retries.InitialDelay,
+            options.Subscriptions.Retries.MaxDelay
+        );
+
+        logger.LogTrace(
+            "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - will begin retrying at {RetryAt}",
+            options.Subscriptions.GroupName,
+            retry.Name,
+            retry.StreamName,
+            retry.StreamPosition,
+            retryAt
+        );
+
+        await messageStore.AppendToStream(
+            retryStreamName,
+            ExpectedVersion.Any,
+            new RetryStarted(
+                retry.Id,
+                retry.GroupName,
+                retry.Name,
+                retry.StreamName,
+                retry.StreamPosition,
+                retry.Error,
+                maxRetryCount,
+                retryAt,
+                DateTimeOffset.UtcNow
+            ),
+            stoppingToken
+        );
+
+        await database.Execute(
+            new UpdateCheckpointStatus(
+                retry.GroupName,
+                retry.Name,
+                retry.StreamName,
+                retry.StreamPosition,
+                CheckpointStatus.Retry
+            ),
+            connection,
+            transaction,
+            stoppingToken
+        );
+    }
+
+    private async Task RecordImmediateFailure(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        string retryStreamName,
+        Retry retry,
+        CancellationToken stoppingToken
+    )
+    {
+        logger.LogTrace(
+            "Retry received for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - max retry count is set to zero for exception type {ExceptionType}, setting it to failed immediately",
+            options.Subscriptions.GroupName,
+            retry.Name,
+            retry.StreamName,
+            retry.StreamPosition,
+            retry.Error.Type
+        );
+
+        await messageStore.AppendToStream(
+            retryStreamName,
+            ExpectedVersion.Any,
+            [
+                new RetryStarted(
+                    retry.Id,
+                    retry.GroupName,
+                    retry.Name,
+                    retry.StreamName,
+                    retry.StreamPosition,
+                    retry.Error,
+                    0,
+                    null,
+                    DateTimeOffset.UtcNow
+                ),
+                new RetryFailed(
+                    retry.Id,
+                    DateTimeOffset.UtcNow
+                )
+            ],
+            stoppingToken
+        );
+
+        await database.Execute(
+            new UpdateCheckpointStatus(
+                retry.GroupName,
+                retry.Name,
+                retry.StreamName,
+                retry.StreamPosition,
+                CheckpointStatus.Failed
+            ),
+            connection,
+            transaction,
+            stoppingToken
+        );
     }
 }

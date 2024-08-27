@@ -31,10 +31,8 @@
     <tr>
       <th>Group</th>
       <th>Name</th>
-      <th style="width: auto;">Stream Name</th>
-      <th style="width: 12rem;">Stream Position</th>
-      <th style="width: 12rem;">Attempts</th>
-      <th style="width: 12rem;">Retry In</th>
+      <th>Stream Name</th>
+      <th>Stream Position</th>
     </tr>
   </thead>
   <tbody>
@@ -47,8 +45,6 @@
         <a href="@Routes.Prefix/subscriptions/retries/@retry.RetryId">@retry.StreamName</a>
       </td>
       <td>@retry.StreamPosition</td>
-      <td>@retry.Attempts</td>
-      <td>@retry.RetryIn</td>
     </tr>
   }
   @if (Model.Retries.Count == 0)

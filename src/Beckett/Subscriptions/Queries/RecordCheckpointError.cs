@@ -1,27 +1,26 @@
 using Beckett.Database;
-using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace Beckett.Subscriptions.Queries;
 
-public class UpdateCheckpointStatus(
+public class RecordCheckpointError(
     string groupName,
     string name,
     string streamName,
     long streamPosition,
-    CheckpointStatus status
+    string error
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {schema}.update_checkpoint_status($1, $2, $3, $4, $5);";
+        command.CommandText = $"select {schema}.record_checkpoint_error($1, $2, $3, $4, $5);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointStatus(schema) });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb });
 
         await command.PrepareAsync(cancellationToken);
 
@@ -29,7 +28,7 @@ public class UpdateCheckpointStatus(
         command.Parameters[1].Value = name;
         command.Parameters[2].Value = streamName;
         command.Parameters[3].Value = streamPosition;
-        command.Parameters[4].Value = status;
+        command.Parameters[4].Value = error;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

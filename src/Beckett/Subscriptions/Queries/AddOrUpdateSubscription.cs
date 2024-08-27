@@ -4,11 +4,11 @@ using NpgsqlTypes;
 
 namespace Beckett.Subscriptions.Queries;
 
-public class AddOrUpdateSubscription(string groupName, string name) : IPostgresDatabaseQuery<bool>
+public class AddOrUpdateSubscription(string groupName, string name) : IPostgresDatabaseQuery<SubscriptionStatus>
 {
-    public async Task<bool> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<SubscriptionStatus> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select initialized from {schema}.add_or_update_subscription($1, $2);";
+        command.CommandText = $"select status from {schema}.add_or_update_subscription($1, $2);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -22,6 +22,6 @@ public class AddOrUpdateSubscription(string groupName, string name) : IPostgresD
 
         await reader.ReadAsync(cancellationToken);
 
-        return reader.GetFieldValue<bool>(0);
+        return reader.GetFieldValue<SubscriptionStatus>(0);
     }
 }

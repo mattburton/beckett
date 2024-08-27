@@ -1,162 +1,149 @@
 using Beckett.Database;
-using Beckett.Subscriptions.Retries.Queries;
+using Beckett.Subscriptions.Queries;
+using Beckett.Subscriptions.Retries.Events;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Retries;
 
 public class RetryProcessor(
-    IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
     BeckettOptions options,
     ISubscriptionStreamProcessor subscriptionStreamProcessor,
+    IPostgresDatabase database,
+    IMessageStore messageStore,
     ILogger<RetryProcessor> logger
 ) : IRetryProcessor
 {
-    public async Task Retry(
-        Guid id,
-        string subscriptionName,
-        string streamName,
-        long streamPosition,
-        int attempts,
-        int maxRetryCount,
+    public Task ManualRetry(RetryState retry, CancellationToken cancellationToken) =>
+        Retry(retry, true, cancellationToken);
+
+
+    public Task Retry(RetryState retry, CancellationToken cancellationToken) => Retry(retry, false, cancellationToken);
+
+    private async Task Retry(
+        RetryState retry,
         bool manualRetry,
         CancellationToken cancellationToken
     )
     {
-        var subscription = subscriptionRegistry.GetSubscription(subscriptionName);
+        var subscription = subscriptionRegistry.GetSubscription(retry.Name);
 
         if (subscription == null)
         {
             return;
         }
 
-        var attemptNumber = attempts + 1;
+        var attemptNumber = retry.Attempts + 1;
+
+        var retryStreamName = RetryStreamName.For(retry.Id);
 
         try
         {
             await subscriptionStreamProcessor.Process(
                 subscription,
-                streamName,
-                streamPosition,
+                retry.StreamName,
+                retry.StreamPosition,
                 1,
                 true,
                 cancellationToken
             );
 
-            await database.Execute(new RecordRetryEvent(id, RetryStatus.Succeeded, attemptNumber), cancellationToken);
-
             logger.LogTrace(
                 "Retry succeeded for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount}",
                 options.Subscriptions.GroupName,
                 subscription.Name,
-                streamName,
-                streamPosition,
+                retry.StreamName,
+                retry.StreamPosition,
                 attemptNumber,
-                maxRetryCount
+                retry.MaxRetryCount
             );
+
+            await using var connection = database.CreateConnection();
+
+            await connection.OpenAsync(cancellationToken);
+
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+            await database.Execute(
+                new UpdateCheckpointStatus(
+                    options.Subscriptions.GroupName,
+                    subscription.Name,
+                    retry.StreamName,
+                    retry.StreamPosition,
+                    CheckpointStatus.Active
+                ),
+                connection,
+                transaction,
+                cancellationToken
+            );
+
+            await messageStore.AppendToStream(
+                retryStreamName,
+                ExpectedVersion.Any,
+                new RetrySucceeded(retry.Id, DateTimeOffset.UtcNow),
+                cancellationToken
+            );
+
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception e)
         {
-            var error = ExceptionData.From(e).ToJson();
+            var error = ExceptionData.From(e);
 
             var retryAt = attemptNumber.GetNextDelayWithExponentialBackoff(
                 options.Subscriptions.Retries.InitialDelay,
                 options.Subscriptions.Retries.MaxDelay
             );
 
-            if (manualRetry)
-            {
-                if (attemptNumber >= maxRetryCount)
-                {
-                    logger.LogTrace(
-                        "Manual retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting to Failed",
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        streamName,
-                        streamPosition,
-                        attemptNumber,
-                        maxRetryCount
-                    );
+            await using var connection = database.CreateConnection();
 
-                    await database.Execute(
-                        new RecordRetryEvent(id, RetryStatus.Failed, attemptNumber, error: error),
-                        cancellationToken
-                    );
-                }
-                else if (attemptNumber < maxRetryCount)
-                {
-                    logger.LogTrace(
-                        "Manual retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - will retry at {RetryAt}",
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        streamName,
-                        streamPosition,
-                        attemptNumber,
-                        maxRetryCount,
-                        retryAt
-                    );
+            await connection.OpenAsync(cancellationToken);
 
-                    await database.Execute(
-                        new RecordRetryEvent(id, RetryStatus.ManualRetryFailed, attemptNumber, retryAt, error),
-                        cancellationToken
-                    );
-                }
-                else
-                {
-                    logger.LogTrace(
-                        "Manual retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount}",
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        streamName,
-                        streamPosition,
-                        attemptNumber,
-                        maxRetryCount
-                    );
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-                    await database.Execute(
-                        new RecordRetryEvent(id, RetryStatus.ManualRetryFailed, attemptNumber, error: error),
-                        cancellationToken
-                    );
-                }
+            await messageStore.AppendToStream(
+                retryStreamName,
+                ExpectedVersion.Any,
+                manualRetry
+                    ? new ManualRetryFailed(retry.Id, error, DateTimeOffset.UtcNow)
+                    : new RetryAttemptFailed(retry.Id, error, retryAt, DateTimeOffset.UtcNow),
+                cancellationToken
+            );
 
-                return;
-            }
-
-            if (attemptNumber >= maxRetryCount)
+            if (attemptNumber >= retry.MaxRetryCount && !retry.Failed)
             {
                 logger.LogTrace(
                     "Retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting to Failed",
                     options.Subscriptions.GroupName,
                     subscription.Name,
-                    streamName,
-                    streamPosition,
+                    retry.StreamName,
+                    retry.StreamPosition,
                     attemptNumber,
-                    maxRetryCount
+                    retry.MaxRetryCount
                 );
 
                 await database.Execute(
-                    new RecordRetryEvent(id, RetryStatus.Failed, attemptNumber, error: error),
+                    new UpdateCheckpointStatus(
+                        options.Subscriptions.GroupName,
+                        subscription.Name,
+                        retry.StreamName,
+                        retry.StreamPosition,
+                        CheckpointStatus.Failed
+                    ),
+                    connection,
+                    transaction,
                     cancellationToken
-                );
-            }
-            else
-            {
-                logger.LogTrace(
-                    "Retry failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - will retry at {RetryAt}",
-                    options.Subscriptions.GroupName,
-                    subscription.Name,
-                    streamName,
-                    streamPosition,
-                    attemptNumber,
-                    maxRetryCount,
-                    retryAt
                 );
 
-                await database.Execute(
-                    new RecordRetryEvent(id, RetryStatus.Scheduled, attemptNumber, retryAt, error),
+                await messageStore.AppendToStream(
+                    retryStreamName,
+                    ExpectedVersion.Any,
+                    new RetryFailed(retry.Id, DateTimeOffset.UtcNow),
                     cancellationToken
                 );
             }
+
+            await transaction.CommitAsync(cancellationToken);
         }
     }
 }

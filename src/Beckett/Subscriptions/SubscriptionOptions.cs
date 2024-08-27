@@ -12,7 +12,7 @@ public class SubscriptionOptions
 
     /// <summary>
     /// Configure whether subscriptions are enabled for this host. Enabling subscriptions will register all the
-    /// necessary dependencies and host services that allows Beckett to process them.
+    /// necessary dependencies and host services that allows Beckett to process them. Defaults to false.
     /// </summary>
     public bool Enabled { get; set; }
 

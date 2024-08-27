@@ -78,7 +78,7 @@ public static class ServiceCollectionExtensions
             messageTypeMap,
             subscriptionRegistry,
             recurringMessageRegistry
-        );
+        ).RetrySupport(options);
     }
 
     /// <summary>
@@ -151,7 +151,7 @@ public static class ServiceCollectionExtensions
                     messageTypeMap,
                     subscriptionRegistry,
                     recurringMessageRegistry
-                );
+                ).RetrySupport(options);
 
                 buildBeckett?.Invoke(beckettBuilder);
             }

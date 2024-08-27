@@ -1,22 +1,25 @@
-using Beckett.Database;
-using Beckett.Subscriptions.Retries.Queries;
+using Beckett.Subscriptions.Retries.Events;
 
 namespace Beckett.Subscriptions.Retries;
 
-public class RetryClient(IPostgresDatabase database) : IRetryClient
+public class RetryClient(IMessageStore messageStore) : IRetryClient
 {
-    public async Task RequestManualRetry(Guid id, CancellationToken cancellationToken)
+    public async Task ManualRetry(Guid id, CancellationToken cancellationToken)
     {
-        await database.Execute(
-            new RecordRetryEvent(id, RetryStatus.ManualRetryRequested, retryAt: DateTimeOffset.UtcNow),
+        await messageStore.AppendToStream(
+            RetryStreamName.For(id),
+            ExpectedVersion.Any,
+            new ManualRetryRequested(id, DateTimeOffset.UtcNow),
             cancellationToken
         );
     }
 
     public async Task DeleteRetry(Guid id, CancellationToken cancellationToken)
     {
-        await database.Execute(
-            new RecordRetryEvent(id, RetryStatus.Deleted),
+        await messageStore.AppendToStream(
+            RetryStreamName.For(id),
+            ExpectedVersion.Any,
+            new DeleteRetryRequested(id, DateTimeOffset.UtcNow),
             cancellationToken
         );
     }

@@ -133,7 +133,7 @@ public class SubscriptionInitializer(
                 }
 
                 await database.Execute(
-                    new SetSubscriptionToInitialized(options.Subscriptions.GroupName, subscription.Name),
+                    new SetSubscriptionToActive(options.Subscriptions.GroupName, subscription.Name),
                     connection,
                     transaction,
                     cancellationToken

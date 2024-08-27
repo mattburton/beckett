@@ -1,6 +1,5 @@
 using Beckett.Database.Types;
 using Beckett.Subscriptions;
-using Beckett.Subscriptions.Retries;
 using Npgsql;
 
 namespace Beckett.Database;
@@ -17,7 +16,7 @@ public static class NpgsqlDataSourceBuilderExtensions
         builder.MapComposite<ScheduledMessageType>(DataTypeNames.ScheduledMessage(schema));
 
         builder.MapEnum<CheckpointStatus>(DataTypeNames.CheckpointStatus(schema));
-        builder.MapEnum<RetryStatus>(DataTypeNames.RetryStatus(schema));
+        builder.MapEnum<SubscriptionStatus>(DataTypeNames.SubscriptionStatus(schema));
 
         return builder;
     }

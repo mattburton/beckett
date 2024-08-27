@@ -25,7 +25,5 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPostgresNotificationHandler, RetryNotificationHandler>();
 
         services.AddHostedService<RetryPollingService>();
-
-        services.AddHostedService<RecoverExpiredRetryReservationsService>();
     }
 }

@@ -56,7 +56,7 @@ public class BootstrapSubscriptions(
                     options.Subscriptions.GroupName
                 );
 
-                var initialized = await database.Execute(
+                var status = await database.Execute(
                     new AddOrUpdateSubscription(
                         options.Subscriptions.GroupName,
                         subscription.Name
@@ -66,10 +66,10 @@ public class BootstrapSubscriptions(
                     cancellationToken
                 );
 
-                if (initialized)
+                if (status == SubscriptionStatus.Active)
                 {
                     logger.LogTrace(
-                        "Subscription {Name} in group {GroupName} is already initialized - no need for further action.",
+                        "Subscription {Name} in group {GroupName} is already active - no need for further action.",
                         subscription.Name,
                         options.Subscriptions.GroupName
                     );
@@ -80,14 +80,14 @@ public class BootstrapSubscriptions(
                 if (subscription.StartingPosition == StartingPosition.Latest)
                 {
                     logger.LogTrace(
-                        "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will be set to initialized and will start processing new messages going forward.",
+                        "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will be set to active and will start processing new messages going forward.",
                         subscription.Name,
                         options.Subscriptions.GroupName,
                         subscription.StartingPosition
                     );
 
                     await database.Execute(
-                        new SetSubscriptionToInitialized(options.Subscriptions.GroupName, subscription.Name),
+                        new SetSubscriptionToActive(options.Subscriptions.GroupName, subscription.Name),
                         connection,
                         transaction,
                         cancellationToken
