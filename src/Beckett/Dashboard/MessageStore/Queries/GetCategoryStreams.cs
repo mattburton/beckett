@@ -19,7 +19,8 @@ public class GetCategoryStreams(string category, string? query) : IPostgresDatab
             and ($2 is null or stream_name ilike '%' || $2 || '%')
             and deleted = false
             group by stream_name
-            order by max(timestamp) desc;
+            order by max(timestamp) desc
+            limit 500;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -46,6 +47,4 @@ public class GetCategoryStreams(string category, string? query) : IPostgresDatab
 
         return new GetCategoryStreamsResult(results);
     }
-
-    public record Result(string StreamName, DateTimeOffset LastUpdated);
 }

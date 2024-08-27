@@ -45,5 +45,9 @@
   }
   </tbody>
 </table>
-
-
+@if (Model.Streams.Count == 500)
+{
+  <div class="alert alert-light mx-3" role="alert">
+    <span class="badge text-bg-secondary">NOTE</span> only showing the first 500 recently updated streams - you can use the search box above to refine your results further as needed
+  </div>
+}
