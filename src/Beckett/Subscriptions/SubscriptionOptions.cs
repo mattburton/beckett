@@ -73,12 +73,11 @@ public class SubscriptionOptions
     public int SubscriptionStreamBatchSize { get; set; } = 500;
 
     /// <summary>
-    /// Configure the polling interval to check for new subscription streams (checkpoints) to process. When Postgres
-    /// notifications are enabled (the default) this interval can be disabled by setting it to <c>TimeSpan.Zero</c> or
-    /// increased and used as a backup sanity check to make sure that everything is being processed. Defaults to 10
-    /// seconds.
+    /// Configure the polling interval to check for new checkpoints to process. When Postgres notifications are enabled
+    /// (the default) this interval can be disabled by setting it to <c>TimeSpan.Zero</c> or increased and used as a
+    /// backup sanity check to make sure that everything is being processed. Defaults to 10 seconds.
     /// </summary>
-    public TimeSpan SubscriptionStreamPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
+    public TimeSpan CheckpointPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
 
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = new() {{typeof(Exception), 10}};
 

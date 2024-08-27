@@ -1,6 +1,6 @@
 namespace Beckett.Subscriptions;
 
-public interface ISubscriptionStreamConsumer
+public interface ICheckpointConsumer
 {
     void StartPolling();
 }

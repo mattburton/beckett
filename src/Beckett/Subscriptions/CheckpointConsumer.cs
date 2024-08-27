@@ -4,14 +4,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionStreamConsumer(
+public class CheckpointConsumer(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
-    ISubscriptionStreamProcessor subscriptionStreamProcessor,
+    ICheckpointProcessor checkpointProcessor,
     BeckettOptions options,
-    ILogger<SubscriptionStreamConsumer> logger,
+    ILogger<CheckpointConsumer> logger,
     CancellationToken stoppingToken
-) : ISubscriptionStreamConsumer
+) : ICheckpointConsumer
 {
     private Task _task = null!;
 
@@ -66,7 +66,7 @@ public class SubscriptionStreamConsumer(
                     checkpoint.StreamVersion
                 );
 
-                await subscriptionStreamProcessor.Process(
+                await checkpointProcessor.Process(
                     subscription,
                     checkpoint.StreamName,
                     checkpoint.StreamPosition + 1,

@@ -19,9 +19,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IGlobalStreamConsumer, GlobalStreamConsumer>();
 
-        services.AddSingleton<ISubscriptionStreamProcessor, SubscriptionStreamProcessor>();
+        services.AddSingleton<ICheckpointProcessor, CheckpointProcessor>();
 
-        services.AddSingleton<ISubscriptionStreamConsumerGroup, SubscriptionStreamConsumerGroup>();
+        services.AddSingleton<ICheckpointConsumerGroup, CheckpointConsumerGroup>();
 
         services.AddSingleton<IPostgresNotificationHandler, CheckpointNotificationHandler>();
 
@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<GlobalStreamPollingService>();
 
-        services.AddHostedService<SubscriptionStreamPollingService>();
+        services.AddHostedService<CheckpointPollingService>();
 
         services.AddHostedService<RecoverExpiredCheckpointReservationsService>();
     }

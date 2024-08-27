@@ -9,14 +9,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionStreamProcessor(
+public class CheckpointProcessor(
     IMessageStorage messageStorage,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
     BeckettOptions options,
     IInstrumentation instrumentation,
-    ILogger<SubscriptionStreamProcessor> logger
-) : ISubscriptionStreamProcessor
+    ILogger<CheckpointProcessor> logger
+) : ICheckpointProcessor
 {
     public async Task Process(
         Subscription subscription,

@@ -8,7 +8,7 @@ namespace Beckett.Subscriptions.Retries;
 public class RetryProcessor(
     ISubscriptionRegistry subscriptionRegistry,
     BeckettOptions options,
-    ISubscriptionStreamProcessor subscriptionStreamProcessor,
+    ICheckpointProcessor checkpointProcessor,
     IPostgresDatabase database,
     IMessageStore messageStore,
     ILogger<RetryProcessor> logger
@@ -39,7 +39,7 @@ public class RetryProcessor(
 
         try
         {
-            await subscriptionStreamProcessor.Process(
+            await checkpointProcessor.Process(
                 subscription,
                 retry.StreamName,
                 retry.StreamPosition,

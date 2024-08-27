@@ -1,6 +1,6 @@
 namespace Beckett.Subscriptions;
 
-public interface ISubscriptionStreamProcessor
+public interface ICheckpointProcessor
 {
     Task Process(
         Subscription subscription,

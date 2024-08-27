@@ -1,6 +1,6 @@
 namespace Beckett.Subscriptions;
 
-public interface ISubscriptionStreamConsumerGroup
+public interface ICheckpointConsumerGroup
 {
     void Initialize(CancellationToken stoppingToken);
 
