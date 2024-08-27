@@ -11,10 +11,6 @@ public interface IMessageStorage
         CancellationToken cancellationToken
     );
 
-    IMessageStoreSession CreateSession();
-
-    IMessageStreamBatch CreateStreamBatch(AppendToStreamDelegate appendToStream);
-
     Task<ReadGlobalStreamResult> ReadGlobalStream(
         long lastGlobalPosition,
         int batchSize,

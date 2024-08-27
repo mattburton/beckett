@@ -2,18 +2,15 @@ using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.MessageStorage.Postgres.Queries;
-using Beckett.OpenTelemetry;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.MessageStorage.Postgres;
 
 public class PostgresMessageStorage(
-    BeckettOptions options,
     IMessageSerializer messageSerializer,
     IPostgresDatabase database,
     IPostgresMessageDeserializer messageDeserializer,
     IMessageTypeMap messageTypeMap,
-    IInstrumentation instrumentation,
     ILoggerFactory loggerFactory
 ) : IMessageStorage
 {
@@ -34,12 +31,6 @@ public class PostgresMessageStorage(
 
         return new AppendToStreamResult(streamVersion);
     }
-
-    public IMessageStoreSession CreateSession() =>
-        new PostgresMessageStoreSession(options, database, messageSerializer, instrumentation);
-
-    public IMessageStreamBatch CreateStreamBatch(AppendToStreamDelegate appendToStream) =>
-        new PostgresMessageStreamBatch(options, database, messageDeserializer, instrumentation, appendToStream);
 
     public async Task<ReadGlobalStreamResult> ReadGlobalStream(
         long lastGlobalPosition,

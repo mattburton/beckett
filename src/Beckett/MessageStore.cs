@@ -9,8 +9,6 @@ public class MessageStore(
     IInstrumentation instrumentation
 ) : IMessageStore
 {
-    public IAdvancedOperations Advanced => new AdvancedOperations(messageStorage, AppendToStream);
-
     public Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
@@ -77,15 +75,5 @@ public class MessageStore(
             AppendToStream
         );
     }
-}
-
-public class AdvancedOperations(
-    IMessageStorage messageStorage,
-    AppendToStreamDelegate appendToStream
-) : IAdvancedOperations
-{
-    public IMessageStoreSession CreateSession() => messageStorage.CreateSession();
-
-    public IMessageStreamBatch ReadStreamBatch() => messageStorage.CreateStreamBatch(appendToStream);
 }
 
