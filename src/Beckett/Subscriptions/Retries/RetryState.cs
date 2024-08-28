@@ -12,6 +12,7 @@ public class RetryState : IApply
     public int Attempts { get; private set; }
     public int MaxRetryCount { get; private set; }
     public CheckpointStatus Status { get; private set; }
+    public DateTimeOffset? NextRetryAt { get; private set; }
     public bool Failed { get; private set; }
 
     public bool Completed => Status is CheckpointStatus.Active or CheckpointStatus.Failed or CheckpointStatus.Deleted;
@@ -21,6 +22,9 @@ public class RetryState : IApply
         switch (message)
         {
             case RetryStarted e:
+                Apply(e);
+                break;
+            case RetryScheduled e:
                 Apply(e);
                 break;
             case RetryAttemptFailed e:
@@ -52,32 +56,42 @@ public class RetryState : IApply
         Status = CheckpointStatus.Retry;
     }
 
-    private void Apply(RetryAttemptFailed _)
+    private void Apply(RetryScheduled e)
     {
-        Status = CheckpointStatus.Retry;
-        Attempts++;
+        NextRetryAt ??= e.RetryAt;
     }
 
-    private void Apply(ManualRetryFailed _)
+    private void Apply(RetryAttemptFailed e)
     {
         Status = CheckpointStatus.Retry;
-        Attempts++;
+        NextRetryAt = null;
+        Attempts = e.Attempt;
     }
 
-    private void Apply(RetrySucceeded _)
+    private void Apply(ManualRetryFailed e)
+    {
+        Status = CheckpointStatus.Retry;
+        Attempts = e.Attempt;
+    }
+
+    private void Apply(RetrySucceeded e)
     {
         Status = CheckpointStatus.Active;
-        Attempts++;
+        NextRetryAt = null;
+        Attempts = e.Attempt;
     }
 
-    private void Apply(RetryFailed _)
+    private void Apply(RetryFailed e)
     {
         Status = CheckpointStatus.Failed;
+        NextRetryAt = null;
         Failed = true;
+        Attempts = e.Attempt;
     }
 
     private void Apply(RetryDeleted _)
     {
         Status = CheckpointStatus.Deleted;
+        NextRetryAt = null;
     }
 }

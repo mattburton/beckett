@@ -15,6 +15,12 @@ public class RetryScheduledHandler(IMessageStore messageStore, IRetryProcessor r
             return;
         }
 
+        //if we receive more than one scheduled message at once only process the first one
+        if (state.NextRetryAt != message.RetryAt)
+        {
+            return;
+        }
+
         await retryProcessor.Retry(state, cancellationToken);
     }
 }

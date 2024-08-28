@@ -22,24 +22,25 @@ public class RetryStartedHandler(
             return;
         }
 
-        logger.LogTrace(
-            "Retry started for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - scheduling first retry at {RetryAt}",
-            state.GroupName,
-            state.Name,
-            state.StreamName,
-            state.StreamPosition,
-            message.RetryAt
-        );
-
         await messageScheduler.ScheduleMessage(
             streamName,
             new RetryScheduled(
                 message.Id,
+                1,
                 message.RetryAt.GetValueOrDefault(),
                 DateTimeOffset.UtcNow
             ),
             message.RetryAt.GetValueOrDefault(),
             cancellationToken
+        );
+
+        logger.LogTrace(
+            "Retry started for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - scheduled first retry at {RetryAt}",
+            state.GroupName,
+            state.Name,
+            state.StreamName,
+            state.StreamPosition,
+            message.RetryAt
         );
     }
 }

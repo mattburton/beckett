@@ -101,8 +101,9 @@ public class GetRetryDetailsResult : IApply
         Id = e.Id;
         Status = RetryStatus.Failed;
         RetryAt = null;
+        TotalAttempts++;
 
-        Attempts.Add(new Attempt(Status, e.Timestamp, null));
+        Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
     }
 
     private void Apply(ManualRetryRequested e)

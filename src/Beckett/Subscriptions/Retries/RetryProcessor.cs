@@ -80,7 +80,7 @@ public class RetryProcessor(
             await messageStore.AppendToStream(
                 retryStreamName,
                 ExpectedVersion.Any,
-                new RetrySucceeded(retry.Id, DateTimeOffset.UtcNow),
+                new RetrySucceeded(retry.Id, attemptNumber, DateTimeOffset.UtcNow),
                 cancellationToken
             );
 
@@ -101,14 +101,25 @@ public class RetryProcessor(
 
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-            await messageStore.AppendToStream(
-                retryStreamName,
-                ExpectedVersion.Any,
-                manualRetry
-                    ? new ManualRetryFailed(retry.Id, error, DateTimeOffset.UtcNow)
-                    : new RetryAttemptFailed(retry.Id, error, retryAt, DateTimeOffset.UtcNow),
-                cancellationToken
-            );
+            switch (manualRetry)
+            {
+                case true when attemptNumber < retry.MaxRetryCount || retry.Failed:
+                    await messageStore.AppendToStream(
+                        retryStreamName,
+                        ExpectedVersion.Any,
+                        new ManualRetryFailed(retry.Id, attemptNumber, error, DateTimeOffset.UtcNow),
+                        cancellationToken
+                    );
+                    break;
+                case false when attemptNumber < retry.MaxRetryCount:
+                    await messageStore.AppendToStream(
+                        retryStreamName,
+                        ExpectedVersion.Any,
+                        new RetryAttemptFailed(retry.Id, attemptNumber, error, retryAt, DateTimeOffset.UtcNow),
+                        cancellationToken
+                    );
+                    break;
+            }
 
             if (attemptNumber >= retry.MaxRetryCount && !retry.Failed)
             {
@@ -138,7 +149,7 @@ public class RetryProcessor(
                 await messageStore.AppendToStream(
                     retryStreamName,
                     ExpectedVersion.Any,
-                    new RetryFailed(retry.Id, DateTimeOffset.UtcNow),
+                    new RetryFailed(retry.Id, attemptNumber, error, DateTimeOffset.UtcNow),
                     cancellationToken
                 );
             }

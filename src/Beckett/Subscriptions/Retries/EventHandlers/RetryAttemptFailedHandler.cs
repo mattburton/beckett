@@ -33,10 +33,13 @@ public class RetryAttemptFailedHandler(
             message.RetryAt
         );
 
+        var nextAttempt = state.Attempts + 1;
+
         await messageScheduler.ScheduleMessage(
             streamName,
             new RetryScheduled(
                 message.Id,
+                nextAttempt,
                 message.RetryAt,
                 DateTimeOffset.UtcNow
             ),

@@ -199,6 +199,8 @@ public class RetryMonitor(
                 ),
                 new RetryFailed(
                     retry.Id,
+                    0,
+                    retry.Error,
                     DateTimeOffset.UtcNow
                 )
             ],
