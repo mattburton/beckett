@@ -142,13 +142,15 @@ public class RetryProcessor(
                         cancellationToken
                     );
 
+                    var nextAttempt = attemptNumber + 1;
+
                     await messageScheduler.ScheduleMessage(
                         connection,
                         transaction,
                         retryStreamName,
                         new RetryScheduled(
                             retry.Id,
-                            attemptNumber,
+                            nextAttempt,
                             retryAt,
                             DateTimeOffset.UtcNow
                         ),
