@@ -1,5 +1,6 @@
 using Beckett.Database;
 using Beckett.Messages;
+using Beckett.Scheduling;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries.Events;
 using Beckett.Subscriptions.Retries.Models;
@@ -15,6 +16,7 @@ public class RetryMonitor(
     ISubscriptionRegistry subscriptionRegistry,
     IMessageTypeProvider messageTypeProvider,
     IMessageStore messageStore,
+    ITransactionalMessageScheduler messageScheduler,
     ILogger<RetryMonitor> logger
 ) : IRetryMonitor
 {
@@ -161,6 +163,20 @@ public class RetryMonitor(
             ),
             connection,
             transaction,
+            stoppingToken
+        );
+
+        await messageScheduler.ScheduleMessage(
+            connection,
+            transaction,
+            retryStreamName,
+            new RetryScheduled(
+                retry.Id,
+                1,
+                retryAt,
+                DateTimeOffset.UtcNow
+            ),
+            retryAt,
             stoppingToken
         );
     }

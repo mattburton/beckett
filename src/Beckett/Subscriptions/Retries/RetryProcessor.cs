@@ -1,4 +1,5 @@
 using Beckett.Database;
+using Beckett.Scheduling;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries.Events;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ public class RetryProcessor(
     ICheckpointProcessor checkpointProcessor,
     IPostgresDatabase database,
     IMessageStore messageStore,
+    ITransactionalMessageScheduler messageScheduler,
     ILogger<RetryProcessor> logger
 ) : IRetryProcessor
 {
@@ -104,6 +106,16 @@ public class RetryProcessor(
             switch (manualRetry)
             {
                 case true when attemptNumber < retry.MaxRetryCount || retry.Failed:
+                    logger.LogTrace(
+                        "Manual retry attempt failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount}",
+                        retry.GroupName,
+                        retry.Name,
+                        retry.StreamName,
+                        retry.StreamPosition,
+                        retry.Attempts,
+                        retry.MaxRetryCount
+                    );
+
                     await messageStore.AppendToStream(
                         retryStreamName,
                         ExpectedVersion.Any,
@@ -112,10 +124,35 @@ public class RetryProcessor(
                     );
                     break;
                 case false when attemptNumber < retry.MaxRetryCount:
+                    logger.LogTrace(
+                        "Retry attempt failed for checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - scheduling retry at {RetryAt}",
+                        retry.GroupName,
+                        retry.Name,
+                        retry.StreamName,
+                        retry.StreamPosition,
+                        retry.Attempts,
+                        retry.MaxRetryCount,
+                        retryAt
+                    );
+
                     await messageStore.AppendToStream(
                         retryStreamName,
                         ExpectedVersion.Any,
                         new RetryAttemptFailed(retry.Id, attemptNumber, error, retryAt, DateTimeOffset.UtcNow),
+                        cancellationToken
+                    );
+
+                    await messageScheduler.ScheduleMessage(
+                        connection,
+                        transaction,
+                        retryStreamName,
+                        new RetryScheduled(
+                            retry.Id,
+                            attemptNumber,
+                            retryAt,
+                            DateTimeOffset.UtcNow
+                        ),
+                        retryAt,
                         cancellationToken
                     );
                     break;

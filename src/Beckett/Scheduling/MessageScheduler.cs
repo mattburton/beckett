@@ -4,6 +4,7 @@ using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling.Queries;
 using Cronos;
+using Npgsql;
 using UUIDNext;
 
 namespace Beckett.Scheduling;
@@ -12,7 +13,7 @@ public class MessageScheduler(
     IPostgresDatabase database,
     IMessageSerializer messageSerializer,
     IInstrumentation instrumentation
-) : IMessageScheduler
+) : IMessageScheduler, ITransactionalMessageScheduler
 {
     public Task CancelScheduledMessage(Guid id, CancellationToken cancellationToken)
     {
@@ -62,6 +63,28 @@ public class MessageScheduler(
         CancellationToken cancellationToken
     )
     {
+        await using var connection = database.CreateConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        var id = await ScheduleMessage(connection, transaction, streamName, message, deliverAt, cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return id;
+    }
+
+    public async Task<Guid> ScheduleMessage(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        string streamName,
+        object message,
+        DateTimeOffset deliverAt,
+        CancellationToken cancellationToken
+    )
+    {
         var metadata = new Dictionary<string, object>();
 
         using var activity = instrumentation.StartScheduleMessageActivity(streamName, metadata);
@@ -88,6 +111,8 @@ public class MessageScheduler(
 
         await database.Execute(
             new ScheduleMessage(streamName, scheduledMessage),
+            connection,
+            transaction,
             cancellationToken
         );
 

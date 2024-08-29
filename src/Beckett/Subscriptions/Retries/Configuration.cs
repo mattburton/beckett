@@ -38,22 +38,10 @@ public static class Configuration
             .Handler<ManualRetryRequestedHandler>((handler, message, token) => handler.Handle(message, token))
             .MaxRetryCount(0);
 
-        builder.AddSubscription("$retry_attempt_failed")
-            .Category(category)
-            .Message<RetryAttemptFailed>()
-            .Handler<RetryAttemptFailedHandler>((handler, message, token) => handler.Handle(message, token))
-            .MaxRetryCount(0);
-
         builder.AddSubscription("$retry_scheduled")
             .Category(category)
             .Message<RetryScheduled>()
             .Handler<RetryScheduledHandler>((handler, message, token) => handler.Handle(message, token))
-            .MaxRetryCount(0);
-
-        builder.AddSubscription("$retry_started")
-            .Category(category)
-            .Message<RetryStarted>()
-            .Handler<RetryStartedHandler>((handler, message, token) => handler.Handle(message, token))
             .MaxRetryCount(0);
     }
 
@@ -61,9 +49,7 @@ public static class Configuration
     {
         builder.Services.AddSingleton<DeleteRetryRequestedHandler>();
         builder.Services.AddSingleton<ManualRetryRequestedHandler>();
-        builder.Services.AddSingleton<RetryAttemptFailedHandler>();
         builder.Services.AddSingleton<RetryScheduledHandler>();
-        builder.Services.AddSingleton<RetryStartedHandler>();
     }
 
     private static void MapMessageTypes(IBeckettBuilder builder)
