@@ -21,7 +21,7 @@ var host = builder.Build();
 
 host.Run();
 ```
-Or an ASP.NET Core application along with the Beckett dashboard that is available in the `Beckett.Dashboard` NuGet package:
+Add the Beckett dashboard to an ASP.NET Core application:
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,13 +31,10 @@ app.MapBeckettDashboard("/beckett");
 
 app.Run();
 ```
-In this example, the dashboard will be available at `http://localhost:<port>/beckett`.
-
-Also, since `MapBeckettDashboard` returns a `RouteGroupBuilder` instance you can further configure the route group as
-needed to add authorization and so on using standard ASP.NET Core route group configuration methods.
+In this example, the dashboard will be available at `http://localhost:<port>/beckett` and can be further configured using standard ASP.NET Core route group configuration options - authorization, etc...
 
 ## Configuration
-There are a number of options available in Beckett which can be configured inline:
+There are a number of options available in Beckett which can be configured inline or via standard .NET configuration:
 ```csharp
 builder.AddBeckett(
     options =>
@@ -45,20 +42,6 @@ builder.AddBeckett(
         options.WithSubscriptions("TodoList");
     });
 ```
-Or in `appsettings.json`:
-```json
-{
-  "Beckett": {
-    "Subscriptions": {
-      "Enabled": true,
-      "GroupName": "TodoList"
-    }
-  }
-}
-```
-
-## Samples
-This documentation is a work in progress - in the meantime take a look at the sample application to see all the features in action.
 
 ## Beckett?
 
