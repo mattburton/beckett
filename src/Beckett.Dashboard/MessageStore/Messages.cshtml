@@ -25,12 +25,12 @@
 
 <table class="table table-striped">
   <thead>
-  <tr>
-    <th>Id</th>
-    <th>Stream Position</th>
-    <th>Type</th>
-    <th>Timestamp</th>
-  </tr>
+    <tr>
+      <th>Id</th>
+      <th>Stream Position</th>
+      <th>Type</th>
+      <th style="width: 20em;">Timestamp</th>
+    </tr>
   </thead>
   <tbody>
   @foreach(var message in Model.Messages)
@@ -41,7 +41,9 @@
       </td>
       <td>@message.StreamPosition</td>
       <td>@message.Type</td>
-      <td>@message.Timestamp</td>
+      <td>
+        <span class="timestamp">@message.Timestamp</span>
+      </td>
     </tr>
   }
   @if (Model.Messages.Count == 0)

@@ -22,7 +22,7 @@
   <thead>
   <tr>
     <th>Stream Name</th>
-    <th>Last Updated</th>
+    <th style="width: 20em;">Last Updated</th>
   </tr>
   </thead>
   <tbody>
@@ -32,7 +32,9 @@
       <td>
         <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)/@HttpUtility.UrlEncode(stream.StreamName)">@stream.StreamName</a>
       </td>
-      <td>@stream.LastUpdated</td>
+      <td>
+        <span class="timestamp">@stream.LastUpdated</span>
+      </td>
     </tr>
   }
   @if (Model.Streams.Count == 0)

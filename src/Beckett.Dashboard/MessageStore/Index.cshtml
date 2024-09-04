@@ -17,7 +17,7 @@
   <thead>
   <tr>
     <th>Name</th>
-    <th>Last Updated</th>
+    <th style="width: 20em;">Last Updated</th>
   </tr>
   </thead>
   <tbody>
@@ -27,7 +27,9 @@
       <td>
         <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(category.Name)">@category.Name</a>
       </td>
-      <td>@category.LastUpdated</td>
+      <td>
+        <span class="timestamp">@category.LastUpdated</span>
+      </td>
     </tr>
   }
   @if (Model.Categories.Count == 0)
