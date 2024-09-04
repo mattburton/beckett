@@ -5,30 +5,53 @@
 }
 
 <div class="p-2 text-bg-light">
-  <ul class="nav nav-pills">
-    <li class="nav-item">
-      <a class="nav-link" href="@Routes.Prefix/subscriptions">Subscriptions</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="@Routes.Prefix/subscriptions/lagging">Lagging</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link active" aria-current="page" href="@Routes.Prefix/subscriptions/retries">Retries</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="@Routes.Prefix/subscriptions/failed">Failed</a>
-    </li>
-  </ul>
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <ul class="nav nav-pills">
+        <li class="nav-item">
+          <a class="nav-link" href="@Routes.Prefix/subscriptions">Subscriptions</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="@Routes.Prefix/subscriptions/lagging">Lagging</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="@Routes.Prefix/subscriptions/retries">Retries</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="@Routes.Prefix/subscriptions/failed">Failed</a>
+        </li>
+      </ul>
+    </div>
+    <div>
+      <a href="#"
+         class="btn btn-primary disabled bulk-controls"
+         title="Request manual retry"
+         hx-post="@Routes.Prefix/subscriptions/retries/bulk-retry"
+         hx-include="[name=id]">
+        Retry
+      </a>
+      <a href="#"
+         class="btn btn-danger disabled bulk-controls"
+         title="Request delete"
+         hx-post="@Routes.Prefix/subscriptions/retries/bulk-delete"
+         hx-include="[name=id]">
+        Delete
+      </a>
+    </div>
+  </div>
 </div>
 
 <table id="list-view"
        class="table table-striped"
        hx-get="@Routes.Prefix/subscriptions/retries"
-       hx-trigger="every 10s"
+       hx-trigger="every 10s [enableAutoReload()]"
        hx-select="#list-view"
        hx-swap="outerHTML">
   <thead>
     <tr>
+      <th style="width: 1em;">
+        <input type="checkbox" id="select-all" onclick="selectAll()" />
+      </th>
       <th>Group</th>
       <th>Name</th>
       <th>Stream Name</th>
@@ -39,6 +62,9 @@
   @foreach (var retry in Model.Retries)
   {
     <tr>
+      <td>
+        <input type="checkbox" class="select-item" name="id" value="@retry.RetryId" onclick="selectItem(this)" />
+      </td>
       <td>@retry.GroupName</td>
       <td>@retry.Name</td>
       <td>
@@ -50,10 +76,11 @@
   @if (Model.Retries.Count == 0)
   {
     <tr>
-      <td colspan="6">
+      <td colspan="5">
         No retries found.
       </td>
     </tr>
   }
   </tbody>
 </table>
+@(new BulkControls())

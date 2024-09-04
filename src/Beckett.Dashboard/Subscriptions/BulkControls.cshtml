@@ -1,0 +1,33 @@
+@inherits HtmlTemplate
+
+<script type="text/javascript">
+  document.body.addEventListener("bulk_retry_requested", () => alert('Enqueued retry requests successfully'));
+
+  document.body.addEventListener("bulk_delete_requested", () => alert('Enqueued delete requests successfully'));
+
+  function selectAll() {
+    document.querySelectorAll(".select-item").forEach((element) => element.click());
+  }
+
+  function selectItem(element) {
+    if (element.checked) {
+      element.closest("tr").classList.add("table-secondary");
+    } else {
+      element.closest("tr").classList.remove("table-secondary");
+    }
+
+    enableBulkControls();
+  }
+
+  function enableBulkControls() {
+    if (document.querySelectorAll(".select-item:checked").length) {
+      document.querySelectorAll(".bulk-controls").forEach((element) => element.classList.remove("disabled"));
+    } else {
+      document.querySelectorAll(".bulk-controls").forEach((element) => element.classList.add("disabled"));
+    }
+  }
+
+  function enableAutoReload() {
+    return document.querySelectorAll(".select-item:checked").length === 0;
+  }
+</script>

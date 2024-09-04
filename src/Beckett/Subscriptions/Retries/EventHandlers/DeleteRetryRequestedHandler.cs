@@ -14,7 +14,7 @@ public class DeleteRetryRequestedHandler(IMessageStore messageStore, IPostgresDa
 
         var state = stream.ProjectTo<RetryState>();
 
-        if (state.Completed)
+        if (state.Status == CheckpointStatus.Deleted)
         {
             return;
         }

@@ -4,6 +4,26 @@ namespace Beckett.Subscriptions.Retries;
 
 public class RetryClient(IMessageStore messageStore) : IRetryClient
 {
+    public async Task BulkDelete(Guid[] retryIds, CancellationToken cancellationToken)
+    {
+        await messageStore.AppendToStream(
+            RetryQueues.BulkDeleteQueue,
+            ExpectedVersion.Any,
+            new BulkDeleteRequested(retryIds.ToList(), DateTimeOffset.UtcNow),
+            cancellationToken
+        );
+    }
+
+    public async Task BulkRetry(Guid[] retryIds, CancellationToken cancellationToken)
+    {
+        await messageStore.AppendToStream(
+            RetryQueues.BulkRetryQueue,
+            ExpectedVersion.Any,
+            new BulkRetryRequested(retryIds.ToList(), DateTimeOffset.UtcNow),
+            cancellationToken
+        );
+    }
+
     public async Task ManualRetry(Guid id, CancellationToken cancellationToken)
     {
         await messageStore.AppendToStream(

@@ -26,6 +26,18 @@ public static class Configuration
     {
         const string category = "$retry";
 
+        builder.AddSubscription("$bulk_delete_requested")
+            .Category(RetryQueues.BulkDeleteQueue)
+            .Message<BulkDeleteRequested>()
+            .Handler<BulkDeleteRequestedHandler>((handler, message, token) => handler.Handle(message, token))
+            .MaxRetryCount(0);
+
+        builder.AddSubscription("$bulk_retry_requested")
+            .Category(RetryQueues.BulkRetryQueue)
+            .Message<BulkRetryRequested>()
+            .Handler<BulkRetryRequestedHandler>((handler, message, token) => handler.Handle(message, token))
+            .MaxRetryCount(0);
+
         builder.AddSubscription("$delete_retry_requested")
             .Category(category)
             .Message<DeleteRetryRequested>()
@@ -47,6 +59,8 @@ public static class Configuration
 
     private static void RegisterHandlers(IBeckettBuilder builder)
     {
+        builder.Services.AddSingleton<BulkDeleteRequestedHandler>();
+        builder.Services.AddSingleton<BulkRetryRequestedHandler>();
         builder.Services.AddSingleton<DeleteRetryRequestedHandler>();
         builder.Services.AddSingleton<ManualRetryRequestedHandler>();
         builder.Services.AddSingleton<RetryScheduledHandler>();
@@ -54,6 +68,8 @@ public static class Configuration
 
     private static void MapMessageTypes(IBeckettBuilder builder)
     {
+        builder.Map<BulkDeleteRequested>("$bulk_delete_requested");
+        builder.Map<BulkRetryRequested>("$bulk_retry_requested");
         builder.Map<DeleteRetryRequested>("$delete_retry_requested");
         builder.Map<ManualRetryFailed>("$manual_retry_failed");
         builder.Map<ManualRetryRequested>("$manual_retry_requested");
