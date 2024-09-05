@@ -106,4 +106,17 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
+
+    public ISubscriptionConfigurationBuilder Handler(
+        Func<IMessageContext, CancellationToken, Task> handler,
+        string handlerName
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(handlerName);
+
+        subscription.HandlerName = handlerName;
+        subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
+
+        return new SubscriptionConfigurationBuilder(subscription);
+    }
 }
