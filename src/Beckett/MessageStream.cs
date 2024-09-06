@@ -18,7 +18,7 @@ public readonly struct MessageStream(
     /// </summary>
     public long StreamVersion { get; } = streamVersion;
 
-    internal IReadOnlyList<MessageResult> RawMessages { get; } = streamMessages.ToList();
+    public IReadOnlyList<MessageResult> RawMessages { get; } = streamMessages.ToList();
 
     /// <summary>
     /// The stream messages
