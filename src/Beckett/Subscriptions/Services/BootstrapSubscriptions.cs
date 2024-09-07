@@ -126,7 +126,17 @@ public class BootstrapSubscriptions(
 
             await transaction.CommitAsync(cancellationToken);
 
-            subscriptionInitializer.Start(cancellationToken);
+            if (options.Subscriptions.InitializationConcurrency <= 0)
+            {
+                return;
+            }
+
+            await Task.Yield();
+
+            var initializationTasks = Enumerable.Range(1, options.Subscriptions.InitializationConcurrency)
+                .Select(_ => subscriptionInitializer.Initialize(cancellationToken)).ToArray();
+
+            await Task.WhenAll(initializationTasks);
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {

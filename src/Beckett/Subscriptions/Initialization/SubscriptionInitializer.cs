@@ -16,19 +16,7 @@ public class SubscriptionInitializer(
     ILogger<SubscriptionInitializer> logger
 ) : ISubscriptionInitializer
 {
-    private Task _task = Task.CompletedTask;
-
-    public void Start(CancellationToken cancellationToken)
-    {
-        if (_task is { IsCompleted: false })
-        {
-            return;
-        }
-
-        _task = InitializeSubscriptions(cancellationToken);
-    }
-
-    private async Task InitializeSubscriptions(CancellationToken cancellationToken)
+    public async Task Initialize(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {

@@ -45,6 +45,12 @@ public class SubscriptionOptions
     public int InitializationBatchSize { get; set; } = 1000;
 
     /// <summary>
+    /// Configure the number of concurrent subscriptions Beckett can initialize at one time per host process.
+    /// Defaults to 5.
+    /// </summary>
+    public int InitializationConcurrency { get; set; } = 5;
+
+    /// <summary>
     /// Configure the timeout for checkpoint and retry reservations that occur while processing them. When a checkpoint
     /// or retry is available for processing, Beckett reserves it for the requesting consumer. The consumer processes it
     /// and no matter the outcome once complete releases the reservation. If the consumer fails to release the
