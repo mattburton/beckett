@@ -27,44 +27,7 @@ public class CheckpointProcessor(
         CancellationToken cancellationToken
     )
     {
-        var stream = await messageStorage.ReadStream(
-            streamName,
-            new ReadStreamOptions
-            {
-                StartingStreamPosition = streamPosition,
-                Count = batchSize
-            },
-            cancellationToken
-        );
-
-        logger.LogTrace(
-            "Found {Count} messages to process for checkpoint {GroupName}:{Name}:{StreamName}",
-            stream.Messages.Count,
-            subscription.Name,
-            options.Subscriptions.GroupName,
-            streamName
-        );
-
-        var messages = new List<MessageContext>();
-
-        foreach (var message in stream.Messages)
-        {
-            messages.Add(
-                new MessageContext(
-                    message.Id,
-                    message.StreamName,
-                    message.StreamPosition,
-                    message.GlobalPosition,
-                    message.Type,
-                    message.Message,
-                    message.Metadata,
-                    message.Timestamp,
-                    serviceProvider
-                )
-            );
-        }
-
-        var result = await HandleMessageBatch(subscription, streamName, messages, cancellationToken);
+        var result = await HandleMessageBatch(subscription, streamName, streamPosition, batchSize, cancellationToken);
 
         switch (result)
         {
@@ -118,10 +81,36 @@ public class CheckpointProcessor(
     private async Task<MessageBatchResult> HandleMessageBatch(
         Subscription subscription,
         string streamName,
-        IReadOnlyList<MessageContext> messages,
+        long streamPosition,
+        int batchSize,
         CancellationToken cancellationToken
     )
     {
+        List<MessageContext> messages;
+
+        try
+        {
+            messages = await ReadMessageBatch(
+                subscription,
+                streamName,
+                streamPosition,
+                batchSize,
+                cancellationToken
+            );
+        }
+        catch (Exception e)
+        {
+            logger.LogError(
+                e,
+                "Error reading message batch for subscription {SubscriptionType} for stream {StreamName} at {StreamPosition}",
+                subscription.Name,
+                streamName,
+                streamPosition
+            );
+
+            return new MessageBatchResult.Error(streamPosition, e);
+        }
+
         try
         {
             if (messages.Count == 0)
@@ -197,6 +186,54 @@ public class CheckpointProcessor(
 
             throw;
         }
+    }
+
+    private async Task<List<MessageContext>> ReadMessageBatch(
+        Subscription subscription,
+        string streamName,
+        long streamPosition,
+        int batchSize,
+        CancellationToken cancellationToken
+    )
+    {
+        var stream = await messageStorage.ReadStream(
+            streamName,
+            new ReadStreamOptions
+            {
+                StartingStreamPosition = streamPosition,
+                Count = batchSize
+            },
+            cancellationToken
+        );
+
+        logger.LogTrace(
+            "Found {Count} messages to process for checkpoint {GroupName}:{Name}:{StreamName}",
+            stream.Messages.Count,
+            subscription.Name,
+            options.Subscriptions.GroupName,
+            streamName
+        );
+
+        var messages = new List<MessageContext>();
+
+        foreach (var message in stream.Messages)
+        {
+            messages.Add(
+                new MessageContext(
+                    message.Id,
+                    message.StreamName,
+                    message.StreamPosition,
+                    message.GlobalPosition,
+                    message.Type,
+                    message.Message,
+                    message.Metadata,
+                    message.Timestamp,
+                    serviceProvider
+                )
+            );
+        }
+
+        return messages;
     }
 
     public abstract record MessageBatchResult
