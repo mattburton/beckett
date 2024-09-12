@@ -59,8 +59,6 @@ public class SubscriptionInitializer(
 
     private async Task InitializeSubscription(Subscription subscription, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Initializing subscription {SubscriptionName}", subscription.Name);
-
         while (!cancellationToken.IsCancellationRequested)
         {
             await using var connection = database.CreateConnection();
@@ -84,6 +82,8 @@ public class SubscriptionInitializer(
             {
                 break;
             }
+
+            logger.LogInformation("Initializing subscription {SubscriptionName}", subscription.Name);
 
             var globalStream = await messageStorage.ReadGlobalStream(
                 checkpoint.StreamPosition,
