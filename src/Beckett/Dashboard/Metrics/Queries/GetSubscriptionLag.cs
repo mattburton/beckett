@@ -12,11 +12,16 @@ public class GetSubscriptionLag : IPostgresDatabaseQuery<long>
     )
     {
         command.CommandText = $@"
-            SELECT count(*)
-            FROM {schema}.checkpoints c
-            INNER JOIN {schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-            WHERE c.status = 'lagging'
-            AND s.status = 'active';
+            WITH lagging AS (
+                SELECT COUNT(*) AS lagging
+                FROM {schema}.subscriptions s
+                INNER JOIN {schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                WHERE s.status = 'active'
+                AND c.status = 'lagging'
+                GROUP BY c.group_name, c.name
+            )
+            SELECT COUNT(*)
+            FROM lagging l;
         ";
 
         await command.PrepareAsync(cancellationToken);

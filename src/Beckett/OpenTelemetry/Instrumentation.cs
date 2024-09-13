@@ -207,11 +207,16 @@ public class Instrumentation : IInstrumentation, IDisposable
         using var command = connection.CreateCommand();
 
         command.CommandText = $@"
-            SELECT count(*)
-            FROM {_options.Postgres.Schema}.checkpoints c
-            INNER JOIN {_options.Postgres.Schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-            WHERE c.status = 'lagging'
-            AND s.status = 'active';
+            WITH lagging AS (
+                SELECT COUNT(*) AS lagging
+                FROM {_options.Postgres.Schema}.subscriptions s
+                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                WHERE s.status = 'active'
+                AND c.status = 'lagging'
+                GROUP BY c.group_name, c.name
+            )
+            SELECT COUNT(*)
+            FROM lagging l;
         ";
 
         command.Prepare();
