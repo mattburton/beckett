@@ -11,7 +11,11 @@ public class GetSubscriptionFailedCount : IPostgresDatabaseQuery<long>
         CancellationToken cancellationToken
     )
     {
-        command.CommandText = $"select {schema}.get_subscription_failed_count();";
+        command.CommandText = $@"
+            SELECT count(*)
+            FROM {schema}.checkpoints
+            WHERE status = 'failed';
+        ";
 
         await command.PrepareAsync(cancellationToken);
 

@@ -11,7 +11,13 @@ public class GetSubscriptionLag : IPostgresDatabaseQuery<long>
         CancellationToken cancellationToken
     )
     {
-        command.CommandText = $"select {schema}.get_subscription_lag();";
+        command.CommandText = $@"
+            SELECT count(*)
+            FROM {schema}.checkpoints c
+            INNER JOIN {schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+            WHERE c.status = 'lagging'
+            AND s.status = 'active';
+        ";
 
         await command.PrepareAsync(cancellationToken);
 

@@ -12,11 +12,13 @@ public class GetLaggingSubscriptions : IPostgresDatabaseQuery<GetLaggingSubscrip
     )
     {
         command.CommandText = $@"
-            SELECT group_name, name, SUM(stream_version - stream_position) AS total_lag
-            FROM {schema}.checkpoints
-            WHERE status = 'lagging'
-            GROUP BY group_name, name
-            ORDER BY group_name, SUM(stream_version - stream_position) DESC, name;
+            SELECT c.group_name, c.name, SUM(c.stream_version - c.stream_position) AS total_lag
+            FROM {schema}.checkpoints c
+            INNER JOIN {schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+            WHERE c.status = 'lagging'
+            AND s.status = 'active'
+            GROUP BY c.group_name, c.name
+            ORDER BY c.group_name, SUM(c.stream_version - c.stream_position) DESC, name;
         ";
 
         await command.PrepareAsync(cancellationToken);

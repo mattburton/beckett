@@ -1,4 +1,5 @@
 using Beckett.Database;
+using Beckett.Subscriptions;
 using Npgsql;
 
 namespace Beckett.Dashboard.Subscriptions.Queries;
@@ -12,7 +13,7 @@ public class GetSubscriptions : IPostgresDatabaseQuery<GetSubscriptionsResult>
     )
     {
         command.CommandText = $@"
-            SELECT group_name, name
+            SELECT group_name, name, status
             FROM {schema}.subscriptions
             ORDER BY group_name, name;
         ";
@@ -28,7 +29,8 @@ public class GetSubscriptions : IPostgresDatabaseQuery<GetSubscriptionsResult>
             results.Add(
                 new GetSubscriptionsResult.Subscription(
                     reader.GetFieldValue<string>(0),
-                    reader.GetFieldValue<string>(1)
+                    reader.GetFieldValue<string>(1),
+                    reader.GetFieldValue<SubscriptionStatus>(2)
                 )
             );
         }
