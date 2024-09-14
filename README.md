@@ -117,7 +117,7 @@ sequenceDiagram
 * Checkpoint expired reservation recovery runs every minute by default
 * Checkpoints are processed by handling the messages in stream order, dispatching them to the handler for the subscription one at a time
 * Checkpoints are processed in parallel, with the allowed concurrency configured via `options.Subscriptions.Concurrency` (defaults to the number of CPUs in the host * 5 or 20, whichever number is smaller)
-* If a subscription handler encounters an error processing a message the checkpoint will be retried in a separated process up to a max number of retries using exponential backoff, at which point it changes to the failed status
+* If a subscription handler encounters an error processing a message the checkpoint will be retried in a separate process up to a max number of retries using exponential backoff, at which point it changes to the failed status
 * Once a checkpoint is failed it can be manually retried at any point in time
 * If a retry succeeds at any point the checkpoint becomes active again and can process new messages
 * Deleting checkpoints means that checkpoint **will not be processed again** - it is a means by which you can clear failed checkpoints from the dashboard that you do not care about any more
