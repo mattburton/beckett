@@ -7,7 +7,7 @@ Event sourcing is a powerful pattern for building applications but reading and w
   - Retries - built-in retry support for failed messages - since messages are processed in order by stream per subscription, a failed message only blocks a single stream for a subscription at a time and the rest of the streams can continue processing for that subscription
 - Scheduled / recurring messages - schedule messages to be sent at a future time with cancellation support, or create a recurring schedule to send messages at a regular interval using cron expressions for scheduled jobs, etc...
 - Open Telemetry - built-in support to provide tracing and metrics
-- Dashboard - browse messages, retry failed subscriptions
+- Dashboard - browse messages, retry failed subscription checkpoints
 - Bring Your Own Event Store - Beckett provides a simple Postgres-based message store or use your own by implementing the `IMessageStorage` interface
 
 ## Example
@@ -116,7 +116,7 @@ sequenceDiagram
 ## Dashboard
 Beckett comes batteries-included with a dashboard to provide visibility into your system while it's running, retry failed checkpoints, and so on:
 
-<img width="1583" alt="Beckett Dashboard" src="https://github.com/user-attachments/assets/b1534284-a980-4894-8045-78f555d1ee5b">
+<img width="1575" alt="Beckett Dashboard" src="https://github.com/user-attachments/assets/0dc5a445-111b-4552-a639-36b37779d094">
 
 Adding the Beckett dashboard to an ASP.NET Core application is simple:
 
