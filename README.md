@@ -111,7 +111,6 @@ sequenceDiagram
 * If a subscription handler encounters an error processing a message the checkpoint will be retried in a separate process up to a max number of retries using exponential backoff, at which point it changes to the failed status
 * Once a checkpoint is failed it can be manually retried at any point in time
 * If a retry succeeds at any point the checkpoint becomes active again and can process new messages
-* Deleting checkpoints means that checkpoint **will not be processed again** - it is a means by which you can clear failed checkpoints from the dashboard that you do not care about any more
 
 ## Dashboard
 Beckett comes batteries-included with a dashboard to provide visibility into your system while it's running, retry failed checkpoints, and so on:

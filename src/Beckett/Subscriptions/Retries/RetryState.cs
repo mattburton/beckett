@@ -39,9 +39,6 @@ public class RetryState : IApply
             case RetryFailed e:
                 Apply(e);
                 break;
-            case RetryDeleted e:
-                Apply(e);
-                break;
         }
     }
 
@@ -87,11 +84,5 @@ public class RetryState : IApply
         NextRetryAt = null;
         Failed = true;
         Attempts = e.Attempt;
-    }
-
-    private void Apply(RetryDeleted _)
-    {
-        Status = CheckpointStatus.Deleted;
-        NextRetryAt = null;
     }
 }

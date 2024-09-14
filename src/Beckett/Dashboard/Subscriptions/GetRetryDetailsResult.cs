@@ -31,7 +31,6 @@ public class GetRetryDetailsResult : IApply
     {
         RetryStatus.Succeeded => false,
         RetryStatus.ManualRetryRequested => false,
-        RetryStatus.Deleted => false,
         _ => true
     };
 
@@ -55,12 +54,6 @@ public class GetRetryDetailsResult : IApply
                 Apply(e);
                 break;
             case ManualRetryFailed e:
-                Apply(e);
-                break;
-            case DeleteRetryRequested e:
-                Apply(e);
-                break;
-            case RetryDeleted e:
                 Apply(e);
                 break;
         }
@@ -121,19 +114,6 @@ public class GetRetryDetailsResult : IApply
         Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
     }
 
-    private void Apply(DeleteRetryRequested _)
-    {
-        Status = RetryStatus.DeleteRequested;
-    }
-
-    private void Apply(RetryDeleted e)
-    {
-        Status = RetryStatus.Deleted;
-        RetryAt = null;
-
-        Attempts.Add(new Attempt(Status, e.Timestamp, null));
-    }
-
     public record Attempt(RetryStatus Status, DateTimeOffset Timestamp, ExceptionData? Error)
     {
         public string BackgroundColor => Status switch
@@ -151,9 +131,7 @@ public class GetRetryDetailsResult : IApply
         Succeeded,
         Failed,
         ManualRetryRequested,
-        ManualRetryFailed,
-        DeleteRequested,
-        Deleted
+        ManualRetryFailed
     }
 }
 
@@ -169,8 +147,6 @@ public static class RetryStatusExtensions
             GetRetryDetailsResult.RetryStatus.Failed => "Failed",
             GetRetryDetailsResult.RetryStatus.ManualRetryRequested => "Manual Retry Requested",
             GetRetryDetailsResult.RetryStatus.ManualRetryFailed => "Manual Retry Failed",
-            GetRetryDetailsResult.RetryStatus.DeleteRequested => "Delete Requested",
-            GetRetryDetailsResult.RetryStatus.Deleted => "Deleted",
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
     }
