@@ -14,7 +14,7 @@ await builder.AddTodoListDatabase();
 builder.AddBeckett(
     options =>
     {
-        options.WithSubscriptions("TodoList");
+        options.WithSubscriptionGroup("TodoList");
 
         options.Subscriptions.MaxRetryCount<RetryableException>(10);
 

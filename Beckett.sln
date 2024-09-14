@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "src\Tests\Tests.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beckett.Dashboard", "src\Beckett.Dashboard\Beckett.Dashboard.csproj", "{30D7B71B-D7F7-4D9A-993F-AB11E6C8D178}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryAllocation", "src\samples\InventoryAllocation\InventoryAllocation.csproj", "{C9078B88-064F-4753-AD5E-2A24AE99F48D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,10 +46,15 @@ Global
 		{30D7B71B-D7F7-4D9A-993F-AB11E6C8D178}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30D7B71B-D7F7-4D9A-993F-AB11E6C8D178}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30D7B71B-D7F7-4D9A-993F-AB11E6C8D178}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9078B88-064F-4753-AD5E-2A24AE99F48D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9078B88-064F-4753-AD5E-2A24AE99F48D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9078B88-064F-4753-AD5E-2A24AE99F48D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9078B88-064F-4753-AD5E-2A24AE99F48D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{5BA49F81-1C48-4B40-9BAD-27DB2A7C5E60} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}
 		{8AE829DD-CBC9-4923-A648-6D0CDDD9AFB6} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}
 		{DCBF99F1-DCD0-45C8-B578-2713AB8065E4} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}
+		{C9078B88-064F-4753-AD5E-2A24AE99F48D} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}
 	EndGlobalSection
 EndGlobal
