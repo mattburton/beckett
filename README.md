@@ -1,7 +1,6 @@
 # Beckett
 
-Event sourcing is a powerful pattern for building applications but reading and writing events to an event store is only
-half of the equation. Beckett aims to fill in the gaps:
+Event sourcing is a powerful pattern for building applications but reading and writing events using an event store is only half of the equation. Beckett aims to fill in the gaps:
 
 - Subscriptions - subscribe to messages and process them in order by stream
   - Horizontal scalability - use auto-scaling to have as many workers as needed processing messages in parallel where the work is distributed automatically across all available nodes without needing to manage the distribution by way of consumer groups or similar mechanisms
@@ -56,20 +55,12 @@ public class OrderItemAddedHandler(IMessageStore messageStore)
     }
 }
 ```
-In this example application we are handling the `OrderItemAdded` event with the `OrderItemAddedHandler` class. The
-handler will receive all `OrderItemAdded` messages written to the message store since it is subscribed to that type
-in the `AddSubscription` call. The host has been configured to use the `InventoryAllocation` subscription group,
-and there can be as many instances of this host running as necessary and the work will be divided among them
-automatically allowing you to take advantage of auto scaling without limits.
+In this example application we are handling the `OrderItemAdded` event with the `OrderItemAddedHandler` class. The host has been configured to use the `InventoryAllocation` subscription group, and there can be as many instances of this host running as necessary and the work will be divided among them
+automatically allowing you to take advantage of auto scaling without limits. The handler will receive all `OrderItemAdded` messages written to the message store since it is subscribed to that type in the `AddSubscription` call. When a message is received it is dispatched to the handler which then writes an `InventoryAllocated` event to an `Inventory` stream to track allocated product inventory.
 
-One of the guiding design principles of Beckett is keeping a minimal footprint - there should be as few references to
-Beckett-provided types in application code as possible. Subscription handlers are registered as lambdas, and can be
-instances that are resolved from the container or static functions. The only type from Beckett used in the application
-code in this sample is `IMessageStore` which itself is optional if you're using your own message store.
+One of the guiding design principles of Beckett is keeping a minimal footprint - there should be as few references to Beckett-provided types in application code as possible. Subscription handlers are registered as inline delegates that can refer to handler instances that are resolved from the container or static functions. The only type from Beckett used in the application code in this sample is `IMessageStore` which itself is optional if you're using your own message store.
 
-The call to `PostgresMigrator.UpgradeSchema` in the example is applying any outstanding migrations to the database
-that are required by Beckett. If you wish to run the migrations separately using Flyway or similar tools then you can
-use the `dump-migrations` shell script supplied in the root of the directory to create a single SQL file:
+The call to `PostgresMigrator.UpgradeSchema` in the example is applying any outstanding migrations to the database that are required by Beckett. If you wish to run the migrations separately using Flyway or similar tools then you can use the `dump-migrations` shell script supplied in the root of the directory to create a single SQL file:
 
 ```shell
 ./dump-migrations.sh beckett 001.sql
