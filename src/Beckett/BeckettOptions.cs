@@ -41,7 +41,7 @@ public class BeckettOptions
     /// </summary>
     /// <param name="groupName">Subscription group name for the host</param>
     /// <param name="configure">Action to configure subscription options</param>
-    public void WithSubscriptions(string groupName, Action<SubscriptionOptions>? configure = null)
+    public void WithSubscriptionGroup(string groupName, Action<SubscriptionOptions>? configure = null)
     {
         Subscriptions.Enabled = true;
         Subscriptions.GroupName = groupName;
