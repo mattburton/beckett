@@ -3,6 +3,7 @@
 Event sourcing is a powerful pattern for building applications but reading and writing events using an event store is only half of the equation. Beckett aims to fill in the gaps:
 
 - Subscriptions - subscribe to messages and process them in order by stream
+  - Projections, read models, event handlers - add asynchronous, event-driven behavior to your applications
   - Horizontal scalability - use auto-scaling to have as many workers as needed processing messages in parallel where the work is distributed automatically across all available nodes without needing to manage the distribution by way of consumer groups or similar mechanisms
   - Retries - built-in retry support for failed messages - since messages are processed in order by stream per subscription, a failed message only blocks a single stream for a subscription at a time and the rest of the streams can continue processing for that subscription
 - Scheduled / recurring messages - schedule messages to be sent at a future time with cancellation support, or create a recurring schedule to send messages at a regular interval using cron expressions for scheduled jobs, etc...
