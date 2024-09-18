@@ -61,17 +61,9 @@ public class MessageTypeMap(
     {
         var messageType = _nameToTypeMap.GetOrAdd(
             name,
-            typeName =>
-            {
-                if (!options.AllowDynamicTypeMapping)
-                {
-                    throw new Exception(
-                        $"{nameof(MessageOptions.AllowDynamicTypeMapping)} is disabled - you must add a type mapping for {name}"
-                    );
-                }
-
-                return messageTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName));
-            }
+            typeName => options.AllowDynamicTypeMapping
+                ? messageTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName))
+                : null
         );
 
         if (messageType != null)
