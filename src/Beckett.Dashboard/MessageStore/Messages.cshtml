@@ -3,6 +3,7 @@
 
 @{
   Layout = new Layout();
+  DateTimeOffset? previousTimestamp = null;
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
@@ -27,7 +28,7 @@
   <thead>
     <tr>
       <th>Id</th>
-      <th>Stream Position</th>
+      <th style="width: 10em;">Stream Position</th>
       <th>Type</th>
       <th style="width: 20em;">Timestamp</th>
     </tr>
@@ -35,6 +36,10 @@
   <tbody>
   @foreach(var message in Model.Messages)
   {
+    var currentTimestamp = message.Timestamp;
+    var timeOffset = previousTimestamp.HasValue ? (currentTimestamp - previousTimestamp.Value).ToString(@"hh\:mm\:ss\.fff") : "";
+    previousTimestamp = currentTimestamp;
+
     <tr>
       <td>
         <a href="@Routes.Prefix/message-store/messages/@message.Id">@message.Id</a>
@@ -43,6 +48,10 @@
       <td>@message.Type</td>
       <td>
         <span class="timestamp">@message.Timestamp</span>
+        @if (!string.IsNullOrEmpty(timeOffset))
+        {
+        <small class="text-muted"> +@timeOffset</small>
+        }
       </td>
     </tr>
   }
