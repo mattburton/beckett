@@ -14,7 +14,7 @@ public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessageResult?>
     )
     {
         command.CommandText = $@"
-            select {schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
+            select {schema}.stream_category(stream_name) as category, stream_name, type, timestamp, data, metadata
             from {schema}.messages
             where id = $1
             and deleted = false
@@ -36,7 +36,7 @@ public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessageResult?>
             return null;
         }
 
-        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(4)) ??
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(5)) ??
                        throw new InvalidOperationException($"Unable to deserialize metadata for message {id}");
 
         return !reader.HasRows
@@ -46,7 +46,8 @@ public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessageResult?>
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<string>(2),
-                reader.GetFieldValue<string>(3),
+                reader.GetFieldValue<DateTimeOffset>(3),
+                reader.GetFieldValue<string>(4),
                 metadata
             );
     }
