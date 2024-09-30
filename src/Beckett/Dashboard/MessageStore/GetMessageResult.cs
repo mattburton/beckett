@@ -5,6 +5,7 @@ public record GetMessageResult(
     string Category,
     string StreamName,
     string Type,
+    DateTimeOffset Timestamp,
     string Data,
     Dictionary<string, object> Metadata
 );

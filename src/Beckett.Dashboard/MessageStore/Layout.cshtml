@@ -40,11 +40,3 @@
 <div id="results">
   @RenderBody()
 </div>
-<script type="text/javascript">
-  window.addEventListener("load", () => {
-    document.querySelectorAll(".timestamp").forEach((element) => {
-      element.innerText = new Date(Date.parse(element.innerText)).toLocaleString()
-      element.classList.add("d-block");
-    });
-  });
-</script>

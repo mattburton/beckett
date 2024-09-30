@@ -15,7 +15,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition)
     )
     {
         command.CommandText = $@"
-            select id::text, {schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
+            select id::text, {schema}.stream_category(stream_name) as category, stream_name, type, timestamp, data, metadata
             from {schema}.messages
             where stream_name = $1
             and stream_position = $2
@@ -40,7 +40,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition)
             return null;
         }
 
-        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(5)) ??
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(6)) ??
                        throw new InvalidOperationException(
                            $"Unable to deserialize metadata for message at {streamName} and stream_position {streamPosition}"
                        );
@@ -52,7 +52,8 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition)
                 reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<string>(2),
                 reader.GetFieldValue<string>(3),
-                reader.GetFieldValue<string>(4),
+                reader.GetFieldValue<DateTimeOffset>(4),
+                reader.GetFieldValue<string>(5),
                 metadata
             );
     }

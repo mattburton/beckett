@@ -29,7 +29,7 @@
   </ol>
 </nav>
 
-<div class="row mt-4 w-75 mx-auto">
+<div class="row mt-4 mx-auto">
   <div class="col-sm-8 mb-3 mb-sm-0">
     <div class="card ms-4" style="max-height: 75vh">
       <div class="card-header">
@@ -50,6 +50,7 @@
         Metadata
       </div>
       <ul class="list-group list-group-flush">
+        <li class="list-group-item">timestamp: <span class="timestamp">@Model.Message.Timestamp</span></li>
         @foreach (var item in Model.Message.Metadata)
         {
           if (item.Key == MessageConstants.Metadata.CausationId)
