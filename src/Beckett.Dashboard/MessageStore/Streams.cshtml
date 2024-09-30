@@ -5,8 +5,8 @@
   Layout = new Layout();
 }
 
-<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 mb-0 text-bg-light rounded-3">
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
+  <ol class="breadcrumb p-3 mb-0 rounded-3">
     <li class="breadcrumb-item">
       <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
         Stream Categories
@@ -23,7 +23,7 @@
     <thead>
     <tr>
       <th>Stream Name</th>
-      <th style="width: 20em;">Last Updated</th>
+      <th style="width: 18em;">Last Updated</th>
     </tr>
     </thead>
     <tbody>
@@ -34,7 +34,7 @@
           <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)/@HttpUtility.UrlEncode(stream.StreamName)">@stream.StreamName</a>
         </td>
         <td>
-          <span class="timestamp">@stream.LastUpdated</span>
+          <span class="timestamp">@stream.LastUpdated.ToString("O")</span>
         </td>
       </tr>
     }

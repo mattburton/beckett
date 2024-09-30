@@ -10,11 +10,23 @@ public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQue
     public async Task<GetMessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select {options.Schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
-            from {options.Schema}.messages
-            where id = $1
-            and deleted = false
-            order by stream_position;
+            SELECT {options.Schema}.stream_category(m.stream_name) AS category,
+                   m.stream_name,
+                   m.global_position,
+                   m.stream_position,
+                   (
+                        SELECT MAX(stream_position) as stream_version
+                        FROM {options.Schema}.messages
+                        WHERE stream_name = m.stream_name
+                        AND deleted = false
+                   ) as stream_version,
+                   m.type,
+                   m.timestamp,
+                   m.data,
+                   m.metadata
+            FROM {options.Schema}.messages AS m
+            WHERE m.id = $1
+            AND m.deleted = false;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
@@ -35,7 +47,7 @@ public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQue
             return null;
         }
 
-        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(4)) ??
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(8)) ??
                        throw new InvalidOperationException($"Unable to deserialize metadata for message {id}");
 
         return !reader.HasRows
@@ -44,8 +56,12 @@ public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQue
                 id.ToString(),
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),
-                reader.GetFieldValue<string>(2),
-                reader.GetFieldValue<string>(3),
+                reader.GetFieldValue<long>(2),
+                reader.GetFieldValue<long>(3),
+                reader.GetFieldValue<long>(4),
+                reader.GetFieldValue<string>(5),
+                reader.GetFieldValue<DateTimeOffset>(6),
+                reader.GetFieldValue<string>(7),
                 metadata
             );
     }

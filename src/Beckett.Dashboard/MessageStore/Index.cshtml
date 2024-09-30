@@ -5,8 +5,8 @@
   Layout = new Layout();
 }
 
-<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 mb-0 text-bg-light rounded-3">
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
+  <ol class="breadcrumb p-3 mb-0 rounded-3">
     <li class="breadcrumb-item active" aria-current="page">
       Stream Categories
     </li>
@@ -18,7 +18,7 @@
     <thead>
     <tr>
       <th>Name</th>
-      <th style="width: 20em;">Last Updated</th>
+      <th style="width: 18em;">Last Updated</th>
     </tr>
     </thead>
     <tbody>
@@ -29,7 +29,7 @@
           <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(category.Name)">@category.Name</a>
         </td>
         <td>
-          <span class="timestamp">@category.LastUpdated</span>
+          <span class="timestamp">@category.LastUpdated.ToString("O")</span>
         </td>
       </tr>
     }

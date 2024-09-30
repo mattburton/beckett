@@ -10,12 +10,25 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
     public async Task<GetMessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select id::text, {options.Schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
-            from {options.Schema}.messages
-            where stream_name = $1
-            and stream_position = $2
-            and deleted = false
-            order by stream_position;
+            SELECT id::text,
+                   {options.Schema}.stream_category(m.stream_name) AS category,
+                   m.stream_name,
+                   m.global_position,
+                   m.stream_position,
+                   (
+                        SELECT MAX(stream_position) as stream_version
+                        FROM {options.Schema}.messages
+                        WHERE stream_name = m.stream_name
+                        AND deleted = false
+                   ) as stream_version,
+                   m.type,
+                   m.timestamp,
+                   m.data,
+                   m.metadata
+            FROM {options.Schema}.messages AS m
+            WHERE m.stream_name = $1
+            AND m.stream_position = $2
+            AND m.deleted = false;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -38,7 +51,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
             return null;
         }
 
-        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(5)) ??
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(9)) ??
                        throw new InvalidOperationException(
                            $"Unable to deserialize metadata for message at {streamName} and stream_position {streamPosition}"
                        );
@@ -49,8 +62,12 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<string>(2),
-                reader.GetFieldValue<string>(3),
-                reader.GetFieldValue<string>(4),
+                reader.GetFieldValue<long>(3),
+                reader.GetFieldValue<long>(4),
+                reader.GetFieldValue<long>(5),
+                reader.GetFieldValue<string>(6),
+                reader.GetFieldValue<DateTimeOffset>(7),
+                reader.GetFieldValue<string>(8),
                 metadata
             );
     }
