@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Messages;
@@ -11,7 +12,6 @@ namespace Beckett.Scheduling;
 
 public class MessageScheduler(
     IPostgresDatabase database,
-    IMessageSerializer messageSerializer,
     IInstrumentation instrumentation
 ) : IMessageScheduler, ITransactionalMessageScheduler
 {
@@ -92,7 +92,7 @@ public class MessageScheduler(
         var messageToSchedule = message;
         var messageMetadata = new Dictionary<string, object>(metadata);
 
-        if (message is MessageMetadataWrapper messageWithMetadata)
+        if (messageToSchedule is MessageMetadataWrapper messageWithMetadata)
         {
             foreach (var item in messageWithMetadata.Metadata) messageMetadata.TryAdd(item.Key, item.Value);
 
@@ -105,8 +105,7 @@ public class MessageScheduler(
             id,
             messageToSchedule,
             messageMetadata,
-            deliverAt,
-            messageSerializer
+            deliverAt
         );
 
         await database.Execute(
@@ -119,23 +118,39 @@ public class MessageScheduler(
         return id;
     }
 
-    private (string Type, string Data, string Metadata) BuildRecurringMessage(object message)
+    private (string Type, JsonDocument Data, JsonDocument Metadata) BuildRecurringMessage(object message)
     {
+        var messageType = message.GetType();
         var recurringMessage = message;
         var metadata = new Dictionary<string, object>();
+        string? typeName = null;
 
-        if (message is MessageMetadataWrapper messageWithMetadata)
+        if (recurringMessage is MessageMetadataWrapper messageWithMetadata)
         {
             foreach (var item in messageWithMetadata.Metadata)
             {
                 metadata.TryAdd(item.Key, item.Value);
             }
 
+            messageType = messageWithMetadata.Message.GetType();
             recurringMessage = messageWithMetadata.Message;
         }
 
-        var (_, type, data, metadataJson) = messageSerializer.Serialize(recurringMessage, metadata);
+        if (recurringMessage is Message genericMessage)
+        {
+            foreach (var item in genericMessage.Metadata)
+            {
+                metadata.TryAdd(item.Key, item.Value);
+            }
 
-        return (type, data, metadataJson);
+            typeName = genericMessage.Type;
+            recurringMessage = genericMessage.Data;
+        }
+
+        var type = typeName ?? MessageTypeMap.GetName(messageType);
+        var data = StaticMessageSerializer.Serialize(recurringMessage);
+        var metadataDocument = metadata.ToJsonDocument();
+
+        return (type, data, metadataDocument);
     }
 }

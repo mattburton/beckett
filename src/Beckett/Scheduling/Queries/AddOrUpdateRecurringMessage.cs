@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
@@ -9,8 +10,8 @@ public class AddOrUpdateRecurringMessage(
     string cronExpression,
     string streamName,
     string type,
-    string data,
-    string metadata,
+    JsonDocument data,
+    JsonDocument metadata,
     DateTimeOffset nextOccurrence
 ) : IPostgresDatabaseQuery<int>
 {

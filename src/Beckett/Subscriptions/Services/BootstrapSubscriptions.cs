@@ -1,6 +1,5 @@
 using Beckett.Database;
 using Beckett.Database.Types;
-using Beckett.Messages;
 using Beckett.Subscriptions.Initialization;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +11,6 @@ namespace Beckett.Subscriptions.Services;
 public class BootstrapSubscriptions(
     IPostgresDatabase database,
     ISubscriptionRegistry subscriptionRegistry,
-    IMessageTypeMap messageTypeMap,
     BeckettOptions options,
     ISubscriptionInitializer subscriptionInitializer,
     IServiceProvider serviceProvider,
@@ -47,8 +45,6 @@ public class BootstrapSubscriptions(
                 EnsureSubscriptionHandlerIsRegistered(subscription);
 
                 subscription.EnsureHandlerIsConfigured();
-
-                subscription.MapMessageTypeNames(messageTypeMap);
 
                 logger.LogTrace(
                     "Adding or updating subscription {Name} in group {GroupName}",

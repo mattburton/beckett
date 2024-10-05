@@ -1,12 +1,12 @@
 using System.Reflection;
 
-namespace Beckett.Messages;
+namespace Beckett.Subscriptions.Retries;
 
-public class MessageTypeProvider : IMessageTypeProvider
+public static class ExceptionTypeProvider
 {
-    private readonly Lazy<Type[]> _types = new(LoadTypes);
+    private static readonly Lazy<Type[]> Types = new(LoadTypes);
 
-    public Type? FindMatchFor(Predicate<Type> criteria) => Array.Find(_types.Value, criteria);
+    public static Type? FindMatchFor(Predicate<Type> criteria) => Array.Find(Types.Value, criteria);
 
     private static Type[] LoadTypes() =>
         AppDomain.CurrentDomain.GetAssemblies().SelectMany(

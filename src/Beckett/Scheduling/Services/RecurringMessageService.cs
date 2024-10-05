@@ -1,6 +1,5 @@
 using Beckett.Database;
 using Beckett.Database.Models;
-using Beckett.MessageStorage.Postgres;
 using Beckett.Scheduling.Queries;
 using Cronos;
 using Microsoft.Extensions.Hosting;
@@ -13,7 +12,6 @@ public class RecurringMessageService(
     IRecurringMessageRegistry recurringMessageRegistry,
     IPostgresDatabase database,
     BeckettOptions options,
-    IPostgresMessageDeserializer messageDeserializer,
     IMessageStore messageStore,
     ILogger<RecurringMessageService> logger
 ) : BackgroundService
@@ -55,35 +53,24 @@ public class RecurringMessageService(
 
                 foreach (var streamGroup in results.GroupBy(x => x.StreamName))
                 {
-                    foreach (var recurringMessage in streamGroup)
-                    {
-                        var result = messageDeserializer.Deserialize(recurringMessage);
-
-                        if (result == null)
-                        {
-                            continue;
-                        }
-
-                        recurringMessages.Add(
-                            new ScheduledMessageContext(
+                    recurringMessages.AddRange(
+                        streamGroup.Select(
+                            recurringMessage => new ScheduledMessageContext(
                                 recurringMessage.StreamName,
-                                result.Value.Message,
-                                result.Value.Metadata
+                                recurringMessage.ToMessage()
                             )
-                        );
-                    }
+                        )
+                    );
                 }
 
                 await UpdateRecurringMessageNextOccurrences(connection, transaction, results, stoppingToken);
 
                 foreach (var recurringMessagesForStream in recurringMessages.GroupBy(x => x.StreamName))
                 {
-                    var messages = recurringMessagesForStream.Select(x => x.Message.WithMetadata(x.Metadata));
-
                     await messageStore.AppendToStream(
                         recurringMessagesForStream.Key,
                         ExpectedVersion.Any,
-                        messages,
+                        recurringMessagesForStream.Select(x => x.Message),
                         stoppingToken
                     );
                 }

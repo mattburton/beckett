@@ -31,18 +31,40 @@ public class MessageStore(
 
         foreach (var message in messages)
         {
+            string? typeName = null;
             var messageToAppend = message;
+            var metadataForMessage = new Dictionary<string, object>(metadata);
 
-            var messageMetadata = new Dictionary<string, object>(metadata);
-
-            if (message is MessageMetadataWrapper messageWithMetadata)
+            switch (message)
             {
-                foreach (var item in messageWithMetadata.Metadata) messageMetadata.TryAdd(item.Key, item.Value);
+                case MessageMetadataWrapper messageWithMetadata:
+                {
+                    foreach (var item in messageWithMetadata.Metadata)
+                    {
+                        metadataForMessage.TryAdd(item.Key, item.Value);
+                    }
 
-                messageToAppend = messageWithMetadata.Message;
+                    typeName = MessageTypeMap.GetName(messageWithMetadata.Message.GetType());
+                    messageToAppend = messageWithMetadata.Message;
+                    break;
+                }
+                case Message genericMessage:
+                {
+                    foreach (var item in genericMessage.Metadata)
+                    {
+                        metadataForMessage.TryAdd(item.Key, item.Value);
+                    }
+
+                    typeName = genericMessage.Type;
+                    messageToAppend = genericMessage.Data;
+                    break;
+                }
             }
 
-            messagesToAppend.Add(new MessageEnvelope(messageToAppend, messageMetadata));
+            var type = typeName ?? MessageTypeMap.GetName(message.GetType());
+            var data = StaticMessageSerializer.Serialize(messageToAppend);
+
+            messagesToAppend.Add(new MessageEnvelope(type, data, metadataForMessage));
         }
 
         var result = await messageStorage.AppendToStream(

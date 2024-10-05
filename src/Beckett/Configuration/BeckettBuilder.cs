@@ -11,7 +11,6 @@ public class BeckettBuilder(
     IConfiguration configuration,
     IHostEnvironment environment,
     IServiceCollection services,
-    IMessageTypeMap messageTypeMap,
     ISubscriptionRegistry subscriptionRegistry,
     IRecurringMessageRegistry recurringMessageRegistry
 ) : IBeckettBuilder
@@ -30,9 +29,9 @@ public class BeckettBuilder(
         return new SubscriptionBuilder(subscription);
     }
 
-    public void Map<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
+    public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
 
-    public void Map(Type type, string name) => messageTypeMap.Map(type, name);
+    public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
 
     public void AddRecurringMessage<TMessage>(
         string name,

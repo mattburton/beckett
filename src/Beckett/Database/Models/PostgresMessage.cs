@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Npgsql;
 
 namespace Beckett.Database.Models;
@@ -10,8 +11,8 @@ public class PostgresMessage
     public required long StreamPosition { get; init; }
     public required long GlobalPosition { get; init; }
     public required string Type { get; init; }
-    public required string Data { get; init; }
-    public required string Metadata { get; init; }
+    public required JsonDocument Data { get; init; }
+    public required JsonDocument Metadata { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 
     public static PostgresMessage From(NpgsqlDataReader reader) =>
@@ -23,8 +24,8 @@ public class PostgresMessage
             StreamPosition = reader.GetFieldValue<long>(3),
             GlobalPosition = reader.GetFieldValue<long>(4),
             Type = reader.GetFieldValue<string>(5),
-            Data = reader.GetFieldValue<string>(6),
-            Metadata = reader.GetFieldValue<string>(7),
+            Data = reader.GetFieldValue<JsonDocument>(6),
+            Metadata = reader.GetFieldValue<JsonDocument>(7),
             Timestamp = reader.GetFieldValue<DateTimeOffset>(8)
         };
 }

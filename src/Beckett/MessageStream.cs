@@ -23,7 +23,8 @@ public readonly struct MessageStream(
     /// <summary>
     /// The stream messages
     /// </summary>
-    public IReadOnlyList<object> Messages => RawMessages.Select(x => x.Message).ToList();
+    public IReadOnlyList<object> Messages => RawMessages.Where(x => x.ResolvedMessage.Value != null)
+        .Select(x => x.ResolvedMessage.Value!).ToList();
 
     /// <summary>
     /// Whether the current stream is empty / does not exist (has zero messages)

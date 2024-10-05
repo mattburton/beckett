@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.MessageStorage.Postgres;
 using Beckett.Scheduling.Queries;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -9,7 +8,6 @@ namespace Beckett.Scheduling.Services;
 public class ScheduledMessageService(
     IPostgresDatabase database,
     BeckettOptions options,
-    IPostgresMessageDeserializer messageDeserializer,
     IMessageStore messageStore,
     ILogger<ScheduledMessageService> logger
 ) : BackgroundService
@@ -36,32 +34,21 @@ public class ScheduledMessageService(
                 var scheduledMessages = new List<ScheduledMessageContext>();
 
                 foreach (var streamGroup in results.GroupBy(x => x.StreamName))
-                foreach (var scheduledMessage in streamGroup)
-                {
-                    var result = messageDeserializer.Deserialize(scheduledMessage);
-
-                    if (result == null)
-                    {
-                        continue;
-                    }
-
-                    scheduledMessages.Add(
-                        new ScheduledMessageContext(
-                            scheduledMessage.StreamName,
-                            result.Value.Message,
-                            result.Value.Metadata
+                    scheduledMessages.AddRange(
+                        streamGroup.Select(
+                            scheduledMessage => new ScheduledMessageContext(
+                                scheduledMessage.StreamName,
+                                scheduledMessage.ToMessage()
+                            )
                         )
                     );
-                }
 
                 foreach (var scheduledMessagesForStream in scheduledMessages.GroupBy(x => x.StreamName))
                 {
-                    var messages = scheduledMessagesForStream.Select(x => x.Message.WithMetadata(x.Metadata));
-
                     await messageStore.AppendToStream(
                         scheduledMessagesForStream.Key,
                         ExpectedVersion.Any,
-                        messages,
+                        scheduledMessagesForStream.Select(x => x.Message),
                         stoppingToken
                     );
                 }

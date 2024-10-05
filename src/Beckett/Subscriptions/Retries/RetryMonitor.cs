@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.Messages;
 using Beckett.Scheduling;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries.Events;
@@ -14,7 +13,6 @@ public class RetryMonitor(
     IPostgresDatabase database,
     BeckettOptions options,
     ISubscriptionRegistry subscriptionRegistry,
-    IMessageTypeProvider messageTypeProvider,
     IMessageStore messageStore,
     ITransactionalMessageScheduler messageScheduler,
     ILogger<RetryMonitor> logger
@@ -65,7 +63,7 @@ public class RetryMonitor(
                     continue;
                 }
 
-                var exceptionType = messageTypeProvider.FindMatchFor(x => x.FullName == retry.Error.Type);
+                var exceptionType = ExceptionTypeProvider.FindMatchFor(x => x.FullName == retry.Error.Type);
 
                 if (exceptionType == null)
                 {

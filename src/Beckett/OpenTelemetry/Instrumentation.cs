@@ -15,7 +15,6 @@ public class Instrumentation : IInstrumentation, IDisposable
     private readonly ActivitySource _activitySource;
     private readonly IPostgresDatabase _database;
     private readonly ILogger<Instrumentation> _logger;
-    private readonly IMessageTypeMap _messageTypeMap;
     private readonly Meter? _meter;
     private readonly BeckettOptions _options;
     private readonly TextMapPropagator _propagator;
@@ -23,13 +22,11 @@ public class Instrumentation : IInstrumentation, IDisposable
     public Instrumentation(
         IPostgresDatabase database,
         IMeterFactory meterFactory,
-        IMessageTypeMap messageTypeMap,
         BeckettOptions options,
         ILogger<Instrumentation> logger
     )
     {
         _database = database;
-        _messageTypeMap = messageTypeMap;
         _options = options;
         _logger = logger;
 
@@ -191,7 +188,7 @@ public class Instrumentation : IInstrumentation, IDisposable
         activity.AddTag(TelemetryConstants.Message.StreamName, messageContext.StreamName);
         activity.AddTag(TelemetryConstants.Message.GlobalPosition, messageContext.GlobalPosition);
         activity.AddTag(TelemetryConstants.Message.StreamPosition, messageContext.StreamPosition);
-        activity.AddTag(TelemetryConstants.Message.Type, _messageTypeMap.GetName(messageContext.Type));
+        activity.AddTag(TelemetryConstants.Message.Type, messageContext.Type);
 
         activity.AddBaggage(TelemetryConstants.Message.Id, messageContext.Id);
 

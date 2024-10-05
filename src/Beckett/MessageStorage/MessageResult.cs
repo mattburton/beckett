@@ -1,3 +1,6 @@
+using System.Text.Json;
+using Beckett.Messages;
+
 namespace Beckett.MessageStorage;
 
 public readonly struct MessageResult(
@@ -5,8 +8,8 @@ public readonly struct MessageResult(
     string streamName,
     long streamPosition,
     long globalPosition,
-    Type type,
-    object message,
+    string type,
+    JsonDocument data,
     IDictionary<string, object> metadata,
     DateTimeOffset timestamp
 )
@@ -15,8 +18,13 @@ public readonly struct MessageResult(
     public string StreamName { get; } = streamName;
     public long StreamPosition { get; } = streamPosition;
     public long GlobalPosition { get; } = globalPosition;
-    public Type Type { get; } = type;
-    public object Message { get; } = message;
+    public string Type { get; } = type;
+    public JsonDocument Data { get; } = data;
     public IDictionary<string, object> Metadata { get; } = metadata;
     public DateTimeOffset Timestamp { get; } = timestamp;
+
+    public Lazy<Type?> ResolvedType { get; } =
+        new(MessageTypeMap.TryGetType(type, out var resolvedType) ? resolvedType : null);
+
+    public Lazy<object?> ResolvedMessage { get; } = new(StaticMessageSerializer.Deserialize(type, data));
 }

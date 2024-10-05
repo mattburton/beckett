@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Beckett;
 
 public interface IMessageContext
@@ -23,14 +25,14 @@ public interface IMessageContext
     long GlobalPosition { get; }
 
     /// <summary>
-    /// The .NET type of the message as mapped from the message store
+    /// The message type
     /// </summary>
-    Type Type { get; }
+    string Type { get; }
 
     /// <summary>
-    /// The message body deserialized as its corresponding .NET type
+    /// Message data
     /// </summary>
-    object Message { get; }
+    JsonDocument Data { get; }
 
     /// <summary>
     /// Message metadata
@@ -41,6 +43,16 @@ public interface IMessageContext
     /// The timestamp of when the message was written to the message store
     /// </summary>
     DateTimeOffset Timestamp { get; }
+
+    /// <summary>
+    /// The .NET type of the message based on the mapped message types, or null if the type is not mapped
+    /// </summary>
+    Lazy<Type?> ResolvedType { get; }
+
+    /// <summary>
+    /// The message data deserialized as an instance of the resolved .NET type, or null if the type is not mapped
+    /// </summary>
+    Lazy<object?> ResolvedMessage { get; }
 
     /// <summary>
     /// Service provider that can be used to resolve services within a handler. For a static handler function this will

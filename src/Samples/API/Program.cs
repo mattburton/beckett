@@ -8,13 +8,14 @@ using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using TodoList;
 using TodoList.Infrastructure.Database;
 
 var builder = WebApplication.CreateBuilder(args);
 
 await builder.AddTodoListDatabase();
 
-builder.AddBeckett();
+builder.AddBeckett().TodoListMessages();
 
 builder.Services.Configure<JsonOptions>(
     options => { options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower; }

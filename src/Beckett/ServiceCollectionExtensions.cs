@@ -3,7 +3,6 @@ using Beckett.Dashboard;
 using Beckett.Database;
 using Beckett.Messages;
 using Beckett.MessageStorage;
-using Beckett.MessageStorage.Postgres;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling;
 using Beckett.Subscriptions;
@@ -39,13 +38,11 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddDashboardSupport();
 
-        builder.Services.AddMessageSupport(options);
+        builder.Services.AddMessageSupport();
 
         builder.Services.AddMessageStorageSupport(options);
 
         builder.Services.AddOpenTelemetrySupport();
-
-        builder.Services.AddPostgresMessageStorageSupport();
 
         builder.Services.AddPostgresSupport(options);
 
@@ -54,14 +51,6 @@ public static class ServiceCollectionExtensions
         builder.Services.AddScheduledMessageSupport(options);
 
         builder.Services.AddSubscriptionSupport(options);
-
-        var messageTypeProvider = new MessageTypeProvider();
-
-        builder.Services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
-
-        var messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
-
-        builder.Services.AddSingleton<IMessageTypeMap>(messageTypeMap);
 
         var subscriptionRegistry = new SubscriptionRegistry();
 
@@ -75,7 +64,6 @@ public static class ServiceCollectionExtensions
             builder.Configuration,
             builder.Environment,
             builder.Services,
-            messageTypeMap,
             subscriptionRegistry,
             recurringMessageRegistry
         ).RetrySupport(options);
@@ -112,13 +100,11 @@ public static class ServiceCollectionExtensions
 
                 services.AddDashboardSupport();
 
-                services.AddMessageSupport(options);
+                services.AddMessageSupport();
 
                 services.AddMessageStorageSupport(options);
 
                 services.AddOpenTelemetrySupport();
-
-                services.AddPostgresMessageStorageSupport();
 
                 services.AddPostgresSupport(options);
 
@@ -127,14 +113,6 @@ public static class ServiceCollectionExtensions
                 services.AddScheduledMessageSupport(options);
 
                 services.AddSubscriptionSupport(options);
-
-                var messageTypeProvider = new MessageTypeProvider();
-
-                services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
-
-                var messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
-
-                services.AddSingleton<IMessageTypeMap>(messageTypeMap);
 
                 var subscriptionRegistry = new SubscriptionRegistry();
 
@@ -148,7 +126,6 @@ public static class ServiceCollectionExtensions
                     configuration,
                     environment,
                     services,
-                    messageTypeMap,
                     subscriptionRegistry,
                     recurringMessageRegistry
                 ).RetrySupport(options);

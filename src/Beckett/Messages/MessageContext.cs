@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Beckett.Messages;
 
 public readonly record struct MessageContext(
@@ -5,9 +7,14 @@ public readonly record struct MessageContext(
     string StreamName,
     long StreamPosition,
     long GlobalPosition,
-    Type Type,
-    object Message,
+    string Type,
+    JsonDocument Data,
     IDictionary<string, object> Metadata,
     DateTimeOffset Timestamp,
     IServiceProvider Services
-) : IMessageContext;
+) : IMessageContext
+{
+    public Lazy<Type?> ResolvedType { get; } = new(MessageTypeMap.TryGetType(Type, out var type) ? type : null);
+
+    public Lazy<object?> ResolvedMessage { get; } = new(StaticMessageSerializer.Deserialize(Type, Data));
+}
