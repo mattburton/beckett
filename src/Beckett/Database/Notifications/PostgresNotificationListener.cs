@@ -7,7 +7,7 @@ using Timer = System.Timers.Timer;
 namespace Beckett.Database.Notifications;
 
 public class PostgresNotificationListener(
-    IPostgresDatabase database,
+    NpgsqlDataSource dataSource,
     IEnumerable<IPostgresNotificationHandler> notificationHandlers,
     ILogger<PostgresNotificationListener> logger
 ) : IPostgresNotificationListener
@@ -30,7 +30,7 @@ public class PostgresNotificationListener(
         {
             try
             {
-                await using var connection = database.CreateConnection();
+                await using var connection = dataSource.CreateConnection();
 
                 connection.Notification += NotificationEventHandler;
 

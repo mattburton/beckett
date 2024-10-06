@@ -26,6 +26,7 @@ public class PostgresOptions
     public bool PrepareStatements { get; set; } = true;
 
     internal NpgsqlDataSource? DataSource { get; private set; }
+    internal NpgsqlDataSource? NotificationsDataSource { get; private set; }
 
     /// <summary>
     /// Configure the database schema where Beckett will create the tables and functions it uses at runtime. Defaults to
@@ -48,6 +49,14 @@ public class PostgresOptions
     public void UseDataSource(NpgsqlDataSource dataSource) => DataSource = dataSource;
 
     /// <summary>
+    /// Configure the <see cref="NpgsqlDataSource"/> that Beckett should use for notifications. This data source must
+    /// have had the Beckett types configured while building it - this can be done using the <c>AddBeckett()</c>
+    /// extension method on <see cref="NpgsqlDataSourceBuilder"/>.
+    /// </summary>
+    /// <param name="dataSource"></param>
+    public void UseNotificationsDataSource(NpgsqlDataSource dataSource) => NotificationsDataSource = dataSource;
+
+    /// <summary>
     /// Configure a specific database connection string for Beckett to use.
     /// </summary>
     /// <param name="connectionString"></param>
@@ -61,5 +70,21 @@ public class PostgresOptions
         };
 
         DataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).AddBeckett().Build();
+    }
+
+    /// <summary>
+    /// Configure a specific database connection string for Beckett to use for notifications.
+    /// </summary>
+    /// <param name="connectionString"></param>
+    public void UseNotificationsConnectionString(string connectionString)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = Schema
+        };
+
+        NotificationsDataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).AddBeckett().Build();
     }
 }
