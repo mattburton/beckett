@@ -7,13 +7,24 @@ public class PostgresOptions
     public const string DefaultSchema = "beckett";
 
     /// <summary>
+    /// The Postgres database schema to use for Beckett.
+    /// </summary>
+    public string Schema { get; private set; } = DefaultSchema;
+
+    /// <summary>
     /// Configure whether to use Postgres notifications (via NOTIFY / LISTEN) to trigger Beckett to look for work to do
     /// in various situations (new messages available, new retries, etc...) This can be far more efficient than polling
     /// but may not be supported in all database deployment scenarios. Enabled by default.
     /// </summary>
     public bool Notifications { get; set; } = true;
 
-    internal string Schema { get; private set; } = DefaultSchema;
+    /// <summary>
+    /// Prepare statements prior to their execution. When using client-side connection pooling this is recommended as
+    /// it will increase performance, however if you are using an external connection pool such as pgbouncer then this
+    /// should be disabled. Enabled by default.
+    /// </summary>
+    public bool PrepareStatements { get; set; } = true;
+
     internal NpgsqlDataSource? DataSource { get; private set; }
 
     /// <summary>

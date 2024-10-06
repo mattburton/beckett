@@ -6,12 +6,12 @@ using NpgsqlTypes;
 namespace Beckett.Scheduling.Queries;
 
 public class GetRecurringMessagesToDeliver(
-    int batchSize
+    int batchSize,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<IReadOnlyList<PostgresRecurringMessage>>
 {
     public async Task<IReadOnlyList<PostgresRecurringMessage>> Execute(
         NpgsqlCommand command,
-        string schema,
         CancellationToken cancellationToken
     )
     {
@@ -24,12 +24,15 @@ public class GetRecurringMessagesToDeliver(
                    metadata,
                    next_occurrence,
                    timestamp
-            from {schema}.get_recurring_messages_to_deliver($1);
+            from {options.Schema}.get_recurring_messages_to_deliver($1);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = batchSize;
 

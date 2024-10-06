@@ -5,7 +5,7 @@ namespace Beckett.Subscriptions.Queries;
 
 public class TryAdvisoryLock(long advisoryLockId) : IPostgresDatabaseQuery<bool>
 {
-    public async Task<bool> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<bool> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $"select pg_try_advisory_lock({advisoryLockId});";
 

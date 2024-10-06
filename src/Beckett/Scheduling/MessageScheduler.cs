@@ -11,12 +11,13 @@ namespace Beckett.Scheduling;
 
 public class MessageScheduler(
     IPostgresDatabase database,
-    IInstrumentation instrumentation
+    IInstrumentation instrumentation,
+    PostgresOptions options
 ) : IMessageScheduler, ITransactionalMessageScheduler
 {
     public Task CancelScheduledMessage(Guid id, CancellationToken cancellationToken)
     {
-        return database.Execute(new CancelScheduledMessage(id), cancellationToken);
+        return database.Execute(new CancelScheduledMessage(id, options), cancellationToken);
     }
 
     public async Task RecurringMessage(
@@ -45,7 +46,8 @@ public class MessageScheduler(
                 cronExpression,
                 streamName,
                 message,
-                nextOccurrence.Value
+                nextOccurrence.Value,
+                options
             ),
             cancellationToken
         );
@@ -95,7 +97,7 @@ public class MessageScheduler(
         );
 
         await database.Execute(
-            new ScheduleMessage(streamName, scheduledMessage),
+            new ScheduleMessage(streamName, scheduledMessage, options),
             connection,
             transaction,
             cancellationToken

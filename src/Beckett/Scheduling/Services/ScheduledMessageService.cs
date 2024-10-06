@@ -25,7 +25,7 @@ public class ScheduledMessageService(
                 await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
                 var results = await database.Execute(
-                    new GetScheduledMessagesToDeliver(options.Scheduling.BatchSize),
+                    new GetScheduledMessagesToDeliver(options.Scheduling.BatchSize, options.Postgres),
                     connection,
                     transaction,
                     stoppingToken

@@ -3,19 +3,15 @@ using Npgsql;
 
 namespace Beckett.Dashboard.Metrics.Queries;
 
-public class GetSubscriptionLag : IPostgresDatabaseQuery<long>
+public class GetSubscriptionLag(PostgresOptions options) : IPostgresDatabaseQuery<long>
 {
-    public async Task<long> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             WITH lagging AS (
                 SELECT COUNT(*) AS lagging
-                FROM {schema}.subscriptions s
-                INNER JOIN {schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                FROM {options.Schema}.subscriptions s
+                INNER JOIN {options.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
                 WHERE s.status = 'active'
                 AND c.status = 'lagging'
                 GROUP BY c.group_name, c.name
@@ -24,7 +20,10 @@ public class GetSubscriptionLag : IPostgresDatabaseQuery<long>
             FROM lagging l;
         ";
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         return (long)(await command.ExecuteScalarAsync(cancellationToken))!;
     }

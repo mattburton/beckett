@@ -5,17 +5,13 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessageResult?>
+public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<GetMessageResult?>
 {
-    public async Task<GetMessageResult?> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<GetMessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select {schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
-            from {schema}.messages
+            select {options.Schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
+            from {options.Schema}.messages
             where id = $1
             and deleted = false
             order by stream_position;
@@ -23,7 +19,10 @@ public class GetMessage(Guid id) : IPostgresDatabaseQuery<GetMessageResult?>
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = id;
 

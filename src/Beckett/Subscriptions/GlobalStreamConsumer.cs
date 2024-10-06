@@ -43,7 +43,8 @@ public class GlobalStreamConsumer(
                     new LockCheckpoint(
                         options.Subscriptions.GroupName,
                         GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName
+                        GlobalCheckpoint.StreamName,
+                        options.Postgres
                     ),
                     connection,
                     transaction,
@@ -108,7 +109,7 @@ public class GlobalStreamConsumer(
                 if (checkpoints.Count > 0)
                 {
                     await database.Execute(
-                        new RecordCheckpoints(checkpoints.ToArray()),
+                        new RecordCheckpoints(checkpoints.ToArray(), options.Postgres),
                         connection,
                         transaction,
                         stoppingToken
@@ -129,7 +130,8 @@ public class GlobalStreamConsumer(
                         GlobalCheckpoint.Name,
                         GlobalCheckpoint.StreamName,
                         newGlobalPosition,
-                        newGlobalPosition
+                        newGlobalPosition,
+                        options.Postgres
                     ),
                     connection,
                     transaction,

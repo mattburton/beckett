@@ -3,22 +3,21 @@ using Npgsql;
 
 namespace Beckett.Dashboard.Subscriptions.Queries;
 
-public class GetRetries : IPostgresDatabaseQuery<GetRetriesResult>
+public class GetRetries (PostgresOptions options) : IPostgresDatabaseQuery<GetRetriesResult>
 {
-    public async Task<GetRetriesResult> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<GetRetriesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT c.group_name, c.name, c.stream_name, c.stream_position, c.retry_id
-            FROM {schema}.checkpoints c
+            FROM {options.Schema}.checkpoints c
             WHERE c.status = 'retry'
             ORDER BY c.group_name, c.name, c.stream_name, c.stream_position;
         ";
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

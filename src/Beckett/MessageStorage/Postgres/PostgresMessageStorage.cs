@@ -4,7 +4,7 @@ using Beckett.MessageStorage.Postgres.Queries;
 
 namespace Beckett.MessageStorage.Postgres;
 
-public class PostgresMessageStorage(IPostgresDatabase database) : IMessageStorage
+public class PostgresMessageStorage(IPostgresDatabase database, PostgresOptions options) : IMessageStorage
 {
     public async Task<AppendToStreamResult> AppendToStream(
         string streamName,
@@ -16,7 +16,7 @@ public class PostgresMessageStorage(IPostgresDatabase database) : IMessageStorag
         var newMessages = messages.Select(x => MessageType.From(streamName, x)).ToArray();
 
         var streamVersion = await database.Execute(
-            new AppendToStream(streamName, expectedVersion.Value, newMessages),
+            new AppendToStream(streamName, expectedVersion.Value, newMessages, options),
             cancellationToken
         );
 
@@ -29,7 +29,10 @@ public class PostgresMessageStorage(IPostgresDatabase database) : IMessageStorag
         CancellationToken cancellationToken
     )
     {
-        var results = await database.Execute(new ReadGlobalStream(lastGlobalPosition, batchSize), cancellationToken);
+        var results = await database.Execute(
+            new ReadGlobalStream(lastGlobalPosition, batchSize, options),
+            cancellationToken
+        );
 
         var items = new List<GlobalStreamItem>();
 
@@ -58,7 +61,10 @@ public class PostgresMessageStorage(IPostgresDatabase database) : IMessageStorag
         CancellationToken cancellationToken
     )
     {
-        var streamMessages = await database.Execute(new ReadStream(streamName, readOptions), cancellationToken);
+        var streamMessages = await database.Execute(
+            new ReadStream(streamName, readOptions, options),
+            cancellationToken
+        );
 
         var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[0].StreamVersion;
 

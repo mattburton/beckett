@@ -7,17 +7,21 @@ namespace Beckett.Scheduling.Queries;
 
 public class ScheduleMessage(
     string streamName,
-    ScheduledMessageType scheduledMessage
+    ScheduledMessageType scheduledMessage,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
-    public async Task<int> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {schema}.schedule_message($1, $2);";
+        command.CommandText = $"select {options.Schema}.schedule_message($1, $2);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.ScheduledMessage(schema) });
+        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.ScheduledMessage(options.Schema) });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = streamName;
         command.Parameters[1].Value = scheduledMessage;

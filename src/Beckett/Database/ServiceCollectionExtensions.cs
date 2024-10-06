@@ -9,7 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
     {
-        services.AddSingleton(options);
+        services.AddSingleton(options.Postgres);
 
         services.AddSingleton<IPostgresDatabase>(
             provider =>
@@ -23,7 +23,7 @@ public static class ServiceCollectionExtensions
                     );
                 }
 
-                return new PostgresDatabase(dataSource, options.Postgres);
+                return new PostgresDatabase(dataSource);
             }
         );
 

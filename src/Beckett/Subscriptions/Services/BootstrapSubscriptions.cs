@@ -30,7 +30,8 @@ public class BootstrapSubscriptions(
                 new EnsureCheckpointExists(
                     options.Subscriptions.GroupName,
                     GlobalCheckpoint.Name,
-                    GlobalCheckpoint.StreamName
+                    GlobalCheckpoint.StreamName,
+                    options.Postgres
                 ),
                 connection,
                 transaction,
@@ -54,7 +55,8 @@ public class BootstrapSubscriptions(
                 var status = await database.Execute(
                     new AddOrUpdateSubscription(
                         options.Subscriptions.GroupName,
-                        subscription.Name
+                        subscription.Name,
+                        options.Postgres
                     ),
                     connection,
                     transaction,
@@ -82,7 +84,11 @@ public class BootstrapSubscriptions(
                     );
 
                     await database.Execute(
-                        new SetSubscriptionToActive(options.Subscriptions.GroupName, subscription.Name),
+                        new SetSubscriptionToActive(
+                            options.Subscriptions.GroupName,
+                            subscription.Name,
+                            options.Postgres
+                        ),
                         connection,
                         transaction,
                         cancellationToken
@@ -112,7 +118,7 @@ public class BootstrapSubscriptions(
             if (checkpoints.Count > 0)
             {
                 await database.Execute(
-                    new RecordCheckpoints(checkpoints.ToArray()),
+                    new RecordCheckpoints(checkpoints.ToArray(), options.Postgres),
                     connection,
                     transaction,
                     cancellationToken

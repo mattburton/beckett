@@ -3,23 +3,22 @@ using Npgsql;
 
 namespace Beckett.Dashboard.Subscriptions.Queries;
 
-public class GetFailed : IPostgresDatabaseQuery<GetFailedResult>
+public class GetFailed(PostgresOptions options) : IPostgresDatabaseQuery<GetFailedResult>
 {
-    public async Task<GetFailedResult> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<GetFailedResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT group_name, name, stream_name, stream_position, retry_id
-            FROM {schema}.checkpoints
+            FROM {options.Schema}.checkpoints
             WHERE status = 'failed'
             AND retry_id IS NOT NULL
             ORDER BY group_name, name, stream_name, stream_position;
         ";
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

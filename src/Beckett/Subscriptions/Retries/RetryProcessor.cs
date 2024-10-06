@@ -71,7 +71,8 @@ public class RetryProcessor(
                     subscription.Name,
                     retry.StreamName,
                     retry.StreamPosition,
-                    CheckpointStatus.Active
+                    CheckpointStatus.Active,
+                    options.Postgres
                 ),
                 connection,
                 transaction,
@@ -179,7 +180,8 @@ public class RetryProcessor(
                         subscription.Name,
                         retry.StreamName,
                         retry.StreamPosition,
-                        CheckpointStatus.Failed
+                        CheckpointStatus.Failed,
+                        options.Postgres
                     ),
                     connection,
                     transaction,

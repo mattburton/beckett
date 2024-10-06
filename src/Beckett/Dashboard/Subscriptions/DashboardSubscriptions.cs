@@ -4,21 +4,25 @@ using Beckett.Subscriptions.Retries;
 
 namespace Beckett.Dashboard.Subscriptions;
 
-public class DashboardSubscriptions(IPostgresDatabase database, IMessageStore messageStore) : IDashboardSubscriptions
+public class DashboardSubscriptions(
+    IPostgresDatabase database,
+    IMessageStore messageStore,
+    PostgresOptions options
+) : IDashboardSubscriptions
 {
     public Task<GetSubscriptionsResult> GetSubscriptions(CancellationToken cancellationToken)
     {
-        return database.Execute(new GetSubscriptions(), cancellationToken);
+        return database.Execute(new GetSubscriptions(options), cancellationToken);
     }
 
     public Task<GetLaggingSubscriptionsResult> GetLaggingSubscriptions(CancellationToken cancellationToken)
     {
-        return database.Execute(new GetLaggingSubscriptions(), cancellationToken);
+        return database.Execute(new GetLaggingSubscriptions(options), cancellationToken);
     }
 
     public Task<GetRetriesResult> GetRetries(CancellationToken cancellationToken)
     {
-        return database.Execute(new GetRetries(), cancellationToken);
+        return database.Execute(new GetRetries(options), cancellationToken);
     }
 
     public async Task<GetRetryDetailsResult?> GetRetryDetails(Guid id, CancellationToken cancellationToken)
@@ -30,6 +34,6 @@ public class DashboardSubscriptions(IPostgresDatabase database, IMessageStore me
 
     public Task<GetFailedResult> GetFailed(CancellationToken cancellationToken)
     {
-        return database.Execute(new GetFailed(), cancellationToken);
+        return database.Execute(new GetFailed(options), cancellationToken);
     }
 }

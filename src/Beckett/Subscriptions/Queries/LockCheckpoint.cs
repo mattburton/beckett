@@ -7,10 +7,11 @@ namespace Beckett.Subscriptions.Queries;
 public class LockCheckpoint(
     string groupName,
     string name,
-    string streamName
+    string streamName,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<Checkpoint?>
 {
-    public async Task<Checkpoint?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<Checkpoint?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             select group_name,
@@ -19,14 +20,17 @@ public class LockCheckpoint(
                    stream_position,
                    stream_version,
                    status
-            from {schema}.lock_checkpoint($1, $2, $3);
+            from {options.Schema}.lock_checkpoint($1, $2, $3);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = groupName;
         command.Parameters[1].Value = name;

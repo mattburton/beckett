@@ -6,24 +6,24 @@ namespace Beckett.MessageStorage.Postgres.Queries;
 
 public class ReadGlobalStream(
     long lastGlobalPosition,
-    int batchSize
+    int batchSize,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<IReadOnlyList<ReadGlobalStream.Result>>
 {
-    public async Task<IReadOnlyList<Result>> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<IReadOnlyList<Result>> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             select stream_name, stream_position, global_position, type
-            from {schema}.read_global_stream($1, $2);
+            from {options.Schema}.read_global_stream($1, $2);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = lastGlobalPosition;
         command.Parameters[1].Value = batchSize;

@@ -5,16 +5,17 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class RecoverExpiredCheckpointReservations(
-    int batchSize
+    int batchSize,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
-    public async Task<int> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            UPDATE {schema}.checkpoints c
+            UPDATE {options.Schema}.checkpoints c
             SET status = CASE
                     WHEN (previous_status = 'active' AND stream_version > stream_position) THEN
-                        'lagging'::{schema}.checkpoint_status
+                        'lagging'::{options.Schema}.checkpoint_status
                     ELSE
                         previous_status
                 END,
@@ -22,8 +23,8 @@ public class RecoverExpiredCheckpointReservations(
                 reserved_until = NULL
             FROM (
                 SELECT c.group_name, c.name, c.stream_name
-                FROM {schema}.checkpoints c
-                INNER JOIN {schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+                FROM {options.Schema}.checkpoints c
+                INNER JOIN {options.Schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
                 WHERE c.status = 'reserved'
                 AND c.previous_status IS NOT NULL
                 AND c.reserved_until <= now()
@@ -37,7 +38,10 @@ public class RecoverExpiredCheckpointReservations(
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = batchSize;
 

@@ -42,7 +42,7 @@ public class RetryMonitor(
                 await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
                 var retry = await database.Execute(
-                    new LockNextPendingRetry(options.Subscriptions.GroupName),
+                    new LockNextPendingRetry(options.Subscriptions.GroupName, options.Postgres),
                     connection,
                     transaction,
                     stoppingToken
@@ -156,7 +156,8 @@ public class RetryMonitor(
                 retry.Name,
                 retry.StreamName,
                 retry.StreamPosition,
-                CheckpointStatus.Retry
+                CheckpointStatus.Retry,
+                options.Postgres
             ),
             connection,
             transaction,
@@ -228,7 +229,8 @@ public class RetryMonitor(
                 retry.Name,
                 retry.StreamName,
                 retry.StreamPosition,
-                CheckpointStatus.Failed
+                CheckpointStatus.Failed,
+                options.Postgres
             ),
             connection,
             transaction,

@@ -5,18 +5,13 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetMessageByStreamPosition(string streamName, long streamPosition)
-    : IPostgresDatabaseQuery<GetMessageResult?>
+public class GetMessageByStreamPosition(string streamName, long streamPosition, PostgresOptions options) : IPostgresDatabaseQuery<GetMessageResult?>
 {
-    public async Task<GetMessageResult?> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<GetMessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select id::text, {schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
-            from {schema}.messages
+            select id::text, {options.Schema}.stream_category(stream_name) as category, stream_name, type, data, metadata
+            from {options.Schema}.messages
             where stream_name = $1
             and stream_position = $2
             and deleted = false
@@ -26,7 +21,10 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition)
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = streamName;
         command.Parameters[1].Value = streamPosition;

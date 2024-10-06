@@ -4,17 +4,17 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetStreamMessages(string streamName, string? query) : IPostgresDatabaseQuery<GetStreamMessagesResult>
+public class GetStreamMessages(
+    string streamName,
+    string? query,
+    PostgresOptions options
+) : IPostgresDatabaseQuery<GetStreamMessagesResult>
 {
-    public async Task<GetStreamMessagesResult> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<GetStreamMessagesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             select id, stream_position, type, timestamp
-            from {schema}.messages
+            from {options.Schema}.messages
             where stream_name = $1
             and ($2 is null or (id::text ilike '%' || $2 || '%' or type ilike '%' || $2 || '%'))
             and deleted = false
@@ -22,9 +22,12 @@ public class GetStreamMessages(string streamName, string? query) : IPostgresData
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true});
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = streamName;
         command.Parameters[1].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;

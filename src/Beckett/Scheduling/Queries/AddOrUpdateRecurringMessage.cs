@@ -9,12 +9,13 @@ public class AddOrUpdateRecurringMessage(
     string cronExpression,
     string streamName,
     Message message,
-    DateTimeOffset nextOccurrence
+    DateTimeOffset nextOccurrence,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
-    public async Task<int> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {schema}.add_or_update_recurring_message($1, $2, $3, $4, $5, $6, $7);";
+        command.CommandText = $"select {options.Schema}.add_or_update_recurring_message($1, $2, $3, $4, $5, $6, $7);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -24,7 +25,10 @@ public class AddOrUpdateRecurringMessage(
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.TimestampTz });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = name;
         command.Parameters[1].Value = cronExpression;

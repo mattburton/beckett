@@ -8,20 +8,24 @@ namespace Beckett.MessageStorage.Postgres.Queries;
 public class AppendToStream(
     string streamName,
     long expectedVersion,
-    MessageType[] messages
+    MessageType[] messages,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<long>
 {
-    public async Task<long> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         try
         {
-            command.CommandText = $"select {schema}.append_to_stream($1, $2, $3);";
+            command.CommandText = $"select {options.Schema}.append_to_stream($1, $2, $3);";
 
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-            command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageArray(schema) });
+            command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageArray(options.Schema) });
 
-            await command.PrepareAsync(cancellationToken);
+            if (options.PrepareStatements)
+            {
+                await command.PrepareAsync(cancellationToken);
+            }
 
             command.Parameters[0].Value = streamName;
             command.Parameters[1].Value = expectedVersion;

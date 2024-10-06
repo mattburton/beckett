@@ -5,12 +5,13 @@ using NpgsqlTypes;
 
 namespace Beckett.Scheduling.Queries;
 
-public class GetScheduledMessagesToDeliver(int batchSize)
-    : IPostgresDatabaseQuery<IReadOnlyList<PostgresScheduledMessage>>
+public class GetScheduledMessagesToDeliver(
+    int batchSize,
+    PostgresOptions options
+) : IPostgresDatabaseQuery<IReadOnlyList<PostgresScheduledMessage>>
 {
     public async Task<IReadOnlyList<PostgresScheduledMessage>> Execute(
         NpgsqlCommand command,
-        string schema,
         CancellationToken cancellationToken
     )
     {
@@ -22,12 +23,15 @@ public class GetScheduledMessagesToDeliver(int batchSize)
                    metadata,
                    deliver_at,
                    timestamp
-            from {schema}.get_scheduled_messages_to_deliver($1);
+            from {options.Schema}.get_scheduled_messages_to_deliver($1);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = batchSize;
 

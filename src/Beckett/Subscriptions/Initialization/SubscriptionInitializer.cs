@@ -18,7 +18,7 @@ public class SubscriptionInitializer(
         while (!cancellationToken.IsCancellationRequested)
         {
             var subscriptionName = await database.Execute(
-                new GetNextUninitializedSubscription(options.Subscriptions.GroupName),
+                new GetNextUninitializedSubscription(options.Subscriptions.GroupName, options.Postgres),
                 cancellationToken
             );
 
@@ -68,7 +68,8 @@ public class SubscriptionInitializer(
                 new LockCheckpoint(
                     options.Subscriptions.GroupName,
                     subscription.Name,
-                    InitializationConstants.StreamName
+                    InitializationConstants.StreamName,
+                    options.Postgres
                 ),
                 connection,
                 transaction,
@@ -94,7 +95,8 @@ public class SubscriptionInitializer(
                     new LockCheckpoint(
                         options.Subscriptions.GroupName,
                         GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName
+                        GlobalCheckpoint.StreamName,
+                        options.Postgres
                     ),
                     connection,
                     transaction,
@@ -118,7 +120,7 @@ public class SubscriptionInitializer(
                 }
 
                 await database.Execute(
-                    new SetSubscriptionToActive(options.Subscriptions.GroupName, subscription.Name),
+                    new SetSubscriptionToActive(options.Subscriptions.GroupName, subscription.Name, options.Postgres),
                     connection,
                     transaction,
                     cancellationToken
@@ -155,7 +157,7 @@ public class SubscriptionInitializer(
             }
 
             await database.Execute(
-                new RecordCheckpoints(checkpoints.ToArray()),
+                new RecordCheckpoints(checkpoints.ToArray(), options.Postgres),
                 connection,
                 transaction,
                 cancellationToken
@@ -169,7 +171,8 @@ public class SubscriptionInitializer(
                     subscription.Name,
                     InitializationConstants.StreamName,
                     newGlobalPosition,
-                    newGlobalPosition
+                    newGlobalPosition,
+                    options.Postgres
                 ),
                 connection,
                 transaction,

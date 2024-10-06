@@ -6,10 +6,11 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Retries.Queries;
 
 public class LockNextPendingRetry(
-    string groupName
+    string groupName,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<Retry?>
 {
-    public async Task<Retry?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<Retry?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             select retry_id,
@@ -18,12 +19,15 @@ public class LockNextPendingRetry(
                    stream_name,
                    stream_position,
                    error
-            from {schema}.lock_next_pending_retry($1);
+            from {options.Schema}.lock_next_pending_retry($1);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = groupName;
 

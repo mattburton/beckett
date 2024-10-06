@@ -33,7 +33,7 @@ public class RecurringMessageService(
                 await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
                 var results = await database.Execute(
-                    new GetRecurringMessagesToDeliver(options.Scheduling.RecurringBatchSize),
+                    new GetRecurringMessagesToDeliver(options.Scheduling.RecurringBatchSize, options.Postgres),
                     connection,
                     transaction,
                     stoppingToken

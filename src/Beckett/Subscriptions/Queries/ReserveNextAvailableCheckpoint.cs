@@ -4,20 +4,26 @@ using NpgsqlTypes;
 
 namespace Beckett.Subscriptions.Queries;
 
-public class ReserveNextAvailableCheckpoint(string groupName, TimeSpan reservationTimeout)
-    : IPostgresDatabaseQuery<Checkpoint?>
+public class ReserveNextAvailableCheckpoint(
+    string groupName,
+    TimeSpan reservationTimeout,
+    PostgresOptions options
+) : IPostgresDatabaseQuery<Checkpoint?>
 {
-    public async Task<Checkpoint?> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<Checkpoint?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             select group_name, name, stream_name, stream_position, stream_version, status
-            from {schema}.reserve_next_available_checkpoint($1, $2);
+            from {options.Schema}.reserve_next_available_checkpoint($1, $2);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Interval });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = groupName;
         command.Parameters[1].Value = reservationTimeout;

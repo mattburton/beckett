@@ -4,26 +4,25 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetCategories(string? query) : IPostgresDatabaseQuery<GetCategoriesResult>
+public class GetCategories(string? query, PostgresOptions options) : IPostgresDatabaseQuery<GetCategoriesResult>
 {
-    public async Task<GetCategoriesResult> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<GetCategoriesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select {schema}.stream_category(stream_name) as name, max(timestamp) as last_updated
-            from {schema}.messages
-            where ($1 is null or {schema}.stream_category(stream_name) ilike '%' || $1 || '%')
+            select {options.Schema}.stream_category(stream_name) as name, max(timestamp) as last_updated
+            from {options.Schema}.messages
+            where ($1 is null or {options.Schema}.stream_category(stream_name) ilike '%' || $1 || '%')
             and deleted = false
-            group by {schema}.stream_category(stream_name)
-            order by {schema}.stream_category(stream_name);
+            group by {options.Schema}.stream_category(stream_name)
+            order by {options.Schema}.stream_category(stream_name);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
 

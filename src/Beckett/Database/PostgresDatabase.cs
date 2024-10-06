@@ -2,7 +2,7 @@ using Npgsql;
 
 namespace Beckett.Database;
 
-public class PostgresDatabase(NpgsqlDataSource dataSource, PostgresOptions options) : IPostgresDatabase
+public class PostgresDatabase(NpgsqlDataSource dataSource) : IPostgresDatabase
 {
     public NpgsqlConnection CreateConnection() => dataSource.CreateConnection();
 
@@ -14,7 +14,7 @@ public class PostgresDatabase(NpgsqlDataSource dataSource, PostgresOptions optio
 
         await using var command = connection.CreateCommand();
 
-        return await query.Execute(command, options.Schema, cancellationToken);
+        return await query.Execute(command, cancellationToken);
     }
 
     public async Task<T> Execute<T>(
@@ -25,7 +25,7 @@ public class PostgresDatabase(NpgsqlDataSource dataSource, PostgresOptions optio
     {
         await using var command = connection.CreateCommand();
 
-        return await query.Execute(command, options.Schema, cancellationToken);
+        return await query.Execute(command, cancellationToken);
     }
 
     public async Task<T> Execute<T>(
@@ -39,6 +39,6 @@ public class PostgresDatabase(NpgsqlDataSource dataSource, PostgresOptions optio
 
         command.Transaction = transaction;
 
-        return await query.Execute(command, options.Schema, cancellationToken);
+        return await query.Execute(command, cancellationToken);
     }
 }

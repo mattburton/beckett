@@ -3,21 +3,20 @@ using Npgsql;
 
 namespace Beckett.Dashboard.Metrics.Queries;
 
-public class GetSubscriptionFailedCount : IPostgresDatabaseQuery<long>
+public class GetSubscriptionFailedCount(PostgresOptions options) : IPostgresDatabaseQuery<long>
 {
-    public async Task<long> Execute(
-        NpgsqlCommand command,
-        string schema,
-        CancellationToken cancellationToken
-    )
+    public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT count(*)
-            FROM {schema}.checkpoints
+            FROM {options.Schema}.checkpoints
             WHERE status = 'failed';
         ";
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         return (long)(await command.ExecuteScalarAsync(cancellationToken))!;
     }

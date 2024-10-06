@@ -43,7 +43,8 @@ public class CheckpointProcessor(
                         subscription.Name,
                         streamName,
                         success.StreamPosition,
-                        CheckpointStatus.Active
+                        CheckpointStatus.Active,
+                        options.Postgres
                     ),
                     cancellationToken
                 );
@@ -69,7 +70,8 @@ public class CheckpointProcessor(
                         subscription.Name,
                         streamName,
                         error.StreamPosition,
-                        ExceptionData.From(error.Exception).ToJson()
+                        ExceptionData.From(error.Exception).ToJson(),
+                        options.Postgres
                     ),
                     cancellationToken
                 );

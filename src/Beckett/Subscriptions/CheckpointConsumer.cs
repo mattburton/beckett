@@ -33,7 +33,8 @@ public class CheckpointConsumer(
                 var checkpoint = await database.Execute(
                     new ReserveNextAvailableCheckpoint(
                         options.Subscriptions.GroupName,
-                        options.Subscriptions.ReservationTimeout
+                        options.Subscriptions.ReservationTimeout,
+                        options.Postgres
                     ),
                     stoppingToken
                 );

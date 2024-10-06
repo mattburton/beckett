@@ -9,12 +9,13 @@ public class RecordCheckpoint(
     string name,
     string streamName,
     long streamPosition,
-    long streamVersion
+    long streamVersion,
+    PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
-    public async Task<int> Execute(NpgsqlCommand command, string schema, CancellationToken cancellationToken)
+    public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {schema}.record_checkpoint($1, $2, $3, $4, $5);";
+        command.CommandText = $"select {options.Schema}.record_checkpoint($1, $2, $3, $4, $5);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -22,7 +23,10 @@ public class RecordCheckpoint(
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        await command.PrepareAsync(cancellationToken);
+        if (options.PrepareStatements)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         command.Parameters[0].Value = groupName;
         command.Parameters[1].Value = name;
