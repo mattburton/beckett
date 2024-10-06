@@ -1,27 +1,21 @@
+using System.Collections.Concurrent;
+
 namespace Beckett.Subscriptions;
 
-public class SubscriptionRegistry : ISubscriptionRegistry
+public class SubscriptionRegistry
 {
-    private readonly Dictionary<string, Subscription> _subscriptions = new();
+    private static readonly ConcurrentDictionary<string, Subscription> Subscriptions = new();
 
-    public bool TryAdd(string name, out Subscription subscription)
+    public static bool TryAdd(string name, out Subscription subscription)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        if (_subscriptions.ContainsKey(name))
-        {
-            subscription = null!;
-            return false;
-        }
-
         subscription = new Subscription(name);
 
-        _subscriptions.Add(name, subscription);
-
-        return true;
+        return Subscriptions.TryAdd(name, subscription);
     }
 
-    public IEnumerable<Subscription> All() => _subscriptions.Values;
+    public static IEnumerable<Subscription> All() => Subscriptions.Values;
 
-    public Subscription? GetSubscription(string name) => _subscriptions.GetValueOrDefault(name);
+    public static Subscription? GetSubscription(string name) => Subscriptions.GetValueOrDefault(name);
 }

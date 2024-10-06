@@ -2,18 +2,27 @@ using System.Text.Json;
 
 namespace Beckett.Messages;
 
-public class MessageSerializer(IMessageTypeMap messageTypeMap) : IMessageSerializer
+public static class MessageSerializer
 {
-    public (Type Type, string TypeName, string Data, string Metadata) Serialize(
-        object message,
-        Dictionary<string, object> metadata
-    )
-    {
-        var type = message.GetType();
-        var typeName = messageTypeMap.GetName(type);
-        var dataJson = JsonSerializer.Serialize(message);
-        var metadataJson = JsonSerializer.Serialize(metadata);
+    private static JsonSerializerOptions _options = JsonSerializerOptions.Default;
 
-        return (type, typeName, dataJson, metadataJson);
+    public static void Configure(JsonSerializerOptions options)
+    {
+        _options = options;
+    }
+
+    public static JsonDocument Serialize(object message, Type? messageType = null)
+    {
+        if (message is Message genericMessage)
+        {
+            return genericMessage.Data;
+        }
+
+        return JsonSerializer.SerializeToDocument(message, messageType ?? message.GetType(), _options);
+    }
+
+    public static object? Deserialize(string type, JsonDocument data)
+    {
+        return !MessageTypeMap.TryGetType(type, out var messageType) ? null : data.Deserialize(messageType!, _options);
     }
 }

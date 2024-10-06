@@ -10,10 +10,7 @@ namespace Beckett.Configuration;
 public class BeckettBuilder(
     IConfiguration configuration,
     IHostEnvironment environment,
-    IServiceCollection services,
-    IMessageTypeMap messageTypeMap,
-    ISubscriptionRegistry subscriptionRegistry,
-    IRecurringMessageRegistry recurringMessageRegistry
+    IServiceCollection services
 ) : IBeckettBuilder
 {
     public IConfiguration Configuration { get; } = configuration;
@@ -22,7 +19,7 @@ public class BeckettBuilder(
 
     public ISubscriptionBuilder AddSubscription(string name)
     {
-        if (!subscriptionRegistry.TryAdd(name, out var subscription))
+        if (!SubscriptionRegistry.TryAdd(name, out var subscription))
         {
             throw new InvalidOperationException($"There is already a subscription with the name {name}");
         }
@@ -30,9 +27,9 @@ public class BeckettBuilder(
         return new SubscriptionBuilder(subscription);
     }
 
-    public void Map<TMessage>(string name) => messageTypeMap.Map<TMessage>(name);
+    public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
 
-    public void Map(Type type, string name) => messageTypeMap.Map(type, name);
+    public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
 
     public void AddRecurringMessage<TMessage>(
         string name,
@@ -40,9 +37,16 @@ public class BeckettBuilder(
         string streamName,
         TMessage message,
         Dictionary<string, object>? metadata = null
-    ) where TMessage : notnull
+    ) where TMessage : notnull => AddRecurringMessage(name, cronExpression, streamName, new Message(message, metadata));
+
+    public void AddRecurringMessage(
+        string name,
+        string cronExpression,
+        string streamName,
+        Message message
+    )
     {
-        if (!recurringMessageRegistry.TryAdd(name, out var recurringMessage))
+        if (!RecurringMessageRegistry.TryAdd(name, out var recurringMessage))
         {
             throw new InvalidOperationException($"There is already a recurring message with the name {name}");
         }
@@ -50,6 +54,5 @@ public class BeckettBuilder(
         recurringMessage.CronExpression = cronExpression;
         recurringMessage.StreamName = streamName;
         recurringMessage.Message = message;
-        recurringMessage.Metadata = metadata ?? new Dictionary<string, object>();
     }
 }

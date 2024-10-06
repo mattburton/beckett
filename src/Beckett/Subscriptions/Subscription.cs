@@ -8,8 +8,7 @@ public class Subscription(string name)
     internal string? Category { get; set; }
     internal Type? HandlerType { get; set; }
     internal string? HandlerName { get; set; }
-    internal HashSet<Type> MessageTypes { get; } = [];
-    internal HashSet<string> MessageTypeNames { get; private set; } = [];
+    internal HashSet<string> MessageTypes { get; } = [];
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
     internal Func<object, CancellationToken, Task>? StaticMethod { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
@@ -21,10 +20,13 @@ public class Subscription(string name)
 
     internal bool CategoryMatches(string streamName) => Category != null && streamName.StartsWith(Category);
 
-    internal bool SubscribedToMessage(Type messageType) => MessageTypes.Contains(messageType) || IsCategoryOnly;
+    internal void RegisterMessageType(string messageType) => MessageTypes.Add(messageType);
 
-    internal void MapMessageTypeNames(IMessageTypeMap messageTypeMap) =>
-        MessageTypeNames = MessageTypes.Select(messageTypeMap.GetName).ToHashSet();
+    internal void RegisterMessageType<T>() => RegisterMessageType(typeof(T));
+
+    internal void RegisterMessageType(Type messageType) => RegisterMessageType(MessageTypeMap.GetName(messageType));
+
+    internal bool SubscribedToMessage(string messageType) => IsCategoryOnly || MessageTypes.Contains(messageType);
 
     internal void EnsureHandlerIsConfigured()
     {

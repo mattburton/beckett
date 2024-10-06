@@ -146,8 +146,8 @@ CREATE OR REPLACE FUNCTION __schema__.read_stream(
     stream_position bigint,
     global_position bigint,
     type text,
-    data text,
-    metadata text,
+    data jsonb,
+    metadata jsonb,
     "timestamp" timestamp with time zone
   )
   LANGUAGE sql

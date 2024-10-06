@@ -1,4 +1,4 @@
-using Beckett.Messages;
+using System.Text.Json;
 
 namespace Beckett.Database.Types;
 
@@ -6,26 +6,22 @@ public class ScheduledMessageType
 {
     public Guid Id { get; init; }
     public string Type { get; init; } = null!;
-    public string Data { get; init; } = null!;
-    public string Metadata { get; init; } = null!;
+    public JsonDocument Data { get; init; } = null!;
+    public JsonDocument Metadata { get; init; } = null!;
     public DateTimeOffset DeliverAt { get; init; } = DateTimeOffset.UtcNow;
 
     public static ScheduledMessageType From(
         Guid id,
-        object message,
-        Dictionary<string, object> metadata,
-        DateTimeOffset deliverAt,
-        IMessageSerializer messageSerializer
+        Message message,
+        DateTimeOffset deliverAt
     )
     {
-        var result = messageSerializer.Serialize(message, metadata);
-
         return new ScheduledMessageType
         {
             Id = id,
-            Type = result.TypeName,
-            Data = result.Data,
-            Metadata = result.Metadata,
+            Type = message.Type,
+            Data = message.Data,
+            Metadata = message.SerializedMetadata,
             DeliverAt = deliverAt
         };
     }

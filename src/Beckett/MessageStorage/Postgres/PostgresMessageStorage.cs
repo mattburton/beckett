@@ -1,28 +1,19 @@
 using Beckett.Database;
 using Beckett.Database.Types;
-using Beckett.Messages;
 using Beckett.MessageStorage.Postgres.Queries;
-using Microsoft.Extensions.Logging;
 
 namespace Beckett.MessageStorage.Postgres;
 
-public class PostgresMessageStorage(
-    IMessageSerializer messageSerializer,
-    IPostgresDatabase database,
-    IPostgresMessageDeserializer messageDeserializer,
-    IMessageTypeMap messageTypeMap,
-    ILoggerFactory loggerFactory
-) : IMessageStorage
+public class PostgresMessageStorage(IPostgresDatabase database) : IMessageStorage
 {
     public async Task<AppendToStreamResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
-        IEnumerable<MessageEnvelope> messages,
+        IReadOnlyList<Message> messages,
         CancellationToken cancellationToken
     )
     {
-        var newMessages = messages.Select(x => MessageType.From(streamName, x.Message, x.Metadata, messageSerializer))
-            .ToArray();
+        var newMessages = messages.Select(x => MessageType.From(streamName, x)).ToArray();
 
         var streamVersion = await database.Execute(
             new AppendToStream(streamName, expectedVersion.Value, newMessages),
@@ -47,24 +38,16 @@ public class PostgresMessageStorage(
             return new ReadGlobalStreamResult(items);
         }
 
-        foreach (var result in results)
-        {
-            var messageType = messageTypeMap.GetType(result.MessageType, loggerFactory);
-
-            if (messageType == null)
-            {
-                continue;
-            }
-
-            var item = new GlobalStreamItem(
-                result.StreamName,
-                result.StreamPosition,
-                result.GlobalPosition,
-                messageType
-            );
-
-            items.Add(item);
-        }
+        items.AddRange(
+            results.Select(
+                result => new GlobalStreamItem(
+                    result.StreamName,
+                    result.StreamPosition,
+                    result.GlobalPosition,
+                    result.MessageType
+                )
+            )
+        );
 
         return new ReadGlobalStreamResult(items);
     }
@@ -79,18 +62,22 @@ public class PostgresMessageStorage(
 
         var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[0].StreamVersion;
 
-        var messages = new List<MessageResult>();
+        var messages = new List<StreamMessage>();
 
         foreach (var streamMessage in streamMessages)
         {
-            var message = messageDeserializer.Deserialize(streamMessage);
-
-            if (message is null)
-            {
-                continue;
-            }
-
-            messages.Add(message.Value);
+            messages.Add(
+                new StreamMessage(
+                    streamMessage.Id.ToString(),
+                    streamMessage.StreamName,
+                    streamMessage.StreamPosition,
+                    streamMessage.GlobalPosition,
+                    streamMessage.Type,
+                    streamMessage.Data,
+                    streamMessage.Metadata,
+                    streamMessage.Timestamp
+                )
+            );
         }
 
         return new MessageStreamResult(streamName, streamVersion, messages);

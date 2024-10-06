@@ -6,14 +6,14 @@ public class CategorySubscriptionBuilder(Subscription subscription) : ICategoryS
 {
     public ICategorySubscriptionBuilder<TMessage> Message<TMessage>()
     {
-        subscription.MessageTypes.Add(typeof(TMessage));
+        subscription.RegisterMessageType<TMessage>();
 
         return new CategorySubscriptionBuilder<TMessage>(subscription);
     }
 
     public ICategorySubscriptionBuilder Message(Type messageType)
     {
-        subscription.MessageTypes.Add(messageType);
+        subscription.RegisterMessageType(messageType);
 
         return new CategorySubscriptionBuilder(subscription);
     }
@@ -50,7 +50,7 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 {
     public ICategorySubscriptionBuilder<TMessage> Message<TMessage>()
     {
-        subscription.MessageTypes.Add(typeof(TMessage));
+        subscription.RegisterMessageType<TMessage>();
 
         return new CategorySubscriptionBuilder<TMessage>(subscription);
     }
@@ -65,7 +65,7 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (T)((IMessageContext)c).Message, t);
+        subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (T)((IMessageContext)c).ResolvedMessage.Value!, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
@@ -82,7 +82,7 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
         subscription.HandlerName = handlerType.FullName;
         subscription.InstanceMethod = (h, c, t) => handler(
             (THandler)h,
-            (T)((IMessageContext)c).Message,
+            (T)((IMessageContext)c).ResolvedMessage.Value!,
             (IMessageContext)c,
             t
         );

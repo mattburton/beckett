@@ -8,9 +8,7 @@ public class AddOrUpdateRecurringMessage(
     string name,
     string cronExpression,
     string streamName,
-    string type,
-    string data,
-    string metadata,
+    Message message,
     DateTimeOffset nextOccurrence
 ) : IPostgresDatabaseQuery<int>
 {
@@ -31,9 +29,9 @@ public class AddOrUpdateRecurringMessage(
         command.Parameters[0].Value = name;
         command.Parameters[1].Value = cronExpression;
         command.Parameters[2].Value = streamName;
-        command.Parameters[3].Value = type;
-        command.Parameters[4].Value = data;
-        command.Parameters[5].Value = metadata;
+        command.Parameters[3].Value = message.Type;
+        command.Parameters[4].Value = message.Data;
+        command.Parameters[5].Value = message.SerializedMetadata;
         command.Parameters[6].Value = nextOccurrence;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);

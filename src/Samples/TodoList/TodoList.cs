@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TodoList.AddItem;
+using TodoList.CompleteItem;
+using TodoList.CreateList;
 using TodoList.Mentions;
 using TodoList.Notifications;
 using TodoList.ScheduledTasks;
@@ -12,11 +14,24 @@ public static class TodoList
 
     public static string StreamName(Guid id) => $"{Category}-{id}";
 
+    public static IBeckettBuilder TodoListMessages(this IBeckettBuilder builder)
+    {
+        builder.Map<TodoListItemAdded>("todo_list_item_added");
+        builder.Map<TodoListItemCompleted>("todo_list_item_completed");
+        builder.Map<TodoListCreated>("todo_list_created");
+        builder.Map<TodoListCreated>("todo_list_created");
+        builder.Map<HelloWorld>("hello_world");
+
+        return builder;
+    }
+
     public static IBeckettBuilder TodoListSubscriptions(this IBeckettBuilder builder)
     {
         builder.Services.AddSingleton<MentionsHandler>();
         builder.Services.AddSingleton<NotificationHandler>();
         builder.Services.AddSingleton<HelloWorld>();
+
+        builder.TodoListMessages();
 
         builder.AddSubscription("Mentions")
             .Message<TodoListItemAdded>()

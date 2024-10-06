@@ -3,22 +3,22 @@ using Npgsql;
 
 namespace Beckett.Database;
 
-public static class PostgresMigrator
+public static class BeckettDatabase
 {
     private const int DefaultAdvisoryLockId = 0;
 
-    public static Task UpgradeSchema(
+    public static Task Migrate(
         string connectionString,
         CancellationToken cancellationToken = default
-    ) => UpgradeSchema(connectionString, PostgresOptions.DefaultSchema, cancellationToken);
+    ) => Migrate(connectionString, PostgresOptions.DefaultSchema, cancellationToken);
 
-    public static Task UpgradeSchema(
+    public static Task Migrate(
         string connectionString,
         string schema,
         CancellationToken cancellationToken = default
-    ) => UpgradeSchema(connectionString, schema, DefaultAdvisoryLockId, cancellationToken);
+    ) => Migrate(connectionString, schema, DefaultAdvisoryLockId, cancellationToken);
 
-    public static async Task UpgradeSchema(
+    public static async Task Migrate(
         string connectionString,
         string schema,
         int advisoryLockId,
@@ -154,7 +154,7 @@ public static class PostgresMigrator
 
     private static IEnumerable<(string Name, string Script)> LoadMigrations(string schema)
     {
-        var assembly = typeof(PostgresMigrator).Assembly;
+        var assembly = typeof(BeckettDatabase).Assembly;
 
         return assembly.GetManifestResourceNames()
             .Where(x => x.EndsWith(".sql"))

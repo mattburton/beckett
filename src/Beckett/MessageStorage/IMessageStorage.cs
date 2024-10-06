@@ -1,5 +1,3 @@
-using Beckett.Messages;
-
 namespace Beckett.MessageStorage;
 
 public interface IMessageStorage
@@ -7,7 +5,7 @@ public interface IMessageStorage
     Task<AppendToStreamResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
-        IEnumerable<MessageEnvelope> messages,
+        IReadOnlyList<Message> messages,
         CancellationToken cancellationToken
     );
 

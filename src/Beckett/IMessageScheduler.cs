@@ -44,7 +44,7 @@ public interface IMessageScheduler
         string name,
         string cronExpression,
         string streamName,
-        object message,
+        Message message,
         CancellationToken cancellationToken
     );
 
@@ -58,7 +58,7 @@ public interface IMessageScheduler
     /// <returns>The ID of the scheduled message that can be used to call <see cref="CancelScheduledMessage"/></returns>
     Task<Guid> ScheduleMessage(
         string streamName,
-        object message,
+        Message message,
         TimeSpan delay,
         CancellationToken cancellationToken
     ) => ScheduleMessage(streamName, message, DateTimeOffset.UtcNow.Add(delay), cancellationToken);
@@ -73,7 +73,7 @@ public interface IMessageScheduler
     /// <returns>The ID of the scheduled message that can be used to call <see cref="CancelScheduledMessage"/></returns>
     Task<Guid> ScheduleMessage(
         string streamName,
-        object message,
+        Message message,
         DateTimeOffset deliverAt,
         CancellationToken cancellationToken
     );

@@ -11,7 +11,6 @@ namespace Beckett.Scheduling;
 
 public class MessageScheduler(
     IPostgresDatabase database,
-    IMessageSerializer messageSerializer,
     IInstrumentation instrumentation
 ) : IMessageScheduler, ITransactionalMessageScheduler
 {
@@ -24,12 +23,10 @@ public class MessageScheduler(
         string name,
         string cronExpression,
         string streamName,
-        object message,
+        Message message,
         CancellationToken cancellationToken
     )
     {
-        var (type, data, metadata) = BuildRecurringMessage(message);
-
         if (!CronExpression.TryParse(cronExpression, out var parsedCronExpression))
         {
             throw new InvalidOperationException("Invalid cron expression");
@@ -47,9 +44,7 @@ public class MessageScheduler(
                 name,
                 cronExpression,
                 streamName,
-                type,
-                data,
-                metadata,
+                message,
                 nextOccurrence.Value
             ),
             cancellationToken
@@ -58,7 +53,7 @@ public class MessageScheduler(
 
     public async Task<Guid> ScheduleMessage(
         string streamName,
-        object message,
+        Message message,
         DateTimeOffset deliverAt,
         CancellationToken cancellationToken
     )
@@ -69,7 +64,7 @@ public class MessageScheduler(
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        var id = await ScheduleMessage(connection, transaction, streamName, message, deliverAt, cancellationToken);
+        var id = await ScheduleMessage(streamName, message, deliverAt, connection, transaction, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
 
@@ -77,36 +72,26 @@ public class MessageScheduler(
     }
 
     public async Task<Guid> ScheduleMessage(
+        string streamName,
+        Message message,
+        DateTimeOffset deliverAt,
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
-        string streamName,
-        object message,
-        DateTimeOffset deliverAt,
         CancellationToken cancellationToken
     )
     {
-        var metadata = new Dictionary<string, object>();
+        var activityMetadata = new Dictionary<string, object>();
 
-        using var activity = instrumentation.StartScheduleMessageActivity(streamName, metadata);
-
-        var messageToSchedule = message;
-        var messageMetadata = new Dictionary<string, object>(metadata);
-
-        if (message is MessageMetadataWrapper messageWithMetadata)
-        {
-            foreach (var item in messageWithMetadata.Metadata) messageMetadata.TryAdd(item.Key, item.Value);
-
-            messageToSchedule = messageWithMetadata.Message;
-        }
+        using var activity = instrumentation.StartScheduleMessageActivity(streamName, activityMetadata);
 
         var id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql);
 
+        message.Metadata.Prepend(activityMetadata);
+
         var scheduledMessage = ScheduledMessageType.From(
             id,
-            messageToSchedule,
-            messageMetadata,
-            deliverAt,
-            messageSerializer
+            message,
+            deliverAt
         );
 
         await database.Execute(
@@ -117,25 +102,5 @@ public class MessageScheduler(
         );
 
         return id;
-    }
-
-    private (string Type, string Data, string Metadata) BuildRecurringMessage(object message)
-    {
-        var recurringMessage = message;
-        var metadata = new Dictionary<string, object>();
-
-        if (message is MessageMetadataWrapper messageWithMetadata)
-        {
-            foreach (var item in messageWithMetadata.Metadata)
-            {
-                metadata.TryAdd(item.Key, item.Value);
-            }
-
-            recurringMessage = messageWithMetadata.Message;
-        }
-
-        var (_, type, data, metadataJson) = messageSerializer.Serialize(recurringMessage, metadata);
-
-        return (type, data, metadataJson);
     }
 }

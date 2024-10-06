@@ -1,11 +1,9 @@
-using Beckett.MessageStorage;
-
 namespace Beckett;
 
 public readonly struct MessageStream(
     string streamName,
     long streamVersion,
-    IReadOnlyList<MessageResult> streamMessages,
+    IReadOnlyList<StreamMessage> streamMessages,
     AppendToStreamDelegate appendToStream)
 {
     /// <summary>
@@ -18,12 +16,13 @@ public readonly struct MessageStream(
     /// </summary>
     public long StreamVersion { get; } = streamVersion;
 
-    public IReadOnlyList<MessageResult> RawMessages { get; } = streamMessages.ToList();
+    public IReadOnlyList<StreamMessage> Messages { get; } = streamMessages.ToList();
 
     /// <summary>
     /// The stream messages
     /// </summary>
-    public IReadOnlyList<object> Messages => RawMessages.Select(x => x.Message).ToList();
+    public IReadOnlyList<object> ResolvedMessages => Messages.Where(x => x.ResolvedMessage.Value != null)
+        .Select(x => x.ResolvedMessage.Value!).ToList();
 
     /// <summary>
     /// Whether the current stream is empty / does not exist (has zero messages)
@@ -66,7 +65,7 @@ public readonly struct MessageStream(
     public MessageStream Merge(MessageStream messageStream)
     {
         var streamMessages =
-            RawMessages.Concat(messageStream.RawMessages).OrderBy(x => x.GlobalPosition).ToList();
+            Messages.Concat(messageStream.Messages).OrderBy(x => x.GlobalPosition).ToList();
 
         return new MessageStream(StreamName, -1, streamMessages, appendToStream);
     }
@@ -77,7 +76,7 @@ public readonly struct MessageStream(
     /// </summary>
     /// <typeparam name="TState"></typeparam>
     /// <returns></returns>
-    public TState ProjectTo<TState>() where TState : IApply, new() => Messages.ProjectTo<TState>();
+    public TState ProjectTo<TState>() where TState : IApply, new() => ResolvedMessages.ProjectTo<TState>();
 
     /// <summary>
     /// Throw a <see cref="StreamDoesNotExistException"/> if the stream does not exist.

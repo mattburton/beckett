@@ -1,32 +1,16 @@
+using System.Collections.Concurrent;
+
 namespace Beckett.Scheduling;
 
-public interface IRecurringMessageRegistry
+public static class RecurringMessageRegistry
 {
-    bool TryAdd(string name, out RecurringMessage recurringMessage);
+    private static readonly ConcurrentDictionary<string, RecurringMessage> RecurringMessages = new();
 
-    IEnumerable<RecurringMessage> All();
-
-    bool Any();
-}
-
-public class RecurringMessage(string name)
-{
-    internal string Name { get; } = name;
-    internal string CronExpression { get; set; } = null!;
-    internal string StreamName { get; set; } = null!;
-    internal object Message { get; set; } = null!;
-    internal Dictionary<string, object> Metadata { get; set; } = null!;
-}
-
-public class RecurringMessageRegistry : IRecurringMessageRegistry
-{
-    private readonly Dictionary<string, RecurringMessage> _recurringMessages = new();
-
-    public bool TryAdd(string name, out RecurringMessage recurringMessage)
+    public static bool TryAdd(string name, out RecurringMessage recurringMessage)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        if (_recurringMessages.ContainsKey(name))
+        if (RecurringMessages.ContainsKey(name))
         {
             recurringMessage = null!;
 
@@ -35,12 +19,12 @@ public class RecurringMessageRegistry : IRecurringMessageRegistry
 
         recurringMessage = new RecurringMessage(name);
 
-        _recurringMessages.Add(name, recurringMessage);
+        RecurringMessages.TryAdd(name, recurringMessage);
 
         return true;
     }
 
-    public IEnumerable<RecurringMessage> All() => _recurringMessages.Values;
+    public static IEnumerable<RecurringMessage> All() => RecurringMessages.Values;
 
-    public bool Any() => _recurringMessages.Count > 0;
+    public static bool Any() => RecurringMessages.Count > 0;
 }

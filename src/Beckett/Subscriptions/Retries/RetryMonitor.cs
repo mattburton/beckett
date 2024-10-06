@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.Messages;
 using Beckett.Scheduling;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries.Events;
@@ -13,8 +12,6 @@ namespace Beckett.Subscriptions.Retries;
 public class RetryMonitor(
     IPostgresDatabase database,
     BeckettOptions options,
-    ISubscriptionRegistry subscriptionRegistry,
-    IMessageTypeProvider messageTypeProvider,
     IMessageStore messageStore,
     ITransactionalMessageScheduler messageScheduler,
     ILogger<RetryMonitor> logger
@@ -56,7 +53,7 @@ public class RetryMonitor(
                     break;
                 }
 
-                var subscription = subscriptionRegistry.GetSubscription(retry.Name);
+                var subscription = SubscriptionRegistry.GetSubscription(retry.Name);
 
                 if (subscription == null)
                 {
@@ -65,7 +62,7 @@ public class RetryMonitor(
                     continue;
                 }
 
-                var exceptionType = messageTypeProvider.FindMatchFor(x => x.FullName == retry.Error.Type);
+                var exceptionType = ExceptionTypeProvider.FindMatchFor(x => x.FullName == retry.Error.Type);
 
                 if (exceptionType == null)
                 {
@@ -167,16 +164,18 @@ public class RetryMonitor(
         );
 
         await messageScheduler.ScheduleMessage(
-            connection,
-            transaction,
             retryStreamName,
-            new RetryScheduled(
-                retry.Id,
-                1,
-                retryAt,
-                DateTimeOffset.UtcNow
+            new Message(
+                new RetryScheduled(
+                    retry.Id,
+                    1,
+                    retryAt,
+                    DateTimeOffset.UtcNow
+                )
             ),
             retryAt,
+            connection,
+            transaction,
             stoppingToken
         );
     }

@@ -225,7 +225,7 @@ public class CheckpointProcessor(
                     message.StreamPosition,
                     message.GlobalPosition,
                     message.Type,
-                    message.Message,
+                    message.Data,
                     message.Metadata,
                     message.Timestamp,
                     serviceProvider

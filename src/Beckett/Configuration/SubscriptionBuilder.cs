@@ -13,14 +13,14 @@ public class SubscriptionBuilder(Subscription subscription) : ISubscriptionBuild
 
     public IMessageSubscriptionBuilder<TMessage> Message<TMessage>()
     {
-        subscription.MessageTypes.Add(typeof(TMessage));
+        subscription.RegisterMessageType<TMessage>();
 
         return new MessageSubscriptionBuilder<TMessage>(subscription);
     }
 
     public IMessageSubscriptionBuilder Message(Type messageType)
     {
-        subscription.MessageTypes.Add(messageType);
+        subscription.RegisterMessageType(messageType);
 
         return new MessageSubscriptionBuilder(subscription);
     }

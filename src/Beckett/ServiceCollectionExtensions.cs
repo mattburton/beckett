@@ -1,9 +1,7 @@
 using Beckett.Configuration;
 using Beckett.Dashboard;
 using Beckett.Database;
-using Beckett.Messages;
 using Beckett.MessageStorage;
-using Beckett.MessageStorage.Postgres;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling;
 using Beckett.Subscriptions;
@@ -37,15 +35,13 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddSingleton(options);
 
-        builder.Services.AddDashboardSupport();
+        builder.Services.AddSingleton<IMessageStore, MessageStore>();
 
-        builder.Services.AddMessageSupport(options);
+        builder.Services.AddDashboardSupport();
 
         builder.Services.AddMessageStorageSupport(options);
 
         builder.Services.AddOpenTelemetrySupport();
-
-        builder.Services.AddPostgresMessageStorageSupport();
 
         builder.Services.AddPostgresSupport(options);
 
@@ -55,29 +51,10 @@ public static class ServiceCollectionExtensions
 
         builder.Services.AddSubscriptionSupport(options);
 
-        var messageTypeProvider = new MessageTypeProvider();
-
-        builder.Services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
-
-        var messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
-
-        builder.Services.AddSingleton<IMessageTypeMap>(messageTypeMap);
-
-        var subscriptionRegistry = new SubscriptionRegistry();
-
-        builder.Services.AddSingleton<ISubscriptionRegistry>(subscriptionRegistry);
-
-        var recurringMessageRegistry = new RecurringMessageRegistry();
-
-        builder.Services.AddSingleton<IRecurringMessageRegistry>(recurringMessageRegistry);
-
         return new BeckettBuilder(
             builder.Configuration,
             builder.Environment,
-            builder.Services,
-            messageTypeMap,
-            subscriptionRegistry,
-            recurringMessageRegistry
+            builder.Services
         ).RetrySupport(options);
     }
 
@@ -110,15 +87,13 @@ public static class ServiceCollectionExtensions
 
                 services.AddSingleton(options);
 
-                services.AddDashboardSupport();
+                services.AddSingleton<IMessageStore, MessageStore>();
 
-                services.AddMessageSupport(options);
+                services.AddDashboardSupport();
 
                 services.AddMessageStorageSupport(options);
 
                 services.AddOpenTelemetrySupport();
-
-                services.AddPostgresMessageStorageSupport();
 
                 services.AddPostgresSupport(options);
 
@@ -128,29 +103,10 @@ public static class ServiceCollectionExtensions
 
                 services.AddSubscriptionSupport(options);
 
-                var messageTypeProvider = new MessageTypeProvider();
-
-                services.AddSingleton<IMessageTypeProvider>(messageTypeProvider);
-
-                var messageTypeMap = new MessageTypeMap(options.Messages, messageTypeProvider);
-
-                services.AddSingleton<IMessageTypeMap>(messageTypeMap);
-
-                var subscriptionRegistry = new SubscriptionRegistry();
-
-                services.AddSingleton<ISubscriptionRegistry>(subscriptionRegistry);
-
-                var recurringMessageRegistry = new RecurringMessageRegistry();
-
-                services.AddSingleton<IRecurringMessageRegistry>(recurringMessageRegistry);
-
                 var beckettBuilder = new BeckettBuilder(
                     configuration,
                     environment,
-                    services,
-                    messageTypeMap,
-                    subscriptionRegistry,
-                    recurringMessageRegistry
+                    services
                 ).RetrySupport(options);
 
                 buildBeckett?.Invoke(beckettBuilder);

@@ -1,4 +1,3 @@
-using Beckett.Messages;
 using Beckett.Subscriptions;
 
 namespace Beckett.MessageStorage;
@@ -7,14 +6,13 @@ public record GlobalStreamItem(
     string StreamName,
     long StreamPosition,
     long GlobalPosition,
-    Type MessageType
+    string MessageType
 )
 {
-    public bool AppliesTo(Subscription subscription, IMessageTypeMap messageTypeMap)
+    public bool AppliesTo(Subscription subscription)
     {
         var categoryMatch = subscription.CategoryMatches(StreamName);
-        var messageTypeName = messageTypeMap.GetName(MessageType);
-        var messageTypeMatch = subscription.MessageTypeNames.Contains(messageTypeName);
+        var messageTypeMatch = subscription.MessageTypes.Contains(MessageType);
 
         if (subscription.IsCategoryOnly)
         {

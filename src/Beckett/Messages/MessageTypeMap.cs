@@ -1,111 +1,91 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
 
 namespace Beckett.Messages;
 
-public class MessageTypeMap(
-    MessageOptions options,
-    IMessageTypeProvider messageTypeProvider
-) : IMessageTypeMap
+public static class MessageTypeMap
 {
-    private readonly ConcurrentDictionary<string, Type?> _nameToTypeMap = new();
-    private readonly ConcurrentDictionary<Type, string> _typeToNameMap = new();
+    private static readonly ConcurrentDictionary<string, Type?> NameToTypeMap = new();
+    private static readonly ConcurrentDictionary<Type, string> TypeToNameMap = new();
+    private static GetNameFallback? _getNameFallback;
+    private static TryGetTypeFallback? _tryGetTypeFallback;
 
-    public void Map<TMessage>(string name)
+    public static void Configure(GetNameFallback getNameFallback)
+    {
+        _getNameFallback = getNameFallback;
+    }
+
+    public static void Configure(TryGetTypeFallback tryGetTypeFallback)
+    {
+        _tryGetTypeFallback = tryGetTypeFallback;
+    }
+
+    public static void Map<TMessage>(string name)
     {
         var type = typeof(TMessage);
 
         Map(type, name);
     }
 
-    public void Map(Type type, string name)
+    public static void Map(Type type, string name)
     {
-        if (_nameToTypeMap.TryGetValue(name, out var existingType) && existingType != type)
+        if (NameToTypeMap.TryGetValue(name, out var existingType) && existingType != type)
         {
             throw new Exception($"Message type name {type.Name} for {type} already mapped to {existingType}");
         }
 
-        _nameToTypeMap.TryAdd(name, type);
-        _typeToNameMap.TryAdd(type, name);
+        NameToTypeMap.TryAdd(name, type);
+        TypeToNameMap.TryAdd(type, name);
     }
 
-    public string GetName(Type type)
+    public static string GetName(Type type)
     {
-        if (_typeToNameMap.TryGetValue(type, out var name))
+        if (TypeToNameMap.TryGetValue(type, out var name))
         {
             return name;
         }
 
-        if (!options.AllowDynamicTypeMapping)
+        name = _getNameFallback?.Invoke(type);
+
+        if (name == null)
         {
-            throw new Exception(
-                $"{nameof(MessageOptions.AllowDynamicTypeMapping)} is disabled - you must add a type mapping for {type}"
-            );
+            throw new UnknownTypeException(type.FullName!);
         }
 
-        if (_nameToTypeMap.TryGetValue(type.Name, out var existingType))
-        {
-            if (existingType != type)
-            {
-                throw new Exception($"Message type name {type.Name} for {type} already mapped to {existingType}");
-            }
-        }
+        NameToTypeMap.TryAdd(name, type);
+        TypeToNameMap.TryAdd(type, name);
 
-        _nameToTypeMap.TryAdd(type.Name, type);
-        _typeToNameMap.TryAdd(type, type.Name);
-
-        return _typeToNameMap[type];
+        return name;
     }
 
-    public Type? GetType(string name, ILoggerFactory loggerFactory)
+    public static bool TryGetType(string name, out Type? type)
     {
-        var messageType = _nameToTypeMap.GetOrAdd(
-            name,
-            typeName =>
-            {
-                if (!options.AllowDynamicTypeMapping)
-                {
-                    throw new Exception(
-                        $"{nameof(MessageOptions.AllowDynamicTypeMapping)} is disabled - you must add a type mapping for {name}"
-                    );
-                }
-
-                return messageTypeProvider.FindMatchFor(x => MatchCriteria(x, typeName));
-            }
-        );
-
-        if (messageType != null)
+        if (NameToTypeMap.TryGetValue(name, out var mappedType))
         {
-            return messageType;
+            type = mappedType;
+
+            return true;
         }
 
-        switch (options.UnknownMessageTypePolicy)
+        mappedType = _tryGetTypeFallback?.Invoke(name);
+
+        if (mappedType == null)
         {
-            case UnknownMessageTypePolicy.IgnoreAndContinue:
-            {
-                return null;
-            }
-            case UnknownMessageTypePolicy.LogErrorAndContinue:
-                var loggerForContinue = loggerFactory.CreateLogger<MessageTypeMap>();
+            type = null;
 
-                loggerForContinue.LogError("Unknown message type: {MessageType} - continuing", name);
-
-                return null;
-            case UnknownMessageTypePolicy.LogErrorAndExitApplication:
-                var loggerForExit = loggerFactory.CreateLogger<MessageTypeMap>();
-
-                loggerForExit.LogError("Unknown message type: {MessageType} - exiting application", name);
-
-                Environment.Exit(-1);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
+            return false;
         }
 
-        return null;
+        type = mappedType;
+
+        NameToTypeMap.TryAdd(name, type);
+        TypeToNameMap.TryAdd(type, name);
+
+        return true;
     }
-
-    public bool IsMapped(Type type) => _typeToNameMap.ContainsKey(type);
-
-    private static bool MatchCriteria(Type type, string name) => type.Name == name || type.FullName == name;
 }
+
+public delegate string GetNameFallback(Type type);
+
+public delegate Type? TryGetTypeFallback(string name);
+
+public class UnknownTypeException(string typeName) : Exception($"Unknown type name: {typeName}");

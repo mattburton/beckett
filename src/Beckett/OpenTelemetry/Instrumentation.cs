@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
+using System.Text.Json;
 using Beckett.Database;
 using Beckett.Messages;
 using Beckett.Subscriptions;
@@ -15,7 +16,6 @@ public class Instrumentation : IInstrumentation, IDisposable
     private readonly ActivitySource _activitySource;
     private readonly IPostgresDatabase _database;
     private readonly ILogger<Instrumentation> _logger;
-    private readonly IMessageTypeMap _messageTypeMap;
     private readonly Meter? _meter;
     private readonly BeckettOptions _options;
     private readonly TextMapPropagator _propagator;
@@ -23,13 +23,11 @@ public class Instrumentation : IInstrumentation, IDisposable
     public Instrumentation(
         IPostgresDatabase database,
         IMeterFactory meterFactory,
-        IMessageTypeMap messageTypeMap,
         BeckettOptions options,
         ILogger<Instrumentation> logger
     )
     {
         _database = database;
-        _messageTypeMap = messageTypeMap;
         _options = options;
         _logger = logger;
 
@@ -183,15 +181,18 @@ public class Instrumentation : IInstrumentation, IDisposable
         activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.HandlerName);
         activity.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
 
-        if (messageContext.Metadata.TryGetValue(MessageConstants.Metadata.CausationId, out var causationId))
+        if (messageContext.Metadata.RootElement.TryGetProperty(
+                MessageConstants.Metadata.CausationId,
+                out var causationIdProperty
+            ))
         {
-            activity.AddTag(TelemetryConstants.Message.CausationId, causationId);
+            activity.AddTag(TelemetryConstants.Message.CausationId, causationIdProperty.GetString());
         }
 
         activity.AddTag(TelemetryConstants.Message.StreamName, messageContext.StreamName);
         activity.AddTag(TelemetryConstants.Message.GlobalPosition, messageContext.GlobalPosition);
         activity.AddTag(TelemetryConstants.Message.StreamPosition, messageContext.StreamPosition);
-        activity.AddTag(TelemetryConstants.Message.Type, _messageTypeMap.GetName(messageContext.Type));
+        activity.AddTag(TelemetryConstants.Message.Type, messageContext.Type);
 
         activity.AddBaggage(TelemetryConstants.Message.Id, messageContext.Id);
 
@@ -262,13 +263,13 @@ public class Instrumentation : IInstrumentation, IDisposable
         return (long)command.ExecuteScalar()!;
     }
 
-    private IEnumerable<string> ExtractTraceContextFromMetadata(IDictionary<string, object> metadata, string key)
+    private IEnumerable<string> ExtractTraceContextFromMetadata(JsonDocument metadata, string key)
     {
         try
         {
-            if (metadata.TryGetValue(key, out var value))
+            if (metadata.RootElement.TryGetProperty(key, out var value))
             {
-                return [value.ToString()!];
+                return [value.GetRawText()];
             }
         }
         catch (Exception e)

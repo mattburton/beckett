@@ -6,7 +6,6 @@ namespace Beckett.Subscriptions;
 
 public class CheckpointConsumer(
     IPostgresDatabase database,
-    ISubscriptionRegistry subscriptionRegistry,
     ICheckpointProcessor checkpointProcessor,
     BeckettOptions options,
     ILogger<CheckpointConsumer> logger,
@@ -44,7 +43,7 @@ public class CheckpointConsumer(
                     break;
                 }
 
-                var subscription = subscriptionRegistry.GetSubscription(checkpoint.Name);
+                var subscription = SubscriptionRegistry.GetSubscription(checkpoint.Name);
 
                 if (subscription == null)
                 {

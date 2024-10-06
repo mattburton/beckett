@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions.Retries;
 
 public class RetryProcessor(
-    ISubscriptionRegistry subscriptionRegistry,
     BeckettOptions options,
     ICheckpointProcessor checkpointProcessor,
     IPostgresDatabase database,
@@ -28,7 +27,7 @@ public class RetryProcessor(
         CancellationToken cancellationToken
     )
     {
-        var subscription = subscriptionRegistry.GetSubscription(retry.Name);
+        var subscription = SubscriptionRegistry.GetSubscription(retry.Name);
 
         if (subscription == null)
         {
@@ -145,16 +144,18 @@ public class RetryProcessor(
                     var nextAttempt = attemptNumber + 1;
 
                     await messageScheduler.ScheduleMessage(
-                        connection,
-                        transaction,
                         retryStreamName,
-                        new RetryScheduled(
-                            retry.Id,
-                            nextAttempt,
-                            retryAt,
-                            DateTimeOffset.UtcNow
+                        new Message(
+                            new RetryScheduled(
+                                retry.Id,
+                                nextAttempt,
+                                retryAt,
+                                DateTimeOffset.UtcNow
+                            )
                         ),
                         retryAt,
+                        connection,
+                        transaction,
                         cancellationToken
                     );
                     break;

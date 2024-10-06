@@ -8,7 +8,6 @@ namespace Beckett.Subscriptions;
 public class CheckpointConsumerGroup(
     BeckettOptions options,
     IPostgresDatabase database,
-    ISubscriptionRegistry subscriptionRegistry,
     ICheckpointProcessor checkpointProcessor,
     ILogger<CheckpointConsumer> logger
 ) : ICheckpointConsumerGroup
@@ -32,7 +31,6 @@ public class CheckpointConsumerGroup(
                 instance,
                 new CheckpointConsumer(
                     database,
-                    subscriptionRegistry,
                     checkpointProcessor,
                     options,
                     logger,

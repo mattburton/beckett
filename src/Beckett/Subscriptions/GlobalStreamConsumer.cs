@@ -1,6 +1,5 @@
 using Beckett.Database;
 using Beckett.Database.Types;
-using Beckett.Messages;
 using Beckett.MessageStorage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
@@ -11,8 +10,6 @@ public class GlobalStreamConsumer(
     IPostgresDatabase database,
     IMessageStorage messageStorage,
     BeckettOptions options,
-    ISubscriptionRegistry subscriptionRegistry,
-    IMessageTypeMap messageTypeMap,
     ILogger<GlobalStreamConsumer> logger
 ) : IGlobalStreamConsumer
 {
@@ -30,7 +27,7 @@ public class GlobalStreamConsumer(
 
     private async Task Poll(CancellationToken stoppingToken)
     {
-        var registeredSubscriptions = subscriptionRegistry.All().ToArray();
+        var registeredSubscriptions = SubscriptionRegistry.All().ToArray();
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -85,7 +82,7 @@ public class GlobalStreamConsumer(
                 foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
-                        .Where(s => stream.Any(m => m.AppliesTo(s, messageTypeMap))).ToArray();
+                        .Where(subscription => stream.Any(m => m.AppliesTo(subscription))).ToArray();
 
                     foreach (var subscription in subscriptions)
                     {
