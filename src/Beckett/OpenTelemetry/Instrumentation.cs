@@ -269,7 +269,7 @@ public class Instrumentation : IInstrumentation, IDisposable
         {
             if (metadata.RootElement.TryGetProperty(key, out var value))
             {
-                return [value.GetRawText()];
+                return [value.ToString()];
             }
         }
         catch (Exception e)
