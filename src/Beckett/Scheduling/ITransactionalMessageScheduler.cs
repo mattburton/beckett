@@ -6,7 +6,7 @@ public interface ITransactionalMessageScheduler
 {
     Task<Guid> ScheduleMessage(
         string streamName,
-        object message,
+        Message message,
         DateTimeOffset deliverAt,
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,

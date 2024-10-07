@@ -31,25 +31,20 @@ public class BeckettBuilder(
 
     public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
 
-    public void AddRecurringMessage<TMessage>(
+    public void AddRecurringMessage(
         string name,
         string cronExpression,
         string streamName,
-        TMessage message
-    ) where TMessage : notnull
+        Message message
+    )
     {
         if (!RecurringMessageRegistry.TryAdd(name, out var recurringMessage))
         {
             throw new InvalidOperationException($"There is already a recurring message with the name {name}");
         }
 
-        if (message is not Message messageToAdd)
-        {
-            messageToAdd = new Message(message);
-        }
-
         recurringMessage.CronExpression = cronExpression;
         recurringMessage.StreamName = streamName;
-        recurringMessage.Message = messageToAdd;
+        recurringMessage.Message = message;
     }
 }

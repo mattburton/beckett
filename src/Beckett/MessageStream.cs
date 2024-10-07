@@ -16,10 +16,14 @@ public readonly struct MessageStream(
     /// </summary>
     public long StreamVersion { get; } = streamVersion;
 
+    /// <summary>
+    /// The stream messages
+    /// </summary>
     public IReadOnlyList<StreamMessage> Messages { get; } = streamMessages.ToList();
 
     /// <summary>
-    /// The stream messages
+    /// The stream messages deserialized as instances of their corresponding .NET types, skipping those where the type
+    /// is not mapped
     /// </summary>
     public IReadOnlyList<object> ResolvedMessages => Messages.Where(x => x.ResolvedMessage.Value != null)
         .Select(x => x.ResolvedMessage.Value!).ToList();
@@ -35,24 +39,13 @@ public readonly struct MessageStream(
     public bool IsNotEmpty => Messages.Count > 0;
 
     /// <summary>
-    /// Append a message to the stream using the expected version at the time it was originally read.
-    /// </summary>
-    /// <param name="message">The message to append</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The append result</returns>
-    public Task<AppendResult> Append(
-        object message,
-        CancellationToken cancellationToken
-    ) => Append([message], cancellationToken);
-
-    /// <summary>
     /// Append messages to the stream using the expected version at the time it was originally read.
     /// </summary>
     /// <param name="messages">The messages to append</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The append result</returns>
     public Task<AppendResult> Append(
-        IEnumerable<object> messages,
+        IEnumerable<Message> messages,
         CancellationToken cancellationToken
     ) => appendToStream(StreamName, ExpectedVersion.For(StreamVersion), messages, cancellationToken);
 
@@ -94,6 +87,48 @@ public readonly struct MessageStream(
 public delegate Task<AppendResult> AppendToStreamDelegate(
     string streamName,
     ExpectedVersion expectedVersion,
-    IEnumerable<object> messages,
+    IEnumerable<Message> messages,
     CancellationToken cancellationToken
 );
+
+public static class MessageStreamExtensions
+{
+    /// <summary>
+    /// Append a message to the stream using the expected version at the time it was originally read.
+    /// </summary>
+    /// <param name="messageStream">The message stream</param>
+    /// <param name="message">The message to append</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The append result</returns>
+    public static Task<AppendResult> Append(
+        this MessageStream messageStream,
+        object message,
+        CancellationToken cancellationToken
+    ) => messageStream.Append([new Message(message)], cancellationToken);
+
+    /// <summary>
+    /// Append a message to the stream using the expected version at the time it was originally read.
+    /// </summary>
+    /// <param name="messageStream">The message stream</param>
+    /// <param name="message">The message to append</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The append result</returns>
+    public static Task<AppendResult> Append(
+        this MessageStream messageStream,
+        Message message,
+        CancellationToken cancellationToken
+    ) => messageStream.Append([message], cancellationToken);
+
+    /// <summary>
+    /// Append messages to the stream using the expected version at the time it was originally read.
+    /// </summary>
+    /// <param name="messageStream">The message stream</param>
+    /// <param name="messages">The messages to append</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The append result</returns>
+    public static Task<AppendResult> Append(
+        this MessageStream messageStream,
+        IEnumerable<object> messages,
+        CancellationToken cancellationToken
+    ) => messageStream.Append(messages.Select(x => new Message(x)), cancellationToken);
+}

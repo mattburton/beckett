@@ -3,7 +3,6 @@ using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling.Queries;
-using Cronos;
 using Npgsql;
 using UUIDNext;
 
@@ -20,47 +19,9 @@ public class MessageScheduler(
         return database.Execute(new CancelScheduledMessage(id, options), cancellationToken);
     }
 
-    public async Task RecurringMessage(
-        string name,
-        string cronExpression,
-        string streamName,
-        object message,
-        CancellationToken cancellationToken
-    )
-    {
-        if (!CronExpression.TryParse(cronExpression, out var parsedCronExpression))
-        {
-            throw new InvalidOperationException("Invalid cron expression");
-        }
-
-        var nextOccurrence = parsedCronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, TimeZoneInfo.Utc);
-
-        if (nextOccurrence == null)
-        {
-            throw new InvalidOperationException("Unable to calculate next occurrence for cron expression");
-        }
-
-        if (message is not Message recurringMessage)
-        {
-            recurringMessage = new Message(message);
-        }
-
-        await database.Execute(
-            new AddOrUpdateRecurringMessage(
-                name,
-                cronExpression,
-                streamName,
-                recurringMessage,
-                nextOccurrence.Value,
-                options
-            ),
-            cancellationToken
-        );
-    }
-
     public async Task<Guid> ScheduleMessage(
         string streamName,
-        object message,
+        Message message,
         DateTimeOffset deliverAt,
         CancellationToken cancellationToken
     )
@@ -80,7 +41,7 @@ public class MessageScheduler(
 
     public async Task<Guid> ScheduleMessage(
         string streamName,
-        object message,
+        Message message,
         DateTimeOffset deliverAt,
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
@@ -93,18 +54,11 @@ public class MessageScheduler(
 
         var id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql);
 
-        if (message is not Message messageToSchedule)
-        {
-            messageToSchedule = new Message(message, activityMetadata);
-        }
-        else
-        {
-            messageToSchedule.Metadata.Prepend(activityMetadata);
-        }
+        message.Metadata.Prepend(activityMetadata);
 
         var scheduledMessage = ScheduledMessageType.From(
             id,
-            messageToSchedule,
+            message,
             deliverAt
         );
 

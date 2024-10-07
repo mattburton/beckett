@@ -9,17 +9,10 @@ public class MessageStore(
     IInstrumentation instrumentation
 ) : IMessageStore
 {
-    public Task<AppendResult> AppendToStream(
-        string streamName,
-        ExpectedVersion expectedVersion,
-        object message,
-        CancellationToken cancellationToken
-    ) => AppendToStream(streamName, expectedVersion, [message], cancellationToken);
-
     public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
-        IEnumerable<object> messages,
+        IEnumerable<Message> messages,
         CancellationToken cancellationToken
     )
     {
@@ -27,20 +20,11 @@ public class MessageStore(
 
         using var activity = instrumentation.StartAppendToStreamActivity(streamName, activityMetadata);
 
-        var messagesToAppend = new List<Message>();
+        var messagesToAppend = messages.ToList();
 
-        foreach (var message in messages)
+        foreach (var message in messagesToAppend)
         {
-            if (message is not Message messageToAppend)
-            {
-                messageToAppend = new Message(message, activityMetadata);
-            }
-            else
-            {
-                messageToAppend.Metadata.Prepend(activityMetadata);
-            }
-
-            messagesToAppend.Add(messageToAppend);
+            message.Metadata.Prepend(activityMetadata);
         }
 
         var result = await messageStorage.AppendToStream(
@@ -52,9 +36,6 @@ public class MessageStore(
 
         return new AppendResult(result.StreamVersion);
     }
-
-    public Task<MessageStream> ReadStream(string streamName, CancellationToken cancellationToken) =>
-        ReadStream(streamName, ReadOptions.Default, cancellationToken);
 
     public async Task<MessageStream> ReadStream(
         string streamName,

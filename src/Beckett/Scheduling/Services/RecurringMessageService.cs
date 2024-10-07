@@ -69,7 +69,7 @@ public class RecurringMessageService(
                     await messageStore.AppendToStream(
                         recurringMessagesForStream.Key,
                         ExpectedVersion.Any,
-                        recurringMessagesForStream.Select(x => x.Message).Cast<object>(),
+                        recurringMessagesForStream.Select(x => x.Message),
                         stoppingToken
                     );
                 }

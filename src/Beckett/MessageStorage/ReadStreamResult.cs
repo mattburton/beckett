@@ -1,6 +1,6 @@
 namespace Beckett.MessageStorage;
 
-public readonly struct MessageStreamResult(
+public readonly struct ReadStreamResult(
     string streamName,
     long streamVersion,
     IReadOnlyList<StreamMessage> streamMessages

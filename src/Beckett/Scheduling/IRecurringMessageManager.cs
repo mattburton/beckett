@@ -6,7 +6,7 @@ public interface IRecurringMessageManager
         string name,
         string cronExpression,
         string streamName,
-        object message,
+        Message message,
         CancellationToken cancellationToken
     );
 }

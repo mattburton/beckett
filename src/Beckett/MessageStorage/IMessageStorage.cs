@@ -15,7 +15,7 @@ public interface IMessageStorage
         CancellationToken cancellationToken
     );
 
-    Task<MessageStreamResult> ReadStream(
+    Task<ReadStreamResult> ReadStream(
         string streamName,
         ReadStreamOptions options,
         CancellationToken cancellationToken

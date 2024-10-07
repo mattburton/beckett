@@ -55,7 +55,7 @@ public class PostgresMessageStorage(IPostgresDatabase database, PostgresOptions 
         return new ReadGlobalStreamResult(items);
     }
 
-    public async Task<MessageStreamResult> ReadStream(
+    public async Task<ReadStreamResult> ReadStream(
         string streamName,
         ReadStreamOptions readOptions,
         CancellationToken cancellationToken
@@ -86,6 +86,6 @@ public class PostgresMessageStorage(IPostgresDatabase database, PostgresOptions 
             );
         }
 
-        return new MessageStreamResult(streamName, streamVersion, messages);
+        return new ReadStreamResult(streamName, streamVersion, messages);
     }
 }

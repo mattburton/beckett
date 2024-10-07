@@ -10,7 +10,7 @@ public class RecurringMessageManager(IPostgresDatabase database, PostgresOptions
         string name,
         string cronExpression,
         string streamName,
-        object message,
+        Message message,
         CancellationToken cancellationToken
     )
     {
@@ -26,17 +26,12 @@ public class RecurringMessageManager(IPostgresDatabase database, PostgresOptions
             throw new InvalidOperationException("Unable to calculate next occurrence for cron expression");
         }
 
-        if (message is not Message recurringMessage)
-        {
-            recurringMessage = new Message(message);
-        }
-
         await database.Execute(
             new AddOrUpdateRecurringMessage(
                 name,
                 cronExpression,
                 streamName,
-                recurringMessage,
+                message,
                 nextOccurrence.Value,
                 options
             ),
