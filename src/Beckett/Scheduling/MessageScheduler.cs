@@ -24,7 +24,7 @@ public class MessageScheduler(
         string name,
         string cronExpression,
         string streamName,
-        Message message,
+        object message,
         CancellationToken cancellationToken
     )
     {
@@ -40,12 +40,17 @@ public class MessageScheduler(
             throw new InvalidOperationException("Unable to calculate next occurrence for cron expression");
         }
 
+        if (message is not Message recurringMessage)
+        {
+            recurringMessage = new Message(message);
+        }
+
         await database.Execute(
             new AddOrUpdateRecurringMessage(
                 name,
                 cronExpression,
                 streamName,
-                message,
+                recurringMessage,
                 nextOccurrence.Value,
                 options
             ),
@@ -55,7 +60,7 @@ public class MessageScheduler(
 
     public async Task<Guid> ScheduleMessage(
         string streamName,
-        Message message,
+        object message,
         DateTimeOffset deliverAt,
         CancellationToken cancellationToken
     )
@@ -75,7 +80,7 @@ public class MessageScheduler(
 
     public async Task<Guid> ScheduleMessage(
         string streamName,
-        Message message,
+        object message,
         DateTimeOffset deliverAt,
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
@@ -88,11 +93,18 @@ public class MessageScheduler(
 
         var id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql);
 
-        message.Metadata.Prepend(activityMetadata);
+        if (message is not Message messageToSchedule)
+        {
+            messageToSchedule = new Message(message, activityMetadata);
+        }
+        else
+        {
+            messageToSchedule.Metadata.Prepend(activityMetadata);
+        }
 
         var scheduledMessage = ScheduledMessageType.From(
             id,
-            message,
+            messageToSchedule,
             deliverAt
         );
 

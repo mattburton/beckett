@@ -5,7 +5,7 @@ namespace Beckett.Scheduling.Services;
 
 public class BootstrapRecurringMessages(
     IPostgresDatabase database,
-    IMessageScheduler messageScheduler
+    IRecurringMessageManager recurringMessageManager
 ) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -16,7 +16,7 @@ public class BootstrapRecurringMessages(
 
             await connection.OpenAsync(cancellationToken);
 
-            await messageScheduler.RecurringMessage(
+            await recurringMessageManager.Create(
                 recurringMessage.Name,
                 recurringMessage.CronExpression,
                 recurringMessage.StreamName,

@@ -18,21 +18,6 @@ public interface IMessageStore
     );
 
     /// <summary>
-    /// Append a message to a stream while supplying the expected version of that stream
-    /// </summary>
-    /// <param name="streamName">The name of the stream to append to</param>
-    /// <param name="expectedVersion">Expected version of the stream</param>
-    /// <param name="message">The message to append</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The result of the append operation</returns>
-    Task<AppendResult> AppendToStream(
-        string streamName,
-        ExpectedVersion expectedVersion,
-        Message message,
-        CancellationToken cancellationToken
-    );
-
-    /// <summary>
     /// Append messages to a stream while supplying the expected version of that stream
     /// </summary>
     /// <param name="streamName">The name of the stream to append to</param>
@@ -44,21 +29,6 @@ public interface IMessageStore
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
-        CancellationToken cancellationToken
-    );
-
-    /// <summary>
-    /// Append messages to a stream while supplying the expected version of that stream
-    /// </summary>
-    /// <param name="streamName">The name of the stream to append to</param>
-    /// <param name="expectedVersion">Expected version of the stream</param>
-    /// <param name="messages">The messages to append</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The result of the append operation</returns>
-    Task<AppendResult> AppendToStream(
-        string streamName,
-        ExpectedVersion expectedVersion,
-        IEnumerable<Message> messages,
         CancellationToken cancellationToken
     );
 

@@ -14,28 +14,44 @@ public class MessageStore(
         ExpectedVersion expectedVersion,
         object message,
         CancellationToken cancellationToken
-    ) => InternalAppendToStream(streamName, expectedVersion, [new Message(message)], cancellationToken);
+    ) => AppendToStream(streamName, expectedVersion, [message], cancellationToken);
 
-    public Task<AppendResult> AppendToStream(
-        string streamName,
-        ExpectedVersion expectedVersion,
-        Message message,
-        CancellationToken cancellationToken
-    ) => InternalAppendToStream(streamName, expectedVersion, [message], cancellationToken);
-
-    public Task<AppendResult> AppendToStream(
+    public async Task<AppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<object> messages,
         CancellationToken cancellationToken
-    ) => InternalAppendToStream(streamName, expectedVersion, messages.Select(x => new Message(x)), cancellationToken);
+    )
+    {
+        var activityMetadata = new Dictionary<string, object>();
 
-    public Task<AppendResult> AppendToStream(
-        string streamName,
-        ExpectedVersion expectedVersion,
-        IEnumerable<Message> messages,
-        CancellationToken cancellationToken
-    ) => InternalAppendToStream(streamName, expectedVersion, messages, cancellationToken);
+        using var activity = instrumentation.StartAppendToStreamActivity(streamName, activityMetadata);
+
+        var messagesToAppend = new List<Message>();
+
+        foreach (var message in messages)
+        {
+            if (message is not Message messageToAppend)
+            {
+                messageToAppend = new Message(message, activityMetadata);
+            }
+            else
+            {
+                messageToAppend.Metadata.Prepend(activityMetadata);
+            }
+
+            messagesToAppend.Add(messageToAppend);
+        }
+
+        var result = await messageStorage.AppendToStream(
+            streamName,
+            expectedVersion,
+            messagesToAppend,
+            cancellationToken
+        );
+
+        return new AppendResult(result.StreamVersion);
+    }
 
     public Task<MessageStream> ReadStream(string streamName, CancellationToken cancellationToken) =>
         ReadStream(streamName, ReadOptions.Default, cancellationToken);
@@ -56,34 +72,6 @@ public class MessageStore(
             result.Messages,
             AppendToStream
         );
-    }
-
-    private async Task<AppendResult> InternalAppendToStream(
-        string streamName,
-        ExpectedVersion expectedVersion,
-        IEnumerable<Message> messages,
-        CancellationToken cancellationToken
-    )
-    {
-        var activityMetadata = new Dictionary<string, object>();
-
-        using var activity = instrumentation.StartAppendToStreamActivity(streamName, activityMetadata);
-
-        var messagesToAppend = messages.ToList();
-
-        foreach (var message in messagesToAppend)
-        {
-            message.Metadata.Prepend(activityMetadata);
-        }
-
-        var result = await messageStorage.AppendToStream(
-            streamName,
-            expectedVersion,
-            messagesToAppend,
-            cancellationToken
-        );
-
-        return new AppendResult(result.StreamVersion);
     }
 }
 

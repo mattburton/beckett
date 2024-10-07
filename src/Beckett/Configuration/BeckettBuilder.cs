@@ -35,24 +35,21 @@ public class BeckettBuilder(
         string name,
         string cronExpression,
         string streamName,
-        TMessage message,
-        Dictionary<string, object>? metadata = null
-    ) where TMessage : notnull => AddRecurringMessage(name, cronExpression, streamName, new Message(message, metadata));
-
-    public void AddRecurringMessage(
-        string name,
-        string cronExpression,
-        string streamName,
-        Message message
-    )
+        TMessage message
+    ) where TMessage : notnull
     {
         if (!RecurringMessageRegistry.TryAdd(name, out var recurringMessage))
         {
             throw new InvalidOperationException($"There is already a recurring message with the name {name}");
         }
 
+        if (message is not Message messageToAdd)
+        {
+            messageToAdd = new Message(message);
+        }
+
         recurringMessage.CronExpression = cronExpression;
         recurringMessage.StreamName = streamName;
-        recurringMessage.Message = message;
+        recurringMessage.Message = messageToAdd;
     }
 }
