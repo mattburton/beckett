@@ -12,6 +12,16 @@ public static class DictionaryExtensions
             return;
         }
 
+        if (dictionary.Count == 0)
+        {
+            foreach (var item in dictionaryToPrepend)
+            {
+                dictionary.Add(item.Key, item.Value);
+            }
+
+            return;
+        }
+
         var result = dictionaryToPrepend.ToDictionary(item => item.Key, item => item.Value);
 
         foreach (var item in dictionary)

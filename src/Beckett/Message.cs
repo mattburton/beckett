@@ -6,7 +6,7 @@ namespace Beckett;
 /// <summary>
 /// Message envelope used to write messages in Beckett
 /// </summary>
-public readonly struct Message
+public readonly record struct Message
 {
     private static readonly JsonDocument EmptyJsonDocument = JsonDocument.Parse("{}");
 
@@ -47,6 +47,8 @@ public readonly struct Message
     public string Type { get; }
     public JsonDocument Data { get; }
     public Dictionary<string, object> Metadata { get; }
+
+    public void AddMetadata(string key, object value) => Metadata.Add(key, value);
 
     internal JsonDocument SerializedMetadata =>
         Metadata.Count > 0 ? MessageSerializer.Serialize(Metadata) : EmptyJsonDocument;
