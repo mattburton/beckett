@@ -19,24 +19,24 @@ public readonly struct MessageStream(
     /// <summary>
     /// The stream messages
     /// </summary>
-    public IReadOnlyList<StreamMessage> Messages { get; } = streamMessages.ToList();
+    public IReadOnlyList<StreamMessage> StreamMessages { get; } = streamMessages.ToList();
 
     /// <summary>
     /// The stream messages deserialized as instances of their corresponding .NET types, skipping those where the type
     /// is not mapped
     /// </summary>
-    public IReadOnlyList<object> ResolvedMessages => Messages.Where(x => x.ResolvedMessage.Value != null)
-        .Select(x => x.ResolvedMessage.Value!).ToList();
+    public IReadOnlyList<object> Messages =>
+        StreamMessages.Where(x => x.Message != null).Select(x => x.Message!).ToList();
 
     /// <summary>
     /// Whether the current stream is empty / does not exist (has zero messages)
     /// </summary>
-    public bool IsEmpty => Messages.Count == 0;
+    public bool IsEmpty => StreamMessages.Count == 0;
 
     /// <summary>
     /// Whether the current stream is not empty / exists (has one or more messages)
     /// </summary>
-    public bool IsNotEmpty => Messages.Count > 0;
+    public bool IsNotEmpty => StreamMessages.Count > 0;
 
     /// <summary>
     /// Append messages to the stream using the expected version at the time it was originally read.
@@ -58,7 +58,7 @@ public readonly struct MessageStream(
     public MessageStream Merge(MessageStream messageStream)
     {
         var streamMessages =
-            Messages.Concat(messageStream.Messages).OrderBy(x => x.GlobalPosition).ToList();
+            StreamMessages.Concat(messageStream.StreamMessages).OrderBy(x => x.GlobalPosition).ToList();
 
         return new MessageStream(StreamName, -1, streamMessages, appendToStream);
     }
@@ -69,7 +69,7 @@ public readonly struct MessageStream(
     /// </summary>
     /// <typeparam name="TState"></typeparam>
     /// <returns></returns>
-    public TState ProjectTo<TState>() where TState : IApply, new() => ResolvedMessages.ProjectTo<TState>();
+    public TState ProjectTo<TState>() where TState : IApply, new() => Messages.ProjectTo<TState>();
 
     /// <summary>
     /// Throw a <see cref="StreamDoesNotExistException"/> if the stream does not exist.

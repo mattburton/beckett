@@ -8,7 +8,7 @@ public class NotificationHandler
 {
     public Task Handle(IMessageContext context, CancellationToken _)
     {
-        switch (context.ResolvedMessage.Value)
+        switch (context.Message)
         {
             case TodoListCreated e:
                 Console.WriteLine($"List created [Id: {e.TodoListId}]");

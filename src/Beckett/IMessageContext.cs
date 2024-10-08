@@ -45,19 +45,22 @@ public interface IMessageContext
     DateTimeOffset Timestamp { get; }
 
     /// <summary>
-    /// The .NET type of the message based on the mapped message types, or null if the type is not mapped
+    /// The .NET type of the message based on the mapped message types, or null if the type is not mapped. This property
+    /// is lazy loaded in order to defer type mapping until requested.
     /// </summary>
-    Lazy<Type?> ResolvedType { get; }
+    Type? MessageType { get; }
 
     /// <summary>
-    /// The message data deserialized as an instance of the resolved .NET type, or null if the type is not mapped
+    /// The message data deserialized as an instance of the resolved .NET type, or null if the type is not mapped. This
+    /// property is lazy loaded in order to defer deserialization until requested.
     /// </summary>
-    Lazy<object?> ResolvedMessage { get; }
+    object? Message { get; }
 
     /// <summary>
-    /// The message metadata deserialized as a <see cref="Dictionary{String,Object}"/>
+    /// Message metadata deserialized as a dictionary. This property is lazy loaded in order to defer deserialization
+    /// until requested.
     /// </summary>
-    Lazy<Dictionary<string, object>?> ResolvedMetadata { get; }
+    Dictionary<string, object> MessageMetadata { get; }
 
     /// <summary>
     /// Service provider that can be used to resolve services within a handler. For a static handler function this will

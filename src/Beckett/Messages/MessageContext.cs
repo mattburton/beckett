@@ -14,9 +14,13 @@ public readonly record struct MessageContext(
     IServiceProvider Services
 ) : IMessageContext
 {
-    public Lazy<Type?> ResolvedType { get; } = new(MessageTypeMap.TryGetType(Type, out var type) ? type : null);
+    private readonly Lazy<Type?> _messageType = new(MessageTypeMap.TryGetType(Type, out var type) ? type : null);
+    private readonly Lazy<object?> _message = new(MessageSerializer.Deserialize(Type, Data));
+    private readonly Lazy<Dictionary<string, object>> _messageMetadata = new(Metadata.ToMetadataDictionary());
 
-    public Lazy<object?> ResolvedMessage { get; } = new(MessageSerializer.Deserialize(Type, Data));
+    public Type? MessageType => _messageType.Value;
 
-    public Lazy<Dictionary<string, object>?> ResolvedMetadata { get; } = new(Metadata.ToMetadataDictionary());
+    public object? Message => _message.Value;
+
+    public Dictionary<string, object> MessageMetadata => _messageMetadata.Value;
 }

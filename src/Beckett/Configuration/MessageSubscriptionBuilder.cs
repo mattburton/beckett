@@ -65,7 +65,7 @@ public class MessageSubscriptionBuilder<T>(Subscription subscription)
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (T)((IMessageContext)c).ResolvedMessage.Value!, t);
+        subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (T)((IMessageContext)c).Message!, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
@@ -82,7 +82,7 @@ public class MessageSubscriptionBuilder<T>(Subscription subscription)
         subscription.HandlerName = handlerType.FullName;
         subscription.InstanceMethod = (h, c, t) => handler(
             (THandler)h,
-            (T)((IMessageContext)c).ResolvedMessage.Value!,
+            (T)((IMessageContext)c).Message!,
             (IMessageContext)c,
             t
         );
