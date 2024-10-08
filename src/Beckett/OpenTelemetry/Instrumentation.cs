@@ -207,18 +207,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $@"
-            WITH lagging AS (
-                SELECT COUNT(*) AS lagging
-                FROM {_options.Postgres.Schema}.subscriptions s
-                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-                WHERE s.status = 'active'
-                AND c.status = 'lagging'
-                GROUP BY c.group_name, c.name
-            )
-            SELECT COUNT(*)
-            FROM lagging l;
-        ";
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_lag_count();";
 
         command.Prepare();
 
@@ -233,11 +222,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $@"
-            SELECT count(*)
-            FROM {_options.Postgres.Schema}.checkpoints
-            WHERE status = 'retry';
-        ";
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_retry_count();";
 
         command.Prepare();
 
@@ -252,11 +237,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $@"
-            SELECT count(*)
-            FROM {_options.Postgres.Schema}.checkpoints
-            WHERE status = 'failed';
-        ";
+        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_failed_count();";
 
         command.Prepare();
 

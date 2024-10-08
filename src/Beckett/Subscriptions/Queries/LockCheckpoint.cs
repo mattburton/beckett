@@ -9,19 +9,11 @@ public class LockCheckpoint(
     string name,
     string streamName,
     PostgresOptions options
-) : IPostgresDatabaseQuery<Checkpoint?>
+) : IPostgresDatabaseQuery<LockCheckpoint.Result?>
 {
-    public async Task<Checkpoint?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
-            select group_name,
-                   name,
-                   stream_name,
-                   stream_position,
-                   stream_version,
-                   status
-            from {options.Schema}.lock_checkpoint($1, $2, $3);
-        ";
+        command.CommandText = $"select id, stream_position from {options.Schema}.lock_checkpoint($1, $2, $3);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -40,6 +32,8 @@ public class LockCheckpoint(
 
         await reader.ReadAsync(cancellationToken);
 
-        return Checkpoint.From(reader);
+        return !reader.HasRows ? null : new Result(reader.GetFieldValue<long>(0), reader.GetFieldValue<long>(1));
     }
+
+    public record Result(long Id, long StreamPosition);
 }

@@ -55,7 +55,7 @@ public static class ServiceCollectionExtensions
             builder.Configuration,
             builder.Environment,
             builder.Services
-        ).RetrySupport(options);
+        );
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public static class ServiceCollectionExtensions
                     configuration,
                     environment,
                     services
-                ).RetrySupport(options);
+                );
 
                 buildBeckett?.Invoke(beckettBuilder);
             }

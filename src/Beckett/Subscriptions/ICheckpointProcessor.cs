@@ -3,11 +3,8 @@ namespace Beckett.Subscriptions;
 public interface ICheckpointProcessor
 {
     Task Process(
+        Checkpoint checkpoint,
         Subscription subscription,
-        string streamName,
-        long streamPosition,
-        int batchSize,
-        bool isRetry,
         CancellationToken cancellationToken
     );
 }

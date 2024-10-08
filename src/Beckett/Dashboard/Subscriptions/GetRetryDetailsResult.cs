@@ -1,9 +1,8 @@
 using Beckett.Subscriptions.Retries;
-using Beckett.Subscriptions.Retries.Events;
 
 namespace Beckett.Dashboard.Subscriptions;
 
-public class GetRetryDetailsResult : IApply
+public class GetRetryDetailsResult //: IApply
 {
     public Guid Id { get; private set; }
     public string GroupName { get; private set; } = null!;
@@ -34,85 +33,85 @@ public class GetRetryDetailsResult : IApply
         _ => true
     };
 
-    public void Apply(object message)
-    {
-        switch (message)
-        {
-            case RetryStarted e:
-                Apply(e);
-                break;
-            case RetryAttemptFailed e:
-                Apply(e);
-                break;
-            case RetrySucceeded e:
-                Apply(e);
-                break;
-            case RetryFailed e:
-                Apply(e);
-                break;
-            case ManualRetryRequested e:
-                Apply(e);
-                break;
-            case ManualRetryFailed e:
-                Apply(e);
-                break;
-        }
-    }
-
-    private void Apply(RetryStarted e)
-    {
-        Id = e.Id;
-        GroupName = e.GroupName;
-        Name = e.Name;
-        StreamName = e.StreamName;
-        StreamPosition = e.StreamPosition;
-        Status = RetryStatus.Started;
-        Error = e.Error;
-        StartedAt = e.Timestamp;
-        RetryAt = e.RetryAt;
-    }
-
-    private void Apply(RetryAttemptFailed e)
-    {
-        Status = RetryStatus.Scheduled;
-        RetryAt = e.RetryAt;
-        TotalAttempts++;
-
-        Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
-    }
-
-    private void Apply(RetrySucceeded e)
-    {
-        Status = RetryStatus.Succeeded;
-        TotalAttempts++;
-
-        Attempts.Add(new Attempt(Status, e.Timestamp, null));
-    }
-
-    private void Apply(RetryFailed e)
-    {
-        Id = e.Id;
-        Status = RetryStatus.Failed;
-        RetryAt = null;
-        TotalAttempts++;
-
-        Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
-    }
-
-    private void Apply(ManualRetryRequested e)
-    {
-        Status = RetryStatus.ManualRetryRequested;
-
-        Attempts.Add(new Attempt(Status, e.Timestamp, null));
-    }
-
-    private void Apply(ManualRetryFailed e)
-    {
-        Status = RetryStatus.ManualRetryFailed;
-        TotalAttempts++;
-
-        Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
-    }
+    // public void Apply(object message)
+    // {
+    //     switch (message)
+    //     {
+    //         case RetryStarted e:
+    //             Apply(e);
+    //             break;
+    //         case RetryAttemptFailed e:
+    //             Apply(e);
+    //             break;
+    //         case RetrySucceeded e:
+    //             Apply(e);
+    //             break;
+    //         case RetryFailed e:
+    //             Apply(e);
+    //             break;
+    //         case ManualRetryRequested e:
+    //             Apply(e);
+    //             break;
+    //         case ManualRetryFailed e:
+    //             Apply(e);
+    //             break;
+    //     }
+    // }
+    //
+    // private void Apply(RetryStarted e)
+    // {
+    //     Id = e.Id;
+    //     GroupName = e.GroupName;
+    //     Name = e.Name;
+    //     StreamName = e.StreamName;
+    //     StreamPosition = e.StreamPosition;
+    //     Status = RetryStatus.Started;
+    //     Error = e.Error;
+    //     StartedAt = e.Timestamp;
+    //     RetryAt = e.RetryAt;
+    // }
+    //
+    // private void Apply(RetryAttemptFailed e)
+    // {
+    //     Status = RetryStatus.Scheduled;
+    //     RetryAt = e.RetryAt;
+    //     TotalAttempts++;
+    //
+    //     Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
+    // }
+    //
+    // private void Apply(RetrySucceeded e)
+    // {
+    //     Status = RetryStatus.Succeeded;
+    //     TotalAttempts++;
+    //
+    //     Attempts.Add(new Attempt(Status, e.Timestamp, null));
+    // }
+    //
+    // private void Apply(RetryFailed e)
+    // {
+    //     Id = e.Id;
+    //     Status = RetryStatus.Failed;
+    //     RetryAt = null;
+    //     TotalAttempts++;
+    //
+    //     Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
+    // }
+    //
+    // private void Apply(ManualRetryRequested e)
+    // {
+    //     Status = RetryStatus.ManualRetryRequested;
+    //
+    //     Attempts.Add(new Attempt(Status, e.Timestamp, null));
+    // }
+    //
+    // private void Apply(ManualRetryFailed e)
+    // {
+    //     Status = RetryStatus.ManualRetryFailed;
+    //     TotalAttempts++;
+    //
+    //     Attempts.Add(new Attempt(Status, e.Timestamp, e.Error));
+    // }
 
     public record Attempt(RetryStatus Status, DateTimeOffset Timestamp, ExceptionData? Error)
     {

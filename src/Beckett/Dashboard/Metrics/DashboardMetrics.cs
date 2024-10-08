@@ -12,7 +12,7 @@ public class DashboardMetrics(IPostgresDatabase database, PostgresOptions option
 
     public Task<long> GetSubscriptionLag(CancellationToken cancellationToken)
     {
-        return database.Execute(new GetSubscriptionLag(options), cancellationToken);
+        return database.Execute(new GetSubscriptionLagCount(options), cancellationToken);
     }
 
     public Task<long> GetSubscriptionRetryCount(CancellationToken cancellationToken)

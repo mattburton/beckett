@@ -1,26 +1,14 @@
-using Beckett.Subscriptions.Retries.Events;
-
 namespace Beckett.Subscriptions.Retries;
 
-public class RetryClient(IMessageStore messageStore) : IRetryClient
+public class RetryClient : IRetryClient
 {
-    public async Task BulkRetry(Guid[] retryIds, CancellationToken cancellationToken)
+    public Task BulkRetry(Guid[] retryIds, CancellationToken cancellationToken)
     {
-        await messageStore.AppendToStream(
-            RetryQueues.BulkRetryQueue,
-            ExpectedVersion.Any,
-            new BulkRetryRequested(retryIds.ToList(), DateTimeOffset.UtcNow),
-            cancellationToken
-        );
+        return Task.CompletedTask;
     }
 
-    public async Task ManualRetry(Guid id, CancellationToken cancellationToken)
+    public Task ManualRetry(Guid id, CancellationToken cancellationToken)
     {
-        await messageStore.AppendToStream(
-            RetryStreamName.For(id),
-            ExpectedVersion.Any,
-            new ManualRetryRequested(id, DateTimeOffset.UtcNow),
-            cancellationToken
-        );
+        return Task.CompletedTask;
     }
 }

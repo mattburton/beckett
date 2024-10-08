@@ -7,11 +7,7 @@ public class GetSubscriptionRetryCount(PostgresOptions options) : IPostgresDatab
 {
     public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
-            SELECT count(*)
-            FROM {options.Schema}.checkpoints
-            WHERE status = 'retry';
-        ";
+        command.CommandText = $"select {options.Schema}.get_subscription_retry_count();";
 
         if (options.PrepareStatements)
         {

@@ -1,12 +1,10 @@
 using Beckett.Dashboard.Subscriptions.Queries;
 using Beckett.Database;
-using Beckett.Subscriptions.Retries;
 
 namespace Beckett.Dashboard.Subscriptions;
 
 public class DashboardSubscriptions(
     IPostgresDatabase database,
-    IMessageStore messageStore,
     PostgresOptions options
 ) : IDashboardSubscriptions
 {
@@ -25,11 +23,9 @@ public class DashboardSubscriptions(
         return database.Execute(new GetRetries(options), cancellationToken);
     }
 
-    public async Task<GetRetryDetailsResult?> GetRetryDetails(Guid id, CancellationToken cancellationToken)
+    public Task<GetRetryDetailsResult?> GetRetryDetails(Guid id, CancellationToken cancellationToken)
     {
-        var stream = await messageStore.ReadStream(RetryStreamName.For(id), cancellationToken);
-
-        return stream.IsEmpty ? null : stream.ProjectTo<GetRetryDetailsResult>();
+        return Task.FromResult(default(GetRetryDetailsResult));
     }
 
     public Task<GetFailedResult> GetFailed(CancellationToken cancellationToken)
