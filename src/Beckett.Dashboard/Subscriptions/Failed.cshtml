@@ -25,8 +25,8 @@
     <div>
       <a href="#"
          class="btn btn-primary disabled bulk-controls"
-         title="Request manual retry"
-         hx-post="@Routes.Prefix/subscriptions/retries/bulk-retry"
+         title="Bulk retry"
+         hx-post="@Routes.Prefix/subscriptions/checkpoints/bulk-retry"
          hx-include="[name=id]">
         Retry
       </a>
@@ -45,25 +45,25 @@
       <th style="width: 1em;">
         <input type="checkbox" id="select-all" onclick="selectAll()" />
       </th>
-      <th>Group</th>
+      <th>Group Name</th>
       <th>Name</th>
       <th>Stream Name</th>
       <th>Stream Position</th>
     </tr>
   </thead>
   <tbody>
-  @foreach(var retry in Model.Failures)
+  @foreach(var checkpoint in Model.Failures)
   {
     <tr>
       <td>
-        <input type="checkbox" class="select-item" name="id" value="@retry.RetryId" onclick="selectItem(this)" />
+        <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id" onclick="selectItem(this)" />
       </td>
-      <td>@retry.GroupName</td>
-      <td>@retry.Name</td>
+      <td>@checkpoint.GroupName</td>
+      <td>@checkpoint.Name</td>
       <td>
-        <a href="@Routes.Prefix/subscriptions/retries/@retry.RetryId">@retry.StreamName</a>
+        <a href="@Routes.Prefix/subscriptions/checkpoints/@checkpoint.Id">@checkpoint.StreamName</a>
       </td>
-      <td>@retry.StreamPosition</td>
+      <td>@checkpoint.StreamPosition</td>
     </tr>
   }
   @if (Model.Failures.Count == 0)

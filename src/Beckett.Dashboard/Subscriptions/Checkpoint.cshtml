@@ -1,13 +1,14 @@
 @using System.Web
-@inherits HtmlTemplate<RetryPage.ViewModel>
+@using Beckett.Subscriptions
+@inherits HtmlTemplate<CheckpointPage.ViewModel>
 
 @{
   Layout = new Layout();
 }
 
 <script type="text/javascript">
-  document.body.addEventListener("manual_retry_requested", function(){
-    alert('Manual retry requested');
+  document.body.addEventListener("retry_requested", function(){
+    alert('Retry requested');
   });
 </script>
 
@@ -28,23 +29,23 @@
   </ul>
 </div>
 
-<div id="retry-details"
-     hx-get="@Routes.Prefix/subscriptions/retries/@Model.Details.Id"
+<div id="checkpoint-details"
+     hx-get="@Routes.Prefix/subscriptions/checkpoints/@Model.Details.Id"
      hx-trigger="every 10s"
-     hx-select="#retry-details"
+     hx-select="#checkpoint-details"
      hx-swap="outerHTML">
   <div class="card m-4">
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
-        <div class="fs-3">Status: @Model.Details.Status.ToDisplayStatus()</div>
+        <div class="fs-3">Status: @Model.Details.Status</div>
         @if (Model.Details.ShowControls)
         {
           <div>
             <a href="#"
                class="btn btn-primary"
-               title="Request manual retry"
-               hx-post="@Routes.Prefix/subscriptions/retries/@Model.Details.Id/manual-retry"
-               hx-on::response-error="alert('Unable to request a manual retry at this time - please try again later')">
+               title="Request retry"
+               hx-post="@Routes.Prefix/subscriptions/checkpoints/@Model.Details.Id/retry"
+               hx-on::response-error="alert('Unable to retry checkpoint at this time - please try again later')">
               Retry
             </a>
           </div>
@@ -52,10 +53,10 @@
       </div>
     </div>
     <ul class="list-group list-group-flush">
-      <li class="list-group-item">Application: @Model.Details.GroupName</li>
-      <li class="list-group-item">Subscription: @Model.Details.Name</li>
+      <li class="list-group-item">Group Name: @Model.Details.GroupName</li>
+      <li class="list-group-item">Name: @Model.Details.Name</li>
       <li class="list-group-item">
-        Stream:
+        Stream Name:
         @if (Routes.Options.MessageStoreEnabled)
         {
           <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamName)">
@@ -68,55 +69,51 @@
         }
       </li>
       <li class="list-group-item">
+        Stream Version: @Model.Details.StreamVersion
+      </li>
+      <li class="list-group-item">
         Stream Position:
         @if (Routes.Options.MessageStoreEnabled)
         {
-        <a href="@Routes.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamName)/@Model.Details.StreamPosition">
-          @Model.Details.StreamPosition
-        </a>
+          <a href="@Routes.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamName)/@Model.Details.StreamPosition">
+            @Model.Details.StreamPosition
+          </a>
         }
         else
         {
           @Model.Details.StreamPosition
         }
       </li>
-      <li class="list-group-item">Attempts: @Model.Details.TotalAttempts</li>
-      @if (Model.Details.RetryAt.HasValue)
+      @if (Model.Details.Status != CheckpointStatus.Active)
       {
-        <li class="list-group-item">Retry In: @Model.Details.RetryAt.Value.ToRetryTimeDisplay()</li>
+        <li class="list-group-item">Retry Attempts: @Model.Details.TotalAttempts</li>
+      }
+      @if (Model.Details.ProcessAt.HasValue)
+      {
+      <li class="list-group-item">Process In: @Model.Details.ProcessAt.Value.ToFriendlyTimeDisplay()</li>
       }
     </ul>
   </div>
 
-  @foreach(var attempt in Model.Details.Attempts.OrderByDescending(x => x.Timestamp))
-  {
-    <div class="card m-4">
-      <div class="card-header d-flex justify-content-between align-items-center @attempt.BackgroundColor bg-opacity-10 text-dark">
-        <div>@attempt.Status.ToAttemptStatus()</div>
-        <div>@attempt.Timestamp</div>
-      </div>
-      @if (attempt.Error != null)
-      {
-        <div class="card-body">
-          @(new Exception((attempt.Error, true)))
-        </div>
-      }
-    </div>
-  }
-
-  @if (Model.Details.Error != null)
+  @foreach(var retry in Model.Details.Retries.OrderByDescending(x => x.Timestamp))
   {
     <div class="card m-4">
       <div class="card-header d-flex justify-content-between align-items-center text-bg-danger bg-opacity-10 text-dark">
-        <div>Original Error</div>
-        <div>@Model.Details.StartedAt</div>
+        <div>
+          @if (retry.Attempt == 0)
+          {
+            <text>Original Error</text>
+          }
+          else
+          {
+            <text>Retried</text>
+          }
+        </div>
+        <div>@retry.Timestamp</div>
       </div>
-      @if (Model.Details.Error != null)
-      {
       <div class="card-body">
-        @(new Exception((Model.Details.Error, true)))
+        @(new Exception((retry.GetException(), true)))
       </div>
-      }
     </div>
   }
 </div>

@@ -19,58 +19,69 @@ public class CheckpointProcessor(
 ) : ICheckpointProcessor
 {
     public async Task Process(
+        Checkpoint checkpoint,
         Subscription subscription,
-        string streamName,
-        long streamPosition,
-        int batchSize,
-        bool isRetry,
         CancellationToken cancellationToken
     )
     {
-        var result = await HandleMessageBatch(subscription, streamName, streamPosition, batchSize, cancellationToken);
+        var startingStreamPosition = checkpoint.StreamPosition + 1;
+        var batchSize = options.Subscriptions.SubscriptionStreamBatchSize;
+
+        if (checkpoint.IsRetryOrFailure)
+        {
+            startingStreamPosition = checkpoint.StreamPosition;
+            batchSize = 1;
+        }
+
+        var result = await HandleMessageBatch(
+            checkpoint,
+            subscription,
+            checkpoint.StreamName,
+            startingStreamPosition,
+            batchSize,
+            cancellationToken
+        );
 
         switch (result)
         {
             case MessageBatchResult.Success success:
-                if (isRetry)
-                {
-                    return;
-                }
-
                 await database.Execute(
-                    new UpdateCheckpointStatus(
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        streamName,
+                    new UpdateCheckpointPosition(
+                        checkpoint.Id,
                         success.StreamPosition,
-                        CheckpointStatus.Active,
+                        null,
                         options.Postgres
                     ),
                     cancellationToken
                 );
 
-                logger.LogTrace(
-                    "Checkpoint {GroupName}:{Name}:{StreamName} processed successfully up to position {StreamPosition}",
-                    subscription.Name,
-                    options.Subscriptions.GroupName,
-                    streamName,
-                    success.StreamPosition
-                );
+                SuccessTraceLogging(checkpoint, success);
 
                 break;
             case MessageBatchResult.Error error:
-                if (isRetry)
-                {
-                    throw error.Exception;
-                }
+                var exceptionType = error.Exception.GetType();
+
+                var maxRetryCount = subscription.GetMaxRetryCount(options, exceptionType);
+
+                var attempt = checkpoint.IsRetryOrFailure ? checkpoint.RetryAttempts : 0;
+
+                var status = attempt >= maxRetryCount ? CheckpointStatus.Failed : CheckpointStatus.Retry;
+
+                DateTimeOffset? processAt = status == CheckpointStatus.Retry ? attempt.GetNextDelayWithExponentialBackoff(
+                    options.Subscriptions.Retries.InitialDelay,
+                    options.Subscriptions.Retries.MaxDelay
+                ) : null;
+
+                ErrorTraceLogging(checkpoint, status, error, processAt, exceptionType, attempt, maxRetryCount);
 
                 await database.Execute(
                     new RecordCheckpointError(
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        streamName,
+                        checkpoint.Id,
                         error.StreamPosition,
+                        status,
+                        attempt,
                         ExceptionData.From(error.Exception).ToJson(),
+                        processAt,
                         options.Postgres
                     ),
                     cancellationToken
@@ -81,9 +92,10 @@ public class CheckpointProcessor(
     }
 
     private async Task<MessageBatchResult> HandleMessageBatch(
+        Checkpoint checkpoint,
         Subscription subscription,
         string streamName,
-        long streamPosition,
+        long startingStreamPosition,
         int batchSize,
         CancellationToken cancellationToken
     )
@@ -93,9 +105,9 @@ public class CheckpointProcessor(
         try
         {
             messages = await ReadMessageBatch(
-                subscription,
+                checkpoint,
                 streamName,
-                streamPosition,
+                startingStreamPosition,
                 batchSize,
                 cancellationToken
             );
@@ -104,13 +116,14 @@ public class CheckpointProcessor(
         {
             logger.LogError(
                 e,
-                "Error reading message batch for subscription {SubscriptionType} for stream {StreamName} at {StreamPosition}",
+                "Error reading message batch for subscription {SubscriptionType} for stream {StreamName} at {StreamPosition} [Checkpoint: {CheckpointId}]",
                 subscription.Name,
                 streamName,
-                streamPosition
+                startingStreamPosition,
+                checkpoint.Id
             );
 
-            return new MessageBatchResult.Error(streamPosition, e);
+            return new MessageBatchResult.Error(startingStreamPosition, e);
         }
 
         try
@@ -141,14 +154,14 @@ public class CheckpointProcessor(
                     if (subscription.HandlerType == null)
                     {
                         throw new InvalidOperationException(
-                            $"Subscription handler type is not configured for {subscription.Name}"
+                            $"Subscription handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
                         );
                     }
 
                     if (subscription.InstanceMethod == null)
                     {
                         throw new InvalidOperationException(
-                            $"Subscription handler expression is not configured for {subscription.Name}"
+                            $"Subscription handler expression is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
                         );
                     }
 
@@ -164,12 +177,13 @@ public class CheckpointProcessor(
                 {
                     logger.LogError(
                         e,
-                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [ID: {MessageId}]",
+                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [Message ID: {MessageId}, Checkpoint: {CheckpointId}]",
                         messageContext.Type,
                         subscription.Name,
                         streamName,
                         subscription.HandlerName,
-                        messageContext.Id
+                        messageContext.Id,
+                        checkpoint.Id
                     );
 
                     return new MessageBatchResult.Error(messageContext.StreamPosition, e);
@@ -184,16 +198,20 @@ public class CheckpointProcessor(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Unhandled exception processing subscription stream");
+            logger.LogError(
+                e,
+                "Unhandled exception processing subscription stream [Checkpoint: {CheckpointId}]",
+                checkpoint.Id
+            );
 
             throw;
         }
     }
 
     private async Task<List<MessageContext>> ReadMessageBatch(
-        Subscription subscription,
+        Checkpoint checkpoint,
         string streamName,
-        long streamPosition,
+        long startingStreamPosition,
         int batchSize,
         CancellationToken cancellationToken
     )
@@ -202,18 +220,16 @@ public class CheckpointProcessor(
             streamName,
             new ReadStreamOptions
             {
-                StartingStreamPosition = streamPosition,
+                StartingStreamPosition = startingStreamPosition,
                 Count = batchSize
             },
             cancellationToken
         );
 
         logger.LogTrace(
-            "Found {Count} messages to process for checkpoint {GroupName}:{Name}:{StreamName}",
+            "Found {Count} messages to process for checkpoint {Id}",
             stream.Messages.Count,
-            subscription.Name,
-            options.Subscriptions.GroupName,
-            streamName
+            checkpoint.Id
         );
 
         var messages = new List<MessageContext>();
@@ -236,6 +252,94 @@ public class CheckpointProcessor(
         }
 
         return messages;
+    }
+
+    private void SuccessTraceLogging(Checkpoint checkpoint, MessageBatchResult.Success success)
+    {
+        if (!logger.IsEnabled(LogLevel.Trace))
+        {
+            return;
+        }
+
+        if (checkpoint.Status == CheckpointStatus.Active)
+        {
+            logger.LogTrace(
+                "Checkpoint {CheckpointId} processed successfully up to position {StreamPosition}",
+                checkpoint.Id,
+                success.StreamPosition
+            );
+        }
+        else
+        {
+            logger.LogTrace(
+                "Retry attempt {Attempt} succeeded for checkpoint {CheckpointId} at position {StreamPosition}",
+                checkpoint.RetryAttempts + 1,
+                checkpoint.Id,
+                success.StreamPosition
+            );
+        }
+    }
+
+    private void ErrorTraceLogging(
+        Checkpoint checkpoint,
+        CheckpointStatus status,
+        MessageBatchResult.Error error,
+        DateTimeOffset? processAt,
+        Type exceptionType,
+        int attempt,
+        int maxRetryCount
+    )
+    {
+        if (!logger.IsEnabled(LogLevel.Trace))
+        {
+            return;
+        }
+
+        if (checkpoint.Status == CheckpointStatus.Active)
+        {
+            if (status == CheckpointStatus.Retry)
+            {
+                logger.LogTrace(
+                    "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - will start retrying at {RetryAt}",
+                    checkpoint.Id,
+                    error.StreamPosition,
+                    processAt
+                );
+            }
+            else
+            {
+                logger.LogTrace(
+                    "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - max retry count is set to zero for exception type {ExceptionType}, setting it to failed immediately",
+                    checkpoint.Id,
+                    error.StreamPosition,
+                    exceptionType
+                );
+            }
+
+            return;
+        }
+
+        if (status == CheckpointStatus.Retry)
+        {
+            logger.LogTrace(
+                "Retry attempt failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - scheduling retry at {RetryAt}",
+                checkpoint.Id,
+                error.StreamPosition,
+                attempt,
+                maxRetryCount,
+                processAt
+            );
+        }
+        else
+        {
+            logger.LogTrace(
+                "Retry failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting checkpoint status to Failed",
+                checkpoint.Id,
+                error.StreamPosition,
+                attempt,
+                maxRetryCount
+            );
+        }
     }
 
     public abstract record MessageBatchResult

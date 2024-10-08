@@ -12,7 +12,8 @@ public class GetLaggingSubscriptions(PostgresOptions options) : IPostgresDatabas
             FROM {options.Schema}.subscriptions s
             INNER JOIN {options.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
             WHERE s.status = 'active'
-            AND c.status = 'lagging'
+            AND c.status = 'active'
+            AND c.lagging = true
             GROUP BY c.group_name, c.name
             ORDER BY c.group_name, SUM(GREATEST(0, c.stream_version - c.stream_position)) DESC, name;
         ";

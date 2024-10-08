@@ -1,9 +1,7 @@
 @inherits HtmlTemplate
 
 <script type="text/javascript">
-  document.body.addEventListener("bulk_retry_requested", () => alert('Enqueued retry requests successfully'));
-
-  document.body.addEventListener("bulk_delete_requested", () => alert('Enqueued delete requests successfully'));
+  document.body.addEventListener("bulk_retry_requested", () => alert('Submitted retry requests successfully'));
 
   function selectAll() {
     document.querySelectorAll(".select-item").forEach((element) => element.click());

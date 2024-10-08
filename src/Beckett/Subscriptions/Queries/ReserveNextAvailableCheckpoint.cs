@@ -13,7 +13,7 @@ public class ReserveNextAvailableCheckpoint(
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select group_name, name, stream_name, stream_position, stream_version, status
+            select id, group_name, name, stream_name, stream_position, stream_version, retry_attempts, status
             from {options.Schema}.reserve_next_available_checkpoint($1, $2);
         ";
 

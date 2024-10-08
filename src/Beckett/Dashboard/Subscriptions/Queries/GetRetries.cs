@@ -8,7 +8,7 @@ public class GetRetries (PostgresOptions options) : IPostgresDatabaseQuery<GetRe
     public async Task<GetRetriesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT c.group_name, c.name, c.stream_name, c.stream_position, c.retry_id
+            SELECT c.id, c.group_name, c.name, c.stream_name, c.stream_position
             FROM {options.Schema}.checkpoints c
             WHERE c.status = 'retry'
             ORDER BY c.group_name, c.name, c.stream_name, c.stream_position;
@@ -32,11 +32,11 @@ public class GetRetries (PostgresOptions options) : IPostgresDatabaseQuery<GetRe
 
             results.Add(
                 new GetRetriesResult.Retry(
-                    reader.GetFieldValue<string>(0),
+                    reader.GetFieldValue<long>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
-                    reader.GetFieldValue<long>(3),
-                    reader.GetFieldValue<Guid>(4)
+                    reader.GetFieldValue<string>(3),
+                    reader.GetFieldValue<long>(4)
                 )
             );
         }

@@ -166,11 +166,8 @@ public class SubscriptionInitializer(
             var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
 
             await database.Execute(
-                new RecordCheckpoint(
-                    options.Subscriptions.GroupName,
-                    subscription.Name,
-                    InitializationConstants.StreamName,
-                    newGlobalPosition,
+                new UpdateSystemCheckpointPosition(
+                    checkpoint.Id,
                     newGlobalPosition,
                     options.Postgres
                 ),

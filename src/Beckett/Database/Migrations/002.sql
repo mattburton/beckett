@@ -204,11 +204,7 @@ WITH last_transaction_id AS (
 )
 SELECT m.stream_name, m.stream_position, m.global_position, m.type
 FROM last_transaction_id lti, __schema__.messages m
-WHERE (
-  (m.transaction_id = lti.transaction_id AND m.global_position > _starting_global_position)
-  OR
-  (m.transaction_id > lti.transaction_id)
-)
+WHERE (m.transaction_id, m.global_position) > (lti.transaction_id, _starting_global_position)
 AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
 AND m.deleted = false
 ORDER BY m.transaction_id, m.global_position

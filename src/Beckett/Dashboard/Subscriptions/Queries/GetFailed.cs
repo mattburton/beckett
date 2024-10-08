@@ -8,10 +8,9 @@ public class GetFailed(PostgresOptions options) : IPostgresDatabaseQuery<GetFail
     public async Task<GetFailedResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT group_name, name, stream_name, stream_position, retry_id
+            SELECT id, group_name, name, stream_name, stream_position
             FROM {options.Schema}.checkpoints
             WHERE status = 'failed'
-            AND retry_id IS NOT NULL
             ORDER BY group_name, name, stream_name, stream_position;
         ";
 
@@ -33,11 +32,11 @@ public class GetFailed(PostgresOptions options) : IPostgresDatabaseQuery<GetFail
 
             results.Add(
                 new GetFailedResult.Failure(
-                    reader.GetFieldValue<string>(0),
+                    reader.GetFieldValue<long>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
-                    reader.GetFieldValue<long>(3),
-                    reader.GetFieldValue<Guid>(4)
+                    reader.GetFieldValue<string>(3),
+                    reader.GetFieldValue<long>(4)
                 )
             );
         }

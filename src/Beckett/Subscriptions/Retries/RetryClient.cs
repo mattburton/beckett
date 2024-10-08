@@ -1,26 +1,17 @@
-using Beckett.Subscriptions.Retries.Events;
+using Beckett.Database;
+using Beckett.Subscriptions.Queries;
 
 namespace Beckett.Subscriptions.Retries;
 
-public class RetryClient(IMessageStore messageStore) : IRetryClient
+public class RetryClient(IPostgresDatabase database, PostgresOptions options) : IRetryClient
 {
-    public async Task BulkRetry(Guid[] retryIds, CancellationToken cancellationToken)
+    public Task BulkRetry(long[] ids, CancellationToken cancellationToken)
     {
-        await messageStore.AppendToStream(
-            RetryQueues.BulkRetryQueue,
-            ExpectedVersion.Any,
-            new BulkRetryRequested(retryIds.ToList(), DateTimeOffset.UtcNow),
-            cancellationToken
-        );
+        return database.Execute(new ScheduleCheckpoints(ids, DateTimeOffset.UtcNow, options), cancellationToken);
     }
 
-    public async Task ManualRetry(Guid id, CancellationToken cancellationToken)
+    public Task Retry(long id, CancellationToken cancellationToken)
     {
-        await messageStore.AppendToStream(
-            RetryStreamName.For(id),
-            ExpectedVersion.Any,
-            new ManualRetryRequested(id, DateTimeOffset.UtcNow),
-            cancellationToken
-        );
+        return database.Execute(new ScheduleCheckpoints([id], DateTimeOffset.UtcNow, options), cancellationToken);
     }
 }

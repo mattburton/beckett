@@ -49,29 +49,25 @@ public class CheckpointConsumer(
                 if (subscription == null)
                 {
                     logger.LogTrace(
-                        "Subscription {Name} not registered for group {GroupName} - skipping",
+                        "Subscription {Name} not registered for group {GroupName} - skipping [Checkpoint: {CheckpoinId}]",
                         checkpoint.Name,
-                        options.Subscriptions.GroupName
+                        options.Subscriptions.GroupName,
+                        checkpoint.Id
                     );
 
                     continue;
                 }
 
                 logger.LogTrace(
-                    "Processing checkpoint {GroupName}:{Name}:{StreamName} at position {StreamPosition} and version {StreamVersion}",
-                    checkpoint.Name,
-                    options.Subscriptions.GroupName,
-                    checkpoint.StreamName,
+                    "Processing checkpoint {CheckpointId} at position {StreamPosition} and version {StreamVersion}",
+                    checkpoint.Id,
                     checkpoint.StreamPosition,
                     checkpoint.StreamVersion
                 );
 
                 await checkpointProcessor.Process(
+                    checkpoint,
                     subscription,
-                    checkpoint.StreamName,
-                    checkpoint.StreamPosition + 1,
-                    options.Subscriptions.SubscriptionStreamBatchSize,
-                    false,
                     stoppingToken
                 );
             }
@@ -81,7 +77,7 @@ public class CheckpointConsumer(
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Error processing subscription stream");
+                logger.LogError(e, "Error processing checkpoint");
 
                 throw;
             }

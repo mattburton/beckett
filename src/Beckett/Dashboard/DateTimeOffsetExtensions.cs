@@ -2,7 +2,7 @@ namespace Beckett.Dashboard;
 
 public static class DateTimeOffsetExtensions
 {
-    public static string ToRetryTimeDisplay(this DateTimeOffset timestamp)
+    public static string ToFriendlyTimeDisplay(this DateTimeOffset timestamp)
     {
         var now = DateTimeOffset.UtcNow;
 
