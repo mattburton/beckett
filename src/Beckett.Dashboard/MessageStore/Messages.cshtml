@@ -6,7 +6,7 @@
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 text-bg-light rounded-3">
+  <ol class="breadcrumb p-3 mb-0 text-bg-light rounded-3">
     <li class="breadcrumb-item">
       <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
         Stream Categories
@@ -23,38 +23,38 @@
   </ol>
 </nav>
 
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>Id</th>
-      <th>Stream Position</th>
-      <th>Type</th>
-      <th style="width: 20em;">Timestamp</th>
-    </tr>
-  </thead>
-  <tbody>
-  @foreach(var message in Model.Messages)
-  {
-    <tr>
-      <td>
-        <a href="@Routes.Prefix/message-store/messages/@message.Id">@message.Id</a>
-      </td>
-      <td>@message.StreamPosition</td>
-      <td>@message.Type</td>
-      <td>
-        <span class="timestamp">@message.Timestamp</span>
-      </td>
-    </tr>
-  }
-  @if (Model.Messages.Count == 0)
-  {
-    <tr>
-      <td colspan="4">
-        No stream messages found.
-      </td>
-    </tr>
-  }
-  </tbody>
-</table>
-
-
+<div class="p-2">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Message ID</th>
+        <th>Stream Position</th>
+        <th>Type</th>
+        <th style="width: 20em;">Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+    @foreach(var message in Model.Messages)
+    {
+      <tr>
+        <td>
+          <a href="@Routes.Prefix/message-store/messages/@message.Id">@message.Id</a>
+        </td>
+        <td>@message.StreamPosition</td>
+        <td>@message.Type</td>
+        <td>
+          <span class="timestamp">@message.Timestamp</span>
+        </td>
+      </tr>
+    }
+    @if (Model.Messages.Count == 0)
+    {
+      <tr>
+        <td colspan="4">
+          No stream messages found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>

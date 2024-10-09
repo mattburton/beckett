@@ -34,13 +34,14 @@
   </div>
 </div>
 
-<table id="list-view"
-       class="table table-striped"
-       hx-get="@Routes.Prefix/subscriptions/failed"
-       hx-trigger="every 10s [enableAutoReload()]"
-       hx-select="#list-view"
-       hx-swap="outerHTML">
-  <thead>
+<div class="p-2">
+  <table id="list-view"
+         class="table table-striped"
+         hx-get="@Routes.Prefix/subscriptions/failed"
+         hx-trigger="every 10s [enableAutoReload()]"
+         hx-select="#list-view"
+         hx-swap="outerHTML">
+    <thead>
     <tr>
       <th style="width: 1em;">
         <input type="checkbox" id="select-all" onclick="selectAll()" />
@@ -50,30 +51,31 @@
       <th>Stream Name</th>
       <th>Stream Position</th>
     </tr>
-  </thead>
-  <tbody>
-  @foreach(var checkpoint in Model.Failures)
-  {
-    <tr>
-      <td>
-        <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id" onclick="selectItem(this)" />
-      </td>
-      <td>@checkpoint.GroupName</td>
-      <td>@checkpoint.Name</td>
-      <td>
-        <a href="@Routes.Prefix/subscriptions/checkpoints/@checkpoint.Id">@checkpoint.StreamName</a>
-      </td>
-      <td>@checkpoint.StreamPosition</td>
-    </tr>
-  }
-  @if (Model.Failures.Count == 0)
-  {
-    <tr>
-      <td colspan="5">
-        No failures found.
-      </td>
-    </tr>
-  }
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+    @foreach(var checkpoint in Model.Failures)
+    {
+      <tr>
+        <td>
+          <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id" onclick="selectItem(this)" />
+        </td>
+        <td>@checkpoint.GroupName</td>
+        <td>@checkpoint.Name</td>
+        <td>
+          <a href="@Routes.Prefix/subscriptions/checkpoints/@checkpoint.Id">@checkpoint.StreamName</a>
+        </td>
+        <td>@checkpoint.StreamPosition</td>
+      </tr>
+    }
+    @if (Model.Failures.Count == 0)
+    {
+      <tr>
+        <td colspan="5">
+          No failures found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
 @(new BulkControls())

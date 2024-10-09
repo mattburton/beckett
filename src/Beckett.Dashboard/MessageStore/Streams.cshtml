@@ -6,7 +6,7 @@
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 text-bg-light rounded-3">
+  <ol class="breadcrumb p-3 mb-0 text-bg-light rounded-3">
     <li class="breadcrumb-item">
       <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
         Stream Categories
@@ -18,38 +18,40 @@
   </ol>
 </nav>
 
-<table class="table table-striped">
-  <thead>
-  <tr>
-    <th>Stream Name</th>
-    <th style="width: 20em;">Last Updated</th>
-  </tr>
-  </thead>
-  <tbody>
-  @foreach(var stream in Model.Streams)
-  {
+<div class="p-2">
+  <table class="table table-striped">
+    <thead>
     <tr>
-      <td>
-        <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)/@HttpUtility.UrlEncode(stream.StreamName)">@stream.StreamName</a>
-      </td>
-      <td>
-        <span class="timestamp">@stream.LastUpdated</span>
-      </td>
+      <th>Stream Name</th>
+      <th style="width: 20em;">Last Updated</th>
     </tr>
-  }
-  @if (Model.Streams.Count == 0)
+    </thead>
+    <tbody>
+    @foreach(var stream in Model.Streams)
+    {
+      <tr>
+        <td>
+          <a href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)/@HttpUtility.UrlEncode(stream.StreamName)">@stream.StreamName</a>
+        </td>
+        <td>
+          <span class="timestamp">@stream.LastUpdated</span>
+        </td>
+      </tr>
+    }
+    @if (Model.Streams.Count == 0)
+    {
+      <tr>
+        <td colspan="4">
+          No category streams found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+  @if (Model.Streams.Count == 500)
   {
-    <tr>
-      <td colspan="4">
-        No category streams found.
-      </td>
-    </tr>
+    <div class="alert alert-light mx-3" role="alert">
+      <span class="badge text-bg-secondary">NOTE</span> only showing the first 500 recently updated streams - you can use the search box above to refine your results further as needed
+    </div>
   }
-  </tbody>
-</table>
-@if (Model.Streams.Count == 500)
-{
-  <div class="alert alert-light mx-3" role="alert">
-    <span class="badge text-bg-secondary">NOTE</span> only showing the first 500 recently updated streams - you can use the search box above to refine your results further as needed
-  </div>
-}
+</div>

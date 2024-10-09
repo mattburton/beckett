@@ -26,6 +26,9 @@
     <li class="nav-item">
       <a class="nav-link" href="@Routes.Prefix/subscriptions/failed">Failed</a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link active" href="@Routes.Prefix/subscriptions/checkpoints/@Model.Details.Id">Checkpoint</a>
+    </li>
   </ul>
 </div>
 
@@ -90,7 +93,7 @@
       }
       @if (Model.Details.ProcessAt.HasValue)
       {
-      <li class="list-group-item">Process In: @Model.Details.ProcessAt.Value.ToFriendlyTimeDisplay()</li>
+      <li class="list-group-item">Retry In: @Model.Details.ProcessAt.Value.ToFriendlyTimeDisplay()</li>
       }
     </ul>
   </div>

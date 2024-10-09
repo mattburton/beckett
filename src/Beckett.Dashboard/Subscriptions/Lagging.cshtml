@@ -21,37 +21,37 @@
   </ul>
 </div>
 
-<table id="list-view"
-       class="table table-striped"
-       hx-get="@Routes.Prefix/subscriptions/lagging"
-       hx-trigger="every 10s"
-       hx-select="#list-view"
-       hx-swap="outerHTML">
-  <thead>
-    <tr>
-      <th>Group Name</th>
-      <th>Name</th>
-      <th>Total Lag</th>
-    </tr>
-  </thead>
-  <tbody>
-  @foreach(var subscription in Model.Subscriptions)
-  {
-    <tr>
-      <td>@subscription.GroupName</td>
-      <td>@subscription.Name</td>
-      <td>@subscription.TotalLag</td>
-    </tr>
-  }
-  @if (Model.Subscriptions.Count == 0)
-  {
-    <tr>
-      <td colspan="3">
-        No lagging subscriptions found.
-      </td>
-    </tr>
-  }
-  </tbody>
-</table>
-
-
+<div class="p-2">
+  <table id="list-view"
+         class="table table-striped"
+         hx-get="@Routes.Prefix/subscriptions/lagging"
+         hx-trigger="every 10s"
+         hx-select="#list-view"
+         hx-swap="outerHTML">
+    <thead>
+      <tr>
+        <th>Group Name</th>
+        <th>Name</th>
+        <th>Total Lag</th>
+      </tr>
+    </thead>
+    <tbody>
+    @foreach(var subscription in Model.Subscriptions)
+    {
+      <tr>
+        <td>@subscription.GroupName</td>
+        <td>@subscription.Name</td>
+        <td>@subscription.TotalLag</td>
+      </tr>
+    }
+    @if (Model.Subscriptions.Count == 0)
+    {
+      <tr>
+        <td colspan="3">
+          No lagging subscriptions found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
