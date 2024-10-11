@@ -19,7 +19,8 @@ CREATE TYPE __schema__.retry AS
 
 CREATE TYPE __schema__.subscription_status AS ENUM (
   'uninitialized',
-  'active'
+  'active',
+  'paused'
 );
 
 CREATE TYPE __schema__.checkpoint_status AS ENUM (
@@ -131,6 +132,36 @@ FROM __schema__.subscriptions
 WHERE group_name = _group_name
 AND status = 'uninitialized'
 LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.pause_subscription(
+  _group_name text,
+  _name text
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+UPDATE __schema__.subscriptions
+SET status = 'paused'
+WHERE group_name = _group_name
+AND name = _name;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.resume_subscription(
+  _group_name text,
+  _name text
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+UPDATE __schema__.subscriptions
+SET status = 'active'
+WHERE group_name = _group_name
+AND name = _name;
+
+SELECT pg_notify('beckett:checkpoints', _group_name);
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_active(
@@ -375,7 +406,7 @@ WITH metric AS (
     SELECT count(*) as value
     FROM __schema__.subscriptions s
     INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status = 'active'
+    WHERE s.status != 'uninitialized'
     AND c.status = 'retry'
     UNION ALL
     SELECT 0
@@ -394,7 +425,7 @@ WITH metric AS (
     SELECT count(*) as value
     FROM __schema__.subscriptions s
     INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status = 'active'
+    WHERE s.status != 'uninitialized'
     AND c.status = 'failed'
     UNION ALL
     SELECT 0

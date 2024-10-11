@@ -57,7 +57,10 @@
     </div>
     <ul class="list-group list-group-flush">
       <li class="list-group-item">Group Name: @Model.Details.GroupName</li>
-      <li class="list-group-item">Name: @Model.Details.Name</li>
+      <li class="list-group-item">
+        Name:
+        <a href="@Routes.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name">@Model.Details.Name</a>
+      </li>
       <li class="list-group-item">
         Stream Name:
         @if (Routes.Options.MessageStoreEnabled)

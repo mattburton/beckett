@@ -1,0 +1,68 @@
+@using Beckett.Subscriptions
+@inherits HtmlTemplate<SubscriptionPage.ViewModel>
+
+@{
+  Layout = new Layout();
+}
+
+<div class="p-2 text-bg-light">
+  <ul class="nav nav-pills">
+    <li class="nav-item">
+      <a class="nav-link" href="@Routes.Prefix/subscriptions">Subscriptions</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Routes.Prefix/subscriptions/lagging">Lagging</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Routes.Prefix/subscriptions/retries">Retries</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Routes.Prefix/subscriptions/failed">Failed</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link active" href="@Routes.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name">Subscription</a>
+    </li>
+  </ul>
+</div>
+
+<div id="subscription-details"
+     hx-get="@Routes.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name"
+     hx-trigger="every 10s"
+     hx-select="#subscription-details"
+     hx-swap="outerHTML">
+  <div class="card m-4">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="fs-3">Status: @Model.Details.Status</div>
+        @if (Model.Details.Status == SubscriptionStatus.Active)
+        {
+          <div>
+            <a href="#"
+               class="btn btn-primary"
+               title="Pause Subscription"
+               hx-post="@Routes.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/pause"
+               hx-on::response-error="alert('Unable to pause subscription at this time - please try again later')">
+              Pause
+            </a>
+          </div>
+        }
+        @if (Model.Details.Status == SubscriptionStatus.Paused)
+        {
+          <div>
+            <a href="#"
+               class="btn btn-primary"
+               title="Resume Subscription"
+               hx-post="@Routes.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/resume"
+               hx-on::response-error="alert('Unable to resume subscription at this time - please try again later')">
+              Resume
+            </a>
+          </div>
+        }
+      </div>
+    </div>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item">Group Name: @Model.Details.GroupName</li>
+      <li class="list-group-item">Name: @Model.Details.Name</li>
+    </ul>
+  </div>
+</div>

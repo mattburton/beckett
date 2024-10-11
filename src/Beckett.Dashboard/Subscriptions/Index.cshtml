@@ -35,7 +35,9 @@
     {
       <tr>
         <td>@subscription.GroupName</td>
-        <td>@subscription.Name</td>
+        <td>
+          <a href="@Routes.Prefix/subscriptions/@subscription.GroupName/@subscription.Name">@subscription.Name</a>
+        </td>
         <td>@subscription.Status</td>
       </tr>
     }

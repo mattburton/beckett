@@ -6,6 +6,8 @@ public static class Routes
     {
         return builder
             .BulkRetryRoute()
-            .ManualRetryRoute();
+            .ManualRetryRoute()
+            .PauseRoute()
+            .ResumeRoute();
     }
 }

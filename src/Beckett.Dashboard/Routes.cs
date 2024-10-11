@@ -31,7 +31,7 @@ public static class Routes
         var routeGroupBuilder = builder.MapGroup(Prefix)
             .IndexRoute()
             .MetricsRoutes()
-            .SubscriptionsRoutes(Prefix, Options);
+            .SubscriptionRoutes(Prefix, Options);
 
         if (Options.MessageStoreEnabled)
         {

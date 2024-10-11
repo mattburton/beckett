@@ -7,17 +7,18 @@ public static class Routes
     public static string Prefix { get; private set; } = null!;
     public static DashboardOptions Options { get; private set; } = null!;
 
-    public static RouteGroupBuilder SubscriptionsRoutes(this RouteGroupBuilder builder, string prefix, DashboardOptions options)
+    public static RouteGroupBuilder SubscriptionRoutes(this RouteGroupBuilder builder, string prefix, DashboardOptions options)
     {
         Prefix = prefix;
         Options = options;
 
         return builder
+            .ActionRoutes()
+            .CheckpointPageRoute()
+            .FailedPageRoute()
             .IndexPageRoute()
             .LaggingPageRoute()
             .RetriesPageRoute()
-            .RetryPageRoute()
-            .FailedPageRoute()
-            .ActionRoutes();
+            .SubscriptionPageRoute();
     }
 }
