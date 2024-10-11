@@ -52,17 +52,6 @@ CREATE INDEX IF NOT EXISTS ix_messages_active_stream_category ON __schema__.mess
   __schema__.stream_category(stream_name)
 );
 
-CREATE OR REPLACE FUNCTION __schema__.stream_hash(
-  _stream_name text
-)
-  RETURNS bigint
-  IMMUTABLE
-  LANGUAGE sql
-AS
-$$
-SELECT abs(hashtextextended(_stream_name, 0));
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.append_to_stream(
   _stream_name text,
   _expected_version bigint,
@@ -76,8 +65,6 @@ DECLARE
   _current_version bigint;
   _stream_version bigint;
 BEGIN
-  PERFORM pg_advisory_xact_lock(__schema__.stream_hash(_stream_name));
-
   SELECT coalesce(max(m.stream_position), 0)
   INTO _current_version
   FROM __schema__.messages m
@@ -150,34 +137,43 @@ CREATE OR REPLACE FUNCTION __schema__.read_stream(
     metadata jsonb,
     "timestamp" timestamp with time zone
   )
-  LANGUAGE sql
+  LANGUAGE plpgsql
 AS
 $$
-WITH stream_version AS (
-  SELECT max(m.stream_position) as stream_version
+DECLARE
+  _stream_version bigint;
+BEGIN
+  SELECT max(m.stream_position)
+  INTO _stream_version
   FROM __schema__.messages m
   WHERE m.stream_name = _stream_name
-  AND m.deleted = false
-)
-SELECT m.id,
-       m.stream_name,
-       sv.stream_version,
-       m.stream_position,
-       m.global_position,
-       m.type,
-       m.data,
-       m.metadata,
-       m.timestamp
-FROM stream_version sv, __schema__.messages m
-WHERE m.stream_name = _stream_name
-AND (_starting_stream_position IS NULL OR m.stream_position >= _starting_stream_position)
-AND (_ending_stream_position IS NULL OR m.stream_position <= _ending_stream_position)
-AND (_starting_global_position IS NULL OR m.global_position >= _starting_global_position)
-AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
-AND m.deleted = false
-ORDER BY CASE WHEN _read_forwards = true THEN stream_position END,
-         CASE WHEN _read_forwards = false THEN stream_position END DESC
-LIMIT _count;
+  AND m.deleted = false;
+
+  IF (_stream_version IS NULL) THEN
+    _stream_version = 0;
+  END IF;
+
+  RETURN QUERY
+    SELECT m.id,
+           m.stream_name,
+           _stream_version as stream_version,
+           m.stream_position,
+           m.global_position,
+           m.type,
+           m.data,
+           m.metadata,
+           m.timestamp
+    FROM __schema__.messages m
+    WHERE m.stream_name = _stream_name
+    AND (_starting_stream_position IS NULL OR m.stream_position >= _starting_stream_position)
+    AND (_ending_stream_position IS NULL OR m.stream_position <= _ending_stream_position)
+    AND (_starting_global_position IS NULL OR m.global_position >= _starting_global_position)
+    AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
+    AND m.deleted = false
+    ORDER BY CASE WHEN _read_forwards = true THEN m.stream_position END,
+             CASE WHEN _read_forwards = false THEN m.stream_position END DESC
+    LIMIT _count;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
@@ -190,23 +186,30 @@ CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
     global_position bigint,
     type text
   )
-  LANGUAGE sql
+  LANGUAGE plpgsql
 AS
 $$
-WITH last_transaction_id AS (
-  SELECT transaction_id
-  FROM __schema__.messages
-  WHERE global_position = _starting_global_position
-  AND deleted = false
-  UNION ALL
-  SELECT '0'::xid8 AS transaction_id
-  LIMIT 1
-)
-SELECT m.stream_name, m.stream_position, m.global_position, m.type
-FROM last_transaction_id lti, __schema__.messages m
-WHERE (m.transaction_id, m.global_position) > (lti.transaction_id, _starting_global_position)
-AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-AND m.deleted = false
-ORDER BY m.transaction_id, m.global_position
-LIMIT _batch_size;
+DECLARE
+  _transaction_id xid8;
+BEGIN
+  SELECT m.transaction_id
+  INTO _transaction_id
+  FROM __schema__.messages m
+  WHERE m.global_position = _starting_global_position;
+
+  IF (_transaction_id IS NULL) THEN
+    _transaction_id = '0'::xid8;
+  END IF;
+
+  RETURN QUERY
+    SELECT m.stream_name,
+           m.stream_position,
+           m.global_position,
+           m.type
+    FROM __schema__.messages m
+    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
+    AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+    ORDER BY m.transaction_id, m.global_position
+    LIMIT _batch_size;
+END;
 $$;
