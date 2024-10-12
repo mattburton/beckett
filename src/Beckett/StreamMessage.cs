@@ -14,9 +14,9 @@ public readonly record struct StreamMessage(
     DateTimeOffset Timestamp
 )
 {
-    private readonly Lazy<Type?> _messageType = new(MessageTypeMap.TryGetType(Type, out var type) ? type : null);
-    private readonly Lazy<object?> _message = new(MessageSerializer.Deserialize(Type, Data));
-    private readonly Lazy<Dictionary<string, object>> _messageMetadata = new(Metadata.ToMetadataDictionary());
+    private readonly Lazy<Type?> _messageType = new(() => MessageTypeMap.TryGetType(Type, out var type) ? type : null);
+    private readonly Lazy<object?> _message = new(() => MessageSerializer.Deserialize(Type, Data));
+    private readonly Lazy<Dictionary<string, object>> _messageMetadata = new(Metadata.ToMetadataDictionary);
 
     public Type? MessageType => _messageType.Value;
 
