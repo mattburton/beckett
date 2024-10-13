@@ -42,7 +42,7 @@ public class AppendToStream(
         }
         catch (PostgresException e)
         {
-            e.HandleAppendToStreamError(streamName, expectedVersion);
+            e.HandleAppendToStreamError();
 
             throw;
         }
