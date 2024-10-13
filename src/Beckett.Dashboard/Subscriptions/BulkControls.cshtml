@@ -1,20 +1,51 @@
 @inherits HtmlTemplate
 
 <script type="text/javascript">
+  const items = document.querySelectorAll(".select-item");
+  let lastSelectedItem;
+
   document.body.addEventListener("bulk_retry_requested", () => alert('Submitted retry requests successfully'));
 
-  function selectAll() {
-    document.querySelectorAll(".select-item").forEach((element) => element.click());
-  }
+  function selectAll(element) {
+    items.forEach((item) => {
+      item.checked = element.checked;
 
-  function selectItem(element) {
-    if (element.checked) {
-      element.closest("tr").classList.add("table-secondary");
-    } else {
-      element.closest("tr").classList.remove("table-secondary");
-    }
+      manageRowHighlight(item);
+    });
 
     enableBulkControls();
+  }
+
+  function selectItem(event) {
+    let withinSelectedRange = false;
+
+    if (event.shiftKey && event.target.checked) {
+      items.forEach(item => {
+        if (item === event.target || item === lastSelectedItem) {
+          withinSelectedRange = !withinSelectedRange;
+        }
+
+        if (withinSelectedRange) {
+          item.checked = true;
+
+          manageRowHighlight(item);
+        }
+      });
+    }
+
+    lastSelectedItem = event.target;
+
+    manageRowHighlight(lastSelectedItem);
+
+    enableBulkControls();
+  }
+
+  function manageRowHighlight(item) {
+    if (item.checked) {
+      item.closest("tr").classList.add("table-secondary");
+    } else {
+      item.closest("tr").classList.remove("table-secondary");
+    }
   }
 
   function enableBulkControls() {
@@ -28,4 +59,6 @@
   function enableAutoReload() {
     return document.querySelectorAll(".select-item:checked").length === 0;
   }
+
+  items.forEach(item => item.addEventListener("click", selectItem));
 </script>

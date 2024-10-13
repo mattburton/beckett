@@ -44,7 +44,7 @@
     <thead>
     <tr>
       <th style="width: 1em;">
-        <input type="checkbox" id="select-all" onclick="selectAll()" />
+        <input type="checkbox" id="select-all" onclick="selectAll(this)" />
       </th>
       <th>Group Name</th>
       <th>Name</th>
@@ -57,7 +57,7 @@
     {
       <tr>
         <td>
-          <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id" onclick="selectItem(this)" />
+          <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id" />
         </td>
         <td>@checkpoint.GroupName</td>
         <td>@checkpoint.Name</td>
