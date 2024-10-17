@@ -19,9 +19,6 @@
     <li class="nav-item">
       <a class="nav-link" href="@Routes.Prefix/subscriptions/failed">Failed</a>
     </li>
-    <li class="nav-item">
-      <a class="nav-link active" href="@Routes.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name">Subscription</a>
-    </li>
   </ul>
 </div>
 
@@ -33,7 +30,20 @@
   <div class="card m-4">
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
-        <div class="fs-3">Status: @Model.Details.Status</div>
+        <div class="fs-4">
+          Subscription
+          @switch (Model.Details.Status)
+          {
+            case SubscriptionStatus.Active:
+              <span class="badge text-bg-success">@Model.Details.Status</span>
+              break;
+            case SubscriptionStatus.Uninitialized:
+            case SubscriptionStatus.Paused:
+            default:
+              <span class="badge text-bg-secondary">@Model.Details.Status</span>
+              break;
+          }
+        </div>
         @if (Model.Details.Status == SubscriptionStatus.Active)
         {
           <div>
@@ -61,8 +71,9 @@
       </div>
     </div>
     <ul class="list-group list-group-flush">
-      <li class="list-group-item">Group Name: @Model.Details.GroupName</li>
-      <li class="list-group-item">Name: @Model.Details.Name</li>
+      <li class="list-group-item"><span class="fw-bolder">Group Name:</span> @Model.Details.GroupName</li>
+      <li class="list-group-item"><span class="fw-bolder">Name:</span> @Model.Details.Name</li>
+      <li class="list-group-item"><span class="fw-bolder">Status:</span> @Model.Details.Status</li>
     </ul>
   </div>
 </div>
