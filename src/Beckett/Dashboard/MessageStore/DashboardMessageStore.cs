@@ -41,9 +41,13 @@ public class DashboardMessageStore(IPostgresDatabase database, PostgresOptions o
     public Task<GetStreamMessagesResult> GetStreamMessages(
         string streamName,
         string? query,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken
     )
     {
-        return database.Execute(new GetStreamMessages(streamName, query, options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetStreamMessages(streamName, query, offset, pageSize, options), cancellationToken);
     }
 }

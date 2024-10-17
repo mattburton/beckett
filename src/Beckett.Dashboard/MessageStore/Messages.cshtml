@@ -5,24 +5,28 @@
   Layout = new Layout();
   DateTimeOffset? firstTimestamp = null;
   DateTimeOffset? previousTimestamp = null;
+  var urlTemplate = $"{Routes.Prefix}/message-store/categories/{HttpUtility.UrlEncode(Model.Category)}/{HttpUtility.UrlEncode(Model.StreamName)}?page={{0}}&pageSize={{1}}";
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 mb-0 rounded-3">
-    <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
-        Stream Categories
-      </a>
-    </li>
-    <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)">
-        @Model.Category
-      </a>
-    </li>
-    <li class="breadcrumb-item active" aria-current="page">
-      @Model.StreamName
-    </li>
-  </ol>
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
+          Stream Categories
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)">
+          @Model.Category
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        @Model.StreamName
+      </li>
+    </ol>
+    @(new Paging((Model, urlTemplate)))
+  </div>
 </nav>
 
 <div class="p-2">
