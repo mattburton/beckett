@@ -9,12 +9,29 @@ public static class RetriesPage
         return builder;
     }
 
-    public static async Task<IResult> Handler(IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handler(
+        int? page,
+        int? pageSize,
+        IDashboard dashboard,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await dashboard.Subscriptions.GetRetries(cancellationToken);
+        var pageParameter = page.ToPageParameter();
+        var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        return new Retries(new ViewModel(result.Retries));
+        var result = await dashboard.Subscriptions.GetRetries(
+            pageParameter,
+            pageSizeParameter,
+            cancellationToken
+        );
+
+        return new Retries(new ViewModel(result.Retries, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
-    public record ViewModel(List<GetRetriesResult.Retry> Retries);
+    public record ViewModel(
+        List<GetRetriesResult.Retry> Retries,
+        int Page,
+        int PageSize,
+        int TotalResults
+    ) : IPagedViewModel;
 }

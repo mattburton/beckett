@@ -14,16 +14,42 @@ public static class StreamsPage
     public static async Task<IResult> Handler(
         string category,
         string? query,
+        int? page,
+        int? pageSize,
         IDashboard dashboard,
         CancellationToken cancellationToken
     )
     {
         var decodedCategory = HttpUtility.UrlDecode(category);
+        var pageParameter = page.ToPageParameter();
+        var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.MessageStore.GetCategoryStreams(decodedCategory, query, cancellationToken);
+        var result = await dashboard.MessageStore.GetCategoryStreams(
+            decodedCategory,
+            query,
+            pageParameter,
+            pageSizeParameter,
+            cancellationToken
+        );
 
-        return new Streams(new ViewModel(decodedCategory, query, result.Streams));
+        return new Streams(
+            new ViewModel(
+                decodedCategory,
+                query,
+                result.Streams,
+                page.ToPageParameter(),
+                pageSize.ToPageSizeParameter(),
+                result.TotalResults
+            )
+        );
     }
 
-    public record ViewModel(string Category, string? Query, IReadOnlyList<GetCategoryStreamsResult.Stream> Streams);
+    public record ViewModel(
+        string Category,
+        string? Query,
+        IReadOnlyList<GetCategoryStreamsResult.Stream> Streams,
+        int Page,
+        int PageSize,
+        int TotalResults
+    ) : IPagedViewModel;
 }

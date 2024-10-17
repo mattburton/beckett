@@ -9,12 +9,31 @@ public static class IndexPage
         return builder;
     }
 
-    public static async Task<IResult> Handler(string? query, IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handler(
+        string? query,
+        int? page,
+        int? pageSize,
+        IDashboard dashboard,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await dashboard.MessageStore.GetCategories(query, cancellationToken);
+        var pageParameter = page.ToPageParameter();
+        var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        return new Index(new ViewModel(result.Categories));
+        var result = await dashboard.MessageStore.GetCategories(
+            query,
+            pageParameter,
+            pageSizeParameter,
+            cancellationToken
+        );
+
+        return new Index(new ViewModel(result.Categories, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
-    public record ViewModel(List<GetCategoriesResult.Category> Categories);
+    public record ViewModel(
+        List<GetCategoriesResult.Category> Categories,
+        int Page,
+        int PageSize,
+        int TotalResults
+    ) : IPagedViewModel;
 }

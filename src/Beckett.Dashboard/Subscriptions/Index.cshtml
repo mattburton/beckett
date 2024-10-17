@@ -2,9 +2,11 @@
 
 @{
   Layout = new Layout();
+
+  var urlTemplate = $"{Routes.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
 }
 
-<div class="p-2 bg-body-tertiary">
+<div class="p-2 bg-body-tertiary d-flex justify-content-between align-items-center">
   <ul class="nav nav-pills">
     <li class="nav-item">
       <a class="nav-link active" aria-current="page" href="@Routes.Prefix/subscriptions">Subscriptions</a>
@@ -19,13 +21,18 @@
       <a class="nav-link" href="@Routes.Prefix/subscriptions/failed">Failed</a>
     </li>
   </ul>
+  @(new Paging((Model, urlTemplate)))
 </div>
 
-<div class="p-2">
+<div class="p-2 pt-0">
   <table class="table table-striped">
     <thead>
       <tr>
-        <th>Group Name</th>
+        <th>
+          <div class="d-flex align-items-end" style="height: 2.25em;">
+            Group Name
+          </div>
+        </th>
         <th>Name</th>
         <th>Status</th>
       </tr>

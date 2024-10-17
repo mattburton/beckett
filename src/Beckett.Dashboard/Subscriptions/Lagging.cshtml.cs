@@ -9,12 +9,29 @@ public static class LaggingPage
         return builder;
     }
 
-    public static async Task<IResult> Handler(IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handler(
+        int? page,
+        int? pageSize,
+        IDashboard dashboard,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await dashboard.Subscriptions.GetLaggingSubscriptions(cancellationToken);
+        var pageParameter = page.ToPageParameter();
+        var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        return new Lagging(new ViewModel(result.Subscriptions));
+        var result = await dashboard.Subscriptions.GetLaggingSubscriptions(
+            pageParameter,
+            pageSizeParameter,
+            cancellationToken
+        );
+
+        return new Lagging(new ViewModel(result.Subscriptions, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
-    public record ViewModel(List<GetLaggingSubscriptionsResult.Subscription> Subscriptions);
+    public record ViewModel(
+        List<GetLaggingSubscriptionsResult.Subscription> Subscriptions,
+        int Page,
+        int PageSize,
+        int TotalResults
+    ) : IPagedViewModel;
 }

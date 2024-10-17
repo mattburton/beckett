@@ -3,19 +3,24 @@
 
 @{
   Layout = new Layout();
+
+  var urlTemplate = $"{Routes.Prefix}/message-store/categories/{HttpUtility.UrlEncode(Model.Category)}?page={{0}}&pageSize={{1}}";
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 mb-0 rounded-3">
-    <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
-        Stream Categories
-      </a>
-    </li>
-    <li class="breadcrumb-item active" aria-current="page">
-      @Model.Category
-    </li>
-  </ol>
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
+          Stream Categories
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        @Model.Category
+      </li>
+    </ol>
+    @(new Paging((Model, urlTemplate)))
+  </div>
 </nav>
 
 <div class="p-2">
@@ -23,7 +28,7 @@
     <thead>
     <tr>
       <th>Stream Name</th>
-      <th style="width: 18em;">Last Updated</th>
+      <th style="width: 16em;">Last Updated</th>
     </tr>
     </thead>
     <tbody>
@@ -48,10 +53,4 @@
     }
     </tbody>
   </table>
-  @if (Model.Streams.Count == 500)
-  {
-    <div class="alert alert-light mx-3" role="alert">
-      <span class="badge text-bg-secondary">NOTE</span> only showing the first 500 recently updated streams - you can use the search box above to refine your results further as needed
-    </div>
-  }
 </div>

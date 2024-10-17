@@ -5,18 +5,29 @@ namespace Beckett.Dashboard.MessageStore;
 
 public class DashboardMessageStore(IPostgresDatabase database, PostgresOptions options) : IDashboardMessageStore
 {
-    public Task<GetCategoriesResult> GetCategories(string? query, CancellationToken cancellationToken)
+    public Task<GetCategoriesResult> GetCategories(
+        string? query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken
+    )
     {
-        return database.Execute(new GetCategories(query, options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetCategories(query, offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetCategoryStreamsResult> GetCategoryStreams(
         string category,
         string? query,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken
     )
     {
-        return database.Execute(new GetCategoryStreams(category, query, options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetCategoryStreams(category, query, offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetMessageResult?> GetMessage(string id, CancellationToken cancellationToken)
@@ -41,9 +52,13 @@ public class DashboardMessageStore(IPostgresDatabase database, PostgresOptions o
     public Task<GetStreamMessagesResult> GetStreamMessages(
         string streamName,
         string? query,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken
     )
     {
-        return database.Execute(new GetStreamMessages(streamName, query, options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetStreamMessages(streamName, query, offset, pageSize, options), cancellationToken);
     }
 }

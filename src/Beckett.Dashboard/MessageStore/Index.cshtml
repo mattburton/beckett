@@ -3,14 +3,19 @@
 
 @{
   Layout = new Layout();
+
+  var urlTemplate = $"{Routes.Prefix}/message-store/categories?page={{0}}&pageSize={{1}}";
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 mb-0 rounded-3">
-    <li class="breadcrumb-item active" aria-current="page">
-      Stream Categories
-    </li>
-  </ol>
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item active" aria-current="page">
+        Stream Categories
+      </li>
+    </ol>
+    @(new Paging((Model, urlTemplate)))
+  </div>
 </nav>
 
 <div class="p-2">
@@ -18,7 +23,7 @@
     <thead>
     <tr>
       <th>Name</th>
-      <th style="width: 18em;">Last Updated</th>
+      <th style="width: 16em;">Last Updated</th>
     </tr>
     </thead>
     <tbody>

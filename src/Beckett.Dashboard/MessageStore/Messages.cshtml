@@ -3,26 +3,29 @@
 
 @{
   Layout = new Layout();
-  DateTimeOffset? firstTimestamp = null;
-  DateTimeOffset? previousTimestamp = null;
+
+  var urlTemplate = $"{Routes.Prefix}/message-store/categories/{HttpUtility.UrlEncode(Model.Category)}/{HttpUtility.UrlEncode(Model.StreamName)}?page={{0}}&pageSize={{1}}";
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
-  <ol class="breadcrumb p-3 mb-0 rounded-3">
-    <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
-        Stream Categories
-      </a>
-    </li>
-    <li class="breadcrumb-item">
-      <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)">
-        @Model.Category
-      </a>
-    </li>
-    <li class="breadcrumb-item active" aria-current="page">
-      @Model.StreamName
-    </li>
-  </ol>
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store">
+          Stream Categories
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Routes.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)">
+          @Model.Category
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        @Model.StreamName
+      </li>
+    </ol>
+    @(new Paging((Model, urlTemplate)))
+  </div>
 </nav>
 
 <div class="p-2">
@@ -38,15 +41,6 @@
     <tbody>
     @foreach(var message in Model.Messages)
     {
-      var currentTimestamp = message.Timestamp;
-
-      firstTimestamp ??= currentTimestamp;
-
-      var deltaFromFirst = (firstTimestamp.Value - currentTimestamp).ToString(@"hh\:mm\:ss\.fff");
-      var deltaFromPrevious = previousTimestamp.HasValue ? (currentTimestamp - previousTimestamp.Value).ToString(@"hh\:mm\:ss\.fff") : "";
-
-      previousTimestamp = currentTimestamp;
-
       <tr>
         <td>
           <a href="@Routes.Prefix/message-store/messages/@message.Id">@message.Id</a>
@@ -54,22 +48,7 @@
         <td>@message.StreamPosition</td>
         <td>@message.Type</td>
         <td>
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="timestamp">@message.Timestamp.ToString("O")</div>
-            @if (!string.IsNullOrEmpty(deltaFromPrevious))
-            {
-              <div class="ms-1 pb-1"
-                   data-bs-toggle="popover"
-                   data-bs-trigger="hover focus"
-                   data-bs-html="true"
-                   data-bs-content="Previous: +@deltaFromPrevious<br/>Stream: +@deltaFromFirst">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
-                  <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
-                  <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
-                </svg>
-              </div>
-            }
-          </div>
+          <div class="timestamp">@message.Timestamp.ToString("O")</div>
         </td>
       </tr>
     }

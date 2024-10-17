@@ -8,9 +8,11 @@ public class DashboardSubscriptions(
     PostgresOptions options
 ) : IDashboardSubscriptions
 {
-    public Task<GetSubscriptionsResult> GetSubscriptions(CancellationToken cancellationToken)
+    public Task<GetSubscriptionsResult> GetSubscriptions(int page, int pageSize, CancellationToken cancellationToken)
     {
-        return database.Execute(new GetSubscriptions(options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetSubscriptions(offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetSubscriptionResult?> GetSubscription(
@@ -22,14 +24,22 @@ public class DashboardSubscriptions(
         return database.Execute(new GetSubscription(groupName, name, options), cancellationToken);
     }
 
-    public Task<GetLaggingSubscriptionsResult> GetLaggingSubscriptions(CancellationToken cancellationToken)
+    public Task<GetLaggingSubscriptionsResult> GetLaggingSubscriptions(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken
+    )
     {
-        return database.Execute(new GetLaggingSubscriptions(options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetLaggingSubscriptions(offset, pageSize, options), cancellationToken);
     }
 
-    public Task<GetRetriesResult> GetRetries(CancellationToken cancellationToken)
+    public Task<GetRetriesResult> GetRetries(int page, int pageSize, CancellationToken cancellationToken)
     {
-        return database.Execute(new GetRetries(options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetRetries(offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetCheckpointResult?> GetCheckpoint(long id, CancellationToken cancellationToken)
@@ -37,8 +47,10 @@ public class DashboardSubscriptions(
         return database.Execute(new GetCheckpoint(id, options), cancellationToken);
     }
 
-    public Task<GetFailedResult> GetFailed(CancellationToken cancellationToken)
+    public Task<GetFailedResult> GetFailed(int page, int pageSize, CancellationToken cancellationToken)
     {
-        return database.Execute(new GetFailed(options), cancellationToken);
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetFailed(offset, pageSize, options), cancellationToken);
     }
 }

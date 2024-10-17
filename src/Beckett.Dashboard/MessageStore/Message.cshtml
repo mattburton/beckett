@@ -28,7 +28,7 @@
         @Model.Message.Id
       </li>
     </ol>
-    <div class="m-2">
+    <div class="m-2 d-flex align-items-start flex-nowrap">
       @{
         var previousLink = "#";
         var nextLink = "#";
@@ -43,17 +43,21 @@
           nextLink = $"{Routes.Prefix}/message-store/streams/{HttpUtility.UrlEncode(Model.Message.StreamName)}/{Model.Message.StreamPosition + 1}";
         }
       }
-      @Model.Message.StreamPosition of @Model.Message.StreamVersion
-      <a href="@previousLink" class="ms-2 btn btn-outline-secondary @(Model.Message.StreamPosition == 1 ? "disabled" : "")">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
-          <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
-        </svg>
-      </a>
-      <a href="@nextLink" class="btn btn-outline-secondary @(Model.Message.StreamPosition == Model.Message.StreamVersion ? "disabled" : "")">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
-          <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
-        </svg>
-      </a>
+      <div class="pt-2 text-nowrap">@Model.Message.StreamPosition of @Model.Message.StreamVersion</div>
+      <div>
+        <a href="@previousLink" class="ms-2 btn btn-outline-secondary @(Model.Message.StreamPosition == 1 ? "disabled" : "")">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+          </svg>
+        </a>
+      </div>
+      <div class="ms-1">
+        <a href="@nextLink" class="btn btn-outline-secondary @(Model.Message.StreamPosition == Model.Message.StreamVersion ? "disabled" : "")">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
+          </svg>
+        </a>
+      </div>
     </div>
   </div>
 </nav>

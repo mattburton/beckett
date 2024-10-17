@@ -9,12 +9,25 @@ public static class FailedPage
         return builder;
     }
 
-    public static async Task<IResult> Handler(IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handler(
+        int? page,
+        int? pageSize,
+        IDashboard dashboard,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await dashboard.Subscriptions.GetFailed(cancellationToken);
+        var pageParameter = page.ToPageParameter();
+        var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        return new Failed(new ViewModel(result.Failures));
+        var result = await dashboard.Subscriptions.GetFailed(pageParameter, pageSizeParameter, cancellationToken);
+
+        return new Failed(new ViewModel(result.Failures, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
-    public record ViewModel(List<GetFailedResult.Failure> Failures);
+    public record ViewModel(
+        List<GetFailedResult.Failure> Failures,
+        int Page,
+        int PageSize,
+        int TotalResults
+    ) : IPagedViewModel;
 }
