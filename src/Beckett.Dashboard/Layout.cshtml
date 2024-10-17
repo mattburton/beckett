@@ -87,7 +87,7 @@
     (function() {
       const storedTheme = localStorage.getItem("theme");
 
-      if (storedTheme.length) {
+      if (storedTheme?.length) {
         document.querySelector("html").setAttribute("data-bs-theme", storedTheme);
 
         return;
