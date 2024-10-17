@@ -2,6 +2,7 @@
   "private": true,
   "scripts": {
     "api": "dotnet run --project src/Samples/API/API.csproj",
+    "dump-schema": "./db/scripts/dump-schema.sh",
     "reset": "docker compose down -v && docker compose up -d",
     "start": "concurrently --raw -k \"npm:api\" \"npm:worker\"",
     "worker": "dotnet run --project src/Samples/Worker/Worker.csproj"
