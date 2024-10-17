@@ -2,6 +2,7 @@
 <Project>
   <PropertyGroup>
     <PackageVersion>0.11.6</PackageVersion>
+    <AssemblyVersion>$(PackageVersion)</AssemblyVersion>
     <Authors>Matt Burton</Authors>
     <Description>Messaging and event sourcing library</Description>
     <PackageProjectUrl>https://github.com/mattburton/beckett</PackageProjectUrl>
