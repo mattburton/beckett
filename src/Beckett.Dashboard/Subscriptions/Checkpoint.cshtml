@@ -38,19 +38,19 @@
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
         <div class="fs-4">
-          Checkpoint
-          @switch (Model.Details.Status)
-          {
-            case CheckpointStatus.Active:
-              <span class="badge text-bg-success">@Model.Details.Status</span>
-              break;
-            case CheckpointStatus.Retry:
-              <span class="badge text-bg-warning">@Model.Details.Status</span>
-              break;
-            case CheckpointStatus.Failed:
-              <span class="badge text-bg-danger">@Model.Details.Status</span>
-              break;
+          @{
+            var statusIndicator = Model.Details.Status switch
+            {
+              CheckpointStatus.Active => "text-bg-success",
+              CheckpointStatus.Retry => "text-bg-warning",
+              CheckpointStatus.Failed => "text-bg-danger",
+              _ => throw new ArgumentOutOfRangeException()
+            };
           }
+          <span class="badge rounded-pill @statusIndicator p-2 me-1">
+            <span class="visually-hidden">Status: @Model.Details.Status</span>
+          </span>
+          Checkpoint
         </div>
         @if (Model.Details.ShowControls)
         {
@@ -93,10 +93,6 @@
         }
       </li>
       <li class="list-group-item">
-        <span class="fw-bolder">Stream Version:</span>
-        @Model.Details.StreamVersion
-      </li>
-      <li class="list-group-item">
         <span class="fw-bolder">Stream Position:</span>
         @if (Routes.Options.MessageStoreEnabled)
         {
@@ -108,6 +104,10 @@
         {
           @Model.Details.StreamPosition
         }
+      </li>
+      <li class="list-group-item">
+        <span class="fw-bolder">Stream Version:</span>
+        @Model.Details.StreamVersion
       </li>
       @if (Model.Details.Status != CheckpointStatus.Active)
       {

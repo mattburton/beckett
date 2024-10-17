@@ -31,18 +31,19 @@
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
         <div class="fs-4">
-          Subscription
-          @switch (Model.Details.Status)
+          @{
+          var statusIndicator = Model.Details.Status switch
           {
-            case SubscriptionStatus.Active:
-              <span class="badge text-bg-success">@Model.Details.Status</span>
-              break;
-            case SubscriptionStatus.Uninitialized:
-            case SubscriptionStatus.Paused:
-            default:
-              <span class="badge text-bg-secondary">@Model.Details.Status</span>
-              break;
+            SubscriptionStatus.Active => "text-bg-success",
+            SubscriptionStatus.Paused => "text-bg-secondary",
+            SubscriptionStatus.Uninitialized => "text-bg-warning",
+            _ => throw new ArgumentOutOfRangeException()
+          };
           }
+          <span class="badge rounded-pill @statusIndicator p-2 me-1">
+            <span class="visually-hidden">Status: @Model.Details.Status</span>
+          </span>
+          Subscription
         </div>
         @if (Model.Details.Status == SubscriptionStatus.Active)
         {

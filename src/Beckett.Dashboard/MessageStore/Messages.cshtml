@@ -32,7 +32,7 @@
         <th style="width: 22em;">Message ID</th>
         <th style="width: 10em;">Stream Position</th>
         <th>Type</th>
-        <th style="width: 18em;">Timestamp</th>
+        <th style="width: 16em;">Timestamp</th>
       </tr>
     </thead>
     <tbody>
@@ -42,8 +42,8 @@
 
       firstTimestamp ??= currentTimestamp;
 
-      var offsetFromFirst = (firstTimestamp.Value - currentTimestamp).ToString(@"hh\:mm\:ss\.fff");
-      var offsetFromPrevious = previousTimestamp.HasValue ? (currentTimestamp - previousTimestamp.Value).ToString(@"hh\:mm\:ss\.fff") : "";
+      var deltaFromFirst = (firstTimestamp.Value - currentTimestamp).ToString(@"hh\:mm\:ss\.fff");
+      var deltaFromPrevious = previousTimestamp.HasValue ? (currentTimestamp - previousTimestamp.Value).ToString(@"hh\:mm\:ss\.fff") : "";
 
       previousTimestamp = currentTimestamp;
 
@@ -54,21 +54,22 @@
         <td>@message.StreamPosition</td>
         <td>@message.Type</td>
         <td>
-          <span class="timestamp">@message.Timestamp.ToString("O")</span>
-          @if (!string.IsNullOrEmpty(offsetFromPrevious))
-          {
-            <div class="d-inline"
-                 data-bs-toggle="popover"
-                 data-bs-trigger="hover focus"
-                 data-bs-title="Timestamp Deltas"
-                 data-bs-html="true"
-                 data-bs-content="Previous: +@offsetFromPrevious<br/>Stream: +@offsetFromFirst">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
-                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
-                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
-              </svg>
-            </div>
-          }
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="timestamp">@message.Timestamp.ToString("O")</div>
+            @if (!string.IsNullOrEmpty(deltaFromPrevious))
+            {
+              <div class="ms-1 pb-1"
+                   data-bs-toggle="popover"
+                   data-bs-trigger="hover focus"
+                   data-bs-html="true"
+                   data-bs-content="Previous: +@deltaFromPrevious<br/>Stream: +@deltaFromFirst">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
+                  <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+                  <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
+                </svg>
+              </div>
+            }
+          </div>
         </td>
       </tr>
     }
