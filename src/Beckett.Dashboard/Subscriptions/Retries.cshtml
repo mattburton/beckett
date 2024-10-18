@@ -24,12 +24,13 @@
   @(new Paging((Model, urlTemplate)))
 </div>
 
-<div hx-get="@Routes.Prefix/subscriptions/retries"
+<div class="p-2 pt-0"
+     hx-get="@Routes.Prefix/subscriptions/retries"
      hx-trigger="every 10s [enableAutoReload()]"
      hx-select="#list-view"
      hx-swap="innerHTML"
      hx-on::after-swap="setupCheckboxes()">
-  <table id="list-view" class="table table-striped m-2 mt-0">
+  <table id="list-view" class="table table-striped">
     <thead>
       <tr>
         <th style="width: 1em;">
@@ -49,7 +50,7 @@
         </th>
         <th>Name</th>
         <th>Stream Name</th>
-        <th>Stream Position</th>
+        <th style="width: 12em;">Stream Position</th>
       </tr>
     </thead>
     <tbody>

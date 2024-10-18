@@ -24,20 +24,21 @@
   @(new Paging((Model, urlTemplate)))
 </div>
 
-<div hx-get="@Routes.Prefix/subscriptions/lagging"
+<div class="p-2 pt-0"
+     hx-get="@Routes.Prefix/subscriptions/lagging"
      hx-trigger="every 10s"
      hx-select="#list-view"
      hx-swap="innerHTML">
-  <table id="list-view" class="table table-striped m-2 mt-0">
+  <table id="list-view" class="table table-striped">
     <thead>
       <tr>
-        <th>
+        <th style="width: 18em;">
           <div class="d-flex align-items-end" style="height: 2.25em;">
             Group Name
           </div>
         </th>
         <th>Name</th>
-        <th>Total Lag</th>
+        <th style="width: 12em;">Total Lag</th>
       </tr>
     </thead>
     <tbody>
