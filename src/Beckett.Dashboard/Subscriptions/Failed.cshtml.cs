@@ -21,11 +21,12 @@ public static class FailedPage
 
         var result = await dashboard.Subscriptions.GetFailed(pageParameter, pageSizeParameter, cancellationToken);
 
-        return new Failed(new ViewModel(result.Failures, pageParameter, pageSizeParameter, result.TotalResults));
+        return new Failed(new ViewModel(result.Failures, null, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
     public record ViewModel(
         List<GetFailedResult.Failure> Failures,
+        string? Query,
         int Page,
         int PageSize,
         int TotalResults

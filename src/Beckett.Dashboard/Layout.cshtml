@@ -1,4 +1,4 @@
-@inherits HtmlLayout
+@inherits HtmlLayout<(Area Area, bool MessageStoreEnabled, bool ShowSearch, string? Query)>
 
 <!doctype html>
 <html lang="en" data-bs-theme="auto">
@@ -23,6 +23,30 @@
       display: none;
     }
   </style>
+  <script>
+    (function() {
+      const storedTheme = localStorage.getItem("theme");
+
+      if (storedTheme?.length) {
+        document.querySelector("html").setAttribute("data-bs-theme", storedTheme);
+
+        return;
+      }
+
+      if (document.querySelector("html").getAttribute("data-bs-theme") === "auto") {
+        function updateColorMode() {
+          document.querySelector("html").setAttribute(
+            "data-bs-theme",
+            window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+          );
+        }
+
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateColorMode);
+
+        updateColorMode();
+      }
+    })();
+  </script>
 </head>
 <body>
   <header>
@@ -33,8 +57,11 @@
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          @RenderSection("Navbar")
-          @RenderSection("Search", false)
+          @(new Navbar((Model.Area, Model.MessageStoreEnabled)))
+          @if (Model.ShowSearch)
+          {
+            @(new Search(Model.Query))
+          }
           <button type="button" class="ms-2 btn btn-secondary" title="Toggle dark mode" onclick="changeColorMode()">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-half" viewBox="0 0 16 16">
               <path d="M8 15A7 7 0 1 0 8 1zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16"></path>
@@ -43,35 +70,11 @@
         </div>
       </div>
     </nav>
-    <script>
-      (function() {
-        const storedTheme = localStorage.getItem("theme");
-
-        if (storedTheme?.length) {
-          document.querySelector("html").setAttribute("data-bs-theme", storedTheme);
-
-          return;
-        }
-
-        if (document.querySelector("html").getAttribute("data-bs-theme") === "auto") {
-          function updateColorMode() {
-            document.querySelector("html").setAttribute(
-              "data-bs-theme",
-              window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-            );
-          }
-
-          window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateColorMode);
-
-          updateColorMode();
-        }
-      })();
-    </script>
   </header>
   <main>
     @RenderBody()
   </main>
-<script type="text/javascript">
+  <script type="text/javascript">
     const dateTimeFormatOptions = Intl.DateTimeFormat().resolvedOptions();
 
     const options = {
@@ -86,17 +89,24 @@
       fractionalSecondDigits: 3
     };
 
-    window.addEventListener("load", () => {
-      document.querySelectorAll(".timestamp").forEach((element) => {
+    htmx.onLoad(function(content) {
+      transformTimestamps(content);
+
+      setupPopovers(content);
+    });
+
+    function transformTimestamps(content) {
+      content.querySelectorAll(".timestamp").forEach((element) => {
         element.innerText = new Date(Date.parse(element.innerText)).toLocaleString(dateTimeFormatOptions.locale, options);
         element.style = "display: inline";
       });
+    }
 
-      const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]')
-      const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl))
-    });
+    function setupPopovers(content) {
+      content.querySelectorAll('[data-bs-toggle="popover"]').forEach((element) => new bootstrap.Popover(element));
+    }
 
-    const changeColorMode = () => {
+    function changeColorMode() {
       const htmlElement = document.querySelector("html");
 
       const theme = htmlElement.getAttribute("data-bs-theme");

@@ -35,8 +35,8 @@ public static class StreamsPage
         return new Streams(
             new ViewModel(
                 decodedCategory,
-                query,
                 result.Streams,
+                query,
                 page.ToPageParameter(),
                 pageSize.ToPageSizeParameter(),
                 result.TotalResults
@@ -46,8 +46,8 @@ public static class StreamsPage
 
     public record ViewModel(
         string Category,
-        string? Query,
         IReadOnlyList<GetCategoryStreamsResult.Stream> Streams,
+        string? Query,
         int Page,
         int PageSize,
         int TotalResults

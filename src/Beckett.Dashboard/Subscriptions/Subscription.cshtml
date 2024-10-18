@@ -2,7 +2,7 @@
 @inherits HtmlTemplate<SubscriptionPage.ViewModel>
 
 @{
-  Layout = new Layout();
+  Layout = new Layout((Area.Subscriptions, Routes.Options.MessageStoreEnabled, false, null));
 }
 
 <div class="p-2 bg-body-tertiary d-flex align-items-center">

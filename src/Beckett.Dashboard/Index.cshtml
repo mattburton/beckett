@@ -1,12 +1,7 @@
 @inherits HtmlTemplate
 
 @{
-  Layout = new Layout();
-}
-
-@* ReSharper disable once Razor.SectionNotResolved *@
-@section Navbar {
-  @(new Navbar((Area.Home, Routes.Options.MessageStoreEnabled)))
+  Layout = new Layout((Area.Home, Routes.Options.MessageStoreEnabled, false, null));
 }
 
 <div class="row mt-4 mx-2">

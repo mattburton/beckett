@@ -27,11 +27,14 @@ public static class IndexPage
             cancellationToken
         );
 
-        return new Index(new ViewModel(result.Categories, pageParameter, pageSizeParameter, result.TotalResults));
+        return new Index(
+            new ViewModel(result.Categories, query, pageParameter, pageSizeParameter, result.TotalResults)
+        );
     }
 
     public record ViewModel(
         List<GetCategoriesResult.Category> Categories,
+        string? Query,
         int Page,
         int PageSize,
         int TotalResults

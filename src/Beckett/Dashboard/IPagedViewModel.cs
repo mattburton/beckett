@@ -2,6 +2,7 @@ namespace Beckett.Dashboard;
 
 public interface IPagedViewModel
 {
+    string? Query { get; }
     int Page { get; }
     int PageSize { get; }
     int TotalResults { get; }
@@ -10,7 +11,8 @@ public interface IPagedViewModel
     int To => From + PageSize > TotalResults ? TotalResults : From - 1 + PageSize;
     int TotalPages => (int)Math.Ceiling((double)TotalResults / PageSize);
 
-    string PreviousLink(string urlTemplate) => Page > 1 ? string.Format(urlTemplate, Page - 1, PageSize) : "#";
+    string PreviousLink(string urlTemplate) => Page > 1 ? string.Format(urlTemplate, Page - 1, PageSize, Query) : "#";
 
-    string NextLink(string urlTemplate) => Page < TotalPages ? string.Format(urlTemplate, Page + 1, PageSize) : "#";
+    string NextLink(string urlTemplate) =>
+        Page < TotalPages ? string.Format(urlTemplate, Page + 1, PageSize, Query) : "#";
 }

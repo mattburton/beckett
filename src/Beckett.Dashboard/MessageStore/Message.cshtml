@@ -3,7 +3,7 @@
 @inherits HtmlTemplate<MessagePage.ViewModel>
 
 @{
-  Layout = new LayoutWithoutSearch();
+  Layout = new Layout((Area.MessageStore, true, false, null));
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">

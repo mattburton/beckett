@@ -1,7 +1,7 @@
 @inherits HtmlTemplate<FailedPage.ViewModel>
 
 @{
-  Layout = new Layout();
+  Layout = new Layout((Area.Subscriptions, Routes.Options.MessageStoreEnabled, false, null));
 
   var urlTemplate = $"{Routes.Prefix}/subscriptions/failed?page={{0}}&pageSize={{1}}";
 }
@@ -26,10 +26,9 @@
 
 <div class="p-2 pt-0"
      hx-get="@Routes.Prefix/subscriptions/failed"
-     hx-trigger="every 10s [enableAutoReload()]"
+     hx-trigger="@(Model.Page > 1 ? "false" : "every 10s [enableAutoReload()]")"
      hx-select="#list-view"
-     hx-swap="innerHTML"
-     hx-on::after-swap="setupCheckboxes()">
+     hx-swap="innerHTML">
   <table id="list-view" class="table table-striped">
     <thead>
       <tr>

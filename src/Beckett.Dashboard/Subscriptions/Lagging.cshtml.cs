@@ -25,11 +25,14 @@ public static class LaggingPage
             cancellationToken
         );
 
-        return new Lagging(new ViewModel(result.Subscriptions, pageParameter, pageSizeParameter, result.TotalResults));
+        return new Lagging(
+            new ViewModel(result.Subscriptions, null, pageParameter, pageSizeParameter, result.TotalResults)
+        );
     }
 
     public record ViewModel(
         List<GetLaggingSubscriptionsResult.Subscription> Subscriptions,
+        string? Query,
         int Page,
         int PageSize,
         int TotalResults

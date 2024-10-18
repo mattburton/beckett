@@ -13,7 +13,11 @@ public static class Routes
     public static string Prefix { get; private set; } = null!;
     public static DashboardOptions Options { get; private set; } = null!;
 
-    public static RouteGroupBuilder MapBeckettDashboard(this IEndpointRouteBuilder builder, string prefix, Action<DashboardOptions>? configure = null)
+    public static RouteGroupBuilder MapBeckettDashboard(
+        this IEndpointRouteBuilder builder,
+        string prefix,
+        Action<DashboardOptions>? configure = null
+    )
     {
         Options = new DashboardOptions();
 
@@ -54,6 +58,17 @@ public abstract class HtmlTemplate : RazorBlade.HtmlTemplate, IResult
 }
 
 public abstract class HtmlLayout : RazorBlade.HtmlLayout;
+
+public abstract class HtmlLayout<T> : HtmlLayout
+{
+    [TemplateConstructor]
+    protected HtmlLayout(T model)
+    {
+        Model = model;
+    }
+
+    public T Model { get; }
+}
 
 public static class HtmlTemplateExtensions
 {

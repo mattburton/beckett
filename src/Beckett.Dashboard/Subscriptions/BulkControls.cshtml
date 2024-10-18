@@ -64,9 +64,10 @@
   }
 
   function setupCheckboxes() {
-    console.log("setup checkboxes");
     document.querySelectorAll(".select-item").forEach(item => item.addEventListener("click", selectItem));
   }
 
-  setupCheckboxes();
+  htmx.onLoad(function() {
+    setupCheckboxes();
+  });
 </script>

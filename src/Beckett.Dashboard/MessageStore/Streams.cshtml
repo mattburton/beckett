@@ -2,9 +2,9 @@
 @inherits HtmlTemplate<StreamsPage.ViewModel>
 
 @{
-  Layout = new Layout();
+  Layout = new Layout((Area.MessageStore, true, true, Model.Query));
 
-  var urlTemplate = $"{Routes.Prefix}/message-store/categories/{HttpUtility.UrlEncode(Model.Category)}?page={{0}}&pageSize={{1}}";
+  var urlTemplate = $"{Routes.Prefix}/message-store/categories/{HttpUtility.UrlEncode(Model.Category)}?page={{0}}&pageSize={{1}}&query={{2}}";
 }
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">

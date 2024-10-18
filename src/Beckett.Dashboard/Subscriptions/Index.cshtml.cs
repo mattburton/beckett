@@ -25,11 +25,14 @@ public static class IndexPage
             cancellationToken
         );
 
-        return new Index(new ViewModel(result.Subscriptions, pageParameter, pageSizeParameter, result.TotalResults));
+        return new Index(
+            new ViewModel(result.Subscriptions, null, pageParameter, pageSizeParameter, result.TotalResults)
+        );
     }
 
     public record ViewModel(
         List<GetSubscriptionsResult.Subscription> Subscriptions,
+        string? Query,
         int Page,
         int PageSize,
         int TotalResults

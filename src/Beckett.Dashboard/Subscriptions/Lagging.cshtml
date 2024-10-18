@@ -1,7 +1,7 @@
 @inherits HtmlTemplate<LaggingPage.ViewModel>
 
 @{
-  Layout = new Layout();
+  Layout = new Layout((Area.Subscriptions, Routes.Options.MessageStoreEnabled, false, null));
 
   var urlTemplate = $"{Routes.Prefix}/subscriptions/lagging?page={{0}}&pageSize={{1}}";
 }

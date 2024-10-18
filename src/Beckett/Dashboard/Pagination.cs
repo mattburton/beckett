@@ -3,7 +3,7 @@ namespace Beckett.Dashboard;
 public static class Pagination
 {
     private const int DefaultPage = 1;
-    private const int DefaultPageSize = 20;
+    private const int DefaultPageSize = 100;
 
     public static int ToPageParameter(this int? page) => page is null or < 1 ? DefaultPage : page.Value;
 

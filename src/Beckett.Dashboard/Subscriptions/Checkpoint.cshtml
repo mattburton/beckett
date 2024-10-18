@@ -3,7 +3,7 @@
 @inherits HtmlTemplate<CheckpointPage.ViewModel>
 
 @{
-  Layout = new Layout();
+  Layout = new Layout((Area.Subscriptions, Routes.Options.MessageStoreEnabled, false, null));
 }
 
 <script type="text/javascript">

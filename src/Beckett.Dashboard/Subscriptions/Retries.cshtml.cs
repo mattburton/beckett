@@ -25,11 +25,12 @@ public static class RetriesPage
             cancellationToken
         );
 
-        return new Retries(new ViewModel(result.Retries, pageParameter, pageSizeParameter, result.TotalResults));
+        return new Retries(new ViewModel(result.Retries, null, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
     public record ViewModel(
         List<GetRetriesResult.Retry> Retries,
+        string? Query,
         int Page,
         int PageSize,
         int TotalResults

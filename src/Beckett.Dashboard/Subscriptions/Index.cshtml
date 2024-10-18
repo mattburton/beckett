@@ -1,7 +1,7 @@
 @inherits HtmlTemplate<IndexPage.ViewModel>
 
 @{
-  Layout = new Layout();
+  Layout = new Layout((Area.Subscriptions, Routes.Options.MessageStoreEnabled, false, null));
 
   var urlTemplate = $"{Routes.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
 }
