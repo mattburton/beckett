@@ -10,6 +10,7 @@ public static class RetriesPage
     }
 
     public static async Task<IResult> Handler(
+        string? query,
         int? page,
         int? pageSize,
         IDashboard dashboard,
@@ -20,12 +21,13 @@ public static class RetriesPage
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
         var result = await dashboard.Subscriptions.GetRetries(
+            query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
         );
 
-        return new Retries(new ViewModel(result.Retries, null, pageParameter, pageSizeParameter, result.TotalResults));
+        return new Retries(new ViewModel(result.Retries, query, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
     public record ViewModel(

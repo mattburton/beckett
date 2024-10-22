@@ -4,7 +4,12 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.Subscriptions.Queries;
 
-public class GetRetries(int offset, int limit, PostgresOptions options) : IPostgresDatabaseQuery<GetRetriesResult>
+public class GetRetries(
+    string? query,
+    int offset,
+    int limit,
+    PostgresOptions options
+) : IPostgresDatabaseQuery<GetRetriesResult>
 {
     public async Task<GetRetriesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
@@ -12,11 +17,13 @@ public class GetRetries(int offset, int limit, PostgresOptions options) : IPostg
             SELECT c.id, c.group_name, c.name, c.stream_name, c.stream_position, count(*) over() as total_results
             FROM {options.Schema}.checkpoints c
             WHERE c.status = 'retry'
+            AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
             ORDER BY c.group_name, c.name, c.stream_name, c.stream_position
-            OFFSET $1
-            LIMIT $2;
+            OFFSET $2
+            LIMIT $3;
         ";
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
@@ -25,9 +32,9 @@ public class GetRetries(int offset, int limit, PostgresOptions options) : IPostg
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = offset;
-        command.Parameters[1].Value = limit;
-
+        command.Parameters[0].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
+        command.Parameters[1].Value = offset;
+        command.Parameters[2].Value = limit;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

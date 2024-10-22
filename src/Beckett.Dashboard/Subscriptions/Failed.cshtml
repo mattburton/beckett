@@ -1,9 +1,9 @@
 @inherits HtmlTemplate<FailedPage.ViewModel>
 
 @{
-  Layout = new Layout((Area.Subscriptions, Routes.Options.MessageStoreEnabled, false, null));
+  Layout = new Layout((Area.Subscriptions, Routes.Options.MessageStoreEnabled, true, Model.Query));
 
-  var urlTemplate = $"{Routes.Prefix}/subscriptions/failed?page={{0}}&pageSize={{1}}";
+  var urlTemplate = $"{Routes.Prefix}/subscriptions/failed?page={{0}}&pageSize={{1}}&query={{2}}";
 }
 
 <div class="p-2 bg-body-tertiary d-flex justify-content-between align-items-center">

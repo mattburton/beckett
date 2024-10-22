@@ -10,6 +10,7 @@ public static class FailedPage
     }
 
     public static async Task<IResult> Handler(
+        string? query,
         int? page,
         int? pageSize,
         IDashboard dashboard,
@@ -19,9 +20,14 @@ public static class FailedPage
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.Subscriptions.GetFailed(pageParameter, pageSizeParameter, cancellationToken);
+        var result = await dashboard.Subscriptions.GetFailed(
+            query,
+            pageParameter,
+            pageSizeParameter,
+            cancellationToken
+        );
 
-        return new Failed(new ViewModel(result.Failures, null, pageParameter, pageSizeParameter, result.TotalResults));
+        return new Failed(new ViewModel(result.Failures, query, pageParameter, pageSizeParameter, result.TotalResults));
     }
 
     public record ViewModel(

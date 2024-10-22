@@ -35,11 +35,11 @@ public class DashboardSubscriptions(
         return database.Execute(new GetLaggingSubscriptions(offset, pageSize, options), cancellationToken);
     }
 
-    public Task<GetRetriesResult> GetRetries(int page, int pageSize, CancellationToken cancellationToken)
+    public Task<GetRetriesResult> GetRetries(string? query, int page, int pageSize, CancellationToken cancellationToken)
     {
         var offset = Pagination.ToOffset(page, pageSize);
 
-        return database.Execute(new GetRetries(offset, pageSize, options), cancellationToken);
+        return database.Execute(new GetRetries(query, offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetCheckpointResult?> GetCheckpoint(long id, CancellationToken cancellationToken)
@@ -47,10 +47,10 @@ public class DashboardSubscriptions(
         return database.Execute(new GetCheckpoint(id, options), cancellationToken);
     }
 
-    public Task<GetFailedResult> GetFailed(int page, int pageSize, CancellationToken cancellationToken)
+    public Task<GetFailedResult> GetFailed(string? query, int page, int pageSize, CancellationToken cancellationToken)
     {
         var offset = Pagination.ToOffset(page, pageSize);
 
-        return database.Execute(new GetFailed(offset, pageSize, options), cancellationToken);
+        return database.Execute(new GetFailed(query, offset, pageSize, options), cancellationToken);
     }
 }

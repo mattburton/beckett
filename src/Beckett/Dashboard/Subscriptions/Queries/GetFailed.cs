@@ -4,7 +4,12 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.Subscriptions.Queries;
 
-public class GetFailed(int offset, int limit, PostgresOptions options) : IPostgresDatabaseQuery<GetFailedResult>
+public class GetFailed(
+    string? query,
+    int offset,
+    int limit,
+    PostgresOptions options
+) : IPostgresDatabaseQuery<GetFailedResult>
 {
     public async Task<GetFailedResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
@@ -12,11 +17,13 @@ public class GetFailed(int offset, int limit, PostgresOptions options) : IPostgr
             SELECT id, group_name, name, stream_name, stream_position, count(*) over() as total_results
             FROM {options.Schema}.checkpoints
             WHERE status = 'failed'
+            AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
             ORDER BY group_name, name, stream_name, stream_position
-            OFFSET $1
-            LIMIT $2;
+            OFFSET $2
+            LIMIT $3;
         ";
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
@@ -25,8 +32,9 @@ public class GetFailed(int offset, int limit, PostgresOptions options) : IPostgr
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = offset;
-        command.Parameters[1].Value = limit;
+        command.Parameters[0].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
+        command.Parameters[1].Value = offset;
+        command.Parameters[2].Value = limit;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
