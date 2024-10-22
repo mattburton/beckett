@@ -17,6 +17,14 @@ public interface IDashboardMessageStore
         CancellationToken cancellationToken
     );
 
+    Task<GetCorrelatedMessagesResult> GetCorrelatedMessages(
+        string correlationId,
+        string? query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken
+    );
+
     Task<GetMessageResult?> GetMessage(string id, CancellationToken cancellationToken);
 
     Task<GetMessageResult?> GetMessage(string streamName, long streamPosition, CancellationToken cancellationToken);

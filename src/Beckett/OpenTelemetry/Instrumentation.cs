@@ -77,6 +77,13 @@ public class Instrumentation : IInstrumentation, IDisposable
             (meta, key, value) => meta[key] = value
         );
 
+        var correlationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.CorrelationId);
+
+        if (correlationId != null)
+        {
+            metadata.Add(MessageConstants.Metadata.CorrelationId, correlationId);
+        }
+
         var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
 
         if (causationId != null)
@@ -103,6 +110,13 @@ public class Instrumentation : IInstrumentation, IDisposable
             metadata,
             (meta, key, value) => meta[key] = value
         );
+
+        var correlationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.CorrelationId);
+
+        if (correlationId != null)
+        {
+            metadata.Add(MessageConstants.Metadata.CorrelationId, correlationId);
+        }
 
         var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
 
@@ -143,6 +157,13 @@ public class Instrumentation : IInstrumentation, IDisposable
             (meta, key, value) => meta[key] = value
         );
 
+        var correlationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.CorrelationId);
+
+        if (correlationId != null)
+        {
+            metadata.Add(MessageConstants.Metadata.CorrelationId, correlationId);
+        }
+
         var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
 
         if (causationId != null)
@@ -180,6 +201,17 @@ public class Instrumentation : IInstrumentation, IDisposable
         activity.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
         activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.HandlerName);
         activity.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
+
+        if (messageContext.Metadata.RootElement.TryGetProperty(
+                MessageConstants.Metadata.CorrelationId,
+                out var correlationIdProperty
+            ))
+        {
+            var correlationId = correlationIdProperty.GetString();
+
+            activity.AddTag(TelemetryConstants.Message.CorrelationId, correlationId);
+            activity.AddBaggage(TelemetryConstants.Message.CorrelationId, correlationId);
+        }
 
         if (messageContext.Metadata.RootElement.TryGetProperty(
                 MessageConstants.Metadata.CausationId,

@@ -48,7 +48,18 @@ public readonly record struct Message
     public JsonDocument Data { get; }
     public Dictionary<string, object> Metadata { get; }
 
-    public void AddMetadata(string key, object value) => Metadata.Add(key, value);
+    public Message AddMetadata(string key, object value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(value);
+
+        Metadata.TryAdd(key, value);
+
+        return this;
+    }
+
+    public Message WithCorrelationId(string correlationId) =>
+        AddMetadata(MessageConstants.Metadata.CorrelationId, correlationId);
 
     internal JsonDocument SerializedMetadata =>
         Metadata.Count > 0 ? MessageSerializer.Serialize(Metadata) : EmptyJsonDocument;

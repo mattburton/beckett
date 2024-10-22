@@ -101,13 +101,17 @@
       <ul class="list-group list-group-flush">
         @foreach (var item in Model.Message.Metadata)
         {
-          if (item.Key == MessageConstants.Metadata.CausationId)
+          switch (item.Key)
           {
-            <li class="list-group-item">@MessageConstants.Metadata.CausationId: <a href="@Routes.Prefix/message-store/messages/@item.Value">@item.Value</a></li>
-          }
-          else
-          {
-            <li class="list-group-item">@(item.Key): @item.Value</li>
+            case MessageConstants.Metadata.CausationId:
+              <li class="list-group-item">@MessageConstants.Metadata.CausationId: <a href="@Routes.Prefix/message-store/messages/@item.Value">@item.Value</a></li>
+              break;
+            case MessageConstants.Metadata.CorrelationId:
+              <li class="list-group-item">@MessageConstants.Metadata.CorrelationId: <a href="@Routes.Prefix/message-store/correlated-by/@item.Value">@item.Value</a></li>
+              break;
+            default:
+              <li class="list-group-item">@(item.Key): @item.Value</li>
+              break;
           }
         }
 

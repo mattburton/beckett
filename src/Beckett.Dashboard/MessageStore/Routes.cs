@@ -12,8 +12,9 @@ public static class Routes
 
         return builder
             .IndexRoute()
-            .StreamsRoute()
+            .CorrelatedByRoute()
             .MessageRoute()
-            .MessagesRoute();
+            .MessagesRoute()
+            .StreamsRoute();
     }
 }

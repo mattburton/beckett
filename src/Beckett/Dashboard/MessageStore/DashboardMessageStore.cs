@@ -30,6 +30,19 @@ public class DashboardMessageStore(IPostgresDatabase database, PostgresOptions o
         return database.Execute(new GetCategoryStreams(category, query, offset, pageSize, options), cancellationToken);
     }
 
+    public Task<GetCorrelatedMessagesResult> GetCorrelatedMessages(
+        string correlationId,
+        string? query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken
+    )
+    {
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetCorrelatedMessages(correlationId, query, offset, pageSize, options), cancellationToken);
+    }
+
     public Task<GetMessageResult?> GetMessage(string id, CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(id, out var guid))

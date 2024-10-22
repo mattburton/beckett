@@ -14,7 +14,7 @@ public record AddTodoListItem(Guid Id, string Item)
         }
 
         return await stream.Append(
-            new TodoListItemAdded(Id, Item),
+            new Message(new TodoListItemAdded(Id, Item)).WithCorrelationId(Guid.NewGuid().ToString()),
             cancellationToken
         );
     }

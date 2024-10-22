@@ -41,6 +41,7 @@ public static class TelemetryConstants
     {
         public const string Id = "message.id";
         public const string CausationId = "message.causation_id";
+        public const string CorrelationId = "message.correlation_id";
         public const string StreamName = "message.stream_name";
         public const string GlobalPosition = "message.global_position";
         public const string StreamPosition = "message.stream_position";
