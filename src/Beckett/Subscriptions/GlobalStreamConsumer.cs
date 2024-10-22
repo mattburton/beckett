@@ -14,11 +14,14 @@ public class GlobalStreamConsumer(
 ) : IGlobalStreamConsumer
 {
     private Task _task = Task.CompletedTask;
+    private bool _continue;
 
     public void StartPolling(CancellationToken stoppingToken)
     {
         if (_task is { IsCompleted: false })
         {
+            _continue = true;
+
             return;
         }
 
@@ -53,6 +56,13 @@ public class GlobalStreamConsumer(
 
                 if (checkpoint == null)
                 {
+                    if (_continue)
+                    {
+                        _continue = false;
+
+                        continue;
+                    }
+
                     break;
                 }
 

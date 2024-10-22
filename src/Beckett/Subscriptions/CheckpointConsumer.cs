@@ -12,12 +12,15 @@ public class CheckpointConsumer(
     CancellationToken stoppingToken
 ) : ICheckpointConsumer
 {
-    private Task _task = null!;
+    private Task _task = Task.CompletedTask;
+    private bool _continue;
 
     public void StartPolling()
     {
         if (_task is { IsCompleted: false })
         {
+            _continue = true;
+
             return;
         }
 
@@ -41,6 +44,13 @@ public class CheckpointConsumer(
 
                 if (checkpoint == null)
                 {
+                    if (_continue)
+                    {
+                        _continue = false;
+
+                        continue;
+                    }
+
                     break;
                 }
 
