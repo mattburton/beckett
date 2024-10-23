@@ -13,6 +13,7 @@ public class GlobalStreamConsumer(
     ILogger<GlobalStreamConsumer> logger
 ) : IGlobalStreamConsumer
 {
+    private readonly object _lock = new();
     private Task _task = Task.CompletedTask;
     private bool _continue;
 
@@ -20,7 +21,10 @@ public class GlobalStreamConsumer(
     {
         if (_task is { IsCompleted: false })
         {
-            _continue = true;
+            lock (_lock)
+            {
+                _continue = true;
+            }
 
             return;
         }
@@ -58,9 +62,15 @@ public class GlobalStreamConsumer(
                 {
                     if (_continue)
                     {
-                        _continue = false;
+                        lock (_lock)
+                        {
+                            if (_continue)
+                            {
+                                _continue = false;
 
-                        continue;
+                                continue;
+                            }
+                        }
                     }
 
                     break;
