@@ -1,11 +1,16 @@
+using Microsoft.Extensions.Logging;
+
 namespace TodoList.ScheduledTasks;
 
 public class HelloWorld
 {
-    public Task Handle(HelloWorld message, CancellationToken cancellationToken)
+    public class Handler(ILogger<Handler> logger)
     {
-        Console.WriteLine("HELLO WORLD");
+        public Task Handle(HelloWorld message, CancellationToken cancellationToken)
+        {
+            logger.LogInformation("Hello World!");
 
-        return Task.CompletedTask;
+            return Task.CompletedTask;
+        }
     }
 }
