@@ -4,37 +4,56 @@ using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Serilog;
 using TodoList;
 using TodoList.Infrastructure.Database;
 
-var builder = Host.CreateApplicationBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-await builder.AddTodoListDatabase();
+try
+{
+    var builder = Host.CreateApplicationBuilder(args);
 
-builder.AddBeckett(
-    options =>
-    {
-        options.WithSubscriptionGroup("TodoList");
+    builder.Services.AddSerilog((_, configuration) => configuration.ReadFrom.Configuration(builder.Configuration));
 
-        options.Subscriptions.MaxRetryCount<RetryableException>(10);
+    await builder.AddTodoListDatabase();
 
-        options.Subscriptions.MaxRetryCount<TerminalException>(0);
-    }).TodoListSubscriptions();
+    builder.AddBeckett(
+        options =>
+        {
+            options.WithSubscriptionGroup("TodoList");
 
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService("todo-list-worker"))
-    .WithMetrics(
-        metrics => metrics
-            .AddBeckett()
-            .AddConsoleExporter()
-    )
-    .WithTracing(
-        tracing => tracing
-            .AddNpgsql()
-            .AddBeckett()
-            .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
-    );
+            options.Subscriptions.MaxRetryCount<RetryableException>(10);
 
-var host = builder.Build();
+            options.Subscriptions.MaxRetryCount<TerminalException>(0);
+        }
+    ).TodoListSubscriptions();
 
-host.Run();
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("todo-list-worker"))
+        .WithMetrics(
+            metrics => metrics
+                .AddBeckett()
+                .AddConsoleExporter()
+        )
+        .WithTracing(
+            tracing => tracing
+                .AddNpgsql()
+                .AddBeckett()
+                .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
+        );
+
+    var host = builder.Build();
+
+    host.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Unhandled exception during startup");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
