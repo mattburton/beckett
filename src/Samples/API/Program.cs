@@ -8,44 +8,62 @@ using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Serilog;
 using TodoList;
 using TodoList.Infrastructure.Database;
 
-var builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-await builder.AddTodoListDatabase();
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
 
-builder.AddBeckett().TodoListMessages();
+    builder.Services.AddSerilog((_, configuration) => configuration.ReadFrom.Configuration(builder.Configuration));
 
-builder.Services.Configure<JsonOptions>(
-    options => { options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower; }
-);
+    await builder.AddTodoListDatabase();
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddHostedService<LogSwaggerLink>();
+    builder.AddBeckett().TodoListMessages();
 
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService("todo-list-api"))
-    .WithTracing(
-        tracing => tracing
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddNpgsql()
-            .AddBeckett()
-            .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
+    builder.Services.Configure<JsonOptions>(
+        options => { options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower; }
     );
 
-var app = builder.Build();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+    builder.Services.AddHostedService<LogSwaggerLink>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("todo-list-api"))
+        .WithTracing(
+            tracing => tracing
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddNpgsql()
+                .AddBeckett()
+                .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
+        );
+
+    var app = builder.Build();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.MapBeckettDashboard("/beckett");
+
+    app.MapGroup("/todos").TodoListRoutes();
+
+    app.Run();
 }
-
-app.MapBeckettDashboard("/beckett");
-
-app.MapGroup("/todos").TodoListRoutes();
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Unhandled exception during startup");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
