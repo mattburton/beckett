@@ -29,7 +29,7 @@ public static class TodoList
     {
         builder.Services.AddSingleton<MentionsHandler>();
         builder.Services.AddSingleton<NotificationHandler>();
-        builder.Services.AddSingleton<HelloWorld>();
+        builder.Services.AddSingleton<HelloWorld.Handler>();
 
         builder.TodoListMessages();
 
@@ -45,7 +45,7 @@ public static class TodoList
 
         builder.AddSubscription("HelloWorld")
             .Message<HelloWorld>()
-            .Handler<HelloWorld>((handler, message, token) => handler.Handle(message, token));
+            .Handler<HelloWorld.Handler>((handler, message, token) => handler.Handle(message, token));
 
         return builder;
     }
