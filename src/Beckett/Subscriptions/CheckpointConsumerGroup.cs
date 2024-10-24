@@ -30,6 +30,7 @@ public class CheckpointConsumerGroup(
             var consumer = _consumers.GetOrAdd(
                 instance,
                 new CheckpointConsumer(
+                    instance,
                     database,
                     checkpointProcessor,
                     options,

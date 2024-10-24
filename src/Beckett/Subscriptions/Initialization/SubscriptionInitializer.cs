@@ -81,7 +81,7 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            logger.LogInformation("Initializing subscription {SubscriptionName}", subscription.Name);
+            logger.InitializingSubscription(subscription.Name);
 
             var globalStream = await messageStorage.ReadGlobalStream(
                 checkpoint.StreamPosition,
@@ -128,10 +128,7 @@ public class SubscriptionInitializer(
 
                 await transaction.CommitAsync(cancellationToken);
 
-                logger.LogInformation(
-                    "Finished initializing subscription {SubscriptionName}",
-                    subscription.Name
-                );
+                logger.FinishedInitializingSubscription(subscription.Name);
 
                 break;
             }
@@ -178,11 +175,19 @@ public class SubscriptionInitializer(
 
             await transaction.CommitAsync(cancellationToken);
 
-            logger.LogInformation(
-                "Initializing subscription {SubscriptionName} - current global position {GlobalPosition}",
-                subscription.Name,
-                newGlobalPosition
-            );
+            logger.SubscriptionInitializationPosition(subscription.Name, newGlobalPosition);
         }
     }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Information, "Initializing subscription {SubscriptionName}")]
+    public static partial void InitializingSubscription(this ILogger logger, string subscriptionName);
+
+    [LoggerMessage(0, LogLevel.Information, "Finished initializing subscription {SubscriptionName}")]
+    public static partial void FinishedInitializingSubscription(this ILogger logger, string subscriptionName);
+
+    [LoggerMessage(0, LogLevel.Information, "Initializing subscription {SubscriptionName} - current global position {GlobalPosition}")]
+    public static partial void SubscriptionInitializationPosition(this ILogger logger, string subscriptionName, long globalPosition);
 }
