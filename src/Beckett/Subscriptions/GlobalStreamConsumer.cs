@@ -23,6 +23,8 @@ public class GlobalStreamConsumer(
         {
             lock (_lock)
             {
+                logger.NewGlobalStreamMessagesAvailableWhileConsumerIsActive();
+
                 _continue = true;
             }
 
@@ -40,6 +42,8 @@ public class GlobalStreamConsumer(
         {
             try
             {
+                logger.StartingGlobalStreamPolling();
+
                 await using var connection = database.CreateConnection();
 
                 await connection.OpenAsync(stoppingToken);
@@ -66,12 +70,16 @@ public class GlobalStreamConsumer(
                         {
                             if (_continue)
                             {
+                                logger.WillContinuePollingGlobalStream();
+
                                 _continue = false;
 
                                 continue;
                             }
                         }
                     }
+
+                    logger.NoNewGlobalStreamMessagesFoundExiting();
 
                     break;
                 }
@@ -84,19 +92,12 @@ public class GlobalStreamConsumer(
 
                 if (globalStream.Items.Count == 0)
                 {
-                    logger.LogTrace(
-                        "No new messages found for global stream after position {Position} - exiting",
-                        checkpoint.StreamPosition
-                    );
+                    logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
 
                     break;
                 }
 
-                logger.LogTrace(
-                    "Found {Count} new global stream message(s) to process after position {Position}",
-                    globalStream.Items.Count,
-                    checkpoint.StreamPosition
-                );
+                logger.NewGlobalStreamMessagesToProcess(globalStream.Items.Count, checkpoint.StreamPosition);
 
                 var checkpoints = new List<CheckpointType>();
 
@@ -107,12 +108,7 @@ public class GlobalStreamConsumer(
 
                     foreach (var subscription in subscriptions)
                     {
-                        logger.LogTrace(
-                            "Subscription {Name} in group {GroupName} is subscribed to new messages found in stream {StreamName} - updating checkpoint",
-                            subscription.Name,
-                            options.Subscriptions.GroupName,
-                            stream.Key
-                        );
+                        logger.NewMessagesFoundForSubscription(subscription.Name, options.Subscriptions.GroupName, stream.Key);
 
                         checkpoints.Add(
                             new CheckpointType
@@ -135,11 +131,11 @@ public class GlobalStreamConsumer(
                         stoppingToken
                     );
 
-                    logger.LogTrace("Recording checkpoints for {Count} checkpoints", checkpoints.Count);
+                    logger.RecordingUpdatedStreamVersionsForCheckpoints(checkpoints.Count);
                 }
                 else
                 {
-                    logger.LogTrace("No new checkpoints to record");
+                    logger.NoNewCheckpointsToRecord();
                 }
 
                 var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
@@ -157,7 +153,7 @@ public class GlobalStreamConsumer(
 
                 await transaction.CommitAsync(stoppingToken);
 
-                logger.LogTrace("Updated global stream to position {Position}", newGlobalPosition);
+                logger.UpdatedGlobalStreamPosition(newGlobalPosition);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {
@@ -171,4 +167,37 @@ public class GlobalStreamConsumer(
             }
         }
     }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Trace, "New global stream messages are available but consumer is already active - setting continue flag to true")]
+    public static partial void NewGlobalStreamMessagesAvailableWhileConsumerIsActive(this ILogger logger);
+
+    [LoggerMessage(0, LogLevel.Trace, "Starting global stream polling")]
+    public static partial void StartingGlobalStreamPolling(this ILogger logger);
+
+    [LoggerMessage(0, LogLevel.Trace, "No new messages found for global stream but will continue polling since the continue flag has been set to true")]
+    public static partial void WillContinuePollingGlobalStream(this ILogger logger);
+
+    [LoggerMessage(0, LogLevel.Trace, "No new messages found for global stream - exiting")]
+    public static partial void NoNewGlobalStreamMessagesFoundExiting(this ILogger logger);
+
+    [LoggerMessage(0, LogLevel.Trace, "No new messages found for global stream after position {Position} - exiting")]
+    public static partial void NoNewGlobalStreamMessagesFoundAfterPosition(this ILogger logger, long position);
+
+    [LoggerMessage(0, LogLevel.Trace, "Found {Count} new global stream message(s) to process after position {Position}")]
+    public static partial void NewGlobalStreamMessagesToProcess(this ILogger logger, int count, long position);
+
+    [LoggerMessage(0, LogLevel.Trace, "Subscription {SubscriptionName} in group {GroupName} is subscribed to new messages found in stream {StreamName} - updating checkpoint")]
+    public static partial void NewMessagesFoundForSubscription(this ILogger logger, string subscriptionName, string groupName, string streamName);
+
+    [LoggerMessage(0, LogLevel.Trace, "Recording updated stream versions for {Count} checkpoints")]
+    public static partial void RecordingUpdatedStreamVersionsForCheckpoints(this ILogger logger, int count);
+
+    [LoggerMessage(0, LogLevel.Trace, "No new checkpoints to record")]
+    public static partial void NoNewCheckpointsToRecord(this ILogger logger);
+
+    [LoggerMessage(0, LogLevel.Trace, "Updated global stream to position {Position}")]
+    public static partial void UpdatedGlobalStreamPosition(this ILogger logger, long position);
 }

@@ -19,11 +19,16 @@ public class CheckpointProcessor(
 ) : ICheckpointProcessor
 {
     public async Task Process(
+        int instance,
         Checkpoint checkpoint,
         Subscription subscription,
         CancellationToken cancellationToken
     )
     {
+        using var checkpointLoggingScope = CheckpointLoggingScope(instance, checkpoint);
+
+        logger.ProcessingCheckpoint(checkpoint.Id, checkpoint.StreamPosition, checkpoint.StreamVersion);
+
         var startingStreamPosition = checkpoint.StreamPosition + 1;
         var batchSize = options.Subscriptions.SubscriptionStreamBatchSize;
 
@@ -44,7 +49,7 @@ public class CheckpointProcessor(
 
         switch (result)
         {
-            case MessageBatchResult.Success success:
+            case Success success:
                 await database.Execute(
                     new UpdateCheckpointPosition(
                         checkpoint.Id,
@@ -58,7 +63,7 @@ public class CheckpointProcessor(
                 SuccessTraceLogging(checkpoint, success);
 
                 break;
-            case MessageBatchResult.Error error:
+            case Error error:
                 var exceptionType = error.Exception.GetType();
 
                 var maxRetryCount = subscription.GetMaxRetryCount(options, exceptionType);
@@ -67,10 +72,12 @@ public class CheckpointProcessor(
 
                 var status = attempt >= maxRetryCount ? CheckpointStatus.Failed : CheckpointStatus.Retry;
 
-                DateTimeOffset? processAt = status == CheckpointStatus.Retry ? attempt.GetNextDelayWithExponentialBackoff(
-                    options.Subscriptions.Retries.InitialDelay,
-                    options.Subscriptions.Retries.MaxDelay
-                ) : null;
+                DateTimeOffset? processAt = status == CheckpointStatus.Retry
+                    ? attempt.GetNextDelayWithExponentialBackoff(
+                        options.Subscriptions.Retries.InitialDelay,
+                        options.Subscriptions.Retries.MaxDelay
+                    )
+                    : null;
 
                 ErrorTraceLogging(checkpoint, status, error, processAt, exceptionType, attempt, maxRetryCount);
 
@@ -91,7 +98,7 @@ public class CheckpointProcessor(
         }
     }
 
-    private async Task<MessageBatchResult> HandleMessageBatch(
+    private async Task<IMessageBatchResult> HandleMessageBatch(
         Checkpoint checkpoint,
         Subscription subscription,
         string streamName,
@@ -123,26 +130,25 @@ public class CheckpointProcessor(
                 checkpoint.Id
             );
 
-            return new MessageBatchResult.Error(startingStreamPosition, e);
+            return new Error(startingStreamPosition, e);
         }
 
         try
         {
             if (messages.Count == 0)
             {
-                return new MessageBatchResult.NoMessages();
+                return NoMessages.Instance;
             }
 
-            foreach (var messageContext in messages)
+            foreach (var messageContext in messages.Where(x => subscription.SubscribedToMessage(x.Type)))
             {
-                if (!subscription.SubscribedToMessage(messageContext.Type))
-                {
-                    continue;
-                }
-
                 try
                 {
                     using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
+
+                    using var messageLoggingScope = MessageLoggingScope(messageContext);
+
+                    logger.HandlingMessageForCheckpoint(messageContext.Id, checkpoint.Id);
 
                     if (subscription.StaticMethod != null)
                     {
@@ -186,11 +192,11 @@ public class CheckpointProcessor(
                         checkpoint.Id
                     );
 
-                    return new MessageBatchResult.Error(messageContext.StreamPosition, e);
+                    return new Error(messageContext.StreamPosition, e);
                 }
             }
 
-            return new MessageBatchResult.Success(messages[^1].StreamPosition);
+            return new Success(messages[^1].StreamPosition);
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -200,7 +206,7 @@ public class CheckpointProcessor(
         {
             logger.LogError(
                 e,
-                "Unhandled exception processing subscription stream [Checkpoint: {CheckpointId}]",
+                "Unhandled exception processing checkpoint {CheckpointId}",
                 checkpoint.Id
             );
 
@@ -226,11 +232,7 @@ public class CheckpointProcessor(
             cancellationToken
         );
 
-        logger.LogTrace(
-            "Found {Count} messages to process for checkpoint {Id}",
-            stream.Messages.Count,
-            checkpoint.Id
-        );
+        logger.FoundMessagesToProcessForCheckpoint(stream.Messages.Count, checkpoint.Id);
 
         var messages = new List<MessageContext>();
 
@@ -254,66 +256,37 @@ public class CheckpointProcessor(
         return messages;
     }
 
-    private void SuccessTraceLogging(Checkpoint checkpoint, MessageBatchResult.Success success)
+    private void SuccessTraceLogging(Checkpoint checkpoint, Success success)
     {
-        if (!logger.IsEnabled(LogLevel.Trace))
-        {
-            return;
-        }
-
         if (checkpoint.Status == CheckpointStatus.Active)
         {
-            logger.LogTrace(
-                "Checkpoint {CheckpointId} processed successfully up to position {StreamPosition}",
-                checkpoint.Id,
-                success.StreamPosition
-            );
+            logger.CheckpointProcessedSuccessfully(checkpoint.Id, success.StreamPosition);
         }
         else
         {
-            logger.LogTrace(
-                "Retry attempt {Attempt} succeeded for checkpoint {CheckpointId} at position {StreamPosition}",
-                checkpoint.RetryAttempts + 1,
-                checkpoint.Id,
-                success.StreamPosition
-            );
+            logger.RetryAttemptSucceeded(checkpoint.RetryAttempts + 1, checkpoint.Id, success.StreamPosition);
         }
     }
 
     private void ErrorTraceLogging(
         Checkpoint checkpoint,
         CheckpointStatus status,
-        MessageBatchResult.Error error,
+        Error error,
         DateTimeOffset? processAt,
         Type exceptionType,
         int attempt,
         int maxRetryCount
     )
     {
-        if (!logger.IsEnabled(LogLevel.Trace))
-        {
-            return;
-        }
-
         if (checkpoint.Status == CheckpointStatus.Active)
         {
             if (status == CheckpointStatus.Retry)
             {
-                logger.LogTrace(
-                    "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - will start retrying at {RetryAt}",
-                    checkpoint.Id,
-                    error.StreamPosition,
-                    processAt
-                );
+                logger.CheckpointWillStartRetry(checkpoint.Id, error.StreamPosition, processAt);
             }
             else
             {
-                logger.LogTrace(
-                    "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - max retry count is set to zero for exception type {ExceptionType}, setting it to failed immediately",
-                    checkpoint.Id,
-                    error.StreamPosition,
-                    exceptionType
-                );
+                logger.CheckpointWillMoveToFailedImmediately(checkpoint.Id, error.StreamPosition, exceptionType);
             }
 
             return;
@@ -321,33 +294,124 @@ public class CheckpointProcessor(
 
         if (status == CheckpointStatus.Retry)
         {
-            logger.LogTrace(
-                "Retry attempt failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - scheduling retry at {RetryAt}",
-                checkpoint.Id,
-                error.StreamPosition,
-                attempt,
-                maxRetryCount,
-                processAt
-            );
+            logger.RetryAttemptFailedWillTryAgain(checkpoint.Id, error.StreamPosition, attempt, maxRetryCount, processAt);
         }
         else
         {
-            logger.LogTrace(
-                "Retry failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting checkpoint status to Failed",
-                checkpoint.Id,
-                error.StreamPosition,
-                attempt,
-                maxRetryCount
-            );
+            logger.RetryAttemptFailedMovingCheckpointToFailed(checkpoint.Id, error.StreamPosition, attempt, maxRetryCount);
         }
     }
 
-    public abstract record MessageBatchResult
+    private IDisposable? CheckpointLoggingScope(int instance, Checkpoint checkpoint)
     {
-        public record NoMessages : MessageBatchResult;
+        const string id = "beckett.checkpoint.id";
+        const string groupName = "beckett.checkpoint.group_name";
+        const string streamName = "beckett.checkpoint.stream_name";
+        const string streamPosition = "beckett.checkpoint.stream_position";
+        const string streamVersion = "beckett.checkpoint.stream_version";
+        const string consumer = "beckett.checkpoint.consumer";
 
-        public record Success(long StreamPosition) : MessageBatchResult;
+        if (!logger.IsEnabled(LogLevel.Information))
+        {
+            return NoOpDisposable.Instance;
+        }
 
-        public record Error(long StreamPosition, Exception Exception) : MessageBatchResult;
+        var state = new Dictionary<string, object>
+        {
+            { id, checkpoint.Id }
+        };
+
+        if (!logger.IsEnabled(LogLevel.Trace))
+        {
+            return logger.BeginScope(state);
+        }
+
+        state.Add(groupName, checkpoint.GroupName);
+        state.Add(streamName, checkpoint.StreamName);
+        state.Add(streamPosition, checkpoint.StreamPosition);
+        state.Add(streamVersion, checkpoint.StreamVersion);
+        state.Add(consumer, instance);
+
+        return logger.BeginScope(state);
     }
+
+    private IDisposable? MessageLoggingScope(MessageContext messageContext)
+    {
+        const string id = "beckett.message.id";
+        const string type = "beckett.message.type";
+        const string globalPosition = "beckett.message.global_position";
+        const string streamPosition = "beckett.message.stream_position";
+
+        if (!logger.IsEnabled(LogLevel.Information))
+        {
+            return NoOpDisposable.Instance;
+        }
+
+        var state = new Dictionary<string, object>
+        {
+            { id, messageContext.Id }
+        };
+
+        if (!logger.IsEnabled(LogLevel.Trace))
+        {
+            return logger.BeginScope(state);
+        }
+
+        state.Add(type, messageContext.Type);
+        state.Add(globalPosition, messageContext.GlobalPosition);
+        state.Add(streamPosition, messageContext.StreamPosition);
+
+        return logger.BeginScope(state);
+    }
+
+    private interface IMessageBatchResult;
+
+    private readonly record struct NoMessages : IMessageBatchResult
+    {
+        public static readonly NoMessages Instance = new();
+    }
+
+    private readonly record struct Success(long StreamPosition) : IMessageBatchResult;
+
+    private readonly record struct Error(long StreamPosition, Exception Exception) : IMessageBatchResult;
+
+    public sealed class NoOpDisposable : IDisposable
+    {
+        public static NoOpDisposable Instance { get; } = new();
+
+        public void Dispose()
+        {
+            //no-op
+        }
+    }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Trace, "Processing checkpoint {CheckpointId} at position {StreamPosition} and version {StreamVersion}")]
+    public static partial void ProcessingCheckpoint(this ILogger logger, long checkpointId, long streamPosition, long streamVersion);
+
+    [LoggerMessage(0, LogLevel.Trace, "Handling message {MessageId} for checkpoint {CheckpointId}")]
+    public static partial void HandlingMessageForCheckpoint(this ILogger logger, string messageId, long checkpointId);
+
+    [LoggerMessage(0, LogLevel.Trace, "Found {Count} messages to process for checkpoint {CheckpointId}")]
+    public static partial void FoundMessagesToProcessForCheckpoint(this ILogger logger, int count, long checkpointId);
+
+    [LoggerMessage(0, LogLevel.Trace, "Checkpoint {CheckpointId} processed successfully up to position {StreamPosition}")]
+    public static partial void CheckpointProcessedSuccessfully(this ILogger logger, long checkpointId, long streamPosition);
+
+    [LoggerMessage(0, LogLevel.Trace, "Retry attempt {Attempt} succeeded for checkpoint {CheckpointId} at position {StreamPosition}")]
+    public static partial void RetryAttemptSucceeded(this ILogger logger, int attempt, long checkpointId, long streamPosition);
+
+    [LoggerMessage(0, LogLevel.Trace, "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - will start retrying at {RetryAt}")]
+    public static partial void CheckpointWillStartRetry(this ILogger logger, long checkpointId, long streamPosition, DateTimeOffset? retryAt);
+
+    [LoggerMessage(0, LogLevel.Trace, "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - max retry count is set to zero for exception type {ExceptionType}, setting it to failed immediately")]
+    public static partial void CheckpointWillMoveToFailedImmediately(this ILogger logger, long checkpointId, long streamPosition, Type exceptionType);
+
+    [LoggerMessage(0, LogLevel.Trace, "Retry attempt failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - scheduling retry at {RetryAt}")]
+    public static partial void RetryAttemptFailedWillTryAgain(this ILogger logger, long checkpointId, long streamPosition, int attempt, int maxRetryCount, DateTimeOffset? retryAt);
+
+    [LoggerMessage(0, LogLevel.Trace, "Retry failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting checkpoint status to Failed")]
+    public static partial void RetryAttemptFailedMovingCheckpointToFailed(this ILogger logger, long checkpointId, long streamPosition, int attempt, int maxRetryCount);
 }

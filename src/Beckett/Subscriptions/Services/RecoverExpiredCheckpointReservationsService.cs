@@ -33,7 +33,7 @@ public class RecoverExpiredCheckpointReservationsService(
                 }
                 else
                 {
-                    logger.LogInformation("Recovered {Count} expired checkpoint reservation(s)", recovered);
+                    logger.RecoveredExpiredCheckpointReservations(recovered);
                 }
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
@@ -48,4 +48,10 @@ public class RecoverExpiredCheckpointReservationsService(
             }
         }
     }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Information, "Recovered {Count} expired checkpoint reservation(s)")]
+    public static partial void RecoveredExpiredCheckpointReservations(this ILogger logger, int count);
 }
