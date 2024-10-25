@@ -75,6 +75,17 @@ CREATE INDEX IF NOT EXISTS ix_messages_active_stream_category ON __schema__.mess
 CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id ON beckett.messages_active ((metadata ->> '$correlation_id'))
   WHERE metadata ->> '$correlation_id' IS NOT NULL;
 
+CREATE OR REPLACE FUNCTION __schema__.stream_hash(
+  _stream_name text
+)
+  RETURNS bigint
+  IMMUTABLE
+  LANGUAGE sql
+AS
+$$
+SELECT abs(hashtextextended(_stream_name, 0));
+$$;
+
 CREATE OR REPLACE FUNCTION __schema__.append_to_stream(
   _stream_name text,
   _expected_version bigint,
@@ -88,6 +99,10 @@ DECLARE
   _current_version bigint;
   _stream_version bigint;
 BEGIN
+  IF (_expected_version < 0) THEN
+    PERFORM pg_advisory_xact_lock(__schema__.stream_hash(_stream_name));
+  END IF;
+
   SELECT coalesce(max(m.stream_position), 0)
   INTO _current_version
   FROM __schema__.messages m

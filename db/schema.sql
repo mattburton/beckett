@@ -150,6 +150,10 @@ DECLARE
   _current_version bigint;
   _stream_version bigint;
 BEGIN
+  IF (_expected_version < 0) THEN
+    PERFORM pg_advisory_xact_lock(beckett.stream_hash(_stream_name));
+  END IF;
+
   SELECT coalesce(max(m.stream_position), 0)
   INTO _current_version
   FROM beckett.messages m
@@ -687,6 +691,17 @@ CREATE FUNCTION beckett.stream_category(_stream_name text) RETURNS text
     LANGUAGE sql IMMUTABLE
     AS $$
 SELECT split_part(_stream_name, '-', 1);
+$$;
+
+
+--
+-- Name: stream_hash(text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.stream_hash(_stream_name text) RETURNS bigint
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT abs(hashtextextended(_stream_name, 0));
 $$;
 
 
