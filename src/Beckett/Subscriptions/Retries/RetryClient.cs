@@ -14,4 +14,9 @@ public class RetryClient(IPostgresDatabase database, PostgresOptions options) : 
     {
         return database.Execute(new ScheduleCheckpoints([id], DateTimeOffset.UtcNow, options), cancellationToken);
     }
+
+    public Task Skip(long id, CancellationToken cancellationToken)
+    {
+        return database.Execute(new SkipCheckpointPosition(id, options), cancellationToken);
+    }
 }

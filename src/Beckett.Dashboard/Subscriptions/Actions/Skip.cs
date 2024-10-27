@@ -3,11 +3,11 @@ using Microsoft.Extensions.Primitives;
 
 namespace Beckett.Dashboard.Subscriptions.Actions;
 
-public static class Retry
+public static class Skip
 {
-    public static RouteGroupBuilder RetryRoute(this RouteGroupBuilder builder)
+    public static RouteGroupBuilder SkipRoute(this RouteGroupBuilder builder)
     {
-        builder.MapPost("/subscriptions/checkpoints/{id:long}/retry", Handler);
+        builder.MapPost("/subscriptions/checkpoints/{id:long}/skip", Handler);
 
         return builder;
     }
@@ -19,10 +19,10 @@ public static class Retry
         CancellationToken cancellationToken
     )
     {
-        await retryClient.Retry(id, cancellationToken);
+        await retryClient.Skip(id, cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
-        context.Response.Headers.Append("HX-Trigger", new StringValues("retry_requested"));
+        context.Response.Headers.Append("HX-Trigger", new StringValues("checkpoint_skipped"));
 
         return Results.Ok();
     }

@@ -684,6 +684,23 @@ $_$;
 
 
 --
+-- Name: skip_checkpoint_position(bigint); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.skip_checkpoint_position(_id bigint) RETURNS void
+    LANGUAGE sql
+    AS $$
+UPDATE beckett.checkpoints
+SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
+    process_at = NULL,
+    reserved_until = NULL,
+    status = 'active',
+    retries = NULL
+WHERE id = _id;
+$$;
+
+
+--
 -- Name: stream_category(text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 

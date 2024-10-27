@@ -758,6 +758,22 @@ SET process_at = _process_at
 WHERE id = ANY(_ids);
 $$;
 
+CREATE OR REPLACE FUNCTION __schema__.skip_checkpoint_position(
+  _id bigint
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+UPDATE __schema__.checkpoints
+SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
+    process_at = NULL,
+    reserved_until = NULL,
+    status = 'active',
+    retries = NULL
+WHERE id = _id;
+$$;
+
 CREATE OR REPLACE FUNCTION __schema__.update_system_checkpoint_position(
   _id bigint,
   _position bigint

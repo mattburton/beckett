@@ -10,6 +10,9 @@
   document.body.addEventListener("retry_requested", function(){
     alert('Retry requested');
   });
+  document.body.addEventListener("checkpoint_skipped", function(){
+    alert('Checkpoint error skipped');
+  });
 </script>
 
 <div class="p-2 bg-body-tertiary d-flex align-items-center">
@@ -55,13 +58,21 @@
         @if (Model.Details.ShowControls)
         {
           <div>
-            <a href="#"
+            <button href="#"
                class="btn btn-primary"
                title="Request retry"
                hx-post="@Routes.Prefix/subscriptions/checkpoints/@Model.Details.Id/retry"
                hx-on::response-error="alert('Unable to retry checkpoint at this time - please try again later')">
               Retry
-            </a>
+            </button>
+            <button href="#"
+               class="btn btn-danger ms-1"
+               title="Skip checkpoint forward"
+               hx-post="@Routes.Prefix/subscriptions/checkpoints/@Model.Details.Id/skip"
+               hx-confirm="Are you sure you want to skip this error? The checkpoint will be reset and advanced to the next stream position if applicable - the current retry history will be lost if you continue."
+               hx-on::response-error="alert('Unable to skip checkpoint forward at this time - please try again later')">
+              Skip
+            </button>
           </div>
         }
       </div>
@@ -119,7 +130,16 @@
       @if (Model.Details.ProcessAt.HasValue)
       {
         <li class="list-group-item">
-          <span class="fw-bolder">Retry In:</span>
+          <span class="fw-bolder">
+            @if (Model.Details.Status == CheckpointStatus.Active)
+            {
+              <text>Process In:</text>
+            }
+            else
+            {
+              <text>Retry In:</text>
+            }
+          </span>
           @Model.Details.ProcessAt.Value.ToFriendlyTimeDisplay()
         </li>
       }
