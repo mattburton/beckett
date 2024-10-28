@@ -11,18 +11,15 @@ public static class MessageSerializer
         _options = options;
     }
 
-    public static JsonDocument Serialize(object message, Type? messageType = null)
+    public static JsonDocument Serialize(Type messageType, object message)
     {
-        if (message is Message genericMessage)
-        {
-            return genericMessage.Data;
-        }
-
-        return JsonSerializer.SerializeToDocument(message, messageType ?? message.GetType(), _options);
+        return JsonSerializer.SerializeToDocument(message, messageType, _options);
     }
 
     public static object? Deserialize(string type, JsonDocument data)
     {
-        return !MessageTypeMap.TryGetType(type, out var messageType) ? null : data.Deserialize(messageType!, _options);
+        return !MessageTypeMap.TryGetType(type, out var messageType)
+            ? null
+            : MessageTransformer.Transform(type, data).Deserialize(messageType!, _options);
     }
 }

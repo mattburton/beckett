@@ -4,8 +4,9 @@ namespace Beckett.Messages;
 
 public static class MessageTypeMap
 {
-    private static readonly ConcurrentDictionary<string, Type?> NameToTypeMap = new();
+    private static readonly ConcurrentDictionary<string, Type> NameToTypeMap = new();
     private static readonly ConcurrentDictionary<Type, string> TypeToNameMap = new();
+    private static readonly ConcurrentDictionary<string, string> TranslationMap = [];
     private static GetNameFallback? _getNameFallback;
     private static TryGetTypeFallback? _tryGetTypeFallback;
 
@@ -30,11 +31,28 @@ public static class MessageTypeMap
     {
         if (NameToTypeMap.TryGetValue(name, out var existingType) && existingType != type)
         {
-            throw new Exception($"Message type name {type.Name} for {type} already mapped to {existingType}");
+            throw new MessageTypeAlreadyMappedException(name, existingType.FullName!);
         }
 
         NameToTypeMap.TryAdd(name, type);
         TypeToNameMap.TryAdd(type, name);
+    }
+
+    public static void Map(string oldName, string newName)
+    {
+        if (oldName == newName)
+        {
+            throw new MessageTypesCannotBeMappedToThemselvesException(oldName);
+        }
+
+        if (TranslationMap.TryAdd(oldName, newName))
+        {
+            return;
+        }
+
+        var existingName = TranslationMap[oldName];
+
+        throw new MessageTypeAlreadyMappedException(oldName, existingName);
     }
 
     public static string GetName(Type type)
@@ -59,6 +77,8 @@ public static class MessageTypeMap
 
     public static bool TryGetType(string name, out Type? type)
     {
+        name = TranslateName(name);
+
         if (NameToTypeMap.TryGetValue(name, out var mappedType))
         {
             type = mappedType;
@@ -82,10 +102,36 @@ public static class MessageTypeMap
 
         return true;
     }
+
+    public static void Clear()
+    {
+        NameToTypeMap.Clear();
+        TypeToNameMap.Clear();
+        TranslationMap.Clear();
+    }
+
+    private static string TranslateName(string name)
+    {
+        while (true)
+        {
+            if (!TranslationMap.TryGetValue(name, out var result))
+            {
+                return name;
+            }
+
+            name = result;
+        }
+    }
 }
 
 public delegate string GetNameFallback(Type type);
 
 public delegate Type? TryGetTypeFallback(string name);
 
-public class UnknownTypeException(string typeName) : Exception($"Unknown type name: {typeName}");
+public class UnknownTypeException(string name) : Exception($"Unknown type name: {name}");
+
+public class MessageTypesCannotBeMappedToThemselvesException(string name)
+    : Exception($"Message types cannot be mapped to themselves: {name}.");
+
+public class MessageTypeAlreadyMappedException(string name, string existingName)
+    : Exception($"Message type name '{name}' is already mapped to {existingName}.");

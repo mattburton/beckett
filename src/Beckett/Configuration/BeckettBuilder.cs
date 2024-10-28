@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Beckett.Messages;
 using Beckett.Scheduling;
 using Beckett.Subscriptions;
@@ -30,6 +31,11 @@ public class BeckettBuilder(
     public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
 
     public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
+
+    public void Map(string oldTypeName, string newTypeName) => MessageTypeMap.Map(oldTypeName, newTypeName);
+
+    public void Transform(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> transformation) =>
+        MessageTransformer.Register(oldTypeName, newTypeName, transformation);
 
     public void AddRecurringMessage(
         string name,

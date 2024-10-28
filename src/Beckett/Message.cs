@@ -9,6 +9,7 @@ namespace Beckett;
 public readonly record struct Message
 {
     private static readonly JsonDocument EmptyJsonDocument = JsonDocument.Parse("{}");
+    private static readonly Type MetadataDictionaryType = typeof(Dictionary<string, object>);
 
     /// <summary>
     /// Create a message using a .NET object where the type will be used to determine the message type using the
@@ -22,8 +23,19 @@ public readonly record struct Message
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        Type = MessageTypeMap.GetName(message.GetType());
-        Data = MessageSerializer.Serialize(message);
+        if (message is Message envelope)
+        {
+            Type = envelope.Type;
+            Data = envelope.Data;
+        }
+        else
+        {
+            var messageType = message.GetType();
+
+            Type = MessageTypeMap.GetName(messageType);
+            Data = MessageSerializer.Serialize(messageType, message);
+        }
+
         Metadata = metadata ?? new Dictionary<string, object>();
     }
 
@@ -62,5 +74,5 @@ public readonly record struct Message
         AddMetadata(MessageConstants.Metadata.CorrelationId, correlationId);
 
     internal JsonDocument SerializedMetadata =>
-        Metadata.Count > 0 ? MessageSerializer.Serialize(Metadata) : EmptyJsonDocument;
+        Metadata.Count > 0 ? MessageSerializer.Serialize(MetadataDictionaryType, Metadata) : EmptyJsonDocument;
 }
