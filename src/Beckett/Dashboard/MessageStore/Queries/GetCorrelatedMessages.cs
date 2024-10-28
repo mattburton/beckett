@@ -20,7 +20,7 @@ public class GetCorrelatedMessages(
             where metadata->>'$correlation_id' = $1
             and ($2 is null or (id::text ilike '%' || $2 || '%' or stream_name ilike '%' || $2 || '%' or type ilike '%' || $2 || '%'))
             and deleted = false
-            order by stream_position
+            order by global_position
             offset $3
             limit $4;
         ";
