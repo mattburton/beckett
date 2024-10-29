@@ -67,6 +67,11 @@ public class CheckpointConsumer(
                 {
                     logger.SkippingCheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance);
 
+                    await database.Execute(
+                        new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
+                        stoppingToken
+                    );
+
                     continue;
                 }
 
@@ -116,7 +121,7 @@ public static partial class Log
     [LoggerMessage(0, LogLevel.Trace, "No new checkpoints found - exiting consumer {Consumer}")]
     public static partial void NoNewCheckpointsFoundExiting(this ILogger logger, int consumer);
 
-    [LoggerMessage(0, LogLevel.Trace, "Skipping checkpoint {CheckpointId} - already caught up at stream position {StreamPosition} - will continue polling in consumer {Consumer}")]
+    [LoggerMessage(0, LogLevel.Trace, "Skipping checkpoint {CheckpointId} - already caught up at stream position {StreamPosition} - releasing reservation and continuing polling in consumer {Consumer}")]
     public static partial void SkippingCheckpointAlreadyCaughtUp(this ILogger logger, long checkpointId, long streamPosition, int consumer);
 
     [LoggerMessage(0, LogLevel.Trace, "Subscription {SubscriptionName} not registered for group {GroupName} - skipping checkpoint {CheckpointId} in consumer {Consumer}")]

@@ -576,6 +576,21 @@ $$;
 
 
 --
+-- Name: release_checkpoint_reservation(bigint); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.release_checkpoint_reservation(_id bigint) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  UPDATE beckett.checkpoints
+  SET reserved_until = NULL
+  WHERE id = _id;
+END;
+$$;
+
+
+--
 -- Name: reserve_next_available_checkpoint(text, interval); Type: FUNCTION; Schema: beckett; Owner: -
 --
 

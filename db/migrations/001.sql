@@ -642,6 +642,20 @@ FOR UPDATE
 SKIP LOCKED;
 $$;
 
+CREATE OR REPLACE FUNCTION __schema__.release_checkpoint_reservation(
+  _id bigint
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.checkpoints
+  SET reserved_until = NULL
+  WHERE id = _id;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION __schema__.record_checkpoint_error(
   _id bigint,
   _stream_position bigint,
