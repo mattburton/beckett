@@ -35,6 +35,18 @@ public class DashboardSubscriptions(
         return database.Execute(new GetLaggingSubscriptions(offset, pageSize, options), cancellationToken);
     }
 
+    public Task<GetReservationsResult> GetReservations(
+        string? query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken
+    )
+    {
+        var offset = Pagination.ToOffset(page, pageSize);
+
+        return database.Execute(new GetReservations(query, offset, pageSize, options), cancellationToken);
+    }
+
     public Task<GetRetriesResult> GetRetries(string? query, int page, int pageSize, CancellationToken cancellationToken)
     {
         var offset = Pagination.ToOffset(page, pageSize);

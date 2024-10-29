@@ -18,6 +18,7 @@ public static class Routes
             .FailedPageRoute()
             .IndexPageRoute()
             .LaggingPageRoute()
+            .ReservationsPageRoute()
             .RetriesPageRoute()
             .SubscriptionPageRoute();
     }
