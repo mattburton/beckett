@@ -228,10 +228,12 @@ CREATE FUNCTION beckett.checkpoint_preprocessor() RETURNS trigger
 BEGIN
   IF (TG_OP = 'UPDATE') THEN
     NEW.updated_at = now();
-  END IF;
+    END IF;
 
-  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
-    NEW.process_at = now();
+  IF (NEW.process_at IS NULL) THEN
+      IF (NEW.status = 'retry' OR (NEW.status = 'active' AND NEW.stream_version > NEW.stream_position)) THEN
+          NEW.process_at = now();
+      END IF;
   END IF;
 
   IF (NEW.process_at IS NOT NULL) THEN
