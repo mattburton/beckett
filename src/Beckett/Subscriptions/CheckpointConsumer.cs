@@ -73,6 +73,13 @@ public class CheckpointConsumer(
                     break;
                 }
 
+                if (!checkpoint.IsRetryOrFailure && checkpoint.StreamPosition >= checkpoint.StreamVersion)
+                {
+                    logger.SkippingCheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance);
+
+                    continue;
+                }
+
                 var subscription = SubscriptionRegistry.GetSubscription(checkpoint.Name);
 
                 if (subscription == null)
@@ -116,6 +123,9 @@ public static partial class Log
 
     [LoggerMessage(0, LogLevel.Trace, "No new checkpoints found - exiting consumer {Consumer}")]
     public static partial void NoNewCheckpointsFoundExiting(this ILogger logger, int consumer);
+
+    [LoggerMessage(0, LogLevel.Trace, "Skipping checkpoint {CheckpointId} - already caught up at stream position {StreamPosition} - will continue polling in consumer {Consumer}")]
+    public static partial void SkippingCheckpointAlreadyCaughtUp(this ILogger logger, long checkpointId, long streamPosition, int consumer);
 
     [LoggerMessage(0, LogLevel.Trace, "Subscription {SubscriptionName} not registered for group {GroupName} - skipping checkpoint {CheckpointId} in consumer {Consumer}")]
     public static partial void SubscriptionNotRegistered(this ILogger logger, string subscriptionName, string groupName, long checkpointId, int consumer);
