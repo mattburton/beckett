@@ -562,8 +562,7 @@ CREATE FUNCTION beckett.recover_expired_checkpoint_reservations(_group_name text
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
-SET process_at = NULL,
-    reserved_until = NULL
+SET reserved_until = NULL
 FROM (
     SELECT id
     FROM beckett.checkpoints
@@ -584,7 +583,8 @@ CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_name text, _res
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
-SET reserved_until = now() + _reservation_timeout
+SET process_at = NULL,
+    reserved_until = now() + _reservation_timeout
 FROM (
   SELECT c.id
   FROM beckett.checkpoints c

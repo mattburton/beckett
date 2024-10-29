@@ -691,8 +691,7 @@ CREATE OR REPLACE FUNCTION __schema__.recover_expired_checkpoint_reservations(
 AS
 $$
 UPDATE __schema__.checkpoints c
-SET process_at = NULL,
-    reserved_until = NULL
+SET reserved_until = NULL
 FROM (
     SELECT id
     FROM __schema__.checkpoints
@@ -722,7 +721,8 @@ CREATE OR REPLACE FUNCTION __schema__.reserve_next_available_checkpoint(
 AS
 $$
 UPDATE __schema__.checkpoints c
-SET reserved_until = now() + _reservation_timeout
+SET process_at = NULL,
+    reserved_until = now() + _reservation_timeout
 FROM (
   SELECT c.id
   FROM __schema__.checkpoints c
