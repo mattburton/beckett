@@ -13,20 +13,16 @@ public class GlobalStreamConsumer(
     ILogger<GlobalStreamConsumer> logger
 ) : IGlobalStreamConsumer
 {
-    private readonly object _lock = new();
     private Task _task = Task.CompletedTask;
-    private bool _continue;
+    private int _continue;
 
     public void StartPolling(CancellationToken stoppingToken)
     {
         if (_task is { IsCompleted: false })
         {
-            lock (_lock)
-            {
-                logger.NewGlobalStreamMessagesAvailableWhileConsumerIsActive();
+            logger.NewGlobalStreamMessagesAvailableWhileConsumerIsActive();
 
-                _continue = true;
-            }
+            Interlocked.Exchange(ref _continue, 1);
 
             return;
         }
@@ -38,10 +34,12 @@ public class GlobalStreamConsumer(
     {
         var registeredSubscriptions = SubscriptionRegistry.All().ToArray();
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (true)
         {
             try
             {
+                stoppingToken.ThrowIfCancellationRequested();
+
                 logger.StartingGlobalStreamPolling();
 
                 await using var connection = database.CreateConnection();
@@ -64,25 +62,19 @@ public class GlobalStreamConsumer(
 
                 if (checkpoint == null)
                 {
-                    if (_continue)
+                    if (Interlocked.CompareExchange(ref _continue, 0, 1) == 1)
                     {
-                        lock (_lock)
-                        {
-                            if (_continue)
-                            {
-                                logger.WillContinuePollingGlobalStream();
+                        logger.WillContinuePollingGlobalStream();
 
-                                _continue = false;
-
-                                continue;
-                            }
-                        }
+                        continue;
                     }
 
                     logger.NoNewGlobalStreamMessagesFoundExiting();
 
                     break;
                 }
+
+                stoppingToken.ThrowIfCancellationRequested();
 
                 var globalStream = await messageStorage.ReadGlobalStream(
                     checkpoint.StreamPosition,
@@ -121,6 +113,8 @@ public class GlobalStreamConsumer(
                         );
                     }
                 }
+
+                stoppingToken.ThrowIfCancellationRequested();
 
                 if (checkpoints.Count > 0)
                 {

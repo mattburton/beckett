@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Beckett.Database;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +11,7 @@ public class CheckpointConsumerGroup(
     ILogger<CheckpointConsumer> logger
 ) : ICheckpointConsumerGroup
 {
-    private readonly int _concurrency = Debugger.IsAttached ? 1 : options.Subscriptions.Concurrency;
+    private readonly int[] _instances = Instances(options);
     private readonly ConcurrentDictionary<int, ICheckpointConsumer> _consumers = new();
     private CancellationToken? _stoppingToken;
 
@@ -25,7 +24,7 @@ public class CheckpointConsumerGroup(
             return;
         }
 
-        foreach (var instance in Enumerable.Range(1, _concurrency))
+        foreach (var instance in _instances)
         {
             var consumer = _consumers.GetOrAdd(
                 instance,
@@ -41,5 +40,10 @@ public class CheckpointConsumerGroup(
 
             consumer.StartPolling();
         }
+    }
+
+    private static int[] Instances(BeckettOptions options)
+    {
+        return Enumerable.Range(1, options.Subscriptions.GetConcurrency()).ToArray();
     }
 }

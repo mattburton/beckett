@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Beckett.Subscriptions.Retries;
 
 namespace Beckett.Subscriptions;
@@ -21,6 +22,8 @@ public class SubscriptionOptions
     /// of the number of CPUs multiplied by 5 or a fixed count of 20, whichever is lower.
     /// </summary>
     public int Concurrency { get; set; } = Math.Min(Environment.ProcessorCount * 5, 20);
+
+    internal int GetConcurrency() => Debugger.IsAttached ? 1 : Concurrency;
 
     /// <summary>
     /// Configure the batch size when reading the global stream of the message store. New messages read from the global

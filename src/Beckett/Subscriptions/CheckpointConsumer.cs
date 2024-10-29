@@ -13,20 +13,16 @@ public class CheckpointConsumer(
     CancellationToken stoppingToken
 ) : ICheckpointConsumer
 {
-    private readonly object _lock = new();
     private Task _task = Task.CompletedTask;
-    private bool _continue;
+    private int _continue;
 
     public void StartPolling()
     {
         if (_task is { IsCompleted: false })
         {
-            lock (_lock)
-            {
-                logger.NewCheckpointsAvailableWhileConsumerIsActive(instance);
+            logger.NewCheckpointsAvailableWhileConsumerIsActive(instance);
 
-                _continue = true;
-            }
+            Interlocked.Exchange(ref _continue, 1);
 
             return;
         }
@@ -36,10 +32,12 @@ public class CheckpointConsumer(
 
     private async Task Poll()
     {
-        while (!stoppingToken.IsCancellationRequested)
+        while (true)
         {
             try
             {
+                stoppingToken.ThrowIfCancellationRequested();
+
                 logger.StartingCheckpointPolling(instance);
 
                 var checkpoint = await database.Execute(
@@ -53,19 +51,11 @@ public class CheckpointConsumer(
 
                 if (checkpoint == null)
                 {
-                    if (_continue)
+                    if (Interlocked.CompareExchange(ref _continue, 0, 1) == 1)
                     {
-                        lock (_lock)
-                        {
-                            if (_continue)
-                            {
-                                logger.WillContinuePollingCheckpoints(instance);
+                        logger.WillContinuePollingCheckpoints(instance);
 
-                                _continue = false;
-
-                                continue;
-                            }
-                        }
+                        continue;
                     }
 
                     logger.NoNewCheckpointsFoundExiting(instance);
@@ -88,6 +78,8 @@ public class CheckpointConsumer(
 
                     continue;
                 }
+
+                stoppingToken.ThrowIfCancellationRequested();
 
                 await checkpointProcessor.Process(
                     instance,
