@@ -560,7 +560,8 @@ CREATE FUNCTION beckett.recover_expired_checkpoint_reservations(_group_name text
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
-SET reserved_until = NULL
+SET process_at = NULL,
+    reserved_until = NULL
 FROM (
     SELECT id
     FROM beckett.checkpoints
@@ -723,16 +724,16 @@ $$;
 
 
 --
--- Name: update_checkpoint_position(bigint, bigint, timestamp with time zone); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: update_checkpoint_position(bigint, bigint); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.update_checkpoint_position(_id bigint, _stream_position bigint, _process_at timestamp with time zone) RETURNS void
+CREATE FUNCTION beckett.update_checkpoint_position(_id bigint, _stream_position bigint) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
   UPDATE beckett.checkpoints
   SET stream_position = _stream_position,
-      process_at = _process_at,
+      process_at = NULL,
       reserved_until = NULL,
       status = 'active',
       retries = NULL

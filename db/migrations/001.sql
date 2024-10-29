@@ -689,7 +689,8 @@ CREATE OR REPLACE FUNCTION __schema__.recover_expired_checkpoint_reservations(
 AS
 $$
 UPDATE __schema__.checkpoints c
-SET reserved_until = NULL
+SET process_at = NULL,
+    reserved_until = NULL
 FROM (
     SELECT id
     FROM __schema__.checkpoints
@@ -792,8 +793,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION __schema__.update_checkpoint_position(
   _id bigint,
-  _stream_position bigint,
-  _process_at timestamp with time zone
+  _stream_position bigint
 )
   RETURNS void
   LANGUAGE plpgsql
@@ -802,7 +802,7 @@ $$
 BEGIN
   UPDATE __schema__.checkpoints
   SET stream_position = _stream_position,
-      process_at = _process_at,
+      process_at = NULL,
       reserved_until = NULL,
       status = 'active',
       retries = NULL
