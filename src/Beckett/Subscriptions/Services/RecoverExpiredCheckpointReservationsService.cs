@@ -2,7 +2,6 @@ using Beckett.Database;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Beckett.Subscriptions.Services;
 
@@ -14,10 +13,12 @@ public class RecoverExpiredCheckpointReservationsService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        while (true)
         {
             try
             {
+                stoppingToken.ThrowIfCancellationRequested();
+
                 var recovered = await database.Execute(
                     new RecoverExpiredCheckpointReservations(
                         options.Subscriptions.GroupName,
@@ -40,9 +41,9 @@ public class RecoverExpiredCheckpointReservationsService(
             {
                 throw;
             }
-            catch (NpgsqlException e)
+            catch (Exception e)
             {
-                logger.LogError(e, "Database error - will retry in 10 seconds");
+                logger.LogError(e, "Unhandled error - will retry in 10 seconds");
 
                 await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
             }

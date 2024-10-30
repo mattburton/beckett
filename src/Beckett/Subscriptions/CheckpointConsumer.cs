@@ -36,7 +36,10 @@ public class CheckpointConsumer(
         {
             try
             {
-                stoppingToken.ThrowIfCancellationRequested();
+                if (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
 
                 logger.StartingCheckpointPolling(instance);
 
@@ -84,7 +87,10 @@ public class CheckpointConsumer(
                     continue;
                 }
 
-                stoppingToken.ThrowIfCancellationRequested();
+                if (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
 
                 await checkpointProcessor.Process(
                     instance,
@@ -95,13 +101,11 @@ public class CheckpointConsumer(
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {
-                throw;
+                break;
             }
             catch (Exception e)
             {
                 logger.LogError(e, "Error processing checkpoint [Consumer: {Consumer}]", instance);
-
-                throw;
             }
         }
     }

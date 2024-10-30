@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Beckett.Subscriptions.Services;
 
@@ -19,10 +18,12 @@ public class GlobalStreamPollingService(
             return;
         }
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (true)
         {
             try
             {
+                stoppingToken.ThrowIfCancellationRequested();
+
                 globalStreamConsumer.StartPolling(stoppingToken);
 
                 await Task.Delay(options.GlobalStreamPollingInterval, stoppingToken);
@@ -31,9 +32,9 @@ public class GlobalStreamPollingService(
             {
                 throw;
             }
-            catch (NpgsqlException e)
+            catch (Exception e)
             {
-                logger.LogError(e, "Database error - will retry in 10 seconds");
+                logger.LogError(e, "Unhandled error - will retry in 10 seconds");
 
                 await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
             }

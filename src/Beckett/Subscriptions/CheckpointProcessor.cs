@@ -172,6 +172,8 @@ public class CheckpointProcessor(
                     {
                         await subscription.StaticMethod(messageContext, cancellationToken);
 
+                        lastProcessedStreamPosition = messageContext.StreamPosition;
+
                         continue;
                     }
 
@@ -336,6 +338,7 @@ public class CheckpointProcessor(
     {
         const string id = "beckett.checkpoint.id";
         const string groupName = "beckett.checkpoint.group_name";
+        const string name = "beckett.checkpoint.name";
         const string streamName = "beckett.checkpoint.stream_name";
         const string streamPosition = "beckett.checkpoint.stream_position";
         const string streamVersion = "beckett.checkpoint.stream_version";
@@ -357,6 +360,7 @@ public class CheckpointProcessor(
         }
 
         state.Add(groupName, checkpoint.GroupName);
+        state.Add(name, checkpoint.Name);
         state.Add(streamName, checkpoint.StreamName);
         state.Add(streamPosition, checkpoint.StreamPosition);
         state.Add(streamVersion, checkpoint.StreamVersion);
