@@ -28,7 +28,7 @@
 </div>
 
 <div class="p-2 pt-0"
-     hx-get="@Routes.Prefix/subscriptions/reservations"
+     hx-get="@Model.CurrentLink(urlTemplate)"
      hx-trigger="@(Model.Page > 1 ? "false" : "every 10s [enableAutoReload()]")"
      hx-select="#list-view"
      hx-swap="innerHTML">
