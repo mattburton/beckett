@@ -228,12 +228,10 @@ CREATE FUNCTION beckett.checkpoint_preprocessor() RETURNS trigger
 BEGIN
   IF (TG_OP = 'UPDATE') THEN
     NEW.updated_at = now();
-    END IF;
+  END IF;
 
-  IF (NEW.process_at IS NULL) THEN
-      IF (NEW.status = 'retry' OR (NEW.status = 'active' AND NEW.stream_version > NEW.stream_position)) THEN
-          NEW.process_at = now();
-      END IF;
+  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
+    NEW.process_at = now();
   END IF;
 
   IF (NEW.process_at IS NOT NULL) THEN
@@ -598,8 +596,7 @@ CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_name text, _res
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
-SET process_at = NULL,
-    reserved_until = now() + _reservation_timeout
+SET reserved_until = now() + _reservation_timeout
 FROM (
   SELECT c.id
   FROM beckett.checkpoints c
@@ -741,16 +738,16 @@ $$;
 
 
 --
--- Name: update_checkpoint_position(bigint, bigint); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: update_checkpoint_position(bigint, bigint, timestamp with time zone); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.update_checkpoint_position(_id bigint, _stream_position bigint) RETURNS void
+CREATE FUNCTION beckett.update_checkpoint_position(_id bigint, _stream_position bigint, _process_at timestamp with time zone) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
   UPDATE beckett.checkpoints
   SET stream_position = _stream_position,
-      process_at = NULL,
+      process_at = _process_at,
       reserved_until = NULL,
       status = 'active',
       retries = NULL

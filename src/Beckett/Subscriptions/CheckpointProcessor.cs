@@ -61,6 +61,7 @@ public class CheckpointProcessor(
                     new UpdateCheckpointPosition(
                         checkpoint.Id,
                         success.StreamPosition,
+                        null,
                         options.Postgres
                     ),
                     cancellationToken

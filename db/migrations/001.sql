@@ -493,12 +493,10 @@ $$
 BEGIN
   IF (TG_OP = 'UPDATE') THEN
     NEW.updated_at = now();
-    END IF;
+  END IF;
 
-  IF (NEW.process_at IS NULL) THEN
-      IF (NEW.status = 'retry' OR (NEW.status = 'active' AND NEW.stream_version > NEW.stream_position)) THEN
-          NEW.process_at = now();
-      END IF;
+  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
+    NEW.process_at = now();
   END IF;
 
   IF (NEW.process_at IS NOT NULL) THEN
@@ -642,20 +640,6 @@ FOR UPDATE
 SKIP LOCKED;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.release_checkpoint_reservation(
-  _id bigint
-)
-  RETURNS void
-  LANGUAGE plpgsql
-AS
-$$
-BEGIN
-  UPDATE __schema__.checkpoints
-  SET reserved_until = NULL
-  WHERE id = _id;
-END;
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.record_checkpoint_error(
   _id bigint,
   _stream_position bigint,
@@ -717,6 +701,20 @@ FROM (
 WHERE c.id = d.id;
 $$;
 
+CREATE OR REPLACE FUNCTION __schema__.release_checkpoint_reservation(
+  _id bigint
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.checkpoints
+  SET reserved_until = NULL
+  WHERE id = _id;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION __schema__.reserve_next_available_checkpoint(
   _group_name text,
   _reservation_timeout interval
@@ -735,8 +733,7 @@ CREATE OR REPLACE FUNCTION __schema__.reserve_next_available_checkpoint(
 AS
 $$
 UPDATE __schema__.checkpoints c
-SET process_at = NULL,
-    reserved_until = now() + _reservation_timeout
+SET reserved_until = now() + _reservation_timeout
 FROM (
   SELECT c.id
   FROM __schema__.checkpoints c
@@ -809,7 +806,8 @@ $$;
 
 CREATE OR REPLACE FUNCTION __schema__.update_checkpoint_position(
   _id bigint,
-  _stream_position bigint
+  _stream_position bigint,
+  _process_at timestamp with time zone
 )
   RETURNS void
   LANGUAGE plpgsql
@@ -818,7 +816,7 @@ $$
 BEGIN
   UPDATE __schema__.checkpoints
   SET stream_position = _stream_position,
-      process_at = NULL,
+      process_at = _process_at,
       reserved_until = NULL,
       status = 'active',
       retries = NULL
