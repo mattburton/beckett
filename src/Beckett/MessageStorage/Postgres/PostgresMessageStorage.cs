@@ -4,7 +4,10 @@ using Beckett.MessageStorage.Postgres.Queries;
 
 namespace Beckett.MessageStorage.Postgres;
 
-public class PostgresMessageStorage(IPostgresDatabase database, PostgresOptions options) : IMessageStorage
+public class PostgresMessageStorage(
+    IPostgresDataSource dataSource,
+    IPostgresDatabase database,
+    PostgresOptions options) : IMessageStorage
 {
     public async Task<AppendToStreamResult> AppendToStream(
         string streamName,
@@ -15,8 +18,13 @@ public class PostgresMessageStorage(IPostgresDatabase database, PostgresOptions 
     {
         var newMessages = messages.Select(x => MessageType.From(streamName, x)).ToArray();
 
+        await using var connection = dataSource.CreateMessageStoreWriteConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
         var streamVersion = await database.Execute(
             new AppendToStream(streamName, expectedVersion.Value, newMessages, options),
+            connection,
             cancellationToken
         );
 
@@ -29,8 +37,13 @@ public class PostgresMessageStorage(IPostgresDatabase database, PostgresOptions 
         CancellationToken cancellationToken
     )
     {
+        await using var connection = dataSource.CreateMessageStoreReadConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
         var results = await database.Execute(
             new ReadGlobalStream(lastGlobalPosition, batchSize, options),
+            connection,
             cancellationToken
         );
 
@@ -61,6 +74,12 @@ public class PostgresMessageStorage(IPostgresDatabase database, PostgresOptions 
         CancellationToken cancellationToken
     )
     {
+        await using var connection = readOptions.RequirePrimary.GetValueOrDefault(false)
+            ? dataSource.CreateMessageStoreWriteConnection()
+            : dataSource.CreateMessageStoreReadConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
         var streamMessages = await database.Execute(
             new ReadStream(streamName, readOptions, options),
             cancellationToken

@@ -8,6 +8,7 @@ namespace Beckett.Subscriptions.Initialization;
 
 public class SubscriptionInitializer(
     IPostgresDatabase database,
+    IPostgresDataSource dataSource,
     BeckettOptions options,
     IMessageStorage messageStorage,
     ILogger<SubscriptionInitializer> logger
@@ -58,7 +59,7 @@ public class SubscriptionInitializer(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            await using var connection = database.CreateConnection();
+            await using var connection = dataSource.CreateConnection();
 
             await connection.OpenAsync(cancellationToken);
 

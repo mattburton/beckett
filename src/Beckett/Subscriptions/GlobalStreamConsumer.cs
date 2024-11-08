@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class GlobalStreamConsumer(
+    IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
     BeckettOptions options,
@@ -42,7 +43,7 @@ public class GlobalStreamConsumer(
 
                 logger.StartingGlobalStreamPolling();
 
-                await using var connection = database.CreateConnection();
+                await using var connection = dataSource.CreateConnection();
 
                 await connection.OpenAsync(stoppingToken);
 

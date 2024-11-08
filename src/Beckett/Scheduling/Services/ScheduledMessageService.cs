@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Scheduling.Services;
 
 public class ScheduledMessageService(
+    IPostgresDataSource dataSource,
     IPostgresDatabase database,
     BeckettOptions options,
     IMessageStore messageStore,
@@ -18,7 +19,7 @@ public class ScheduledMessageService(
         {
             try
             {
-                await using var connection = database.CreateConnection();
+                await using var connection = dataSource.CreateConnection();
 
                 await connection.OpenAsync(stoppingToken);
 

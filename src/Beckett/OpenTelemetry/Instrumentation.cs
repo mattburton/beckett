@@ -14,20 +14,20 @@ namespace Beckett.OpenTelemetry;
 public class Instrumentation : IInstrumentation, IDisposable
 {
     private readonly ActivitySource _activitySource;
-    private readonly IPostgresDatabase _database;
+    private readonly IPostgresDataSource _dataSource;
     private readonly ILogger<Instrumentation> _logger;
     private readonly Meter? _meter;
     private readonly BeckettOptions _options;
     private readonly TextMapPropagator _propagator;
 
     public Instrumentation(
-        IPostgresDatabase database,
+        IPostgresDataSource dataSource,
         IMeterFactory meterFactory,
         BeckettOptions options,
         ILogger<Instrumentation> logger
     )
     {
-        _database = database;
+        _dataSource = dataSource;
         _options = options;
         _logger = logger;
 
@@ -233,7 +233,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
     private long GetSubscriptionLag()
     {
-        using var connection = _database.CreateConnection();
+        using var connection = _dataSource.CreateConnection();
 
         connection.Open();
 
@@ -248,7 +248,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
     private long GetSubscriptionRetryCount()
     {
-        using var connection = _database.CreateConnection();
+        using var connection = _dataSource.CreateConnection();
 
         connection.Open();
 
@@ -263,7 +263,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
     private long GetSubscriptionFailedCount()
     {
-        using var connection = _database.CreateConnection();
+        using var connection = _dataSource.CreateConnection();
 
         connection.Open();
 

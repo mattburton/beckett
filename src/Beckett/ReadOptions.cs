@@ -35,6 +35,11 @@ public class ReadOptions
     public bool? ReadForwards { get; set; }
 
     /// <summary>
+    /// Require a primary / leader connection when performing the read
+    /// </summary>
+    public bool? RequirePrimary { get; set; }
+
+    /// <summary>
     /// Read only the last message appended to a given stream. This is a convenience method for setting the
     /// <see cref="Count"/> to 1 and <see cref="ReadForwards"/> to false. Useful for streams used for lookup data or
     /// snapshots of aggregated state to retrieve the latest entry quickly without reading the entire stream.

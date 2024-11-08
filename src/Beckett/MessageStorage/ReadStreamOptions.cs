@@ -8,6 +8,7 @@ public class ReadStreamOptions
     public long? EndingGlobalPosition { get; set; }
     public long? Count { get; set; }
     public bool? ReadForwards { get; set; }
+    public bool? RequirePrimary { get; set; }
 
     public static ReadStreamOptions From(ReadOptions options)
     {
@@ -18,7 +19,8 @@ public class ReadStreamOptions
             StartingGlobalPosition = options.StartingGlobalPosition,
             EndingGlobalPosition = options.EndingGlobalPosition,
             Count = options.Count,
-            ReadForwards = options.ReadForwards
+            ReadForwards = options.ReadForwards,
+            RequirePrimary = options.RequirePrimary
         };
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions.Services;
 
 public class BootstrapSubscriptions(
+    IPostgresDataSource dataSource,
     IPostgresDatabase database,
     BeckettOptions options,
     ISubscriptionInitializer subscriptionInitializer,
@@ -20,7 +21,7 @@ public class BootstrapSubscriptions(
     {
         try
         {
-            await using var connection = database.CreateConnection();
+            await using var connection = dataSource.CreateConnection();
 
             await connection.OpenAsync(cancellationToken);
 

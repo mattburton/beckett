@@ -9,6 +9,7 @@ using Npgsql;
 namespace Beckett.Scheduling.Services;
 
 public class RecurringMessageService(
+    IPostgresDataSource dataSource,
     IPostgresDatabase database,
     BeckettOptions options,
     IMessageStore messageStore,
@@ -26,7 +27,7 @@ public class RecurringMessageService(
         {
             try
             {
-                await using var connection = database.CreateConnection();
+                await using var connection = dataSource.CreateConnection();
 
                 await connection.OpenAsync(stoppingToken);
 

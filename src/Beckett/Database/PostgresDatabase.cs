@@ -4,13 +4,11 @@ using Polly.Retry;
 
 namespace Beckett.Database;
 
-public class PostgresDatabase(NpgsqlDataSource dataSource) : IPostgresDatabase
+public class PostgresDatabase(IPostgresDataSource dataSource) : IPostgresDatabase
 {
-    public NpgsqlConnection CreateConnection() => dataSource.CreateConnection();
-
     public async Task<T> Execute<T>(IPostgresDatabaseQuery<T> query, CancellationToken cancellationToken)
     {
-        await using var connection = CreateConnection();
+        await using var connection = dataSource.CreateConnection();
 
         await connection.OpenAsync(cancellationToken);
 

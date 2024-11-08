@@ -9,6 +9,7 @@ using UUIDNext;
 namespace Beckett.Scheduling;
 
 public class MessageScheduler(
+    IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IInstrumentation instrumentation,
     PostgresOptions options
@@ -26,7 +27,7 @@ public class MessageScheduler(
         CancellationToken cancellationToken
     )
     {
-        await using var connection = database.CreateConnection();
+        await using var connection = dataSource.CreateConnection();
 
         await connection.OpenAsync(cancellationToken);
 

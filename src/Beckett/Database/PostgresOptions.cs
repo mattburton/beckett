@@ -26,6 +26,8 @@ public class PostgresOptions
     public bool PrepareStatements { get; set; } = true;
 
     internal NpgsqlDataSource? DataSource { get; private set; }
+    internal NpgsqlDataSource? MessageStoreReadDataSource { get; private set; }
+    internal NpgsqlDataSource? MessageStoreWriteDataSource { get; private set; }
     internal NpgsqlDataSource? NotificationsDataSource { get; private set; }
 
     /// <summary>
@@ -49,9 +51,21 @@ public class PostgresOptions
     public void UseDataSource(NpgsqlDataSource dataSource) => DataSource = dataSource;
 
     /// <summary>
-    /// Configure the <see cref="NpgsqlDataSource"/> that Beckett should use for notifications. This data source must
-    /// have had the Beckett types configured while building it - this can be done using the <c>AddBeckett()</c>
-    /// extension method on <see cref="NpgsqlDataSourceBuilder"/>.
+    /// Configure the <see cref="NpgsqlDataSource"/> that is used when reading from Beckett's built-in message store.
+    /// </summary>
+    /// <param name="dataSource"></param>
+    public void UseMessageStoreReadDataSource(NpgsqlDataSource dataSource) => MessageStoreReadDataSource = dataSource;
+
+    /// <summary>
+    /// Configure the <see cref="NpgsqlDataSource"/> that is used when writing to Beckett's built-in message store. This
+    /// data source must have had the Beckett types configured while building it - this can be done using the
+    /// <c>AddBeckett()</c> extension method on <see cref="NpgsqlDataSourceBuilder"/>.
+    /// </summary>
+    /// <param name="dataSource"></param>
+    public void UseMessageStoreWriteDataSource(NpgsqlDataSource dataSource) => MessageStoreWriteDataSource = dataSource;
+
+    /// <summary>
+    /// Configure the <see cref="NpgsqlDataSource"/> that Beckett should use for notifications.
     /// </summary>
     /// <param name="dataSource"></param>
     public void UseNotificationsDataSource(NpgsqlDataSource dataSource) => NotificationsDataSource = dataSource;
@@ -73,7 +87,44 @@ public class PostgresOptions
     }
 
     /// <summary>
-    /// Configure a specific database connection string for Beckett to use for notifications.
+    /// Configure a specific database connection string for Beckett to use when reading from the built-in message store.
+    /// This allows you to configure Beckett to use a separate connection for reading from follower instance(s) when
+    /// replicas are in use.
+    /// </summary>
+    /// <param name="connectionString"></param>
+    public void UseMessageStoreReadConnectionString(string connectionString)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = Schema
+        };
+
+        MessageStoreReadDataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).AddBeckett().Build();
+    }
+
+    /// <summary>
+    /// Configure a specific database connection string for Beckett to use when writing to the built-in message store.
+    /// This is the primary / leader instance when replicas are in use.
+    /// </summary>
+    /// <param name="connectionString"></param>
+    public void UseMessageStoreWriteConnectionString(string connectionString)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = Schema
+        };
+
+        MessageStoreReadDataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).AddBeckett().Build();
+    }
+
+    /// <summary>
+    /// Configure a specific database connection string for Beckett to use for notifications. This is useful when using
+    /// a database proxy such as pgbouncer or RDS Proxy where a direct connection to the database is required for
+    /// LISTEN / NOTIFY to work. Beckett creates a single connection and keeps it open to receive all notifications.
     /// </summary>
     /// <param name="connectionString"></param>
     public void UseNotificationsConnectionString(string connectionString)
