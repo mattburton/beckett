@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   release:
     types:
-      - created
+      - published
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
