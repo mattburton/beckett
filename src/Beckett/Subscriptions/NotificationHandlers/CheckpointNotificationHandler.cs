@@ -14,6 +14,8 @@ public class CheckpointNotificationHandler(
     {
         try
         {
+            logger.StartingCheckpointNotificationPolling();
+
             checkpointConsumerGroup.StartPolling(payload);
         }
         catch (Exception e)
@@ -21,4 +23,10 @@ public class CheckpointNotificationHandler(
             logger.LogError(e, "Error handling checkpoint notification");
         }
     }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Trace, "Checkpoint notification received - starting polling")]
+    public static partial void StartingCheckpointNotificationPolling(this ILogger logger);
 }

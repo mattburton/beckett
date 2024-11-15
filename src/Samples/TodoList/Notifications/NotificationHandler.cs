@@ -9,10 +9,12 @@ public class NotificationHandler(ILogger<NotificationHandler> logger)
 {
     public Task Handle(IMessageContext context, CancellationToken _)
     {
+        var lag = DateTimeOffset.UtcNow.Subtract(context.Timestamp).TotalMilliseconds;
+
         switch (context.Message)
         {
             case TodoListCreated e:
-                logger.LogInformation("List created [Id: {TodoListId}]", e.TodoListId);
+                logger.LogInformation("List created [Id: {TodoListId}, Lag: {Lag}ms]", e.TodoListId, lag);
                 break;
             case TodoListItemAdded e:
                 if (e.Item.Contains("Retry"))
@@ -25,10 +27,10 @@ public class NotificationHandler(ILogger<NotificationHandler> logger)
                     throw new TerminalException(e.Item);
                 }
 
-                logger.LogInformation("Item added: {Item} [List: {TodoListId}]", e.Item, e.TodoListId);
+                logger.LogInformation("Item added: {Item} [List: {TodoListId}, Lag: {Lag}ms]", e.Item, e.TodoListId, lag);
                 break;
             case TodoListItemCompleted e:
-                logger.LogInformation("Item completed: {Item} [List: {TodoListId}]", e.Item, e.TodoListId);
+                logger.LogInformation("Item completed: {Item} [List: {TodoListId}, Lag: {Lag}ms]", e.Item, e.TodoListId, lag);
                 break;
         }
 

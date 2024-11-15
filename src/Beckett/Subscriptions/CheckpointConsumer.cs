@@ -13,21 +13,25 @@ public class CheckpointConsumer(
     CancellationToken stoppingToken
 ) : ICheckpointConsumer
 {
-    private Task _task = Task.CompletedTask;
-    private int _continue;
+    private readonly object _lock = new();
+    private Task? _task;
+    private bool _continue;
 
     public void StartPolling()
     {
-        if (_task is { IsCompleted: false })
+        lock (_lock)
         {
-            logger.NewCheckpointsAvailableWhileConsumerIsActive(instance);
+            if (_task is { IsCompleted: false })
+            {
+                logger.NewCheckpointsAvailableWhileConsumerIsActive(instance);
 
-            Interlocked.Exchange(ref _continue, 1);
+                _continue = true;
 
-            return;
+                return;
+            }
+
+            _task = Poll();
         }
-
-        _task = Poll();
     }
 
     private async Task Poll()
@@ -54,9 +58,11 @@ public class CheckpointConsumer(
 
                 if (checkpoint == null)
                 {
-                    if (Interlocked.CompareExchange(ref _continue, 0, 1) == 1)
+                    if (_continue)
                     {
                         logger.WillContinuePollingCheckpoints(instance);
+
+                        _continue = false;
 
                         continue;
                     }

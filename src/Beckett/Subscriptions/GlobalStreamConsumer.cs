@@ -14,21 +14,25 @@ public class GlobalStreamConsumer(
     ILogger<GlobalStreamConsumer> logger
 ) : IGlobalStreamConsumer
 {
+    private readonly object _lock = new();
     private Task _task = Task.CompletedTask;
-    private int _continue;
+    private bool _continue;
 
     public void StartPolling(CancellationToken stoppingToken)
     {
-        if (_task is { IsCompleted: false })
+        lock (_lock)
         {
-            logger.NewGlobalStreamMessagesAvailableWhileConsumerIsActive();
+            if (_task is { IsCompleted: false })
+            {
+                logger.NewGlobalStreamMessagesAvailableWhileConsumerIsActive();
 
-            Interlocked.Exchange(ref _continue, 1);
+                _continue = true;
 
-            return;
+                return;
+            }
+
+            _task = Poll(stoppingToken);
         }
-
-        _task = Poll(stoppingToken);
     }
 
     private async Task Poll(CancellationToken stoppingToken)
@@ -63,9 +67,11 @@ public class GlobalStreamConsumer(
 
                 if (checkpoint == null)
                 {
-                    if (Interlocked.CompareExchange(ref _continue, 0, 1) == 1)
+                    if (_continue)
                     {
                         logger.WillContinuePollingGlobalStream();
+
+                        _continue = false;
 
                         continue;
                     }

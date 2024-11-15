@@ -24,6 +24,8 @@ public class GlobalStreamPollingService(
             {
                 stoppingToken.ThrowIfCancellationRequested();
 
+                logger.StartingGlobalStreamIntervalPolling();
+
                 globalStreamConsumer.StartPolling(stoppingToken);
 
                 await Task.Delay(options.GlobalStreamPollingInterval, stoppingToken);
@@ -40,4 +42,10 @@ public class GlobalStreamPollingService(
             }
         }
     }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Trace, "Starting global stream interval polling")]
+    public static partial void StartingGlobalStreamIntervalPolling(this ILogger logger);
 }

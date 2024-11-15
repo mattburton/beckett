@@ -14,6 +14,8 @@ public class MessageNotificationHandler(
     {
         try
         {
+            logger.StartingGlobalStreamNotificationPolling();
+
             globalStreamConsumer.StartPolling(cancellationToken);
         }
         catch (Exception e)
@@ -21,4 +23,10 @@ public class MessageNotificationHandler(
             logger.LogError(e, "Error handling message notification");
         }
     }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Trace, "Starting global stream notification polling")]
+    public static partial void StartingGlobalStreamNotificationPolling(this ILogger logger);
 }

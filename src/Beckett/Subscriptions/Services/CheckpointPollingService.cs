@@ -19,6 +19,8 @@ public class CheckpointPollingService(
             {
                 stoppingToken.ThrowIfCancellationRequested();
 
+                logger.StartingCheckpointIntervalPolling();
+
                 consumerGroup.StartPolling(options.GroupName);
 
                 await Task.Delay(options.CheckpointPollingInterval, stoppingToken);
@@ -35,4 +37,10 @@ public class CheckpointPollingService(
             }
         }
     }
+}
+
+public static partial class Log
+{
+    [LoggerMessage(0, LogLevel.Trace, "Starting checkpoint interval polling")]
+    public static partial void StartingCheckpointIntervalPolling(this ILogger logger);
 }
