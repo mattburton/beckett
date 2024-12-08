@@ -7,7 +7,7 @@ public static class GetList
 {
     public static RouteGroupBuilder GetListRoute(this RouteGroupBuilder builder)
     {
-        builder.MapGet("/{id:guid}", Handler).Produces<TodoListView>().WithName("Get Todo List").WithOpenApi();
+        builder.MapGet("/{id:guid}", Handler);
 
         return builder;
     }

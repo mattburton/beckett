@@ -7,7 +7,7 @@ public static class CreateList
 {
     public static RouteGroupBuilder CreateListRoute(this RouteGroupBuilder builder)
     {
-        builder.MapPost("/", Handler).WithName("Create Todo List").WithOpenApi();
+        builder.MapPost("/", Handler);
 
         return builder;
     }

@@ -7,7 +7,7 @@ public static class AddItem
 {
     public static RouteGroupBuilder AddItemRoute(this RouteGroupBuilder builder)
     {
-        builder.MapPost("/{id:guid}", Handler).WithName("Add Todo List Item").WithOpenApi();
+        builder.MapPost("/{id:guid}", Handler);
 
         return builder;
     }

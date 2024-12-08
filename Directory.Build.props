@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
-    <PackageVersion>0.13.1</PackageVersion>
+    <PackageVersion>0.14.0</PackageVersion>
     <AssemblyVersion>$(PackageVersion)</AssemblyVersion>
     <Authors>Matt Burton</Authors>
     <Description>Messaging and event sourcing library</Description>
@@ -9,7 +9,7 @@
     <RepositoryUrl>https://github.com/mattburton/beckett</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>Messaging, EventSourcing, EventStore, MessageStore, CQRS, Subscriptions, EventHandlers, Reactors, Projections</PackageTags>
+    <PackageTags>EventSourcing, EventStore, CQRS, Subscriptions, EventHandlers, Projections</PackageTags>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <EnablePackageValidation>true</EnablePackageValidation>

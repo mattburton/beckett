@@ -13,7 +13,11 @@ public class CheckpointConsumer(
     CancellationToken stoppingToken
 ) : ICheckpointConsumer
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private Task? _task;
     private bool _continue;
 

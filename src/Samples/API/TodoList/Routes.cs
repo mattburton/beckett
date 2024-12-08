@@ -7,6 +7,5 @@ public static class Routes
             .AddItemRoute()
             .CompleteItemRoute()
             .CreateListRoute()
-            .GetListRoute()
-            .WithTags("Todo List API");
+            .GetListRoute();
 }

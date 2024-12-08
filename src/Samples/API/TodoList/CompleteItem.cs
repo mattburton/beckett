@@ -7,7 +7,7 @@ public static class CompleteItem
 {
     public static RouteGroupBuilder CompleteItemRoute(this RouteGroupBuilder builder)
     {
-        builder.MapPost("/{id:guid}/complete/{item}", Handler).WithName("Complete Todo List Item").WithOpenApi();
+        builder.MapPost("/{id:guid}/complete/{item}", Handler);
 
         return builder;
     }

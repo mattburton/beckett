@@ -1,5 +1,4 @@
 using System.Text.Json;
-using API;
 using API.TodoList;
 using Beckett;
 using Beckett.Dashboard;
@@ -30,10 +29,6 @@ try
         options => { options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower; }
     );
 
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
-    builder.Services.AddHostedService<LogSwaggerLink>();
-
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("todo-list-api"))
         .WithTracing(
@@ -46,12 +41,6 @@ try
         );
 
     var app = builder.Build();
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-    }
 
     app.MapBeckettDashboard("/beckett");
 

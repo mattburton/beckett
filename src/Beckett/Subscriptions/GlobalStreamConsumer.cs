@@ -14,7 +14,11 @@ public class GlobalStreamConsumer(
     ILogger<GlobalStreamConsumer> logger
 ) : IGlobalStreamConsumer
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private Task _task = Task.CompletedTask;
     private bool _continue;
 
