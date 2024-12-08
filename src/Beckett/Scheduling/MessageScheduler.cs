@@ -4,7 +4,6 @@ using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling.Queries;
 using Npgsql;
-using UUIDNext;
 
 namespace Beckett.Scheduling;
 
@@ -53,7 +52,7 @@ public class MessageScheduler(
 
         using var activity = instrumentation.StartScheduleMessageActivity(streamName, activityMetadata);
 
-        var id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql);
+        var id = MessageId.New();
 
         message.Metadata.Prepend(activityMetadata);
 

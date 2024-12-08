@@ -1,5 +1,5 @@
 using System.Text.Json;
-using UUIDNext;
+using Beckett.Messages;
 
 namespace Beckett.Database.Types;
 
@@ -19,7 +19,7 @@ public class MessageType
     {
         return new MessageType
         {
-            Id = Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql),
+            Id = MessageId.New(),
             StreamName = streamName,
             Type = message.Type,
             Data = message.Data,
