@@ -10,5 +10,5 @@ public record GetMessageResult(
     string Type,
     DateTimeOffset Timestamp,
     string Data,
-    Dictionary<string, object> Metadata
+    Dictionary<string, string> Metadata
 );

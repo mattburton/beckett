@@ -143,6 +143,6 @@ public static class BeckettBuilderExtensions
         string cronExpression,
         string streamName,
         TMessage message,
-        Dictionary<string, object>? metadata = null
+        Dictionary<string, string>? metadata = null
     ) where TMessage : notnull => builder.AddRecurringMessage(name, cronExpression, streamName, new Message(message, metadata));
 }

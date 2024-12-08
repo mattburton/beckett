@@ -16,11 +16,11 @@ public readonly record struct MessageContext(
 {
     private readonly Lazy<Type?> _messageType = new(() => MessageTypeMap.TryGetType(Type, out var type) ? type : null);
     private readonly Lazy<object?> _message = new(() => MessageSerializer.Deserialize(Type, Data));
-    private readonly Lazy<Dictionary<string, object>> _messageMetadata = new(Metadata.ToMetadataDictionary);
+    private readonly Lazy<Dictionary<string, string>> _messageMetadata = new(Metadata.ToMetadataDictionary);
 
     public Type? MessageType => _messageType.Value;
 
     public object? Message => _message.Value;
 
-    public Dictionary<string, object> MessageMetadata => _messageMetadata.Value;
+    public Dictionary<string, string> MessageMetadata => _messageMetadata.Value;
 }

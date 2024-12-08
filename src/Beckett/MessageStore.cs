@@ -16,7 +16,7 @@ public class MessageStore(
         CancellationToken cancellationToken
     )
     {
-        var activityMetadata = new Dictionary<string, object>();
+        var activityMetadata = new Dictionary<string, string>();
 
         using var activity = instrumentation.StartAppendToStreamActivity(streamName, activityMetadata);
 

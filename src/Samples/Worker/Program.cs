@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Beckett;
+using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Npgsql;
 using OpenTelemetry.Metrics;
@@ -19,6 +21,13 @@ try
     builder.Services.AddSerilog((_, configuration) => configuration.ReadFrom.Configuration(builder.Configuration));
 
     await builder.AddTodoListDatabase();
+
+    var jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerOptions.Default)
+    {
+        TypeInfoResolver = TodoListJsonSerializerContext.Default
+    };
+
+    MessageSerializer.Configure(jsonSerializerOptions);
 
     builder.AddBeckett(
         options =>

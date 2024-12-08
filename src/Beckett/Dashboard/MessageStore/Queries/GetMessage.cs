@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Beckett.Database;
+using Beckett.Messages;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -47,8 +48,10 @@ public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQue
             return null;
         }
 
-        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(8)) ??
-                       throw new InvalidOperationException($"Unable to deserialize metadata for message {id}");
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            reader.GetFieldValue<string>(8),
+            MessageSerializer.Options
+        ) ?? throw new InvalidOperationException($"Unable to deserialize metadata for message {id}");
 
         return !reader.HasRows
             ? null

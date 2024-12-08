@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using TodoList.AddItem;
 using TodoList.CompleteItem;
@@ -18,7 +19,6 @@ public static class TodoList
     {
         builder.Map<TodoListItemAdded>("todo_list_item_added");
         builder.Map<TodoListItemCompleted>("todo_list_item_completed");
-        builder.Map<TodoListCreated>("todo_list_created");
         builder.Map<TodoListCreated>("todo_list_created");
         builder.Map<HelloWorld>("hello_world");
 
@@ -50,3 +50,9 @@ public static class TodoList
         return builder;
     }
 }
+
+[JsonSerializable(typeof(TodoListItemAdded))]
+[JsonSerializable(typeof(TodoListItemCompleted))]
+[JsonSerializable(typeof(TodoListCreated))]
+[JsonSerializable(typeof(HelloWorld))]
+public partial class TodoListJsonSerializerContext : JsonSerializerContext;

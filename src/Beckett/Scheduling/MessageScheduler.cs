@@ -48,7 +48,7 @@ public class MessageScheduler(
         CancellationToken cancellationToken
     )
     {
-        var activityMetadata = new Dictionary<string, object>();
+        var activityMetadata = new Dictionary<string, string>();
 
         using var activity = instrumentation.StartScheduleMessageActivity(streamName, activityMetadata);
 

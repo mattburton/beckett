@@ -13,22 +13,17 @@ public static class CreateList
     }
 
     private static async Task<IResult> Handler(
-        Request request,
+        CreateListRequest request,
         IMessageStore messageStore,
         CancellationToken cancellationToken
     )
     {
         var result = await new CreateTodoList(request.Id, request.Name).Execute(messageStore, cancellationToken);
 
-        return Results.Ok(
-            new
-            {
-                request.Id,
-                request.Name,
-                result.StreamVersion
-            }
-        );
+        return Results.Ok(new CreateListResponse(request.Id, request.Name, result.StreamVersion));
     }
-
-    public record Request(Guid Id, string Name);
 }
+
+public record CreateListRequest(Guid Id, string Name);
+
+public record CreateListResponse(Guid Id, string Name, long StreamVersion);

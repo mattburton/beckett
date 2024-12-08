@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Beckett.Database;
+using Beckett.Messages;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace Beckett.Dashboard.MessageStore.Queries;
 
-public class GetMessageByStreamPosition(string streamName, long streamPosition, PostgresOptions options) : IPostgresDatabaseQuery<GetMessageResult?>
+public class GetMessageByStreamPosition(string streamName, long streamPosition, PostgresOptions options)
+    : IPostgresDatabaseQuery<GetMessageResult?>
 {
     public async Task<GetMessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
@@ -51,10 +53,12 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
             return null;
         }
 
-        var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetFieldValue<string>(9)) ??
-                       throw new InvalidOperationException(
-                           $"Unable to deserialize metadata for message at {streamName} and stream_position {streamPosition}"
-                       );
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            reader.GetFieldValue<string>(9),
+            MessageSerializer.Options
+        ) ?? throw new InvalidOperationException(
+            $"Unable to deserialize metadata for message at {streamName} and stream_position {streamPosition}"
+        );
 
         return !reader.HasRows
             ? null

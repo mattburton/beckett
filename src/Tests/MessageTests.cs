@@ -42,7 +42,7 @@ public sealed class MessageTests : IDisposable
     public void UsesMetadataPassedInConstructor()
     {
         var input = new TestMessage(Guid.NewGuid());
-        var expectedMetadata = new Dictionary<string, object>
+        var expectedMetadata = new Dictionary<string, string>
         {
             { "test-key", "test-value" }
         };
@@ -60,7 +60,7 @@ public sealed class MessageTests : IDisposable
 
         message.AddMetadata("test-key", "test-value");
 
-        Assert.Single(message.Metadata, new KeyValuePair<string, object>("test-key", "test-value"));
+        Assert.Single(message.Metadata, new KeyValuePair<string, string>("test-key", "test-value"));
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class MessageTests : IDisposable
 
         message.WithCorrelationId(expectedCorrelationId);
 
-        Assert.Single(message.Metadata, new KeyValuePair<string, object>("$correlation_id", expectedCorrelationId));
+        Assert.Single(message.Metadata, new KeyValuePair<string, string>("$correlation_id", expectedCorrelationId));
     }
 
     // ReSharper disable once NotAccessedPositionalProperty.Local

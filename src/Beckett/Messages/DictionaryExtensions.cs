@@ -3,8 +3,8 @@ namespace Beckett.Messages;
 public static class DictionaryExtensions
 {
     public static void Prepend(
-        this Dictionary<string, object> dictionary,
-        Dictionary<string, object> dictionaryToPrepend
+        this Dictionary<string, string> dictionary,
+        Dictionary<string, string> dictionaryToPrepend
     )
     {
         if (dictionaryToPrepend.Count == 0)

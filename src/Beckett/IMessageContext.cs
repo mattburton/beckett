@@ -60,7 +60,7 @@ public interface IMessageContext
     /// Message metadata deserialized as a dictionary. This property is lazy loaded in order to defer deserialization
     /// until requested.
     /// </summary>
-    Dictionary<string, object> MessageMetadata { get; }
+    Dictionary<string, string> MessageMetadata { get; }
 
     /// <summary>
     /// Service provider that can be used to resolve services within a handler. For a static handler function this will

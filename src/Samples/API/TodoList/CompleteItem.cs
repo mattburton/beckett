@@ -26,14 +26,7 @@ public static class CompleteItem
             //TODO - add polly retry example here
             var result = await command.Execute(messageStore, cancellationToken);
 
-            return Results.Ok(
-                new
-                {
-                    id,
-                    item,
-                    result.StreamVersion
-                }
-            );
+            return Results.Ok(new CompleteItemResponse(id, item, result.StreamVersion));
         }
         catch (ItemAlreadyCompletedException)
         {
@@ -41,3 +34,5 @@ public static class CompleteItem
         }
     }
 }
+
+public record CompleteItemResponse(Guid Id, string Item, long StreamVersion);

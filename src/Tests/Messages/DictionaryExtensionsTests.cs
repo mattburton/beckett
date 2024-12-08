@@ -7,12 +7,12 @@ public class DictionaryExtensionsTests
     [Fact]
     public void PrependsDictionary()
     {
-        var dictionary = new Dictionary<string, object>
+        var dictionary = new Dictionary<string, string>
         {
             { "key-2", "value-2" },
             { "key-3", "value-3" }
         };
-        var dictionaryToPrepend = new Dictionary<string, object>
+        var dictionaryToPrepend = new Dictionary<string, string>
         {
             { "key-1", "value-1" }
         };
@@ -27,12 +27,12 @@ public class DictionaryExtensionsTests
     [Fact]
     public void PrependsDictionaryWithPrecedence()
     {
-        var dictionary = new Dictionary<string, object>
+        var dictionary = new Dictionary<string, string>
         {
             { "key-1", "overwrite-me" },
             { "key-2", "value-2" }
         };
-        var dictionaryToPrepend = new Dictionary<string, object>
+        var dictionaryToPrepend = new Dictionary<string, string>
         {
             { "key-1", "value-1" }
         };
@@ -46,12 +46,12 @@ public class DictionaryExtensionsTests
     [Fact]
     public void HandlesEmptyDictionaryToPrepend()
     {
-        var dictionary = new Dictionary<string, object>
+        var dictionary = new Dictionary<string, string>
         {
             { "key-1", "value-1" },
             { "key-2", "value-2" }
         };
-        var dictionaryToPrepend = new Dictionary<string, object>();
+        var dictionaryToPrepend = new Dictionary<string, string>();
 
         dictionary.Prepend(dictionaryToPrepend);
 
@@ -62,8 +62,8 @@ public class DictionaryExtensionsTests
     [Fact]
     public void HandlesEmptyBaseDictionary()
     {
-        var dictionary = new Dictionary<string, object>();
-        var dictionaryToPrepend = new Dictionary<string, object>
+        var dictionary = new Dictionary<string, string>();
+        var dictionaryToPrepend = new Dictionary<string, string>
         {
             { "key-1", "value-1" },
             { "key-2", "value-2" }

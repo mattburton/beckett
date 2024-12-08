@@ -60,7 +60,7 @@ public class Instrumentation : IInstrumentation, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public Activity? StartAppendToStreamActivity(string streamName, Dictionary<string, object> metadata)
+    public Activity? StartAppendToStreamActivity(string streamName, Dictionary<string, string> metadata)
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.AppendToStream);
 
@@ -94,7 +94,7 @@ public class Instrumentation : IInstrumentation, IDisposable
         return activity;
     }
 
-    public Activity? StartSessionAppendToStreamActivity(string streamName, Dictionary<string, object> metadata)
+    public Activity? StartSessionAppendToStreamActivity(string streamName, Dictionary<string, string> metadata)
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.SessionAppendToStream);
 
@@ -140,7 +140,7 @@ public class Instrumentation : IInstrumentation, IDisposable
     public Activity? StartReadStreamBatchActivity() =>
         _activitySource.StartActivity(TelemetryConstants.Activities.ReadStreamBatch);
 
-    public Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, object> metadata)
+    public Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, string> metadata)
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.ScheduleMessage);
 
@@ -282,6 +282,11 @@ public class Instrumentation : IInstrumentation, IDisposable
         {
             if (metadata.RootElement.TryGetProperty(key, out var value))
             {
+                if (value.ValueKind == JsonValueKind.Null)
+                {
+                    return [];
+                }
+
                 return [value.ToString()];
             }
         }

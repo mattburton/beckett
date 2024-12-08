@@ -4,8 +4,9 @@ namespace Beckett.Messages;
 
 public static class JsonDocumentExtensions
 {
-    public static Dictionary<string, object> ToMetadataDictionary(this JsonDocument metadata)
+    public static Dictionary<string, string> ToMetadataDictionary(this JsonDocument metadata)
     {
-        return metadata.Deserialize<Dictionary<string, object>>() ?? new Dictionary<string, object>();
+        return metadata.Deserialize<Dictionary<string, string>>(MessageSerializer.Options) ??
+               new Dictionary<string, string>();
     }
 }

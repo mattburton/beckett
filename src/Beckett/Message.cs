@@ -9,7 +9,7 @@ namespace Beckett;
 public readonly record struct Message
 {
     private static readonly JsonDocument EmptyJsonDocument = JsonDocument.Parse("{}");
-    private static readonly Type MetadataDictionaryType = typeof(Dictionary<string, object>);
+    private static readonly Type MetadataDictionaryType = typeof(Dictionary<string, string>);
 
     /// <summary>
     /// Create a message using a .NET object where the type will be used to determine the message type using the
@@ -19,7 +19,7 @@ public readonly record struct Message
     /// <param name="message">The message to write</param>
     /// <param name="metadata">Message metadata</param>
     /// <exception cref="UnknownTypeException">The message type is not mapped</exception>
-    public Message(object message, Dictionary<string, object>? metadata = null)
+    public Message(object message, Dictionary<string, string>? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(message);
 
@@ -36,7 +36,7 @@ public readonly record struct Message
             Data = MessageSerializer.Serialize(messageType, message);
         }
 
-        Metadata = metadata ?? new Dictionary<string, object>();
+        Metadata = metadata ?? new Dictionary<string, string>();
     }
 
     /// <summary>
@@ -46,21 +46,21 @@ public readonly record struct Message
     /// <param name="type">Message type</param>
     /// <param name="data">Message data</param>
     /// <param name="metadata">Message metadata</param>
-    public Message(string type, JsonDocument data, Dictionary<string, object>? metadata = null)
+    public Message(string type, JsonDocument data, Dictionary<string, string>? metadata = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(type);
         ArgumentNullException.ThrowIfNull(data);
 
         Type = type;
         Data = data;
-        Metadata = metadata ?? new Dictionary<string, object>();
+        Metadata = metadata ?? new Dictionary<string, string>();
     }
 
     public string Type { get; }
     public JsonDocument Data { get; }
-    public Dictionary<string, object> Metadata { get; }
+    public Dictionary<string, string> Metadata { get; }
 
-    public Message AddMetadata(string key, object value)
+    public Message AddMetadata(string key, string? value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(value);
@@ -70,8 +70,10 @@ public readonly record struct Message
         return this;
     }
 
-    public Message WithCorrelationId(string correlationId) =>
-        AddMetadata(MessageConstants.Metadata.CorrelationId, correlationId);
+    public Message WithCorrelationId(string correlationId) => AddMetadata(
+        MessageConstants.Metadata.CorrelationId,
+        correlationId
+    );
 
     internal JsonDocument SerializedMetadata =>
         Metadata.Count > 0 ? MessageSerializer.Serialize(MetadataDictionaryType, Metadata) : EmptyJsonDocument;

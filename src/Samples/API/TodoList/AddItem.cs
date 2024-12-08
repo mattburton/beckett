@@ -14,7 +14,7 @@ public static class AddItem
 
     private static async Task<IResult> Handler(
         Guid id,
-        Request request,
+        AddItemRequest request,
         IMessageStore messageStore,
         CancellationToken cancellationToken
     )
@@ -24,20 +24,15 @@ public static class AddItem
             //TODO - add polly retry example here
             var result = await new AddTodoListItem(id, request.Item).Execute(messageStore, cancellationToken);
 
-            return Results.Ok(
-                new
-                {
-                    id,
-                    request.Item,
-                    result.StreamVersion
-                }
-            );
+            return Results.Ok(new AddItemResponse(id, request.Item, result.StreamVersion));
         }
         catch (ItemAlreadyAddedException)
         {
             return Results.Conflict();
         }
     }
-
-    public record Request(string Item);
 }
+
+public record AddItemRequest(string Item);
+
+public record AddItemResponse(Guid Id, string Item, long StreamVersion);

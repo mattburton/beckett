@@ -1,7 +1,9 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using API.TodoList;
 using Beckett;
 using Beckett.Dashboard;
+using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
@@ -23,10 +25,24 @@ try
 
     await builder.AddTodoListDatabase();
 
+    var jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerOptions.Default)
+    {
+        TypeInfoResolver = TodoListJsonSerializerContext.Default
+    };
+
+    MessageSerializer.Configure(jsonSerializerOptions);
+
     builder.AddBeckett().TodoListMessages();
 
     builder.Services.Configure<JsonOptions>(
-        options => { options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower; }
+        options =>
+        {
+            options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+            options.SerializerOptions.TypeInfoResolver = JsonTypeInfoResolver.Combine(
+                TodoListApiJsonSerializerContext.Default,
+                TodoListJsonSerializerContext.Default
+            );
+        }
     );
 
     builder.Services.AddOpenTelemetry()
