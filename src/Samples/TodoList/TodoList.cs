@@ -9,29 +9,29 @@ using TodoList.ScheduledTasks;
 
 namespace TodoList;
 
-public static class TodoList
+public class TodoList : IBeckettModule
 {
     private const string Category = nameof(TodoList);
 
     public static string StreamName(Guid id) => $"{Category}-{id}";
 
-    public static IBeckettBuilder TodoListMessages(this IBeckettBuilder builder)
+    public void MessageTypes(IBeckettBuilder builder)
     {
         builder.Map<TodoListItemAdded>("todo_list_item_added");
         builder.Map<TodoListItemCompleted>("todo_list_item_completed");
         builder.Map<TodoListCreated>("todo_list_created");
         builder.Map<HelloWorld>("hello_world");
-
-        return builder;
     }
 
-    public static IBeckettBuilder TodoListSubscriptions(this IBeckettBuilder builder)
+    public void ClientConfiguration(IBeckettBuilder builder)
+    {
+    }
+
+    public void ServerConfiguration(IBeckettBuilder builder)
     {
         builder.Services.AddSingleton<MentionsHandler>();
         builder.Services.AddSingleton<NotificationHandler>();
         builder.Services.AddSingleton<HelloWorld.Handler>();
-
-        builder.TodoListMessages();
 
         builder.AddSubscription("Mentions")
             .Message<TodoListItemAdded>()
@@ -46,8 +46,6 @@ public static class TodoList
         builder.AddSubscription("HelloWorld")
             .Message<HelloWorld>()
             .Handler<HelloWorld.Handler>((handler, message, token) => handler.Handle(message, token));
-
-        return builder;
     }
 }
 

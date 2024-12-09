@@ -32,7 +32,7 @@ try
 
     MessageSerializer.Configure(jsonSerializerOptions);
 
-    builder.AddBeckett().TodoListMessages();
+    builder.AddBeckett().WithClientConfigurationFrom(typeof(TodoList.TodoList).Assembly);
 
     builder.Services.Configure<JsonOptions>(
         options =>

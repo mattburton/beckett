@@ -38,7 +38,7 @@ try
 
             options.Subscriptions.MaxRetryCount<TerminalException>(0);
         }
-    ).TodoListSubscriptions();
+    ).WithServerConfigurationFrom(typeof(TodoList.TodoList).Assembly);
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("todo-list-worker"))
@@ -53,6 +53,7 @@ try
                 .AddBeckett()
                 .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
         );
+
 
     var host = builder.Build();
 
