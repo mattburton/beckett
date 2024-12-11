@@ -10,8 +10,7 @@ public readonly record struct MessageContext(
     string Type,
     JsonDocument Data,
     JsonDocument Metadata,
-    DateTimeOffset Timestamp,
-    IServiceProvider Services
+    DateTimeOffset Timestamp
 ) : IMessageContext
 {
     private readonly Lazy<Type?> _messageType = new(() => MessageTypeMap.TryGetType(Type, out var type) ? type : null);

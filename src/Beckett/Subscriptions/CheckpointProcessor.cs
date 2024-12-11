@@ -196,9 +196,7 @@ public class CheckpointProcessor(
 
                     var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
 
-                    IMessageContext messageContextForScope = messageContext with { Services = scope.ServiceProvider };
-
-                    await subscription.InstanceMethod(handler, messageContextForScope, cancellationToken);
+                    await subscription.InstanceMethod(handler, messageContext, cancellationToken);
 
                     lastProcessedStreamPosition = messageContext.StreamPosition;
                 }
@@ -272,8 +270,7 @@ public class CheckpointProcessor(
                 message.Type,
                 message.Data,
                 message.Metadata,
-                message.Timestamp,
-                serviceProvider
+                message.Timestamp
             )
         ).ToList();
     }

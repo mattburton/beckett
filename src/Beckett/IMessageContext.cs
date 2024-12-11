@@ -61,10 +61,4 @@ public interface IMessageContext
     /// until requested.
     /// </summary>
     Dictionary<string, string> MessageMetadata { get; }
-
-    /// <summary>
-    /// Service provider that can be used to resolve services within a handler. For a static handler function this will
-    /// be the root service provider, but otherwise this will be scoped to the handler execution.
-    /// </summary>
-    IServiceProvider Services { get; }
 }
