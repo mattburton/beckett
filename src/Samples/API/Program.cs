@@ -1,16 +1,13 @@
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using API.TodoList;
 using Beckett;
 using Beckett.Dashboard;
-using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using TodoList;
 using TodoList.Infrastructure.Database;
 
 Log.Logger = new LoggerConfiguration()
@@ -25,23 +22,12 @@ try
 
     await builder.AddTodoListDatabase();
 
-    var jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerOptions.Default)
-    {
-        TypeInfoResolver = TodoListJsonSerializerContext.Default
-    };
-
-    MessageSerializer.Configure(jsonSerializerOptions);
-
     builder.AddBeckett().WithClientConfigurationFrom(typeof(TodoList.TodoList).Assembly);
 
     builder.Services.Configure<JsonOptions>(
         options =>
         {
             options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-            options.SerializerOptions.TypeInfoResolver = JsonTypeInfoResolver.Combine(
-                TodoListApiJsonSerializerContext.Default,
-                TodoListJsonSerializerContext.Default
-            );
         }
     );
 

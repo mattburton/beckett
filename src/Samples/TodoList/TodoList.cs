@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using TodoList.AddItem;
 using TodoList.CompleteItem;
@@ -39,8 +38,3 @@ public class TodoList : IBeckettModule
             .Handler<NotificationHandler>(static (handler, context, token) => handler.Handle(context, token));
     }
 }
-
-[JsonSerializable(typeof(TodoListItemAdded))]
-[JsonSerializable(typeof(TodoListItemCompleted))]
-[JsonSerializable(typeof(TodoListCreated))]
-public partial class TodoListJsonSerializerContext : JsonSerializerContext;
