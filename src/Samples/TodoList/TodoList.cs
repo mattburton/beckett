@@ -32,11 +32,11 @@ public class TodoList : IBeckettModule
 
         builder.AddSubscription("Mentions")
             .Message<TodoListItemAdded>()
-            .Handler<MentionsHandler>((handler, message, token) => handler.Handle(message, token));
+            .Handler<MentionsHandler>(static (handler, message, token) => handler.Handle(message, token));
 
         builder.AddSubscription("Notifications")
             .Category(Category)
-            .Handler<NotificationHandler>((handler, context, token) => handler.Handle(context, token));
+            .Handler<NotificationHandler>(static (handler, context, token) => handler.Handle(context, token));
     }
 }
 

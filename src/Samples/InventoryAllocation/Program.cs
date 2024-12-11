@@ -26,7 +26,7 @@ beckett.Map<InventoryAllocated>("inventory_allocated");
 //add subscription handler
 beckett.AddSubscription("order-item-inventory-allocation")
     .Message<OrderItemAdded>()
-    .Handler<OrderItemAddedHandler>((handler, message, token) => handler.Handle(message, token));
+    .Handler<OrderItemAddedHandler>(static (handler, message, token) => handler.Handle(message, token));
 
 var host = builder.Build();
 
