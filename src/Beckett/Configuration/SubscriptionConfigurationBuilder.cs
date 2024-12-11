@@ -44,4 +44,11 @@ public class SubscriptionConfigurationBuilder(Subscription subscription) : ISubs
 
         return this;
     }
+
+    public ISubscriptionConfigurationBuilder Priority(int priority)
+    {
+        subscription.Priority = priority;
+
+        return this;
+    }
 }

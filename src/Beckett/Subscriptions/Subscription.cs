@@ -15,6 +15,7 @@ public class Subscription(string name)
     internal Func<IReadOnlyList<IMessageContext>, CancellationToken, Task>? StaticBatchMethod { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
+    internal int Priority { get; set; } = int.MaxValue;
 
     internal bool IsCategoryOnly => Category != null && MessageTypes.Count == 0;
 

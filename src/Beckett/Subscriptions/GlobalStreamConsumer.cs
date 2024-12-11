@@ -107,7 +107,8 @@ public class GlobalStreamConsumer(
                 foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
-                        .Where(subscription => stream.Any(m => m.AppliesTo(subscription))).ToArray();
+                        .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
+                        .OrderBy(subscription => subscription.Priority).ToArray();
 
                     foreach (var subscription in subscriptions)
                     {

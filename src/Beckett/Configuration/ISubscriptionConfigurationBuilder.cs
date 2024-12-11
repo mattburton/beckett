@@ -45,4 +45,13 @@ public interface ISubscriptionConfigurationBuilder
     /// <typeparam name="TException">Exception type</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder MaxRetryCount<TException>(int maxRetryCount) where TException : Exception;
+
+    /// <summary>
+    /// Configure the priority for this subscription. When messages are available for multiple subscriptions at the same
+    /// time they will be sorted based on their priority, lowest to highest. This affects the order in which the
+    /// resulting lagging checkpoints will be processed. Defaults to <c>int.MaxValue</c>.
+    /// </summary>
+    /// <param name="priority">Priority</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder Priority(int priority);
 }
