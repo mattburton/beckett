@@ -36,20 +36,51 @@ public interface ICategorySubscriptionBuilder
     );
 
     /// <summary>
+    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
+    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
+    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
+    /// well. The handler is registered as a func that takes a batch of messages and <see cref="CancellationToken"/> as
+    /// inputs and returns a <see cref="Task"/> as the result. Any exceptions thrown by the handler will result in
+    /// Beckett retrying the subscription based on its configuration.
+    /// </summary>
+    /// <param name="handler">Handler func</param>
+    /// <typeparam name="THandler">Handler type</typeparam>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder Handler<THandler>(
+        Func<THandler, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler
+    );
+
+    /// <summary>
     /// Configure the handler for this subscription as a static function reference. The handler type does not need to
     /// be registered in the container since it is a static function. The handler is registered as a func that takes
     /// <see cref="IMessageContext"/> and <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/>
     /// as the result. The handler name must be specified to provide a display name for the static function in traces
     /// and logs - attempting to infer a useful name from a static function reference may or may not result in the
-    /// desired outcome, so we are making it explicit. If you need to resolve services at runtime you can use the
-    /// <see cref="IServiceProvider"/> provided by the <see cref="IMessageContext"/> <c>Services</c> property. Any
-    /// exceptions thrown by the handler will result in Beckett retrying the subscription based on its configuration.
+    /// desired outcome, so we are making it explicit. Any exceptions thrown by the handler will result in Beckett
+    /// retrying the subscription based on its configuration.
     /// </summary>
     /// <param name="handler">Handler func</param>
     /// <param name="handlerName">Handler display name for traces and logs</param>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder Handler(
         Func<IMessageContext, CancellationToken, Task> handler,
+        string handlerName
+    );
+
+    /// <summary>
+    /// Configure the handler for this subscription as a static function reference. The handler type does not need to
+    /// be registered in the container since it is a static function. The handler is registered as a func that takes
+    /// a batch of messages and <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/> as the
+    /// result. The handler name must be specified to provide a display name for the static function in traces and logs
+    /// - attempting to infer a useful name from a static function reference may or may not result in the desired
+    /// outcome, so we are making it explicit. Any exceptions thrown by the handler will result in Beckett retrying the
+    /// subscription based on its configuration.
+    /// </summary>
+    /// <param name="handler">Handler func</param>
+    /// <param name="handlerName">Handler display name for traces and logs</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder Handler(
+        Func<IReadOnlyList<IMessageContext>, CancellationToken, Task> handler,
         string handlerName
     );
 }
@@ -125,20 +156,51 @@ public interface ICategorySubscriptionBuilder<out TMessage>
     );
 
     /// <summary>
+    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
+    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
+    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
+    /// well. The handler is registered as a func that takes a batch of messages and <see cref="CancellationToken"/> as
+    /// inputs and returns a <see cref="Task"/> as the result. Any exceptions thrown by the handler will result in
+    /// Beckett retrying the subscription based on its configuration.
+    /// </summary>
+    /// <param name="handler">Handler func</param>
+    /// <typeparam name="THandler">Handler type</typeparam>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder Handler<THandler>(
+        Func<THandler, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler
+    );
+
+    /// <summary>
     /// Configure the handler for this subscription as a static function reference. The handler type does not need to
     /// be registered in the container since it is a static function. The handler is registered as a func that takes
     /// <see cref="IMessageContext"/> and <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/>
     /// as the result. The handler name must be specified to provide a display name for the static function in traces
     /// and logs - attempting to infer a useful name from a static function reference may or may not result in the
-    /// desired outcome, so we are making it explicit. If you need to resolve services at runtime you can use the
-    /// <see cref="IServiceProvider"/> provided by the <see cref="IMessageContext"/> <c>Services</c> property. Any
-    /// exceptions thrown by the handler will result in Beckett retrying the subscription based on its configuration.
+    /// desired outcome, so we are making it explicit. Any exceptions thrown by the handler will result in Beckett
+    /// retrying the subscription based on its configuration.
     /// </summary>
     /// <param name="handler">Handler func</param>
     /// <param name="handlerName">Handler display name for traces and logs</param>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder Handler(
         Func<IMessageContext, CancellationToken, Task> handler,
+        string handlerName
+    );
+
+    /// <summary>
+    /// Configure the handler for this subscription as a static function reference. The handler type does not need to
+    /// be registered in the container since it is a static function. The handler is registered as a func that takes
+    /// a batch of messages and a <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/> as the
+    /// result. The handler name must be specified to provide a display name for the static function in traces and logs
+    /// - attempting to infer a useful name from a static function reference may or may not result in the desired
+    /// outcome, so we are making it explicit. Any exceptions thrown by the handler will result in Beckett retrying the
+    /// subscription based on its configuration.
+    /// </summary>
+    /// <param name="handler">Handler func</param>
+    /// <param name="handlerName">Handler display name for traces and logs</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder Handler(
+        Func<IReadOnlyList<IMessageContext>, CancellationToken, Task> handler,
         string handlerName
     );
 }

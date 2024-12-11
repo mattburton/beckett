@@ -106,4 +106,17 @@ public class MessageSubscriptionBuilder<T>(Subscription subscription)
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
+
+    public ISubscriptionConfigurationBuilder Handler<THandler>(
+        Func<THandler, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler
+    )
+    {
+        var handlerType = typeof(THandler);
+
+        subscription.HandlerType = handlerType;
+        subscription.HandlerName = handlerType.FullName;
+        subscription.InstanceBatchMethod = (h, b, t) => handler((THandler)h, b, t);
+
+        return new SubscriptionConfigurationBuilder(subscription);
+    }
 }

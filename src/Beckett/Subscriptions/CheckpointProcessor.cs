@@ -35,7 +35,11 @@ public class CheckpointProcessor(
         if (checkpoint.IsRetryOrFailure)
         {
             startingStreamPosition = checkpoint.StreamPosition;
-            batchSize = 1;
+
+            if (!subscription.IsBatchHandler)
+            {
+                batchSize = 1;
+            }
         }
 
         var result = await HandleMessageBatch(
@@ -151,6 +155,17 @@ public class CheckpointProcessor(
                 return NoMessages.Instance;
             }
 
+            if (subscription.IsBatchHandler)
+            {
+                return await DispatchMessageBatchToHandler(
+                    checkpoint,
+                    subscription,
+                    streamName,
+                    messages,
+                    cancellationToken
+                );
+            }
+
             var lastProcessedStreamPosition = checkpoint.StreamPosition;
 
             foreach (var messageContext in messages.Where(x => subscription.SubscribedToMessage(x.Type)))
@@ -163,40 +178,7 @@ public class CheckpointProcessor(
                         return new Success(lastProcessedStreamPosition);
                     }
 
-                    using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
-
-                    using var messageLoggingScope = MessageLoggingScope(messageContext);
-
-                    logger.HandlingMessageForCheckpoint(messageContext.Id, checkpoint.Id);
-
-                    if (subscription.StaticMethod != null)
-                    {
-                        await subscription.StaticMethod(messageContext, cancellationToken);
-
-                        lastProcessedStreamPosition = messageContext.StreamPosition;
-
-                        continue;
-                    }
-
-                    if (subscription.HandlerType == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"Subscription handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
-                        );
-                    }
-
-                    if (subscription.InstanceMethod == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"Subscription handler expression is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
-                        );
-                    }
-
-                    using var scope = serviceProvider.CreateScope();
-
-                    var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
-
-                    await subscription.InstanceMethod(handler, messageContext, cancellationToken);
+                    await DispatchMessageToHandler(checkpoint, subscription, messageContext, cancellationToken);
 
                     lastProcessedStreamPosition = messageContext.StreamPosition;
                 }
@@ -236,6 +218,101 @@ public class CheckpointProcessor(
             );
 
             throw;
+        }
+    }
+
+    private async Task DispatchMessageToHandler(
+        Checkpoint checkpoint,
+        Subscription subscription,
+        MessageContext messageContext,
+        CancellationToken cancellationToken
+    )
+    {
+        using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
+
+        using var messageLoggingScope = MessageLoggingScope(messageContext);
+
+        logger.HandlingMessageForCheckpoint(messageContext.Id, checkpoint.Id);
+
+        if (subscription.StaticMethod != null)
+        {
+            await subscription.StaticMethod(messageContext, cancellationToken);
+
+            return;
+        }
+
+        if (subscription.HandlerType == null)
+        {
+            throw new InvalidOperationException(
+                $"Subscription handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
+            );
+        }
+
+        if (subscription.InstanceMethod == null)
+        {
+            throw new InvalidOperationException(
+                $"Subscription handler expression is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
+            );
+        }
+
+        using var scope = serviceProvider.CreateScope();
+
+        var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
+
+        await subscription.InstanceMethod(handler, messageContext, cancellationToken);
+    }
+
+    private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
+        Checkpoint checkpoint,
+        Subscription subscription,
+        string streamName,
+        List<MessageContext> messages,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            var messageBatch = messages.Where(x => subscription.SubscribedToMessage(x.Type)).Cast<IMessageContext>()
+                .ToList();
+
+            if (subscription.StaticBatchMethod != null)
+            {
+                await subscription.StaticBatchMethod(messageBatch, cancellationToken);
+
+                return new Success(messages[^1].StreamPosition);
+            }
+
+            if (subscription.HandlerType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Subscription handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
+                );
+            }
+
+            using var scope = serviceProvider.CreateScope();
+
+            var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
+
+            await subscription.InstanceBatchMethod!(handler, messageBatch, cancellationToken);
+
+            return new Success(messages[^1].StreamPosition);
+        }
+        catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            logger.LogError(
+                e,
+                "Error dispatching message batch to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [Checkpoint: {CheckpointId}]",
+                subscription.Name,
+                streamName,
+                subscription.HandlerName,
+                checkpoint.Id
+            );
+
+            return new Error(messages[0].StreamPosition, e);
         }
     }
 
@@ -420,7 +497,11 @@ public class CheckpointProcessor(
 
 public static partial class Log
 {
-    [LoggerMessage(0, LogLevel.Trace, "Processing checkpoint {CheckpointId} at position {StreamPosition} and version {StreamVersion}")]
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Processing checkpoint {CheckpointId} at position {StreamPosition} and version {StreamVersion}"
+    )]
     public static partial void ProcessingCheckpoint(
         this ILogger logger,
         long checkpointId,
@@ -434,14 +515,22 @@ public static partial class Log
     [LoggerMessage(0, LogLevel.Trace, "Found {Count} messages to process for checkpoint {CheckpointId}")]
     public static partial void FoundMessagesToProcessForCheckpoint(this ILogger logger, int count, long checkpointId);
 
-    [LoggerMessage(0, LogLevel.Trace, "Checkpoint {CheckpointId} processed successfully up to position {StreamPosition}")]
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Checkpoint {CheckpointId} processed successfully up to position {StreamPosition}"
+    )]
     public static partial void CheckpointProcessedSuccessfully(
         this ILogger logger,
         long checkpointId,
         long streamPosition
     );
 
-    [LoggerMessage(0, LogLevel.Trace, "Retry attempt {Attempt} succeeded for checkpoint {CheckpointId} at position {StreamPosition}")]
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Retry attempt {Attempt} succeeded for checkpoint {CheckpointId} at position {StreamPosition}"
+    )]
     public static partial void RetryAttemptSucceeded(
         this ILogger logger,
         int attempt,
@@ -449,7 +538,11 @@ public static partial class Log
         long streamPosition
     );
 
-    [LoggerMessage(0, LogLevel.Trace, "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - will start retrying at {RetryAt}")]
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - will start retrying at {RetryAt}"
+    )]
     public static partial void CheckpointWillStartRetry(
         this ILogger logger,
         long checkpointId,
@@ -457,7 +550,10 @@ public static partial class Log
         DateTimeOffset? retryAt
     );
 
-    [LoggerMessage(0, LogLevel.Trace, "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - max retry count is set to zero for exception type {ExceptionType}, setting it to failed immediately"
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Checkpoint {CheckpointId} encountered an error at position {StreamPosition} - max retry count is set to zero for exception type {ExceptionType}, setting it to failed immediately"
     )]
     public static partial void CheckpointWillMoveToFailedImmediately(
         this ILogger logger,
@@ -466,7 +562,11 @@ public static partial class Log
         Type exceptionType
     );
 
-    [LoggerMessage(0, LogLevel.Trace, "Retry attempt failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - scheduling retry at {RetryAt}")]
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Retry attempt failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - scheduling retry at {RetryAt}"
+    )]
     public static partial void RetryAttemptFailedWillTryAgain(
         this ILogger logger,
         long checkpointId,
@@ -476,7 +576,11 @@ public static partial class Log
         DateTimeOffset? retryAt
     );
 
-    [LoggerMessage(0, LogLevel.Trace, "Retry failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting checkpoint status to Failed")]
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Retry failed for checkpoint {CheckpointId} at position {StreamPosition} - attempt {Attempt} of {MaxRetryCount} - max retries exceeded, setting checkpoint status to Failed"
+    )]
     public static partial void RetryAttemptFailedMovingCheckpointToFailed(
         this ILogger logger,
         long checkpointId,

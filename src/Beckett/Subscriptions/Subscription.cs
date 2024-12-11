@@ -10,13 +10,17 @@ public class Subscription(string name)
     internal string? HandlerName { get; set; }
     internal HashSet<string> MessageTypes { get; } = [];
     internal Func<object, object, CancellationToken, Task>? InstanceMethod { get; set; }
+    internal Func<object, IReadOnlyList<IMessageContext>, CancellationToken, Task>? InstanceBatchMethod { get; set; }
     internal Func<object, CancellationToken, Task>? StaticMethod { get; set; }
+    internal Func<IReadOnlyList<IMessageContext>, CancellationToken, Task>? StaticBatchMethod { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
 
     internal bool IsCategoryOnly => Category != null && MessageTypes.Count == 0;
 
     internal bool IsMessageTypesOnly => Category == null && MessageTypes.Count > 0;
+
+    internal bool IsBatchHandler => InstanceBatchMethod != null || StaticBatchMethod != null;
 
     internal bool CategoryMatches(string streamName) => Category != null && streamName.StartsWith(Category);
 
@@ -30,7 +34,7 @@ public class Subscription(string name)
 
     internal void EnsureHandlerIsConfigured()
     {
-        if (StaticMethod == null && InstanceMethod == null)
+        if (StaticMethod == null && StaticBatchMethod == null && InstanceMethod == null && InstanceBatchMethod == null)
         {
             throw new InvalidOperationException($"The subscription {Name} does not have a handler configured.");
         }
