@@ -28,7 +28,7 @@ public static class ReservationsPage
         );
 
         return new Reservations(
-            new ViewModel(result.Reservations, null, pageParameter, pageSizeParameter, result.TotalResults)
+            new ViewModel(result.Reservations, query, pageParameter, pageSizeParameter, result.TotalResults)
         );
     }
 

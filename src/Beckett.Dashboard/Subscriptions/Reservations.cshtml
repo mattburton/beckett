@@ -12,9 +12,6 @@
       <a class="nav-link" href="@Routes.Prefix/subscriptions">Subscriptions</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link active" aria-current="page" href="@Routes.Prefix/subscriptions/reservations">Reservations</a>
-    </li>
-    <li class="nav-item">
       <a class="nav-link" href="@Routes.Prefix/subscriptions/lagging">Lagging</a>
     </li>
     <li class="nav-item">
@@ -27,46 +24,47 @@
   @(new Paging((Model, urlTemplate)))
 </div>
 
-<div class="p-2 pt-0"
-     hx-get="@Model.CurrentLink(urlTemplate)"
-     hx-trigger="@(Model.Page > 1 ? "false" : "every 10s [enableAutoReload()]")"
-     hx-select="#list-view"
-     hx-swap="innerHTML">
-  <table id="list-view" class="table table-striped">
-    <thead>
-      <tr>
-        <th style="width: 18em;">
-          <div class="d-flex align-items-end" style="height: 2.25em;">
-            Group Name
-          </div>
-        </th>
-        <th>Name</th>
-        <th>Stream Name</th>
-        <th style="width: 12em;">Stream Position</th>
-        <th style="width: 12em;">Time Left</th>
-      </tr>
-    </thead>
-    <tbody>
-    @foreach(var reservation in Model.Reservations)
-    {
-      <tr>
-        <td>@reservation.GroupName</td>
-        <td>@reservation.Name</td>
-        <td>
-          <a href="@Routes.Prefix/subscriptions/checkpoints/@reservation.Id">@reservation.StreamName</a>
-        </td>
-        <td>@reservation.StreamPosition</td>
-        <td>@reservation.ReservedUntil.ToFriendlyTimeAbbreviation()</td>
-      </tr>
-    }
-    @if (Model.Reservations.Count == 0)
-    {
-      <tr>
-        <td colspan="5">
-          No reservations found.
-        </td>
-      </tr>
-    }
-    </tbody>
-  </table>
+<div class="card m-4">
+  <div class="card-header fs-4">
+    Reservations
+  </div>
+  <div class="card-body"
+       hx-get="@Model.CurrentLink(urlTemplate)"
+       hx-trigger="@(Model.Page > 1 ? "false" : "every 10s [enableAutoReload()]")"
+       hx-select="#list-view"
+       hx-swap="innerHTML">
+    <table id="list-view" class="table table-striped mb-0">
+      <thead>
+        <tr>
+          <th style="width: 18em;">Group Name</th>
+          <th>Name</th>
+          <th>Stream Name</th>
+          <th style="width: 12em;">Stream Position</th>
+          <th style="width: 12em;">Time Left</th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach(var reservation in Model.Reservations)
+      {
+        <tr>
+          <td>@reservation.GroupName</td>
+          <td>@reservation.Name</td>
+          <td>
+            <a href="@Routes.Prefix/subscriptions/checkpoints/@reservation.Id">@reservation.StreamName</a>
+          </td>
+          <td>@reservation.StreamPosition</td>
+          <td>@reservation.ReservedUntil.ToFriendlyTimeAbbreviation()</td>
+        </tr>
+      }
+      @if (Model.Reservations.Count == 0)
+      {
+        <tr>
+          <td colspan="5">
+            No reservations found.
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
 </div>
