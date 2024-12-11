@@ -5,6 +5,8 @@
 
   document.body.addEventListener("bulk_retry_requested", () => alert('Submitted retry requests successfully'));
 
+  document.body.addEventListener("bulk_skip_requested", () => alert('Submitted skip requests successfully'));
+
   function selectAll() {
     document.querySelectorAll(".select-item").forEach((item) => {
       item.checked = document.getElementById("select-all").checked;

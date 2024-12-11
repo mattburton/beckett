@@ -10,6 +10,11 @@ public class RetryClient(IPostgresDatabase database, PostgresOptions options) : 
         return database.Execute(new ScheduleCheckpoints(ids, DateTimeOffset.UtcNow, options), cancellationToken);
     }
 
+    public Task BulkSkip(long[] ids, CancellationToken cancellationToken)
+    {
+        return database.Execute(new SkipCheckpointPositions(ids, options), cancellationToken);
+    }
+
     public Task Retry(long id, CancellationToken cancellationToken)
     {
         return database.Execute(new ScheduleCheckpoints([id], DateTimeOffset.UtcNow, options), cancellationToken);
