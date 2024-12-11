@@ -21,9 +21,11 @@ public static class MessageSerializer
 
     public static object? Deserialize(string type, JsonDocument data)
     {
-        return !MessageTypeMap.TryGetType(type, out var messageType)
+        var result = MessageUpcaster.Upcast(type, data);
+
+        return !MessageTypeMap.TryGetType(result.TypeName, out var messageType)
             ? null
-            : MessageTransformer.Transform(type, data).Deserialize(messageType!, Options);
+            : result.Data.Deserialize(messageType, Options);
     }
 
     private static JsonSerializerOptions BuildJsonSerializerOptions()

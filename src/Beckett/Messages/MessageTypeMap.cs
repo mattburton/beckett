@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Beckett.Messages;
 
@@ -6,7 +7,6 @@ public static class MessageTypeMap
 {
     private static readonly ConcurrentDictionary<string, Type> NameToTypeMap = new();
     private static readonly ConcurrentDictionary<Type, string> TypeToNameMap = new();
-    private static readonly ConcurrentDictionary<string, string> TranslationMap = [];
     private static GetNameFallback? _getNameFallback;
     private static TryGetTypeFallback? _tryGetTypeFallback;
 
@@ -34,25 +34,13 @@ public static class MessageTypeMap
             throw new MessageTypeAlreadyMappedException(name, existingType.FullName!);
         }
 
+        if (TypeToNameMap.TryGetValue(type, out var existingName) && existingName != name)
+        {
+            throw new MessageTypeAlreadyMappedException(name, existingName);
+        }
+
         NameToTypeMap.TryAdd(name, type);
         TypeToNameMap.TryAdd(type, name);
-    }
-
-    public static void Map(string oldName, string newName)
-    {
-        if (oldName == newName)
-        {
-            throw new MessageTypesCannotBeMappedToThemselvesException(oldName);
-        }
-
-        if (TranslationMap.TryAdd(oldName, newName))
-        {
-            return;
-        }
-
-        var existingName = TranslationMap[oldName];
-
-        throw new MessageTypeAlreadyMappedException(oldName, existingName);
     }
 
     public static string GetName(Type type)
@@ -75,10 +63,8 @@ public static class MessageTypeMap
         return name;
     }
 
-    public static bool TryGetType(string name, out Type? type)
+    public static bool TryGetType(string name, [NotNullWhen(returnValue: true)] out Type? type)
     {
-        name = TranslateName(name);
-
         if (NameToTypeMap.TryGetValue(name, out var mappedType))
         {
             type = mappedType;
@@ -107,20 +93,6 @@ public static class MessageTypeMap
     {
         NameToTypeMap.Clear();
         TypeToNameMap.Clear();
-        TranslationMap.Clear();
-    }
-
-    private static string TranslateName(string name)
-    {
-        while (true)
-        {
-            if (!TranslationMap.TryGetValue(name, out var result))
-            {
-                return name;
-            }
-
-            name = result;
-        }
     }
 }
 

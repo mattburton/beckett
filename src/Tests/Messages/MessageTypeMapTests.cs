@@ -1,44 +1,41 @@
+using System.Diagnostics.CodeAnalysis;
 using Beckett.Messages;
 
 namespace Tests.Messages;
 
 [Collection("MessageTypeMap")]
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Local")]
 public sealed class MessageTypeMapTests : IDisposable
 {
     [Fact]
-    public void ThrowsWhenTypeNameIsMappedMultipleTimes()
+    public void maps_type_name()
     {
-        MessageTypeMap.Map("old-type", "new-type");
+        MessageTypeMap.Map<TestMessage>("type-map-test");
+
+        Assert.True(MessageTypeMap.TryGetType("type-map-test", out var type));
+
+        Assert.NotNull(type);
+        Assert.Equal(typeof(TestMessage), type);
+    }
+
+    [Fact]
+    public void throws_when_type_is_mapped_to_multiple_names()
+    {
+        MessageTypeMap.Map<TestMessage>("type-map-test");
 
         Assert.Throws<MessageTypeAlreadyMappedException>(
-            () => MessageTypeMap.Map("old-type", "new-type")
+            () => MessageTypeMap.Map<TestMessage>("same-type-different-name")
         );
     }
 
     [Fact]
-    public void MapsTypeName()
+    public void throws_when_name_is_reused_for_different_types()
     {
-        MessageTypeMap.Map<NewType>("new-type");
-        MessageTypeMap.Map("old-type", "new-type");
+        MessageTypeMap.Map<TestMessage>("type-map-test");
 
-        Assert.True(MessageTypeMap.TryGetType("old-type", out var type));
-
-        Assert.NotNull(type);
-        Assert.Equal(typeof(NewType), type);
-    }
-
-    [Fact]
-    public void MapsTypeNameRecursively()
-    {
-        MessageTypeMap.Map<NewType>("new-type");
-        MessageTypeMap.Map("type-v1", "type-v2");
-        MessageTypeMap.Map("type-v2", "type-v3");
-        MessageTypeMap.Map("type-v3", "new-type");
-
-        Assert.True(MessageTypeMap.TryGetType("type-v1", out var type));
-
-        Assert.NotNull(type);
-        Assert.Equal(typeof(NewType), type);
+        Assert.Throws<MessageTypeAlreadyMappedException>(
+            () => MessageTypeMap.Map<TestMessage2>("type-map-test")
+        );
     }
 
     public void Dispose()
@@ -46,5 +43,7 @@ public sealed class MessageTypeMapTests : IDisposable
         MessageTypeMap.Clear();
     }
 
-    private record NewType;
+    private record TestMessage;
+
+    private record TestMessage2;
 }

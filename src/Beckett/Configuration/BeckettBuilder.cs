@@ -31,8 +31,6 @@ public class BeckettBuilder(
 
     public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
 
-    public void Map(string oldTypeName, string newTypeName) => MessageTypeMap.Map(oldTypeName, newTypeName);
-
-    public void Transform(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> transformation) =>
-        MessageTransformer.Register(oldTypeName, newTypeName, transformation);
+    public void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster) =>
+        MessageUpcaster.Register(oldTypeName, newTypeName, upcaster);
 }

@@ -3,50 +3,52 @@ using System.Text.Json.Nodes;
 
 namespace Beckett.Messages;
 
-public static class MessageTransformer
+public static class MessageUpcaster
 {
-    private static readonly Dictionary<MappedType, Func<JsonObject, JsonObject>> Transformations = [];
+    private static readonly Dictionary<MappedType, Func<JsonObject, JsonObject>> Upcasters = [];
     private static readonly Dictionary<string, string> TypeMap = [];
 
     public static void Register(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> transformation)
     {
         if (!TypeMap.TryAdd(oldTypeName, newTypeName))
         {
-            throw new TransformationAlreadyRegisteredException(oldTypeName, newTypeName);
+            throw new UpcasterAlreadyRegisteredException(oldTypeName, newTypeName);
         }
 
-        Transformations.Add(new MappedType(oldTypeName, newTypeName), transformation);
+        Upcasters.Add(new MappedType(oldTypeName, newTypeName), transformation);
     }
 
-    public static JsonDocument Transform(string typeName, JsonDocument data)
+    public static (string TypeName, JsonDocument Data) Upcast(string typeName, JsonDocument data)
     {
         var mappedTypes = FindAllMappedTypes(typeName).ToArray();
 
         if (mappedTypes.Length == 0)
         {
-            return data;
+            return (typeName, data);
         }
 
         var result = JsonObject.Create(data.RootElement) ??
                      throw new InvalidOperationException("Unable to create JsonObject from message data");
 
+        var newTypeName = typeName;
+
         foreach (var mappedType in mappedTypes)
         {
-            if (!Transformations.TryGetValue(mappedType, out var transformation))
+            if (!Upcasters.TryGetValue(mappedType, out var upcaster))
             {
                 break;
             }
 
-            result = transformation(result);
+            newTypeName = mappedType.NewTypeName;
+            result = upcaster(result);
         }
 
-        return JsonDocument.Parse(result.ToJsonString());
+        return (newTypeName, JsonDocument.Parse(result.ToJsonString()));
     }
 
     public static void Clear()
     {
-        Transformations.Clear();
-        TypeMap.Clear();
+        Upcasters.Clear();
         TypeMap.Clear();
     }
 
@@ -74,5 +76,5 @@ public static class MessageTransformer
     private readonly record struct MappedType(string OldTypeName, string NewTypeName);
 }
 
-public class TransformationAlreadyRegisteredException(string oldTypeName, string newTypeName)
-    : Exception($"Transformation from type '{oldTypeName}' to '{newTypeName} is already registered.");
+public class UpcasterAlreadyRegisteredException(string oldTypeName, string newTypeName)
+    : Exception($"Upcaster from type '{oldTypeName}' to '{newTypeName} is already registered.");

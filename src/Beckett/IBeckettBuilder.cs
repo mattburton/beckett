@@ -52,25 +52,16 @@ public interface IBeckettBuilder
     void Map(Type type, string name);
 
     /// <summary>
-    /// Map an old type name to a new type name. This is useful when a message type is renamed and you still need
-    /// messages written using the old type name to map to the new type name - ex: some-event -> some-event.v2. This
-    /// mapping is also recursive, so you can have mappings for multiple versions of the same type - v1 -> v2, v2 -> v3,
-    /// and so on.
-    /// </summary>
-    /// <param name="oldTypeName">The old type name</param>
-    /// <param name="newTypeName">The new type name</param>
-    void Map(string oldTypeName, string newTypeName);
-
-    /// <summary>
-    /// Transform the schema of a message from an old type to a new type. Using a <see cref="JsonObject"/> makes it
-    /// straightforward to add and remove properties and otherwise transform message payloads as necessary.
-    /// Transformations are recursive, meaning you can register transformations for v1 -> v2, v2 -> v3, and v3 -> v4.
+    /// Upcast the name and /or schema of a message from an old type to a new type. Using a <see cref="JsonObject"/>
+    /// makes it straightforward to add and remove properties and otherwise transform message payloads as necessary.
+    /// If you are just renaming a message type without changing the schema you can register a no-op upcaster, i.e.
+    /// <c>x => x</c>. Upcasters are recursive, meaning you can register upcasters for v1 -> v2, v2 -> v3, and v3 -> v4.
     /// When the message type v1 is read from message storage it will be transformed to v4 using the registered
-    /// transformations and apply them in order. Alternatively you could just register a single transformation for
-    /// v1 -> v4 if that's more appropriate.
+    /// upcasters and apply them in order. Alternatively you could just register a single upcaster for v1 -> v4 if
+    /// that's more appropriate.
     /// </summary>
     /// <param name="oldTypeName">The old type name</param>
     /// <param name="newTypeName">The new type name</param>
-    /// <param name="transformation"></param>
-    void Transform(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> transformation);
+    /// <param name="upcaster">The upcaster function</param>
+    void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster);
 }

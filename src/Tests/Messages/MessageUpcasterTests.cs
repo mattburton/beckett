@@ -1,38 +1,51 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Beckett.Messages;
 
 namespace Tests.Messages;
 
-public sealed class MessageTransformerTests : IDisposable
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Local")]
+public sealed class MessageUpcasterTests : IDisposable
 {
     [Fact]
-    public void ThrowsWhenTransformationIsMappedMultipleTimes()
+    public void throws_when_upcaster_is_mapped_multiple_times()
     {
-        MessageTransformer.Register("old-type", "new-type", x => x);
+        MessageUpcaster.Register("old-type", "new-type", x => x);
 
-        Assert.Throws<TransformationAlreadyRegisteredException>(
-            () => MessageTransformer.Register("old-type", "new-type", x => x)
+        Assert.Throws<UpcasterAlreadyRegisteredException>(
+            () => MessageUpcaster.Register("old-type", "new-type", x => x)
         );
     }
 
     [Fact]
-    public void ReturnsOriginalDataIfNoTransformationIsRegisteredForTypeName()
+    public void returns_original_data_if_no_upcaster_is_registered_for_type_name()
     {
         var expected = JsonDocument.Parse(@"{""Name"":""Value""}");
 
-        var actual = MessageTransformer.Transform("message-type", expected);
+        var result = MessageUpcaster.Upcast("message-type", expected);
 
-        Assert.Equal(expected, actual);
+        Assert.Equal(expected, result.Data);
     }
 
     [Fact]
-    public void TransformsMessage()
+    public void returns_new_type_name()
+    {
+        MessageUpcaster.Register("old-type", "new-type", x => x);
+
+        var result = MessageUpcaster.Upcast("old-type", JsonDocument.Parse("{}"));
+
+        Assert.Equal("new-type", result.TypeName);
+    }
+
+    [Fact]
+    public void upcasts_message()
     {
         var expectedValue = Guid.NewGuid().ToString();
+        const string expectedTypeName = "type-v2";
 
-        MessageTransformer.Register(
+        MessageUpcaster.Register(
             "type-v1",
-            "type-v2",
+            expectedTypeName,
             x =>
             {
                 if (!x.TryGetPropertyValue("PropertyV1", out var propertyV1) || propertyV1 == null)
@@ -50,20 +63,22 @@ public sealed class MessageTransformerTests : IDisposable
 
         var dataV1 = JsonDocument.Parse($@"{{""PropertyV1"":""{expectedValue}""}}");
 
-        var dataV2 = MessageTransformer.Transform("type-v1", dataV1);
+        var result = MessageUpcaster.Upcast("type-v1", dataV1);
 
-        var result = dataV2.Deserialize<TestMessageV2>();
+        var dataV2 = result.Data.Deserialize<TestMessageV2>();
 
-        Assert.NotNull(result);
-        Assert.Equal(expectedValue, result.PropertyV2);
+        Assert.Equal(expectedTypeName, result.TypeName);
+        Assert.NotNull(dataV2);
+        Assert.Equal(expectedValue, dataV2.PropertyV2);
     }
 
     [Fact]
-    public void TransformsMessageRecursively()
+    public void upcasts_message_recursively()
     {
         var expectedValue = Guid.NewGuid().ToString();
+        const string expectedTypeName = "type-v4";
 
-        MessageTransformer.Register(
+        MessageUpcaster.Register(
             "type-v1",
             "type-v2",
             x =>
@@ -81,7 +96,7 @@ public sealed class MessageTransformerTests : IDisposable
             }
         );
 
-        MessageTransformer.Register(
+        MessageUpcaster.Register(
             "type-v2",
             "type-v3",
             x =>
@@ -99,9 +114,9 @@ public sealed class MessageTransformerTests : IDisposable
             }
         );
 
-        MessageTransformer.Register(
+        MessageUpcaster.Register(
             "type-v3",
-            "type-v4",
+            expectedTypeName,
             x =>
             {
                 if (!x.TryGetPropertyValue("PropertyV3", out var propertyV3) || propertyV3 == null)
@@ -119,22 +134,21 @@ public sealed class MessageTransformerTests : IDisposable
 
         var dataV1 = JsonDocument.Parse($@"{{""PropertyV1"":""{expectedValue}""}}");
 
-        var dataV4 = MessageTransformer.Transform("type-v1", dataV1);
+        var result = MessageUpcaster.Upcast("type-v1", dataV1);
 
-        var result = dataV4.Deserialize<TestMessageV4>();
+        var dataV4 = result.Data.Deserialize<TestMessageV4>();
 
-        Assert.NotNull(result);
-        Assert.Equal(expectedValue, result.PropertyV4);
+        Assert.Equal(expectedTypeName, result.TypeName);
+        Assert.NotNull(dataV4);
+        Assert.Equal(expectedValue, dataV4.PropertyV4);
     }
 
-    // ReSharper disable once ClassNeverInstantiated.Local
     private record TestMessageV2(string PropertyV2);
 
-    // ReSharper disable once ClassNeverInstantiated.Local
     private record TestMessageV4(string PropertyV4);
 
     public void Dispose()
     {
-        MessageTransformer.Clear();
+        MessageUpcaster.Clear();
     }
 }

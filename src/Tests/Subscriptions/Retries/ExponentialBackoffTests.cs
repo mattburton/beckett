@@ -16,7 +16,7 @@ public class ExponentialBackoffTests
     [InlineData(8, 240000)]
     [InlineData(9, 240000)]
     [InlineData(10, 240000)]
-    public void CalculatesNextDelayWithExponentialBackoff(int attempt, double backoff)
+    public void calculates_next_delay_with_exponential_backoff(int attempt, double backoff)
     {
         var low = DateTimeOffset.UtcNow;
         var high = low.AddMilliseconds(backoff + 1000);

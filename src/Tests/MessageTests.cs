@@ -13,7 +13,7 @@ public sealed class MessageTests : IDisposable
     }
 
     [Fact]
-    public void MapsTypeAndSerializesDataInConstructor()
+    public void maps_type_and_serializes_data_in_constructor()
     {
         var expectedId = Guid.NewGuid();
         var input = new TestMessage(expectedId);
@@ -26,20 +26,7 @@ public sealed class MessageTests : IDisposable
     }
 
     [Fact]
-    public void UnwrapsEnvelopeInConstructorIfPassedIn()
-    {
-        const string expectedType = "message-type";
-        var expectedData = JsonDocument.Parse("{}");
-        var input = new Message(expectedType, expectedData);
-
-        var message = new Message(input);
-
-        Assert.Equal(expectedType, message.Type);
-        Assert.Equal(expectedData, message.Data);
-    }
-
-    [Fact]
-    public void UsesMetadataPassedInConstructor()
+    public void uses_metadata_passed_in_constructor()
     {
         var input = new TestMessage(Guid.NewGuid());
         var expectedMetadata = new Dictionary<string, string>
@@ -53,7 +40,7 @@ public sealed class MessageTests : IDisposable
     }
 
     [Fact]
-    public void CanAddMetadataToMessage()
+    public void can_add_metadata_to_message()
     {
         var input = new TestMessage(Guid.NewGuid());
         var message = new Message(input);
@@ -64,7 +51,7 @@ public sealed class MessageTests : IDisposable
     }
 
     [Fact]
-    public void CanAddCorrelationIdToMessageMetadata()
+    public void can_add_correlation_id_to_message_metadata()
     {
         const string expectedCorrelationId = "correlation-id";
         var input = new TestMessage(Guid.NewGuid());
@@ -75,7 +62,6 @@ public sealed class MessageTests : IDisposable
         Assert.Single(message.Metadata, new KeyValuePair<string, string>("$correlation_id", expectedCorrelationId));
     }
 
-    // ReSharper disable once NotAccessedPositionalProperty.Local
     private record TestMessage(Guid Id);
 
     public void Dispose()

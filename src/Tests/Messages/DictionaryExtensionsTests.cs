@@ -5,7 +5,7 @@ namespace Tests.Messages;
 public class DictionaryExtensionsTests
 {
     [Fact]
-    public void PrependsDictionary()
+    public void prepends_dictionary()
     {
         var dictionary = new Dictionary<string, string>
         {
@@ -25,7 +25,7 @@ public class DictionaryExtensionsTests
     }
 
     [Fact]
-    public void PrependsDictionaryWithPrecedence()
+    public void prepends_dictionary_with_precedence()
     {
         var dictionary = new Dictionary<string, string>
         {
@@ -44,7 +44,7 @@ public class DictionaryExtensionsTests
     }
 
     [Fact]
-    public void HandlesEmptyDictionaryToPrepend()
+    public void handles_empty_dictionary_to_prepend()
     {
         var dictionary = new Dictionary<string, string>
         {
@@ -60,7 +60,7 @@ public class DictionaryExtensionsTests
     }
 
     [Fact]
-    public void HandlesEmptyBaseDictionary()
+    public void handles_empty_base_dictionary()
     {
         var dictionary = new Dictionary<string, string>();
         var dictionaryToPrepend = new Dictionary<string, string>
