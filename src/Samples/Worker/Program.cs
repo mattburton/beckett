@@ -1,7 +1,6 @@
 using Beckett;
 using Beckett.OpenTelemetry;
 using Npgsql;
-using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -33,11 +32,6 @@ try
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("todo-list-worker"))
-        .WithMetrics(
-            metrics => metrics
-                .AddBeckett()
-                .AddConsoleExporter()
-        )
         .WithTracing(
             tracing => tracing
                 .AddNpgsql()
