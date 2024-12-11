@@ -26,7 +26,7 @@ public class CategorySubscriptionBuilder(Subscription subscription) : ICategoryS
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
+        subscription.HandlerFunction = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
@@ -39,33 +39,7 @@ public class CategorySubscriptionBuilder(Subscription subscription) : ICategoryS
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceBatchMethod = (h, b, t) => handler((THandler)h, b, t);
-
-        return new SubscriptionConfigurationBuilder(subscription);
-    }
-
-    public ISubscriptionConfigurationBuilder Handler(
-        Func<IMessageContext, CancellationToken, Task> handler,
-        string handlerName
-    )
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(handlerName);
-
-        subscription.HandlerName = handlerName;
-        subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
-
-        return new SubscriptionConfigurationBuilder(subscription);
-    }
-
-    public ISubscriptionConfigurationBuilder Handler(
-        Func<IReadOnlyList<IMessageContext>, CancellationToken, Task> handler,
-        string handlerName
-    )
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(handlerName);
-
-        subscription.HandlerName = handlerName;
-        subscription.StaticBatchMethod = handler;
+        subscription.BatchHandlerFunction = (h, b, t) => handler((THandler)h, b, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
@@ -91,7 +65,7 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceMethod = (h, c, t) => handler((THandler)h, (T)((IMessageContext)c).Message!, t);
+        subscription.HandlerFunction = (h, c, t) => handler((THandler)h, (T)((IMessageContext)c).Message!, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
@@ -106,7 +80,7 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceMethod = (h, c, t) => handler(
+        subscription.HandlerFunction = (h, c, t) => handler(
             (THandler)h,
             (T)((IMessageContext)c).Message!,
             (IMessageContext)c,
@@ -124,7 +98,7 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceMethod = (h, c, t) => handler(
+        subscription.HandlerFunction = (h, c, t) => handler(
             (THandler)h,
             (IMessageContext)c,
             t
@@ -141,34 +115,9 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.InstanceBatchMethod = (h, b, t) => handler((THandler)h, b, t);
+        subscription.BatchHandlerFunction = (h, b, t) => handler((THandler)h, b, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
 
-    public ISubscriptionConfigurationBuilder Handler(
-        Func<IMessageContext, CancellationToken, Task> handler,
-        string handlerName
-    )
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(handlerName);
-
-        subscription.HandlerName = handlerName;
-        subscription.StaticMethod = (c, t) => handler((IMessageContext)c, t);
-
-        return new SubscriptionConfigurationBuilder(subscription);
-    }
-
-    public ISubscriptionConfigurationBuilder Handler(
-        Func<IReadOnlyList<IMessageContext>, CancellationToken, Task> handler,
-        string handlerName
-    )
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(handlerName);
-
-        subscription.HandlerName = handlerName;
-        subscription.StaticBatchMethod = handler;
-
-        return new SubscriptionConfigurationBuilder(subscription);
-    }
 }
