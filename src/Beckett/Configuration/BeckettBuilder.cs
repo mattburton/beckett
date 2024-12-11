@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using Beckett.Messages;
-using Beckett.Scheduling;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,21 +35,4 @@ public class BeckettBuilder(
 
     public void Transform(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> transformation) =>
         MessageTransformer.Register(oldTypeName, newTypeName, transformation);
-
-    public void AddRecurringMessage(
-        string name,
-        string cronExpression,
-        string streamName,
-        Message message
-    )
-    {
-        if (!RecurringMessageRegistry.TryAdd(name, out var recurringMessage))
-        {
-            throw new InvalidOperationException($"There is already a recurring message with the name {name}");
-        }
-
-        recurringMessage.CronExpression = cronExpression;
-        recurringMessage.StreamName = streamName;
-        recurringMessage.Message = message;
-    }
 }

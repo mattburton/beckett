@@ -96,32 +96,6 @@ CREATE TYPE beckett.subscription_status AS ENUM (
 
 
 --
--- Name: add_or_update_recurring_message(text, text, text, text, jsonb, jsonb, timestamp with time zone); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.add_or_update_recurring_message(_name text, _cron_expression text, _stream_name text, _type text, _data jsonb, _metadata jsonb, _next_occurrence timestamp with time zone) RETURNS void
-    LANGUAGE sql
-    AS $$
-INSERT INTO beckett.recurring_messages (
-  name,
-  cron_expression,
-  stream_name,
-  type,
-  data,
-  metadata,
-  next_occurrence
-)
-VALUES (_name, _cron_expression, _stream_name, _type, _data, _metadata, _next_occurrence)
-ON CONFLICT (name) DO UPDATE
-  SET cron_expression = excluded.cron_expression,
-      stream_name = excluded.stream_name,
-      data = excluded.data,
-      metadata = excluded.metadata,
-      next_occurrence = excluded.next_occurrence;
-$$;
-
-
---
 -- Name: add_or_update_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -274,38 +248,6 @@ $$;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
-
---
--- Name: recurring_messages; Type: TABLE; Schema: beckett; Owner: -
---
-
-CREATE TABLE beckett.recurring_messages (
-    name text NOT NULL,
-    cron_expression text NOT NULL,
-    stream_name text NOT NULL,
-    type text NOT NULL,
-    data jsonb NOT NULL,
-    metadata jsonb NOT NULL,
-    next_occurrence timestamp with time zone,
-    "timestamp" timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: get_recurring_messages_to_deliver(integer); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.get_recurring_messages_to_deliver(_batch_size integer) RETURNS SETOF beckett.recurring_messages
-    LANGUAGE sql
-    AS $$
-SELECT name, cron_expression, stream_name, type, data, metadata, next_occurrence, timestamp
-FROM beckett.recurring_messages
-WHERE next_occurrence <= CURRENT_TIMESTAMP
-FOR UPDATE
-SKIP LOCKED
-LIMIT _batch_size;
-$$;
-
 
 --
 -- Name: scheduled_messages; Type: TABLE; Schema: beckett; Owner: -
@@ -757,19 +699,6 @@ $$;
 
 
 --
--- Name: update_recurring_message_next_occurrence(text, timestamp with time zone); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.update_recurring_message_next_occurrence(_name text, _next_occurrence timestamp with time zone) RETURNS void
-    LANGUAGE sql
-    AS $$
-UPDATE beckett.recurring_messages
-SET next_occurrence = _next_occurrence
-WHERE name = _name;
-$$;
-
-
---
 -- Name: update_system_checkpoint_position(bigint, bigint); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -1021,14 +950,6 @@ ALTER TABLE ONLY beckett.migrations
 
 
 --
--- Name: recurring_messages recurring_messages_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
---
-
-ALTER TABLE ONLY beckett.recurring_messages
-    ADD CONSTRAINT recurring_messages_pkey PRIMARY KEY (name);
-
-
---
 -- Name: scheduled_messages scheduled_messages_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
@@ -1084,13 +1005,6 @@ CREATE INDEX ix_messages_active_global_read_stream ON beckett.messages_active US
 --
 
 CREATE INDEX ix_messages_active_stream_category ON beckett.messages_active USING btree (beckett.stream_category(stream_name));
-
-
---
--- Name: ix_recurring_messages_next_occurrence; Type: INDEX; Schema: beckett; Owner: -
---
-
-CREATE INDEX ix_recurring_messages_next_occurrence ON beckett.recurring_messages USING btree (next_occurrence) WHERE (next_occurrence IS NOT NULL);
 
 
 --

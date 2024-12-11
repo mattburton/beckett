@@ -28,14 +28,6 @@ beckett.AddSubscription("order-item-inventory-allocation")
     .Message<OrderItemAdded>()
     .Handler<OrderItemAddedHandler>((handler, message, token) => handler.Handle(message, token));
 
-//test by sending an OrderItemAdded event every minute
-beckett.AddRecurringMessage(
-    "Send sample OrderItemAdded event each minute",
-    "* * * * *",
-    "order_items",
-    new OrderItemAdded(Guid.NewGuid(), Guid.NewGuid(), 1)
-);
-
 var host = builder.Build();
 
 host.Run();

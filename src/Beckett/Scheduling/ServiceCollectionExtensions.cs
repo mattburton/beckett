@@ -13,16 +13,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ITransactionalMessageScheduler, MessageScheduler>();
 
-        services.AddSingleton<IRecurringMessageManager, RecurringMessageManager>();
-
         if (!options.Subscriptions.Enabled)
         {
             return;
         }
-
-        services.AddHostedService<BootstrapRecurringMessages>();
-
-        services.AddHostedService<RecurringMessageService>();
 
         services.AddHostedService<ScheduledMessageService>();
     }

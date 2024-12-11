@@ -40,7 +40,7 @@ public static class BeckettDatabase
 
         await ApplyMigrations(connection, schema, cancellationToken);
 
-        await connection.ReloadTypesAsync();
+        await connection.ReloadTypesAsync(cancellationToken);
 
         await AdvisoryUnlock(connection, advisoryLockId, cancellationToken);
     }

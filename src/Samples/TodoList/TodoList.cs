@@ -5,7 +5,6 @@ using TodoList.CompleteItem;
 using TodoList.CreateList;
 using TodoList.Mentions;
 using TodoList.Notifications;
-using TodoList.ScheduledTasks;
 
 namespace TodoList;
 
@@ -20,7 +19,6 @@ public class TodoList : IBeckettModule
         builder.Map<TodoListItemAdded>("todo_list_item_added");
         builder.Map<TodoListItemCompleted>("todo_list_item_completed");
         builder.Map<TodoListCreated>("todo_list_created");
-        builder.Map<HelloWorld>("hello_world");
     }
 
     public void ClientConfiguration(IBeckettBuilder builder)
@@ -31,7 +29,6 @@ public class TodoList : IBeckettModule
     {
         builder.Services.AddSingleton<MentionsHandler>();
         builder.Services.AddSingleton<NotificationHandler>();
-        builder.Services.AddSingleton<HelloWorld.Handler>();
 
         builder.AddSubscription("Mentions")
             .Message<TodoListItemAdded>()
@@ -40,17 +37,10 @@ public class TodoList : IBeckettModule
         builder.AddSubscription("Notifications")
             .Category(Category)
             .Handler<NotificationHandler>((handler, context, token) => handler.Handle(context, token));
-
-        builder.AddRecurringMessage(nameof(HelloWorld), "* * * * *", nameof(HelloWorld), new HelloWorld());
-
-        builder.AddSubscription("HelloWorld")
-            .Message<HelloWorld>()
-            .Handler<HelloWorld.Handler>((handler, message, token) => handler.Handle(message, token));
     }
 }
 
 [JsonSerializable(typeof(TodoListItemAdded))]
 [JsonSerializable(typeof(TodoListItemCompleted))]
 [JsonSerializable(typeof(TodoListCreated))]
-[JsonSerializable(typeof(HelloWorld))]
 public partial class TodoListJsonSerializerContext : JsonSerializerContext;
