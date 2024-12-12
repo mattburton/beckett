@@ -30,6 +30,18 @@ public class MessageSubscriptionBuilder(Subscription subscription) : IMessageSub
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
+
+    public ISubscriptionConfigurationBuilder Handler<THandlerServiceType>(
+        Func<THandlerServiceType, IMessageContext, CancellationToken, Task> handler,
+        Type handlerImplementationType
+    )
+    {
+        subscription.HandlerType = handlerImplementationType;
+        subscription.HandlerName = handlerImplementationType.FullName;
+        subscription.HandlerFunction = (h, c, t) => handler((THandlerServiceType)h, (IMessageContext)c, t);
+
+        return new SubscriptionConfigurationBuilder(subscription);
+    }
 }
 
 public class MessageSubscriptionBuilder<T>(Subscription subscription)
@@ -85,11 +97,19 @@ public class MessageSubscriptionBuilder<T>(Subscription subscription)
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
-        subscription.HandlerFunction = (h, c, t) => handler(
-            (THandler)h,
-            (IMessageContext)c,
-            t
-        );
+        subscription.HandlerFunction = (h, c, t) => handler((THandler)h, (IMessageContext)c, t);
+
+        return new SubscriptionConfigurationBuilder(subscription);
+    }
+
+    public ISubscriptionConfigurationBuilder Handler<THandlerServiceType>(
+        Func<THandlerServiceType, IMessageContext, CancellationToken, Task> handler,
+        Type handlerImplementationType
+    )
+    {
+        subscription.HandlerType = handlerImplementationType;
+        subscription.HandlerName = handlerImplementationType.FullName;
+        subscription.HandlerFunction = (h, c, t) => handler((THandlerServiceType)h, (IMessageContext)c, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
@@ -103,6 +123,18 @@ public class MessageSubscriptionBuilder<T>(Subscription subscription)
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
         subscription.BatchHandlerFunction = (h, b, t) => handler((THandler)h, b, t);
+
+        return new SubscriptionConfigurationBuilder(subscription);
+    }
+
+    public ISubscriptionConfigurationBuilder Handler<THandlerServiceType>(
+        Func<THandlerServiceType, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler,
+        Type handlerImplementationType
+    )
+    {
+        subscription.HandlerType = handlerImplementationType;
+        subscription.HandlerName = handlerImplementationType.FullName;
+        subscription.BatchHandlerFunction = (h, b, t) => handler((THandlerServiceType)h, b, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }

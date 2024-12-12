@@ -31,6 +31,18 @@ public class CategorySubscriptionBuilder(Subscription subscription) : ICategoryS
         return new SubscriptionConfigurationBuilder(subscription);
     }
 
+    public ISubscriptionConfigurationBuilder Handler<THandlerServiceType>(
+        Func<THandlerServiceType, IMessageContext, CancellationToken, Task> handler,
+        Type handlerImplementationType
+    )
+    {
+        subscription.HandlerType = handlerImplementationType;
+        subscription.HandlerName = handlerImplementationType.FullName;
+        subscription.HandlerFunction = (h, c, t) => handler((THandlerServiceType)h, (IMessageContext)c, t);
+
+        return new SubscriptionConfigurationBuilder(subscription);
+    }
+
     public ISubscriptionConfigurationBuilder Handler<THandler>(
         Func<THandler, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler
     )
@@ -40,6 +52,18 @@ public class CategorySubscriptionBuilder(Subscription subscription) : ICategoryS
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
         subscription.BatchHandlerFunction = (h, b, t) => handler((THandler)h, b, t);
+
+        return new SubscriptionConfigurationBuilder(subscription);
+    }
+
+    public ISubscriptionConfigurationBuilder Handler<THandlerServiceType>(
+        Func<THandlerServiceType, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler,
+        Type handlerImplementationType
+    )
+    {
+        subscription.HandlerType = handlerImplementationType;
+        subscription.HandlerName = handlerImplementationType.FullName;
+        subscription.BatchHandlerFunction = (h, b, t) => handler((THandlerServiceType)h, b, t);
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
@@ -119,5 +143,4 @@ public class CategorySubscriptionBuilder<T>(Subscription subscription)
 
         return new SubscriptionConfigurationBuilder(subscription);
     }
-
 }
