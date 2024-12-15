@@ -1,20 +1,21 @@
 namespace Beckett.Dashboard.MessageStore;
 
-public static class Routes
+public class Routes : IConfigureRoutes
 {
-    public static string Prefix { get; private set; } = null!;
-    public static DashboardOptions Options { get; private set; } = null!;
-
-    public static RouteGroupBuilder MessageStoreRoutes(this RouteGroupBuilder builder, string prefix, DashboardOptions options)
+    public void Configure(IEndpointRouteBuilder builder)
     {
-        Prefix = prefix;
-        Options = options;
+        if (!Dashboard.Options.MessageStoreEnabled)
+        {
+            return;
+        }
 
-        return builder
-            .IndexRoute()
-            .CorrelatedByRoute()
-            .MessageRoute()
-            .MessagesRoute()
-            .StreamsRoute();
+        var routes = builder.MapGroup("/message-store");
+
+        routes.MapGet("/", Index.Get);
+        routes.MapGet("/categories/{category}", Streams.Get);
+        routes.MapGet("/categories/{category}/{streamName}", Messages.Get);
+        routes.MapGet("/correlated-by/{correlationId}", CorrelatedBy.Get);
+        routes.MapGet("/messages/{id}", Message.GetById);
+        routes.MapGet("/streams/{streamName}/{streamPosition:long}", Message.GetByStreamPosition);
     }
 }

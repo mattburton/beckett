@@ -5,14 +5,7 @@ namespace Beckett.Dashboard.Subscriptions.Actions;
 
 public static class Skip
 {
-    public static RouteGroupBuilder SkipRoute(this RouteGroupBuilder builder)
-    {
-        builder.MapPost("/subscriptions/checkpoints/{id:long}/skip", Handler);
-
-        return builder;
-    }
-
-    private static async Task<IResult> Handler(
+    public static async Task<IResult> Post(
         HttpContext context,
         long id,
         IRetryClient retryClient,

@@ -1,0 +1,101 @@
+@inherits Component<Streams.ViewModel>
+@layout Layout
+
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Dashboard.Prefix/message-store">
+          Stream Categories
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        @Model.Category
+      </li>
+    </ol>
+    <Paging ViewModel="Model"></Paging>
+  </div>
+</nav>
+
+<div class="p-2">
+  <table class="table table-striped">
+    <thead>
+    <tr>
+      <th>Stream Name</th>
+      <th style="width: 16em;">Last Updated</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach(var stream in Model.Streams)
+    {
+      <tr>
+        <td>
+          <a href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)/@HttpUtility.UrlEncode(stream.StreamName)">
+            @stream.StreamName
+          </a>
+        </td>
+        <td>
+          <span class="timestamp">@stream.LastUpdated.ToString("O")</span>
+        </td>
+      </tr>
+    }
+    @if (Model.Streams.Count == 0)
+    {
+      <tr>
+        <td colspan="4">
+          No category streams found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
+
+@code {
+
+  public static async Task<IResult> Get(
+    string category,
+    string? query,
+    int? page,
+    int? pageSize,
+    IDashboard dashboard,
+    CancellationToken cancellationToken
+  )
+  {
+    var decodedCategory = HttpUtility.UrlDecode(category);
+    var pageParameter = page.ToPageParameter();
+    var pageSizeParameter = pageSize.ToPageSizeParameter();
+
+    var result = await dashboard.MessageStore.GetCategoryStreams(
+      decodedCategory,
+      query,
+      pageParameter,
+      pageSizeParameter,
+      cancellationToken
+    );
+
+    return Results.Extensions.Render<Streams>(
+      new ViewModel(
+        decodedCategory,
+        result.Streams,
+        query,
+        page.ToPageParameter(),
+        pageSize.ToPageSizeParameter(),
+        result.TotalResults
+      )
+    );
+  }
+
+  public record ViewModel(
+    string Category,
+    IReadOnlyList<GetCategoryStreamsResult.Stream> Streams,
+    string? Query,
+    int Page,
+    int PageSize,
+    int TotalResults
+  ) : IPagedViewModel
+  {
+    public string UrlTemplate => $"{Dashboard.Prefix}/message-store/categories/{HttpUtility.UrlEncode(Category)}?page={{0}}&pageSize={{1}}&query={{2}}";
+  }
+
+}

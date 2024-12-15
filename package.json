@@ -1,11 +1,12 @@
 {
   "private": true,
   "scripts": {
-    "api": "dotnet run --project src/Samples/API/API.csproj",
+    "api": "dotnet run --no-build --project src/Samples/API/API.csproj",
     "dump-schema": "./db/scripts/dump-schema.sh",
     "reset": "docker compose down -v && docker compose up -d",
+    "prestart": "dotnet build",
     "start": "concurrently --raw -k \"npm:api\" \"npm:worker\"",
-    "worker": "dotnet run --project src/Samples/Worker/Worker.csproj"
+    "worker": "dotnet run --no-build --project src/Samples/Worker/Worker.csproj"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

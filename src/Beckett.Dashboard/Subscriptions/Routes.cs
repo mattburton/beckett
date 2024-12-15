@@ -1,25 +1,17 @@
-using Beckett.Dashboard.Subscriptions.Actions;
-
 namespace Beckett.Dashboard.Subscriptions;
 
-public static class Routes
+public class Routes : IConfigureRoutes
 {
-    public static string Prefix { get; private set; } = null!;
-    public static DashboardOptions Options { get; private set; } = null!;
-
-    public static RouteGroupBuilder SubscriptionRoutes(this RouteGroupBuilder builder, string prefix, DashboardOptions options)
+    public void Configure(IEndpointRouteBuilder builder)
     {
-        Prefix = prefix;
-        Options = options;
+        var routes = builder.MapGroup("/subscriptions");
 
-        return builder
-            .ActionRoutes()
-            .CheckpointPageRoute()
-            .FailedPageRoute()
-            .IndexPageRoute()
-            .LaggingPageRoute()
-            .ReservationsPageRoute()
-            .RetriesPageRoute()
-            .SubscriptionPageRoute();
+        routes.MapGet("/", Index.Get);
+        routes.MapGet("/checkpoints/{id:long}", Checkpoint.Get);
+        routes.MapGet("/failed", Failed.Get);
+        routes.MapGet("/lagging", Lagging.Get);
+        routes.MapGet("/reservations", Reservations.Get);
+        routes.MapGet("/retries", Retries.Get);
+        routes.MapGet("/{groupName}/{name}", Subscription.Get);
     }
 }

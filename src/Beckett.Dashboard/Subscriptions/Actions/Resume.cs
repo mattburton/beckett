@@ -6,14 +6,7 @@ namespace Beckett.Dashboard.Subscriptions.Actions;
 
 public static class Resume
 {
-    public static RouteGroupBuilder ResumeRoute(this RouteGroupBuilder builder)
-    {
-        builder.MapPost("/subscriptions/{groupName}/{name}/resume", Handler).DisableAntiforgery();
-
-        return builder;
-    }
-
-    private static async Task<IResult> Handler(
+    public static async Task<IResult> Post(
         HttpContext context,
         string groupName,
         string name,
