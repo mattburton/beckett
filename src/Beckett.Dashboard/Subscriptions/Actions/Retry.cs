@@ -5,14 +5,7 @@ namespace Beckett.Dashboard.Subscriptions.Actions;
 
 public static class Retry
 {
-    public static RouteGroupBuilder RetryRoute(this RouteGroupBuilder builder)
-    {
-        builder.MapPost("/subscriptions/checkpoints/{id:long}/retry", Handler);
-
-        return builder;
-    }
-
-    private static async Task<IResult> Handler(
+    public static async Task<IResult> Post(
         HttpContext context,
         long id,
         IRetryClient retryClient,

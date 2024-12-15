@@ -1,0 +1,127 @@
+
+@inherits Component<Failed.ViewModel>
+@layout Layout
+
+<div class="p-2 bg-body-tertiary d-flex justify-content-between align-items-center">
+  <ul class="nav nav-pills">
+    <li class="nav-item">
+      <a class="nav-link" href="@Dashboard.Prefix/subscriptions">Subscriptions</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Dashboard.Prefix/subscriptions/lagging">Lagging</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="@Dashboard.Prefix/subscriptions/retries">Retries</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link active" aria-current="page" href="@Dashboard.Prefix/subscriptions/failed">Failed</a>
+    </li>
+  </ul>
+  <Paging ViewModel="Model"></Paging>
+</div>
+
+<div class="p-2 pt-0"
+     hx-get="@Model.CurrentLink()"
+     hx-trigger="@(Model.Page > 1 ? "false" : "every 10s [enableAutoReload()]")"
+     hx-select="#list-view"
+     hx-swap="innerHTML">
+  <table id="list-view" class="table table-striped">
+    <thead>
+    <tr>
+      <th style="width: 1em;">
+        <input type="checkbox" id="select-all" onclick="selectAll()" />
+      </th>
+      <th style="width: 16em;">
+        <div class="d-flex align-items-end" style="height: 2.25em;">
+          <div class="hide-for-bulk-controls">Group Name</div>
+          <a href="#"
+             class="d-none btn btn-sm btn-primary bulk-controls mt-1"
+             title="Retry Selected"
+             hx-post="@Dashboard.Prefix/subscriptions/actions/bulk-retry"
+             hx-include="[name=id]">
+            Retry Selected
+          </a>
+          <a href="#"
+             class="d-none btn btn-sm btn-danger bulk-controls mt-1 ms-1"
+             title="Skip Selected"
+             hx-post="@Dashboard.Prefix/subscriptions/actions/bulk-skip"
+             hx-include="[name=id]">
+            Skip Selected
+          </a>
+        </div>
+      </th>
+      <th>Name</th>
+      <th>Stream Name</th>
+      <th style="width: 12em;">Stream Position</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach(var checkpoint in Model.Failures)
+    {
+      <tr>
+        <td>
+          <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id" />
+        </td>
+        <td>@checkpoint.GroupName</td>
+        <td>@checkpoint.Name</td>
+        <td>
+          <a href="@Dashboard.Prefix/subscriptions/checkpoints/@checkpoint.Id">@checkpoint.StreamName</a>
+        </td>
+        <td>@checkpoint.StreamPosition</td>
+      </tr>
+    }
+    @if (Model.Failures.Count == 0)
+    {
+      <tr>
+        <td colspan="5">
+          No failures found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
+
+@code {
+
+  public static async Task<IResult> Get(
+    string? query,
+    int? page,
+    int? pageSize,
+    IDashboard dashboard,
+    CancellationToken cancellationToken
+  )
+  {
+    var pageParameter = page.ToPageParameter();
+    var pageSizeParameter = pageSize.ToPageSizeParameter();
+
+    var result = await dashboard.Subscriptions.GetFailed(
+      query,
+      pageParameter,
+      pageSizeParameter,
+      cancellationToken
+    );
+
+    return Results.Extensions.Render<Failed>(
+      new ViewModel(
+        result.Failures,
+        query,
+        pageParameter,
+        pageSizeParameter,
+        result.TotalResults
+      )
+    );
+  }
+
+  public record ViewModel(
+    List<GetFailedResult.Failure> Failures,
+    string? Query,
+    int Page,
+    int PageSize,
+    int TotalResults
+  ) : IPagedViewModel
+  {
+    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions/failed?page={{0}}&pageSize={{1}}&query={{2}}";
+  }
+
+}

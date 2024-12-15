@@ -1,0 +1,16 @@
+@inherits Component<Retries.ViewModel>
+
+@Model.Value
+
+@code {
+
+  public static async Task<IResult> Get(IDashboard dashboard, CancellationToken cancellationToken)
+  {
+    var result = await dashboard.Metrics.GetSubscriptionRetryCount(cancellationToken);
+
+    return Results.Extensions.Render<Retries>(new ViewModel(result));
+  }
+
+  public record ViewModel(long Value);
+
+}

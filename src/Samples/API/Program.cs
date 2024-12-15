@@ -24,6 +24,8 @@ try
 
     builder.AddBeckett().WithClientConfigurationFrom(typeof(TodoList.TodoList).Assembly);
 
+    builder.Services.AddBeckettDashboard();
+
     builder.Services.Configure<JsonOptions>(
         options =>
         {

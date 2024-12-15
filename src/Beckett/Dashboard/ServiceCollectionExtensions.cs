@@ -12,6 +12,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDashboardMessageStore, DashboardMessageStore>();
         services.AddSingleton<IDashboardMetrics, DashboardMetrics>();
         services.AddSingleton<IDashboardSubscriptions, DashboardSubscriptions>();
-        services.AddSingleton<IDashboard, Dashboard>();
+        services.AddSingleton<IDashboard, DefaultDashboard>();
     }
 }

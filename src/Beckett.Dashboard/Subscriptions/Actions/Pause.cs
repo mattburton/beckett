@@ -6,14 +6,7 @@ namespace Beckett.Dashboard.Subscriptions.Actions;
 
 public static class Pause
 {
-    public static RouteGroupBuilder PauseRoute(this RouteGroupBuilder builder)
-    {
-        builder.MapPost("/subscriptions/{groupName}/{name}/pause", Handler).DisableAntiforgery();
-
-        return builder;
-    }
-
-    private static async Task<IResult> Handler(
+    public static async Task<IResult> Post(
         HttpContext context,
         string groupName,
         string name,

@@ -6,14 +6,7 @@ namespace Beckett.Dashboard.Subscriptions.Actions;
 
 public static class BulkSkip
 {
-    public static RouteGroupBuilder BulkSkipRoute(this RouteGroupBuilder builder)
-    {
-        builder.MapPost("/subscriptions/checkpoints/bulk-skip", Handler).DisableAntiforgery();
-
-        return builder;
-    }
-
-    private static async Task<IResult> Handler(
+    public static async Task<IResult> Post(
         HttpContext context,
         [FromForm(Name = "id")] long[] ids,
         IRetryClient retryClient,
