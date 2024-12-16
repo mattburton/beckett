@@ -9,8 +9,50 @@ public interface ICategorySubscriptionBuilder
     /// </summary>
     /// <typeparam name="TMessage">The message type to subscribe to for this category</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
-    ICategorySubscriptionBuilder<TMessage> Message<TMessage>();
+    IMessageSubscriptionTypedBuilder<TMessage> Message<TMessage>();
 
+    /// <summary>
+    /// Subscribe to a specific message type within this category. When this message type is read from the global stream
+    /// your subscription will be invoked. You can configure multiple message types for a single subscription as well
+    /// using the fluent builder returned by this method.
+    /// </summary>
+    /// <param name="messageType">The message type to subscribe to for this category</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    IMessageSubscriptionUntypedBuilder Message(Type messageType);
+
+    /// <summary>
+    /// Subscribe to multiple message types within this category. When any of these types are read from the global
+    /// stream your subscription will be invoked.
+    /// </summary>
+    /// <param name="messageTypes">The message types to subscribe to for this category</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    IMessageSubscriptionUntypedBuilder Messages(IEnumerable<Type> messageTypes);
+
+    /// <summary>
+    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
+    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
+    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
+    /// well. Any exceptions thrown by the handler will result in Beckett retrying the subscription based on its
+    /// configuration.
+    /// </summary>
+    /// <typeparam name="THandler">Handler type</typeparam>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder Handler<THandler>() where THandler : IMessageHandler;
+
+    /// <summary>
+    /// Configure the batch handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
+    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
+    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
+    /// well. Any exceptions thrown by the handler will result in Beckett retrying the subscription based on its
+    /// configuration.
+    /// </summary>
+    /// <typeparam name="THandler">Handler type</typeparam>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder BatchHandler<THandler>() where THandler : IMessageBatchHandler;
+}
+
+public interface ICategorySubscriptionUntypedBuilder
+{
     /// <summary>
     /// Subscribe to a specific message type within this category. When this message type is read from the global stream
     /// your subscription will be invoked. You can configure multiple message types for a single subscription as well
@@ -21,158 +63,32 @@ public interface ICategorySubscriptionBuilder
     ICategorySubscriptionBuilder Message(Type messageType);
 
     /// <summary>
-    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
-    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
-    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
-    /// well. The handler is registered as a func that takes <see cref="IMessageContext"/> and
-    /// <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/> as the result. Any exceptions thrown
-    /// by the handler will result in Beckett retrying the subscription based on its configuration.
+    /// Subscribe to multiple message types within this category. When any of these types are read from the global
+    /// stream your subscription will be invoked.
     /// </summary>
-    /// <param name="handler">Handler func</param>
-    /// <typeparam name="THandler">Handler type</typeparam>
+    /// <param name="messageTypes">The message types to subscribe to for this category</param>
     /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandler>(
-        Func<THandler, IMessageContext, CancellationToken, Task> handler
-    );
-
-    /// <summary>
-    /// Configure the handler for this subscription, specifying the service type and the implementation type. This can
-    /// be used in scenarios where your handlers all implement a shared interface, and you are dynamically registering
-    /// subscriptions. Using this method you can supply a typed handler function even though you only know the
-    /// subscription type that is being registered. The handler implementation type must be a registered service in the
-    /// host as it will be resolved within a scope surrounding the execution of the handler itself. Beckett will perform
-    /// a diagnostic check at startup to ensure that the handler has been registered as well. The handler is registered
-    /// as a func that takes <see cref="IMessageContext"/> and <see cref="CancellationToken"/> as inputs and returns a
-    /// <see cref="Task"/> as the result. Any exceptions thrown by the handler will result in Beckett retrying the
-    /// subscription based on its configuration.
-    /// </summary>
-    /// <param name="handler">Handler func</param>
-    /// <param name="handlerImplementationType"></param>
-    /// <typeparam name="THandlerServiceType">Handler service type</typeparam>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandlerServiceType>(
-        Func<THandlerServiceType, IMessageContext, CancellationToken, Task> handler,
-        Type handlerImplementationType
-    );
+    ICategorySubscriptionBuilder Messages(IEnumerable<Type> messageTypes);
 
     /// <summary>
     /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
     /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
     /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
-    /// well. The handler is registered as a func that takes a batch of messages and <see cref="CancellationToken"/> as
-    /// inputs and returns a <see cref="Task"/> as the result. Any exceptions thrown by the handler will result in
-    /// Beckett retrying the subscription based on its configuration.
+    /// well. Any exceptions thrown by the handler will result in Beckett retrying the subscription based on its
+    /// configuration.
     /// </summary>
-    /// <param name="handler">Handler func</param>
     /// <typeparam name="THandler">Handler type</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandler>(
-        Func<THandler, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler
-    );
+    ISubscriptionConfigurationBuilder Handler<THandler>() where THandler : IMessageHandler;
 
     /// <summary>
-    /// Configure the handler for this subscription, specifying the service type and the implementation type. This can
-    /// be used in scenarios where your handlers all implement a shared interface, and you are dynamically registering
-    /// subscriptions. Using this method you can supply a typed handler function even though you only know the
-    /// subscription type that is being registered. The handler implementation type must be a registered service in the
-    /// host as it will be resolved within a scope surrounding the execution of the handler itself. Beckett will perform
-    /// a diagnostic check at startup to ensure that the handler has been registered as well. The handler is registered
-    /// as a func that takes a batch of messages and <see cref="CancellationToken"/> as inputs and returns a
-    /// <see cref="Task"/> as the result. Any exceptions thrown by the handler will result in Beckett retrying the
-    /// subscription based on its configuration.
-    /// </summary>
-    /// <param name="handler">Handler func</param>
-    /// <param name="handlerImplementationType"></param>
-    /// <typeparam name="THandlerServiceType">Handler service type</typeparam>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandlerServiceType>(
-        Func<THandlerServiceType, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler,
-        Type handlerImplementationType
-    );
-}
-
-public interface ICategorySubscriptionBuilder<out TMessage>
-{
-    /// <summary>
-    /// Subscribe to a specific message type within this category. When this message type is read from the global stream
-    /// your subscription will be invoked. You can configure multiple message types for a single subscription as well
-    /// using the fluent builder returned by this method.
-    /// </summary>
-    /// <typeparam name="T">The message type to subscribe to for this category</typeparam>
-    /// <returns>Builder to further configure the subscription</returns>
-    ICategorySubscriptionBuilder<T> Message<T>();
-
-    /// <summary>
-    /// <para>
-    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
+    /// Configure the batch handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
     /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
     /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
-    /// well. The handler is registered as a func that takes <typeparamref name="TMessage"/> and
-    /// <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/> as the result. Any exceptions thrown
-    /// by the handler will result in Beckett retrying the subscription based on its configuration.
-    /// </para>
-    /// <para>
-    /// Note that this handler registration is strongly typed in terms of the message type it handles. As such only one
-    /// message type can be configured for this subscription. If multiple message types have been configured an
-    /// exception will be thrown and the host will fail to start.
-    /// </para>
+    /// well. Any exceptions thrown by the handler will result in Beckett retrying the subscription based on its
+    /// configuration.
     /// </summary>
-    /// <param name="handler">Handler func</param>
     /// <typeparam name="THandler">Handler type</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandler>(Func<THandler, TMessage, CancellationToken, Task> handler);
-
-    /// <summary>
-    /// <para>
-    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
-    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
-    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
-    /// well. The handler is registered as a func that takes <typeparamref name="TMessage"/>,
-    /// <see cref="IMessageContext"/> and <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/>
-    /// as the result. The <see cref="IMessageContext"/> is useful to access the message context - stream position,
-    /// global position, etc... as well as the message metadata. Any exceptions thrown by the handler will result in
-    /// Beckett retrying the subscription based on its configuration.
-    /// </para>
-    /// <para>
-    /// Note that this handler registration is strongly typed in terms of the message type it handles. As such only one
-    /// message type can be configured for this subscription. If multiple message types have been configured an
-    /// exception will be thrown and the host will fail to start.
-    /// </para>
-    /// </summary>
-    /// <param name="handler">Handler func</param>
-    /// <typeparam name="THandler">Handler type</typeparam>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandler>(
-        Func<THandler, TMessage, IMessageContext, CancellationToken, Task> handler
-    );
-
-    /// <summary>
-    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
-    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
-    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
-    /// well. The handler is registered as a func that takes <see cref="IMessageContext"/> and
-    /// <see cref="CancellationToken"/> as inputs and returns a <see cref="Task"/> as the result. Any exceptions thrown
-    /// by the handler will result in Beckett retrying the subscription based on its configuration.
-    /// </summary>
-    /// <param name="handler">Handler func</param>
-    /// <typeparam name="THandler">Handler type</typeparam>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandler>(
-        Func<THandler, IMessageContext, CancellationToken, Task> handler
-    );
-
-    /// <summary>
-    /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
-    /// registered service in the host as it will be resolved within a scope surrounding the execution of the handler
-    /// itself. Beckett will perform a diagnostic check at startup to ensure that the handler has been registered as
-    /// well. The handler is registered as a func that takes a batch of messages and <see cref="CancellationToken"/> as
-    /// inputs and returns a <see cref="Task"/> as the result. Any exceptions thrown by the handler will result in
-    /// Beckett retrying the subscription based on its configuration.
-    /// </summary>
-    /// <param name="handler">Handler func</param>
-    /// <typeparam name="THandler">Handler type</typeparam>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Handler<THandler>(
-        Func<THandler, IReadOnlyList<IMessageContext>, CancellationToken, Task> handler
-    );
+    ISubscriptionConfigurationBuilder BatchHandler<THandler>() where THandler : IMessageBatchHandler;
 }

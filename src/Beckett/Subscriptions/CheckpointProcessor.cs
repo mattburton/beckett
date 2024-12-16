@@ -36,7 +36,7 @@ public class CheckpointProcessor(
         {
             startingStreamPosition = checkpoint.StreamPosition;
 
-            if (!subscription.IsBatchHandler)
+            if (!subscription.BatchHandler)
             {
                 batchSize = 1;
             }
@@ -155,7 +155,7 @@ public class CheckpointProcessor(
                 return NoMessages.Instance;
             }
 
-            if (subscription.IsBatchHandler)
+            if (subscription.BatchHandler)
             {
                 return await DispatchMessageBatchToHandler(
                     checkpoint,
@@ -241,18 +241,19 @@ public class CheckpointProcessor(
             );
         }
 
-        if (subscription.HandlerFunction == null)
-        {
-            throw new InvalidOperationException(
-                $"Subscription handler function is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
-            );
-        }
-
         using var scope = serviceProvider.CreateScope();
 
         var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
 
-        await subscription.HandlerFunction(handler, messageContext, cancellationToken);
+        switch (handler)
+        {
+            case IMessageHandler instance:
+                await instance.Handle(messageContext, cancellationToken);
+                break;
+            case IMessageHandlerAdapter adapter:
+                await adapter.Handle(messageContext, cancellationToken);
+                break;
+        }
     }
 
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
@@ -271,14 +272,7 @@ public class CheckpointProcessor(
             if (subscription.HandlerType == null)
             {
                 throw new InvalidOperationException(
-                    $"Subscription handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
-                );
-            }
-
-            if (subscription.BatchHandlerFunction == null)
-            {
-                throw new InvalidOperationException(
-                    $"Subscription batch handler function is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
+                    $"Subscription batch handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
                 );
             }
 
@@ -286,7 +280,14 @@ public class CheckpointProcessor(
 
             var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
 
-            await subscription.BatchHandlerFunction(handler, messageBatch, cancellationToken);
+            if (handler is not IMessageBatchHandler batchHandler)
+            {
+                throw new InvalidOperationException(
+                    $"Invalid batch handler type for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
+                );
+            }
+
+            await batchHandler.Handle(messageBatch, cancellationToken);
 
             return new Success(messages[^1].StreamPosition);
         }

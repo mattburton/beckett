@@ -5,7 +5,7 @@ using TodoList.CreateList;
 
 namespace TodoList.Notifications;
 
-public class NotificationHandler(ILogger<NotificationHandler> logger)
+public class NotificationHandler(ILogger<NotificationHandler> logger) : IMessageHandler
 {
     public Task Handle(IMessageContext context, CancellationToken _)
     {

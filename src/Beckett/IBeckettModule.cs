@@ -3,36 +3,23 @@ using System.Reflection;
 namespace Beckett;
 
 /// <summary>
-/// Beckett modules provide a way to manage configuration for each application module. They support a client-server
-/// architecture allowing you to supply separate client and server configuration for each module, as well as shared
-/// message type configuration which is always applied regardless of the mode of operation. Modules can be configured
-/// explicitly via <see cref="BeckettConfigurationExtensions.WithClientConfiguration{T}"/> and
-/// <see cref="BeckettConfigurationExtensions.WithServerConfiguration{T}"/> or can be discovered using assembly scanning
-/// via <see cref="BeckettConfigurationExtensions.WithClientConfigurationFrom"/> and
-/// <see cref="BeckettConfigurationExtensions.WithServerConfigurationFrom"/> where you specify one or more assemblies to
-/// scan for <see cref="IBeckettModule"/> implementations.
+/// Beckett modules provide a way to manage configuration for each application module. Message types are configured
+/// separately from subscriptions to permit client-server architectures where only the message types are configured on
+/// the client, and message types + subscriptions on the server.
 /// </summary>
 public interface IBeckettModule
 {
     /// <summary>
-    /// Message type configuration for the module. This method will be run for both client and server configurations.
+    /// Message type configuration for the module. This method will be run for both client and server profiles.
     /// </summary>
     /// <param name="builder"></param>
     void MessageTypes(IBeckettBuilder builder);
 
     /// <summary>
-    /// Client-specific configuration for the module. In a client-server architecture, for example API + Worker, this
-    /// method would be used to configure the system as needed to run as a client.
+    /// Subscription configuration for the module. This method will only be run for server profiles.
     /// </summary>
     /// <param name="builder"></param>
-    void ClientConfiguration(IBeckettBuilder builder);
-
-    /// <summary>
-    /// Server-specific configuration for the module. In a client-server architecture, for example API + Worker, this
-    /// method would be used to configure the system as needed to run as a server.
-    /// </summary>
-    /// <param name="builder"></param>
-    void ServerConfiguration(IBeckettBuilder builder);
+    void Subscriptions(IBeckettBuilder builder);
 }
 
 public static class BeckettConfigurationExtensions
@@ -40,31 +27,29 @@ public static class BeckettConfigurationExtensions
     private static readonly Type ModuleType = typeof(IBeckettModule);
 
     /// <summary>
-    /// Apply message type and client configuration from the specified <see cref="IBeckettModule"/>
+    /// Configure message types using the specified <see cref="IBeckettModule"/>
     /// </summary>
     /// <param name="builder"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public static IBeckettBuilder WithClientConfiguration<T>(this IBeckettBuilder builder)
+    public static IBeckettBuilder WithMessageTypes<T>(this IBeckettBuilder builder)
         where T : IBeckettModule, new()
     {
         var module = new T();
 
         module.MessageTypes(builder);
 
-        module.ClientConfiguration(builder);
-
         return builder;
     }
 
     /// <summary>
-    /// Scan the provided assemblies for <see cref="IBeckettModule"/> implementations and apply message type and client
-    /// configuration for each one found
+    /// Scan the provided assemblies for <see cref="IBeckettModule"/> implementations and configure message types for
+    /// each module
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="assemblies"></param>
     /// <returns></returns>
-    public static IBeckettBuilder WithClientConfigurationFrom(
+    public static IBeckettBuilder WithMessageTypesFrom(
         this IBeckettBuilder builder,
         params Assembly[] assemblies
     )
@@ -85,8 +70,6 @@ public static class BeckettConfigurationExtensions
                 }
 
                 module.MessageTypes(builder);
-
-                module.ClientConfiguration(builder);
             }
         }
 
@@ -94,31 +77,31 @@ public static class BeckettConfigurationExtensions
     }
 
     /// <summary>
-    /// Apply message type and server configuration from the specified <see cref="IBeckettModule"/>
+    /// Configure message types and subscriptions from the specified <see cref="IBeckettModule"/>
     /// </summary>
     /// <param name="builder"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public static IBeckettBuilder WithServerConfiguration<T>(this IBeckettBuilder builder)
+    public static IBeckettBuilder WithSubscriptions<T>(this IBeckettBuilder builder)
         where T : IBeckettModule, new()
     {
         var module = new T();
 
         module.MessageTypes(builder);
 
-        module.ServerConfiguration(builder);
+        module.Subscriptions(builder);
 
         return builder;
     }
 
     /// <summary>
-    /// Scan the provided assemblies for <see cref="IBeckettModule"/> implementations and apply message type and server
-    /// configuration for each one found
+    /// Scan the provided assemblies for <see cref="IBeckettModule"/> implementations and configure message types and
+    /// subscriptions for each module
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="assemblies"></param>
     /// <returns></returns>
-    public static IBeckettBuilder WithServerConfigurationFrom(
+    public static IBeckettBuilder WithSubscriptionsFrom(
         this IBeckettBuilder builder,
         params Assembly[] assemblies
     )
@@ -140,7 +123,7 @@ public static class BeckettConfigurationExtensions
 
                 module.MessageTypes(builder);
 
-                module.ServerConfiguration(builder);
+                module.Subscriptions(builder);
             }
         }
 

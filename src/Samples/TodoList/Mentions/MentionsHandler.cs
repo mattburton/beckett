@@ -3,25 +3,25 @@ using TodoList.AddItem;
 
 namespace TodoList.Mentions;
 
-public partial class MentionsHandler(IMessageStore messageStore)
+public partial class MentionsHandler(IMessageStore messageStore) : IMessageHandler<TodoListItemAdded>
 {
-    public async Task Handle(TodoListItemAdded e, CancellationToken cancellationToken)
+    public async Task Handle(TodoListItemAdded message, IMessageContext context, CancellationToken cancellationToken)
     {
-        if (!e.Item.Contains('@'))
+        if (!message.Item.Contains('@'))
         {
             return;
         }
 
-        var username = Username().Match(e.Item).Value.TrimStart('@');
+        var username = Username().Match(message.Item).Value.TrimStart('@');
 
-        var followUpItem = e.Item.Replace("@", "");
+        var followUpItem = message.Item.Replace("@", "");
 
         var item = $"Hi {username} - please follow up on {followUpItem}";
 
         await messageStore.AppendToStream(
-            TodoList.StreamName(e.TodoListId),
+            TodoList.StreamName(message.TodoListId),
             ExpectedVersion.StreamExists,
-            e with { Item = item },
+            message with { Item = item },
             cancellationToken
         );
     }

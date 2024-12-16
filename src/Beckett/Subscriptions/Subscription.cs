@@ -7,10 +7,9 @@ public class Subscription(string name)
     internal string Name { get; } = name;
     internal string? Category { get; set; }
     internal HashSet<string> MessageTypes { get; } = [];
+    internal bool BatchHandler { get; set; } = false;
     internal Type? HandlerType { get; set; }
     internal string? HandlerName { get; set; }
-    internal Func<object, object, CancellationToken, Task>? HandlerFunction { get; set; }
-    internal Func<object, IReadOnlyList<IMessageContext>, CancellationToken, Task>? BatchHandlerFunction { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
     internal int Priority { get; set; } = int.MaxValue;
@@ -18,8 +17,6 @@ public class Subscription(string name)
     internal bool IsCategoryOnly => Category != null && MessageTypes.Count == 0;
 
     internal bool IsMessageTypesOnly => Category == null && MessageTypes.Count > 0;
-
-    internal bool IsBatchHandler => BatchHandlerFunction != null;
 
     internal bool CategoryMatches(string streamName) => Category != null && streamName.StartsWith(Category);
 
@@ -33,7 +30,7 @@ public class Subscription(string name)
 
     internal void EnsureHandlerIsConfigured()
     {
-        if (HandlerFunction == null && BatchHandlerFunction == null)
+        if (HandlerType == null)
         {
             throw new InvalidOperationException($"The subscription {Name} does not have a handler configured.");
         }

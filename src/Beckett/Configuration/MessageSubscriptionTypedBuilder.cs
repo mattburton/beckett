@@ -2,33 +2,16 @@ using Beckett.Subscriptions;
 
 namespace Beckett.Configuration;
 
-public class CategorySubscriptionBuilder(Subscription subscription) : ICategorySubscriptionBuilder
+public class MessageSubscriptionTypedBuilder<T>(Subscription subscription) : IMessageSubscriptionTypedBuilder<T>
 {
-    public IMessageSubscriptionTypedBuilder<TMessage> Message<TMessage>()
+    public IMessageSubscriptionUntypedBuilder And<TMessage>()
     {
         subscription.RegisterMessageType<TMessage>();
 
-        return new MessageSubscriptionTypedBuilder<TMessage>(subscription);
-    }
-
-    public IMessageSubscriptionUntypedBuilder Message(Type messageType)
-    {
-        subscription.RegisterMessageType(messageType);
-
         return new MessageSubscriptionUntypedBuilder(subscription);
     }
 
-    public IMessageSubscriptionUntypedBuilder Messages(IEnumerable<Type> messageTypes)
-    {
-        foreach (var messageType in messageTypes)
-        {
-            subscription.RegisterMessageType(messageType);
-        }
-
-        return new MessageSubscriptionUntypedBuilder(subscription);
-    }
-
-    public ISubscriptionConfigurationBuilder Handler<THandler>() where THandler : IMessageHandler
+    public ISubscriptionConfigurationBuilder Handler<THandler>() where THandler : IMessageHandler<T>
     {
         var handlerType = typeof(THandler);
 

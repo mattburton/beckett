@@ -28,7 +28,7 @@ try
 
             options.Subscriptions.MaxRetryCount<TerminalException>(0);
         }
-    ).WithServerConfigurationFrom(typeof(TodoList.TodoList).Assembly);
+    ).WithSubscriptionsFrom(typeof(TodoList.TodoList).Assembly);
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("todo-list-worker"))
