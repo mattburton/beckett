@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Beckett.Dashboard\Beckett.Dashboard.csproj" />
+    <ProjectReference Include="..\..\..\src\Beckett.Dashboard\Beckett.Dashboard.csproj" />
     <ProjectReference Include="..\TodoList\TodoList.csproj"/>
   </ItemGroup>
 

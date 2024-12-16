@@ -1,12 +1,13 @@
 {
   "private": true,
   "scripts": {
-    "api": "dotnet run --no-build --project src/Samples/API/API.csproj",
     "dump-schema": "./db/scripts/dump-schema.sh",
     "reset": "docker compose down -v && docker compose up -d",
     "prestart": "dotnet build",
-    "start": "concurrently --raw -k \"npm:api\" \"npm:worker\"",
-    "worker": "dotnet run --no-build --project src/Samples/Worker/Worker.csproj"
+    "start": "npm run todolist",
+    "todolist": "concurrently --raw -k \"npm:todolist:api\" \"npm:todolist:worker\"",
+    "todolist:api": "dotnet run --no-build --project samples/TodoList/API/API.csproj",
+    "todolist:worker": "dotnet run --no-build --project samples/TodoList/Worker/Worker.csproj"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
