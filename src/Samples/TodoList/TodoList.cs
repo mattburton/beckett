@@ -31,6 +31,6 @@ public class TodoList : IBeckettModule
 
         builder.AddSubscription("Notifications")
             .Category(Category)
-            .Handler<NotificationHandler>();
+            .Handler(typeof(NotificationHandler));
     }
 }

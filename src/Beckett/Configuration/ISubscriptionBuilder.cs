@@ -28,7 +28,7 @@ public interface ISubscriptionBuilder
     /// </summary>
     /// <typeparam name="TMessage">The message type to subscribe to</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
-    IMessageSubscriptionTypedBuilder<TMessage> Message<TMessage>();
+    IMessageSubscriptionBuilder<TMessage> Message<TMessage>();
 
     /// <summary>
     /// Subscribe your handler to a specific message type. When this message type is read from the global stream your
@@ -37,7 +37,7 @@ public interface ISubscriptionBuilder
     /// </summary>
     /// <param name="messageType">The message type to subscribe to</param>
     /// <returns>Builder to further configure the subscription</returns>
-    IMessageSubscriptionUntypedBuilder Message(Type messageType);
+    IMessageSubscriptionBuilder Message(Type messageType);
 
     /// <summary>
     /// Subscribe your handler to multiple message types. When any of these message types are read from the global
@@ -45,5 +45,13 @@ public interface ISubscriptionBuilder
     /// </summary>
     /// <param name="messageTypes">The message types to subscribe to</param>
     /// <returns>Builder to further configure the subscription</returns>
-    IMessageSubscriptionUntypedBuilder Messages(IEnumerable<Type> messageTypes);
+    IMessageSubscriptionBuilder Messages(params Type[] messageTypes) => Messages(messageTypes.AsEnumerable());
+
+    /// <summary>
+    /// Subscribe your handler to multiple message types. When any of these message types are read from the global
+    /// stream your subscription will be invoked.
+    /// </summary>
+    /// <param name="messageTypes">The message types to subscribe to</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    IMessageSubscriptionBuilder Messages(IEnumerable<Type> messageTypes);
 }

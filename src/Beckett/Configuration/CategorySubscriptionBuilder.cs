@@ -4,33 +4,43 @@ namespace Beckett.Configuration;
 
 public class CategorySubscriptionBuilder(Subscription subscription) : ICategorySubscriptionBuilder
 {
-    public IMessageSubscriptionTypedBuilder<TMessage> Message<TMessage>()
+    public IMessageSubscriptionBuilder<TMessage> Message<TMessage>()
     {
         subscription.RegisterMessageType<TMessage>();
 
-        return new MessageSubscriptionTypedBuilder<TMessage>(subscription);
+        return new MessageSubscriptionBuilder<TMessage>(subscription);
     }
 
-    public IMessageSubscriptionUntypedBuilder Message(Type messageType)
+    public IMessageSubscriptionBuilder Message(Type messageType)
     {
         subscription.RegisterMessageType(messageType);
 
-        return new MessageSubscriptionUntypedBuilder(subscription);
+        return new MessageSubscriptionBuilder(subscription);
     }
 
-    public IMessageSubscriptionUntypedBuilder Messages(IEnumerable<Type> messageTypes)
+    public IMessageSubscriptionBuilder Messages(IEnumerable<Type> messageTypes)
     {
         foreach (var messageType in messageTypes)
         {
             subscription.RegisterMessageType(messageType);
         }
 
-        return new MessageSubscriptionUntypedBuilder(subscription);
+        return new MessageSubscriptionBuilder(subscription);
     }
 
     public ISubscriptionConfigurationBuilder Handler<THandler>() where THandler : IMessageHandler
     {
         var handlerType = typeof(THandler);
+
+        return Handler(handlerType);
+    }
+
+    public ISubscriptionConfigurationBuilder Handler(Type handlerType)
+    {
+        if (!typeof(IMessageHandler).IsAssignableFrom(handlerType))
+        {
+            throw new ArgumentException($"Message handler {handlerType.FullName} does not implement {nameof(IMessageHandler)}");
+        }
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
@@ -41,6 +51,16 @@ public class CategorySubscriptionBuilder(Subscription subscription) : ICategoryS
     public ISubscriptionConfigurationBuilder BatchHandler<THandler>() where THandler : IMessageBatchHandler
     {
         var handlerType = typeof(THandler);
+
+        return BatchHandler(handlerType);
+    }
+
+    public ISubscriptionConfigurationBuilder BatchHandler(Type handlerType)
+    {
+        if (!typeof(IMessageBatchHandler).IsAssignableFrom(handlerType))
+        {
+            throw new ArgumentException($"Batch handler {handlerType.FullName} does not implement {nameof(IMessageBatchHandler)}");
+        }
 
         subscription.BatchHandler = true;
         subscription.HandlerType = handlerType;

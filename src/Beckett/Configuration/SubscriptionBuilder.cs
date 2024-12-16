@@ -11,27 +11,27 @@ public class SubscriptionBuilder(Subscription subscription) : ISubscriptionBuild
         return new CategorySubscriptionBuilder(subscription);
     }
 
-    public IMessageSubscriptionTypedBuilder<TMessage> Message<TMessage>()
+    public IMessageSubscriptionBuilder<TMessage> Message<TMessage>()
     {
         subscription.RegisterMessageType<TMessage>();
 
-        return new MessageSubscriptionTypedBuilder<TMessage>(subscription);
+        return new MessageSubscriptionBuilder<TMessage>(subscription);
     }
 
-    public IMessageSubscriptionUntypedBuilder Message(Type messageType)
+    public IMessageSubscriptionBuilder Message(Type messageType)
     {
         subscription.RegisterMessageType(messageType);
 
-        return new MessageSubscriptionUntypedBuilder(subscription);
+        return new MessageSubscriptionBuilder(subscription);
     }
 
-    public IMessageSubscriptionUntypedBuilder Messages(IEnumerable<Type> messageTypes)
+    public IMessageSubscriptionBuilder Messages(IEnumerable<Type> messageTypes)
     {
         foreach (var messageType in messageTypes)
         {
             subscription.RegisterMessageType(messageType);
         }
 
-        return new MessageSubscriptionUntypedBuilder(subscription);
+        return new MessageSubscriptionBuilder(subscription);
     }
 }
