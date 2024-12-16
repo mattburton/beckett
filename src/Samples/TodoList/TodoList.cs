@@ -20,21 +20,17 @@ public class TodoList : IBeckettModule
         builder.Map<TodoListCreated>("todo_list_created");
     }
 
-    public void ClientConfiguration(IBeckettBuilder builder)
-    {
-    }
-
-    public void ServerConfiguration(IBeckettBuilder builder)
+    public void Subscriptions(IBeckettBuilder builder)
     {
         builder.Services.AddSingleton<MentionsHandler>();
         builder.Services.AddSingleton<NotificationHandler>();
 
         builder.AddSubscription("Mentions")
             .Message<TodoListItemAdded>()
-            .Handler<MentionsHandler>(static (handler, message, token) => handler.Handle(message, token));
+            .Handler<MentionsHandler>();
 
         builder.AddSubscription("Notifications")
             .Category(Category)
-            .Handler<NotificationHandler>(static (handler, context, token) => handler.Handle(context, token));
+            .Handler<NotificationHandler>();
     }
 }

@@ -26,7 +26,7 @@ beckett.Map<InventoryAllocated>("inventory_allocated");
 //add subscription handler
 beckett.AddSubscription("order-item-inventory-allocation")
     .Message<OrderItemAdded>()
-    .Handler<OrderItemAddedHandler>(static (handler, message, token) => handler.Handle(message, token));
+    .Handler<OrderItemAddedHandler>();
 
 var host = builder.Build();
 
@@ -36,9 +36,9 @@ public record OrderItemAdded(Guid OrderId, Guid ProductId, int Quantity);
 
 public record InventoryAllocated(Guid ProductId, Guid OrderId, int Quantity);
 
-public class OrderItemAddedHandler(IMessageStore messageStore)
+public class OrderItemAddedHandler(IMessageStore messageStore) : IMessageHandler<OrderItemAdded>
 {
-    public async Task Handle(OrderItemAdded message, CancellationToken cancellationToken)
+    public async Task Handle(OrderItemAdded message, IMessageContext context, CancellationToken cancellationToken)
     {
         await messageStore.AppendToStream(
             $"inventory-{message.ProductId}",
