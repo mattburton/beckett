@@ -1,3 +1,4 @@
+using Beckett.Commands;
 using Beckett.Configuration;
 using Beckett.Dashboard;
 using Beckett.Database;
@@ -20,7 +21,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The .NET host service collection</param>
     /// <param name="configure">Action to configure Beckett options</param>
-    /// <returns>Beckett builder that can be used to configure individual application modules</returns>
+    /// <returns>Beckett builder that can be used to configure the application further</returns>
     public static IBeckettBuilder AddBeckett(
         this IServiceCollection services,
         Action<BeckettOptions>? configure = null
@@ -33,6 +34,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
 
         services.AddSingleton<IMessageStore, MessageStore>();
+
+        services.AddCommandSupport();
 
         services.AddDashboardSupport();
 
