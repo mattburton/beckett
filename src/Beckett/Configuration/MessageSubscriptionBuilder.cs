@@ -1,71 +1,79 @@
 using Beckett.Subscriptions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Beckett.Configuration;
 
-public class MessageSubscriptionBuilder<T>(Subscription subscription) : IMessageSubscriptionBuilder<T>
+public class MessageSubscriptionBuilder<T>(Subscription subscription, IServiceCollection services) : IMessageSubscriptionBuilder<T>
 {
     public IMessageSubscriptionBuilder And<TMessage>()
     {
         subscription.RegisterMessageType<TMessage>();
 
-        return new MessageSubscriptionBuilder(subscription);
+        return new MessageSubscriptionBuilder(subscription, services);
     }
 
-    public ISubscriptionConfigurationBuilder Handler<THandler>() where THandler : IMessageHandler<T>
+    public ISubscriptionSettingsBuilder Handler<THandler>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient) where THandler : IMessageHandler<T>
     {
         var handlerType = typeof(THandler);
+
+        services.TryAdd(new ServiceDescriptor(handlerType, handlerType, serviceLifetime));
 
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
 
-        return new SubscriptionConfigurationBuilder(subscription);
+        return new SubscriptionSettingsBuilder(subscription);
     }
 
-    public ISubscriptionConfigurationBuilder BatchHandler<THandler>() where THandler : IMessageBatchHandler
+    public ISubscriptionSettingsBuilder BatchHandler<THandler>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient) where THandler : IMessageBatchHandler
     {
         var handlerType = typeof(THandler);
+
+        services.TryAdd(new ServiceDescriptor(handlerType, handlerType, serviceLifetime));
 
         subscription.BatchHandler = true;
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
 
-        return new SubscriptionConfigurationBuilder(subscription);
+        return new SubscriptionSettingsBuilder(subscription);
     }
 }
 
-public class MessageSubscriptionBuilder(Subscription subscription) : IMessageSubscriptionBuilder
+public class MessageSubscriptionBuilder(Subscription subscription, IServiceCollection services) : IMessageSubscriptionBuilder
 {
     public IMessageSubscriptionBuilder And<TMessage>()
     {
         subscription.RegisterMessageType<TMessage>();
 
-        return new MessageSubscriptionBuilder(subscription);
+        return new MessageSubscriptionBuilder(subscription, services);
     }
 
     public IMessageSubscriptionBuilder And(Type messageType)
     {
         subscription.RegisterMessageType(messageType);
 
-        return new MessageSubscriptionBuilder(subscription);
+        return new MessageSubscriptionBuilder(subscription, services);
     }
 
-    public ISubscriptionConfigurationBuilder Handler<THandler>() where THandler : IMessageHandler
+    public ISubscriptionSettingsBuilder Handler<THandler>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient) where THandler : IMessageHandler
     {
         var handlerType = typeof(THandler);
 
         return Handler(handlerType);
     }
 
-    public ISubscriptionConfigurationBuilder Handler(Type handlerType)
+    public ISubscriptionSettingsBuilder Handler(Type handlerType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         if (!typeof(IMessageHandler).IsAssignableFrom(handlerType))
         {
             throw new ArgumentException($"Message handler {handlerType.FullName} does not implement {nameof(IMessageHandler)}");
         }
 
+        services.TryAdd(new ServiceDescriptor(handlerType, handlerType, serviceLifetime));
+
         subscription.HandlerType = handlerType;
         subscription.HandlerName = handlerType.FullName;
 
-        return new SubscriptionConfigurationBuilder(subscription);
+        return new SubscriptionSettingsBuilder(subscription);
     }
 }

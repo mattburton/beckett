@@ -10,16 +10,16 @@ namespace Beckett;
 public interface IBeckettModule
 {
     /// <summary>
-    /// Message type configuration for the module. This method will be run for both client and server profiles.
+    /// Message type configuration for the module.
     /// </summary>
     /// <param name="builder"></param>
-    void MessageTypes(IBeckettBuilder builder);
+    void MessageTypes(IMessageTypeBuilder builder);
 
     /// <summary>
-    /// Subscription configuration for the module. This method will only be run for server profiles.
+    /// Subscription configuration for the module.
     /// </summary>
     /// <param name="builder"></param>
-    void Subscriptions(IBeckettBuilder builder);
+    void Subscriptions(ISubscriptionBuilder builder);
 }
 
 public static class BeckettConfigurationExtensions

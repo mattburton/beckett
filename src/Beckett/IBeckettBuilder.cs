@@ -1,36 +1,13 @@
 using System.Text.Json.Nodes;
 using Beckett.Configuration;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Beckett;
 
-public interface IBeckettBuilder
+public interface IBeckettBuilder : IMessageTypeBuilder, ISubscriptionBuilder;
+
+public interface IMessageTypeBuilder
 {
-    /// <summary>
-    /// Host configuration to access application settings in your application module
-    /// </summary>
-    IConfiguration Configuration { get; }
-
-    /// <summary>
-    /// Host environment to access environment information in your application module
-    /// </summary>
-    IHostEnvironment Environment { get; }
-
-    /// <summary>
-    /// Host service collection to register additional dependencies required by your application module
-    /// </summary>
-    IServiceCollection Services { get; }
-
-    /// <summary>
-    /// Add a subscription to the subscription group hosted by this application and configure it using the resulting
-    /// <see cref="ISubscriptionBuilder"/>
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
-    ISubscriptionBuilder AddSubscription(string name);
-
     /// <summary>
     /// Explicitly map a message type to the name that will be stored as the type in the message store. When reading a
     /// message from the store Beckett will use the mapping during deserialization to map the message to the correct
@@ -64,4 +41,20 @@ public interface IBeckettBuilder
     /// <param name="newTypeName">The new type name</param>
     /// <param name="upcaster">The upcaster function</param>
     void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster);
+}
+
+public interface ISubscriptionBuilder
+{
+    /// <summary>
+    /// Host service collection to register additional dependencies required by the application module
+    /// </summary>
+    IServiceCollection Services { get; }
+
+    /// <summary>
+    /// Add a subscription to the subscription group hosted by this application and configure it using the resulting
+    /// <see cref="ISubscriptionConfigurationBuilder"/>
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    ISubscriptionConfigurationBuilder AddSubscription(string name);
 }

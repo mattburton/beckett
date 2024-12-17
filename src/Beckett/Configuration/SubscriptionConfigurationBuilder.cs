@@ -1,54 +1,38 @@
 using Beckett.Subscriptions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Configuration;
 
-public class SubscriptionConfigurationBuilder(Subscription subscription) : ISubscriptionConfigurationBuilder
+public class SubscriptionConfigurationBuilder(Subscription subscription, IServiceCollection services) : ISubscriptionConfigurationBuilder
 {
-    public ISubscriptionConfigurationBuilder HandlerName(string name)
+    public ICategorySubscriptionBuilder Category(string category)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        subscription.Category = category;
 
-        subscription.HandlerName = name;
-
-        return this;
+        return new CategorySubscriptionBuilder(subscription, services);
     }
 
-    public ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition)
+    public IMessageSubscriptionBuilder<TMessage> Message<TMessage>()
     {
-        subscription.StartingPosition = startingPosition;
+        subscription.RegisterMessageType<TMessage>();
 
-        return this;
+        return new MessageSubscriptionBuilder<TMessage>(subscription, services);
     }
 
-    public ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount)
+    public IMessageSubscriptionBuilder Message(Type messageType)
     {
-        if (maxRetryCount < 0)
+        subscription.RegisterMessageType(messageType);
+
+        return new MessageSubscriptionBuilder(subscription, services);
+    }
+
+    public IMessageSubscriptionBuilder Messages(IEnumerable<Type> messageTypes)
+    {
+        foreach (var messageType in messageTypes)
         {
-            throw new ArgumentException("The max retry count must be greater than or equal to 0", nameof(maxRetryCount));
+            subscription.RegisterMessageType(messageType);
         }
 
-        subscription.MaxRetriesByExceptionType[typeof(Exception)] = maxRetryCount;
-
-        return this;
-    }
-
-    public ISubscriptionConfigurationBuilder MaxRetryCount<TException>(int maxRetryCount)
-        where TException : Exception
-    {
-        if (maxRetryCount < 0)
-        {
-            throw new ArgumentException("The max retry count must be greater than or equal to 0", nameof(maxRetryCount));
-        }
-
-        subscription.MaxRetriesByExceptionType[typeof(TException)] = maxRetryCount;
-
-        return this;
-    }
-
-    public ISubscriptionConfigurationBuilder Priority(int priority)
-    {
-        subscription.Priority = priority;
-
-        return this;
+        return new MessageSubscriptionBuilder(subscription, services);
     }
 }

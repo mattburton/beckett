@@ -19,7 +19,7 @@ try
 
     await builder.AddTodoListDatabase();
 
-    builder.AddBeckett(
+    builder.Services.AddBeckett(
         options =>
         {
             options.WithSubscriptionGroup("TodoList");
