@@ -1,16 +1,13 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Beckett.Messages;
 
 public static class MessageSerializer
 {
-    internal static JsonSerializerOptions Options { get; private set; } = BuildJsonSerializerOptions();
+    internal static JsonSerializerOptions Options { get; private set; } = JsonSerializerOptions.Default;
 
     public static void Configure(JsonSerializerOptions options)
     {
-        options.TypeInfoResolverChain.Add(BeckettJsonSerializerContext.Default);
-
         Options = options;
     }
 
@@ -27,16 +24,4 @@ public static class MessageSerializer
             ? null
             : result.Data.Deserialize(messageType, Options);
     }
-
-    private static JsonSerializerOptions BuildJsonSerializerOptions()
-    {
-        var options = new JsonSerializerOptions(JsonSerializerOptions.Default);
-
-        options.TypeInfoResolverChain.Add(BeckettJsonSerializerContext.Default);
-
-        return options;
-    }
 }
-
-[JsonSerializable(typeof(Dictionary<string, string>))]
-public partial class BeckettJsonSerializerContext : JsonSerializerContext;
