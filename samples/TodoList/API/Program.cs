@@ -22,7 +22,7 @@ try
 
     await builder.AddTodoListDatabase();
 
-    builder.AddBeckett().WithMessageTypesFrom(typeof(TodoList.TodoList).Assembly);
+    builder.Services.AddBeckett().WithMessageTypesFrom(typeof(TodoList.TodoList).Assembly);
 
     builder.Services.AddBeckettDashboard();
 

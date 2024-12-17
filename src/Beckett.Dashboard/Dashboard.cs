@@ -23,7 +23,7 @@ public static class Dashboard
         services.AddRazorComponents();
     }
 
-    public static IEndpointRouteBuilder MapBeckettDashboard(
+    public static RouteGroupBuilder MapBeckettDashboard(
         this IEndpointRouteBuilder builder,
         string prefix,
         Action<DashboardOptions>? configure = null
@@ -44,7 +44,7 @@ public static class Dashboard
 
         RegisterRoutes(routes);
 
-        return builder;
+        return routes;
     }
 
     private static void RegisterRoutes(IEndpointRouteBuilder builder)

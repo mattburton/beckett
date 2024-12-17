@@ -11,11 +11,8 @@ await BeckettDatabase.Migrate(connectionString);
 //configure the data source with support for Beckett
 builder.Services.AddNpgsqlDataSource(connectionString, options => options.AddBeckett());
 
-//register the subscription handler in the container
-builder.Services.AddTransient<OrderItemAddedHandler>();
-
 //add Beckett support to the host for the InventoryAllocation subscription group
-var beckett = builder.AddBeckett(
+var beckett = builder.Services.AddBeckett(
     options => { options.WithSubscriptionGroup("InventoryAllocation"); }
 );
 

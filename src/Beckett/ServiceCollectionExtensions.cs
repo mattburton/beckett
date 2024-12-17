@@ -6,9 +6,7 @@ using Beckett.OpenTelemetry;
 using Beckett.Scheduling;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Retries;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Beckett;
 
@@ -20,97 +18,36 @@ public static class ServiceCollectionExtensions
     /// - <see cref="IMessageStore"/>, and so on. Subscription support must be enabled explicitly by supplying an action
     /// to configure Beckett options.
     /// </summary>
-    /// <param name="builder">The .NET host application builder</param>
-    /// <param name="configureOptions">Action to configure Beckett options</param>
+    /// <param name="services">The .NET host service collection</param>
+    /// <param name="configure">Action to configure Beckett options</param>
     /// <returns>Beckett builder that can be used to configure individual application modules</returns>
     public static IBeckettBuilder AddBeckett(
-        this IHostApplicationBuilder builder,
-        Action<BeckettOptions>? configureOptions = null
+        this IServiceCollection services,
+        Action<BeckettOptions>? configure = null
     )
     {
-        var options = builder.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
-                      new BeckettOptions();
+        var options = new BeckettOptions();
 
-        configureOptions?.Invoke(options);
+        configure?.Invoke(options);
 
-        builder.Services.AddSingleton(options);
+        services.AddSingleton(options);
 
-        builder.Services.AddSingleton<IMessageStore, MessageStore>();
+        services.AddSingleton<IMessageStore, MessageStore>();
 
-        builder.Services.AddDashboardSupport();
+        services.AddDashboardSupport();
 
-        builder.Services.AddMessageStorageSupport(options);
+        services.AddMessageStorageSupport(options);
 
-        builder.Services.AddOpenTelemetrySupport();
+        services.AddOpenTelemetrySupport();
 
-        builder.Services.AddPostgresSupport(options);
+        services.AddPostgresSupport(options);
 
-        builder.Services.AddRetrySupport(options);
+        services.AddRetrySupport(options);
 
-        builder.Services.AddScheduledMessageSupport(options);
+        services.AddScheduledMessageSupport(options);
 
-        builder.Services.AddSubscriptionSupport(options);
+        services.AddSubscriptionSupport(options);
 
-        return new BeckettBuilder(
-            builder.Configuration,
-            builder.Environment,
-            builder.Services
-        );
-    }
-
-    /// <summary>
-    /// Add Beckett support to the host. Without configuring any options Beckett will use the registered
-    /// <see cref="Npgsql.NpgsqlDataSource"/> and register those dependencies required to run in a client configuration
-    /// - <see cref="IMessageStore"/>, and so on. Subscription support must be enabled explicitly by supplying an action
-    /// to configure Beckett options.
-    /// </summary>
-    /// <param name="builder">The .NET host builder</param>
-    /// <param name="configureOptions">Configure Beckett options</param>
-    /// <param name="buildBeckett">Apply Beckett builders to configure individual application modules</param>
-    /// <returns></returns>
-    public static void AddBeckett(
-        this IHostBuilder builder,
-        Action<BeckettOptions>? configureOptions = null,
-        Action<IBeckettBuilder>? buildBeckett = null
-    )
-    {
-        builder.ConfigureServices(
-            (context, services) =>
-            {
-                var configuration = context.Configuration;
-                var environment = context.HostingEnvironment;
-
-                var options = context.Configuration.GetSection(BeckettOptions.SectionName).Get<BeckettOptions>() ??
-                              new BeckettOptions();
-
-                configureOptions?.Invoke(options);
-
-                services.AddSingleton(options);
-
-                services.AddSingleton<IMessageStore, MessageStore>();
-
-                services.AddDashboardSupport();
-
-                services.AddMessageStorageSupport(options);
-
-                services.AddOpenTelemetrySupport();
-
-                services.AddPostgresSupport(options);
-
-                services.AddRetrySupport(options);
-
-                services.AddScheduledMessageSupport(options);
-
-                services.AddSubscriptionSupport(options);
-
-                var beckettBuilder = new BeckettBuilder(
-                    configuration,
-                    environment,
-                    services
-                );
-
-                buildBeckett?.Invoke(beckettBuilder);
-            }
-        );
+        return new BeckettBuilder(services);
     }
 }

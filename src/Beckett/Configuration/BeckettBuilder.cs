@@ -1,30 +1,22 @@
 using System.Text.Json.Nodes;
 using Beckett.Messages;
 using Beckett.Subscriptions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Beckett.Configuration;
 
-public class BeckettBuilder(
-    IConfiguration configuration,
-    IHostEnvironment environment,
-    IServiceCollection services
-) : IBeckettBuilder
+public class BeckettBuilder(IServiceCollection services) : IBeckettBuilder
 {
-    public IConfiguration Configuration { get; } = configuration;
-    public IHostEnvironment Environment { get; } = environment;
     public IServiceCollection Services { get; } = services;
 
-    public ISubscriptionBuilder AddSubscription(string name)
+    public ISubscriptionConfigurationBuilder AddSubscription(string name)
     {
         if (!SubscriptionRegistry.TryAdd(name, out var subscription))
         {
             throw new InvalidOperationException($"There is already a subscription with the name {name}");
         }
 
-        return new SubscriptionBuilder(subscription);
+        return new SubscriptionConfigurationBuilder(subscription, Services);
     }
 
     public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
