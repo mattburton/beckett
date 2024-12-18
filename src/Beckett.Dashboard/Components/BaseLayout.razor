@@ -30,97 +30,31 @@
       display: none;
     }
   </style>
-  <script>
-    (function() {
-      const storedTheme = localStorage.getItem("theme");
-
-      if (storedTheme?.length) {
-        document.querySelector("html").setAttribute("data-bs-theme", storedTheme);
-
-        return;
-      }
-
-      if (document.querySelector("html").getAttribute("data-bs-theme") === "auto") {
-        function updateColorMode() {
-          document.querySelector("html").setAttribute(
-            "data-bs-theme",
-            window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-          );
-        }
-
-        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateColorMode);
-
-        updateColorMode();
-      }
-    })();
-  </script>
+  <ThemeBehavior></ThemeBehavior>
 </head>
 <body>
-<header>
-  <nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="@Dashboard.Prefix">@Dashboard.Options.Title</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <SectionOutlet SectionName="navbar" />
-        <button type="button" class="ms-2 btn btn-secondary" title="Toggle dark mode" onclick="changeColorMode()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-half" viewBox="0 0 16 16">
-            <path d="M8 15A7 7 0 1 0 8 1zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16"></path>
-          </svg>
+  <header>
+    <nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="@Dashboard.Prefix">@Dashboard.Options.Title</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
         </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <SectionOutlet SectionName="navbar" />
+          <button type="button" class="ms-2 btn btn-secondary" title="Toggle dark mode" onclick="changeColorMode()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-half" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 0 8 1zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16"></path>
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
-  </nav>
-</header>
-<main>
-  @Body
-</main>
-<script type="text/javascript">
-    const dateTimeFormatOptions = Intl.DateTimeFormat().resolvedOptions();
-
-    const options = {
-      timeZone: dateTimeFormatOptions.timeZone,
-      timeZoneName: dateTimeFormatOptions.timeZoneName,
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-      fractionalSecondDigits: 3
-    };
-
-    htmx.onLoad(function(content) {
-      transformTimestamps(content);
-
-      setupPopovers(content);
-    });
-
-    function transformTimestamps(content) {
-      content.querySelectorAll(".timestamp").forEach((element) => {
-        element.innerText = new Date(Date.parse(element.innerText)).toLocaleString(dateTimeFormatOptions.locale, options);
-        element.style = "display: inline";
-      });
-    }
-
-    function setupPopovers(content) {
-      content.querySelectorAll('[data-bs-toggle="popover"]').forEach((element) => new bootstrap.Popover(element));
-    }
-
-    function changeColorMode() {
-      const htmlElement = document.querySelector("html");
-
-      const theme = htmlElement.getAttribute("data-bs-theme");
-
-      const newTheme = theme === "dark" ? "light" : "dark";
-
-      htmlElement.setAttribute("data-bs-theme", newTheme);
-
-      localStorage.setItem("theme", newTheme);
-    }
-  </script>
+    </nav>
+  </header>
+  <main>
+    @Body
+  </main>
+  <GlobalBehavior></GlobalBehavior>
   <SectionOutlet SectionName="behaviors" />
 </body>
 </html>
