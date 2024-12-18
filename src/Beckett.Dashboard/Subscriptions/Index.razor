@@ -57,36 +57,15 @@
 
 @code {
 
-  public static async Task<IResult> Get(
-    int? page,
-    int? pageSize,
-    IDashboard dashboard,
-    CancellationToken cancellationToken
-  )
-  {
-    var pageParameter = page.ToPageParameter();
-    var pageSizeParameter = pageSize.ToPageSizeParameter();
+   public record ViewModel(
+     List<GetSubscriptionsResult.Subscription> Subscriptions,
+     string? Query,
+     int Page,
+     int PageSize,
+     int TotalResults
+   ) : IPagedViewModel
+   {
+     public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
+   }
 
-    var result = await dashboard.Subscriptions.GetSubscriptions(
-      pageParameter,
-      pageSizeParameter,
-      cancellationToken
-    );
-
-    return Results.Extensions.Render<Index>(
-      new ViewModel(result.Subscriptions, null, pageParameter, pageSizeParameter, result.TotalResults)
-    );
-  }
-
-  public record ViewModel(
-    List<GetSubscriptionsResult.Subscription> Subscriptions,
-    string? Query,
-    int Page,
-    int PageSize,
-    int TotalResults
-  ) : IPagedViewModel
-  {
-    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
-  }
-
-}
+ }

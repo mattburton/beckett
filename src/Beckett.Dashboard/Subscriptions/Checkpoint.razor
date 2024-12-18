@@ -166,13 +166,6 @@
 
 @code {
 
-  public static async Task<IResult> Get(long id, IDashboard dashboard, CancellationToken cancellationToken)
-  {
-    var result = await dashboard.Subscriptions.GetCheckpoint(id, cancellationToken);
-
-    return result == null ? Results.NotFound() : Results.Extensions.Render<Checkpoint>(new ViewModel(result));
-  }
-
   public record ViewModel(GetCheckpointResult Details);
 
 }

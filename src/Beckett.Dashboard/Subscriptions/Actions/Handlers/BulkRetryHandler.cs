@@ -1,21 +1,19 @@
 using Beckett.Subscriptions.Retries;
-using Microsoft.Extensions.Primitives;
+namespace Beckett.Dashboard.Subscriptions.Actions.Handlers;
 
-namespace Beckett.Dashboard.Subscriptions.Actions;
-
-public static class Retry
+public static class BulkRetryHandler
 {
     public static async Task<IResult> Post(
         HttpContext context,
-        long id,
+        [FromForm(Name = "id")] long[] ids,
         IRetryClient retryClient,
         CancellationToken cancellationToken
     )
     {
-        await retryClient.Retry(id, cancellationToken);
+        await retryClient.BulkRetry(ids, cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
-        context.Response.Headers.Append("HX-Trigger", new StringValues("retry_requested"));
+        context.Response.Headers.Append("HX-Trigger", new StringValues("bulk_retry_requested"));
 
         return Results.Ok();
     }

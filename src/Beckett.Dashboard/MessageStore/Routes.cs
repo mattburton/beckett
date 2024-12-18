@@ -1,3 +1,5 @@
+using Beckett.Dashboard.MessageStore.Handlers;
+
 namespace Beckett.Dashboard.MessageStore;
 
 public class Routes : IConfigureRoutes
@@ -11,11 +13,11 @@ public class Routes : IConfigureRoutes
 
         var routes = builder.MapGroup("/message-store");
 
-        routes.MapGet("/", Index.Get);
-        routes.MapGet("/categories/{category}", Streams.Get);
-        routes.MapGet("/categories/{category}/{streamName}", Messages.Get);
-        routes.MapGet("/correlated-by/{correlationId}", CorrelatedBy.Get);
-        routes.MapGet("/messages/{id}", Message.GetById);
-        routes.MapGet("/streams/{streamName}/{streamPosition:long}", Message.GetByStreamPosition);
+        routes.MapGet("/", IndexHandler.Get);
+        routes.MapGet("/categories/{category}", StreamsHandler.Get);
+        routes.MapGet("/categories/{category}/{streamName}", MessagesHandler.Get);
+        routes.MapGet("/correlated-by/{correlationId}", CorrelatedByHandler.Get);
+        routes.MapGet("/messages/{id}", MessageHandler.GetById);
+        routes.MapGet("/streams/{streamName}/{streamPosition:long}", MessageHandler.GetByStreamPosition);
     }
 }

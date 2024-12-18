@@ -1,3 +1,5 @@
+using Beckett.Dashboard.Subscriptions.Actions.Handlers;
+
 namespace Beckett.Dashboard.Subscriptions.Actions;
 
 public class Routes : IConfigureRoutes
@@ -6,12 +8,12 @@ public class Routes : IConfigureRoutes
     {
         var routes = builder.MapGroup("/subscriptions/actions");
 
-        routes.MapPost("/bulk-retry", BulkRetry.Post);
-        routes.MapPost("/bulk-skip", BulkSkip.Post);
-        routes.MapPost("/pause/{groupName}/{name}", Pause.Post);
-        routes.MapPost("/resume/{groupName}/{name}", Resume.Post);
-        routes.MapPost("/retry/{id:long}", Retry.Post);
-        routes.MapPost("/skip/{id:long}", Skip.Post);
+        routes.MapPost("/bulk-retry", BulkRetryHandler.Post);
+        routes.MapPost("/bulk-skip", BulkSkipHandler.Post);
+        routes.MapPost("/pause/{groupName}/{name}", PauseHandler.Post);
+        routes.MapPost("/resume/{groupName}/{name}", ResumeHandler.Post);
+        routes.MapPost("/retry/{id:long}", RetryHandler.Post);
+        routes.MapPost("/skip/{id:long}", SkipHandler.Post);
 
         routes.DisableAntiforgery();
     }
