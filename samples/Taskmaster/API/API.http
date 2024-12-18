@@ -1,0 +1,81 @@
+@base_url = http://localhost:5222/taskmaster
+
+### Create List
+
+POST {{base_url}}
+Content-Type: application/json
+
+{
+  "id": "{{$random.uuid}}",
+  "name": "{{$random.uuid}}"
+}
+> {%
+  client.global.set("id", response.body.id)
+%}
+
+### Add Task
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "task": "{{$random.uuid}}"
+}
+> {%
+  client.global.set("task", response.body.task)
+%}
+
+### Add Task w/Error (run twice)
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "task": "will return 409 on second attempt"
+}
+> {%
+  client.global.set("task", response.body.task)
+%}
+
+### Add Task w/Retry from NotificationHandler
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "task": "Retry"
+}
+> {%
+  client.global.set("task", response.body.task)
+%}
+
+### Add Task w/Failure from NotificationHandler
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "task": "Fail"
+}
+> {%
+  client.global.set("task", response.body.task)
+%}
+
+### Complete Task
+
+POST {{base_url}}/{{id}}/complete/{{task}}
+Content-Type: application/json
+
+### Add Task - CC User
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "task": "{{$random.uuid}} cc: @bob"
+}
+
+### Get List
+
+GET {{base_url}}/{{id}}
+Accept: application/json

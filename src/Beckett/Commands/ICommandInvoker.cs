@@ -9,7 +9,7 @@ public interface ICommandInvoker
     /// <param name="streamName">The name of the stream to use when executing the command</param>
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task Execute(string streamName, ICommand command, CancellationToken cancellationToken);
+    Task<CommandResult> Execute(string streamName, ICommand command, CancellationToken cancellationToken);
 
     /// <summary>
     /// Execute the command using state built from the specified stream. The resulting events from the command will be
@@ -19,7 +19,7 @@ public interface ICommandInvoker
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <typeparam name="TState">The state of the stream that can be used to make decisions in the command</typeparam>
-    Task Execute<TState>(string streamName, ICommand<TState> command, CancellationToken cancellationToken)
+    Task<CommandResult> Execute<TState>(string streamName, ICommand<TState> command, CancellationToken cancellationToken)
         where TState : class, IApply, new();
 
     /// <summary>
@@ -33,7 +33,7 @@ public interface ICommandInvoker
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <typeparam name="TResult">The result model that will be built from the state of the stream after the command executes</typeparam>
-    Task<TResult> Execute<TResult>(
+    Task<CommandResult<TResult>> Execute<TResult>(
         string streamName,
         ICommand command,
         CancellationToken cancellationToken
@@ -51,7 +51,7 @@ public interface ICommandInvoker
     /// <param name="cancellationToken">Cancellation token</param>
     /// <typeparam name="TState">The state of the stream that can be used to make decisions in the command</typeparam>
     /// <typeparam name="TResult">The result model that will be built from the state of the stream after the command executes</typeparam>
-    Task<TResult> Execute<TState, TResult>(
+    Task<CommandResult<TResult>> Execute<TState, TResult>(
         string streamName,
         ICommand<TState> command,
         CancellationToken cancellationToken
@@ -66,7 +66,7 @@ public interface ICommandInvoker
     /// <param name="command">The command to execute</param>
     /// <param name="options">Additional options to control the command execution process</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task Execute(string streamName, ICommand command, CommandOptions options, CancellationToken cancellationToken);
+    Task<CommandResult> Execute(string streamName, ICommand command, CommandOptions options, CancellationToken cancellationToken);
 
     /// <summary>
     /// Execute the command using state built from the specified stream. The resulting events from the command will be
@@ -78,7 +78,7 @@ public interface ICommandInvoker
     /// <param name="options">Additional options to control the command execution process</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <typeparam name="TState">The state of the stream that can be used to make decisions in the command</typeparam>
-    Task Execute<TState>(
+    Task<CommandResult> Execute<TState>(
         string streamName,
         ICommand<TState> command,
         CommandOptions<TState> options,
@@ -97,7 +97,7 @@ public interface ICommandInvoker
     /// <param name="options">Additional options to control the command execution process</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <typeparam name="TResult">The result model that will be built from the state of the stream after the command executes</typeparam>
-    Task<TResult> Execute<TResult>(
+    Task<CommandResult<TResult>> Execute<TResult>(
         string streamName,
         ICommand command,
         CommandOptions options,
@@ -117,7 +117,7 @@ public interface ICommandInvoker
     /// <param name="cancellationToken">Cancellation token</param>
     /// <typeparam name="TState">The state of the stream that can be used to make decisions in the command</typeparam>
     /// <typeparam name="TResult">The result model that will be built from the state of the stream after the command executes</typeparam>
-    Task<TResult> Execute<TState, TResult>(
+    Task<CommandResult<TResult>> Execute<TState, TResult>(
         string streamName,
         ICommand<TState> command,
         CommandOptions<TState> options,

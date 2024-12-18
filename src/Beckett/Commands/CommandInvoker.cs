@@ -2,18 +2,22 @@ namespace Beckett.Commands;
 
 public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
 {
-    public Task Execute(string streamName, ICommand command, CancellationToken cancellationToken)
+    public async Task<CommandResult> Execute(string streamName, ICommand command, CancellationToken cancellationToken)
     {
-        return ExecuteInternal(streamName, command, null, cancellationToken);
+        var stream = await ExecuteInternal(streamName, command, null, cancellationToken);
+
+        return new CommandResult(stream.StreamVersion);
     }
 
-    public Task Execute<TState>(string streamName, ICommand<TState> command, CancellationToken cancellationToken)
+    public async Task<CommandResult> Execute<TState>(string streamName, ICommand<TState> command, CancellationToken cancellationToken)
         where TState : class, IApply, new()
     {
-        return ExecuteInternal(streamName, command, null, cancellationToken);
+        var stream = await ExecuteInternal(streamName, command, null, cancellationToken);
+
+        return new CommandResult(stream.StreamVersion);
     }
 
-    public async Task<TResult> Execute<TResult>(
+    public async Task<CommandResult<TResult>> Execute<TResult>(
         string streamName,
         ICommand command,
         CancellationToken cancellationToken
@@ -22,10 +26,10 @@ public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
     {
         var stream = await ExecuteInternal(streamName, command, null, cancellationToken);
 
-        return stream.ProjectTo<TResult>();
+        return new CommandResult<TResult>(stream.StreamVersion, stream.Messages.ProjectTo<TResult>());
     }
 
-    public async Task<TResult> Execute<TState, TResult>(
+    public async Task<CommandResult<TResult>> Execute<TState, TResult>(
         string streamName,
         ICommand<TState> command,
         CancellationToken cancellationToken
@@ -33,30 +37,34 @@ public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
     {
         var stream = await ExecuteInternal(streamName, command, null, cancellationToken);
 
-        return stream.ProjectTo<TResult>();
+        return new CommandResult<TResult>(stream.StreamVersion, stream.Messages.ProjectTo<TResult>());
     }
 
-    public Task Execute(
+    public async Task<CommandResult> Execute(
         string streamName,
         ICommand command,
         CommandOptions options,
         CancellationToken cancellationToken
     )
     {
-        return ExecuteInternal(streamName, command, options, cancellationToken);
+        var stream = await ExecuteInternal(streamName, command, options, cancellationToken);
+
+        return new CommandResult(stream.StreamVersion);
     }
 
-    public Task Execute<TState>(
+    public async Task<CommandResult> Execute<TState>(
         string streamName,
         ICommand<TState> command,
         CommandOptions<TState> options,
         CancellationToken cancellationToken
     ) where TState : class, IApply, new()
     {
-        return ExecuteInternal(streamName, command, options, cancellationToken);
+        var stream = await ExecuteInternal(streamName, command, options, cancellationToken);
+
+        return new CommandResult(stream.StreamVersion);
     }
 
-    public async Task<TResult> Execute<TResult>(
+    public async Task<CommandResult<TResult>> Execute<TResult>(
         string streamName,
         ICommand command,
         CommandOptions options,
@@ -65,10 +73,10 @@ public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
     {
         var stream = await ExecuteInternal(streamName, command, options, cancellationToken);
 
-        return stream.ProjectTo<TResult>();
+        return new CommandResult<TResult>(stream.StreamVersion, stream.Messages.ProjectTo<TResult>());
     }
 
-    public async Task<TResult> Execute<TState, TResult>(
+    public async Task<CommandResult<TResult>> Execute<TState, TResult>(
         string streamName,
         ICommand<TState> command,
         CommandOptions<TState> options,
@@ -77,10 +85,10 @@ public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
     {
         var stream = await ExecuteInternal(streamName, command, options, cancellationToken);
 
-        return stream.ProjectTo<TResult>();
+        return new CommandResult<TResult>(stream.StreamVersion, stream.Messages.ProjectTo<TResult>());
     }
 
-    private async Task<IReadOnlyList<object>> ExecuteInternal(
+    private async Task<ExecuteResult> ExecuteInternal(
         string streamName,
         ICommand command,
         CommandOptions? options,
@@ -94,7 +102,7 @@ public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
         return await AppendToStream(streamName, result, stream, options, cancellationToken);
     }
 
-    private async Task<IReadOnlyList<object>> ExecuteInternal<TState>(
+    private async Task<ExecuteResult> ExecuteInternal<TState>(
         string streamName,
         ICommand<TState> command,
         CommandOptions<TState>? options,
@@ -135,7 +143,7 @@ public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
         return stream;
     }
 
-    private async Task<IReadOnlyList<object>> AppendToStream(
+    private async Task<ExecuteResult> AppendToStream(
         string streamName,
         List<object> result,
         MessageStream stream,
@@ -143,19 +151,23 @@ public class CommandInvoker(IMessageStore messageStore) : ICommandInvoker
         CancellationToken cancellationToken
     )
     {
+        AppendResult appendResult;
+
         if (options?.ExpectedVersion == ExpectedVersion.Any)
         {
-            await messageStore.AppendToStream(streamName, ExpectedVersion.Any, result, cancellationToken);
+            appendResult = await messageStore.AppendToStream(streamName, ExpectedVersion.Any, result, cancellationToken);
         }
         else
         {
-            await stream.Append(result, cancellationToken);
+            appendResult = await stream.Append(result, cancellationToken);
         }
 
         var messages = stream.Messages.ToList();
 
         messages.AddRange(result);
 
-        return messages;
+        return new ExecuteResult(messages, appendResult.StreamVersion);
     }
+
+    private record ExecuteResult(IReadOnlyList<object> Messages, long StreamVersion);
 }
