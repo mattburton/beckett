@@ -132,7 +132,7 @@ BEGIN
   INTO _current_version
   FROM beckett.messages m
   WHERE m.stream_name = _stream_name
-  AND m.deleted = false;
+  AND m.archived = false;
 
   IF (_expected_version < -2) THEN
     RAISE EXCEPTION 'Invalid value for expected version: %', _expected_version;
@@ -465,7 +465,7 @@ BEGIN
   INTO _stream_version
   FROM beckett.messages m
   WHERE m.stream_name = _stream_name
-  AND m.deleted = false;
+  AND m.archived = false;
 
   IF (_stream_version IS NULL) THEN
     _stream_version = 0;
@@ -487,7 +487,7 @@ BEGIN
     AND (_ending_stream_position IS NULL OR m.stream_position <= _ending_stream_position)
     AND (_starting_global_position IS NULL OR m.global_position >= _starting_global_position)
     AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
-    AND m.deleted = false
+    AND m.archived = false
     ORDER BY CASE WHEN _read_forwards = true THEN m.stream_position END,
              CASE WHEN _read_forwards = false THEN m.stream_position END DESC
     LIMIT _count;
@@ -797,13 +797,13 @@ CREATE TABLE beckett.messages (
     stream_position bigint NOT NULL,
     transaction_id xid8 DEFAULT pg_current_xact_id() NOT NULL,
     "timestamp" timestamp with time zone DEFAULT now() NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
+    archived boolean DEFAULT false NOT NULL,
     stream_name text NOT NULL,
     type text NOT NULL,
     data jsonb NOT NULL,
     metadata jsonb NOT NULL
 )
-PARTITION BY LIST (deleted);
+PARTITION BY LIST (archived);
 
 
 --
@@ -816,7 +816,7 @@ CREATE TABLE beckett.messages_active (
     stream_position bigint NOT NULL,
     transaction_id xid8 DEFAULT pg_current_xact_id() NOT NULL,
     "timestamp" timestamp with time zone DEFAULT now() NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
+    archived boolean DEFAULT false NOT NULL,
     stream_name text NOT NULL,
     type text NOT NULL,
     data jsonb NOT NULL,
@@ -825,16 +825,16 @@ CREATE TABLE beckett.messages_active (
 
 
 --
--- Name: messages_deleted; Type: TABLE; Schema: beckett; Owner: -
+-- Name: messages_archived; Type: TABLE; Schema: beckett; Owner: -
 --
 
-CREATE TABLE beckett.messages_deleted (
+CREATE TABLE beckett.messages_archived (
     id uuid NOT NULL,
     global_position bigint NOT NULL,
     stream_position bigint NOT NULL,
     transaction_id xid8 DEFAULT pg_current_xact_id() NOT NULL,
     "timestamp" timestamp with time zone DEFAULT now() NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
+    archived boolean DEFAULT false NOT NULL,
     stream_name text NOT NULL,
     type text NOT NULL,
     data jsonb NOT NULL,
@@ -885,10 +885,10 @@ ALTER TABLE ONLY beckett.messages ATTACH PARTITION beckett.messages_active FOR V
 
 
 --
--- Name: messages_deleted; Type: TABLE ATTACH; Schema: beckett; Owner: -
+-- Name: messages_archived; Type: TABLE ATTACH; Schema: beckett; Owner: -
 --
 
-ALTER TABLE ONLY beckett.messages ATTACH PARTITION beckett.messages_deleted FOR VALUES IN (true);
+ALTER TABLE ONLY beckett.messages ATTACH PARTITION beckett.messages_archived FOR VALUES IN (true);
 
 
 --
@@ -908,19 +908,19 @@ ALTER TABLE ONLY beckett.checkpoints
 
 
 --
--- Name: messages messages_id_deleted_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+-- Name: messages messages_id_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
 ALTER TABLE ONLY beckett.messages
-    ADD CONSTRAINT messages_id_deleted_key UNIQUE (id, deleted);
+    ADD CONSTRAINT messages_id_archived_key UNIQUE (id, archived);
 
 
 --
--- Name: messages_active messages_active_id_deleted_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+-- Name: messages_active messages_active_id_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
 ALTER TABLE ONLY beckett.messages_active
-    ADD CONSTRAINT messages_active_id_deleted_key UNIQUE (id, deleted);
+    ADD CONSTRAINT messages_active_id_archived_key UNIQUE (id, archived);
 
 
 --
@@ -928,7 +928,7 @@ ALTER TABLE ONLY beckett.messages_active
 --
 
 ALTER TABLE ONLY beckett.messages
-    ADD CONSTRAINT messages_pkey PRIMARY KEY (global_position, deleted);
+    ADD CONSTRAINT messages_pkey PRIMARY KEY (global_position, archived);
 
 
 --
@@ -936,47 +936,47 @@ ALTER TABLE ONLY beckett.messages
 --
 
 ALTER TABLE ONLY beckett.messages_active
-    ADD CONSTRAINT messages_active_pkey PRIMARY KEY (global_position, deleted);
+    ADD CONSTRAINT messages_active_pkey PRIMARY KEY (global_position, archived);
 
 
 --
--- Name: messages messages_stream_name_stream_position_deleted_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+-- Name: messages messages_stream_name_stream_position_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
 ALTER TABLE ONLY beckett.messages
-    ADD CONSTRAINT messages_stream_name_stream_position_deleted_key UNIQUE (stream_name, stream_position, deleted);
+    ADD CONSTRAINT messages_stream_name_stream_position_archived_key UNIQUE (stream_name, stream_position, archived);
 
 
 --
--- Name: messages_active messages_active_stream_name_stream_position_deleted_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+-- Name: messages_active messages_active_stream_name_stream_position_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
 ALTER TABLE ONLY beckett.messages_active
-    ADD CONSTRAINT messages_active_stream_name_stream_position_deleted_key UNIQUE (stream_name, stream_position, deleted);
+    ADD CONSTRAINT messages_active_stream_name_stream_position_archived_key UNIQUE (stream_name, stream_position, archived);
 
 
 --
--- Name: messages_deleted messages_deleted_id_deleted_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+-- Name: messages_archived messages_archived_id_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
-ALTER TABLE ONLY beckett.messages_deleted
-    ADD CONSTRAINT messages_deleted_id_deleted_key UNIQUE (id, deleted);
-
-
---
--- Name: messages_deleted messages_deleted_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
---
-
-ALTER TABLE ONLY beckett.messages_deleted
-    ADD CONSTRAINT messages_deleted_pkey PRIMARY KEY (global_position, deleted);
+ALTER TABLE ONLY beckett.messages_archived
+    ADD CONSTRAINT messages_archived_id_archived_key UNIQUE (id, archived);
 
 
 --
--- Name: messages_deleted messages_deleted_stream_name_stream_position_deleted_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+-- Name: messages_archived messages_archived_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
-ALTER TABLE ONLY beckett.messages_deleted
-    ADD CONSTRAINT messages_deleted_stream_name_stream_position_deleted_key UNIQUE (stream_name, stream_position, deleted);
+ALTER TABLE ONLY beckett.messages_archived
+    ADD CONSTRAINT messages_archived_pkey PRIMARY KEY (global_position, archived);
+
+
+--
+-- Name: messages_archived messages_archived_stream_name_stream_position_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.messages_archived
+    ADD CONSTRAINT messages_archived_stream_name_stream_position_archived_key UNIQUE (stream_name, stream_position, archived);
 
 
 --
@@ -1035,7 +1035,7 @@ CREATE INDEX ix_messages_active_correlation_id ON beckett.messages_active USING 
 -- Name: ix_messages_active_global_read_stream; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_messages_active_global_read_stream ON beckett.messages_active USING btree (transaction_id, global_position, deleted);
+CREATE INDEX ix_messages_active_global_read_stream ON beckett.messages_active USING btree (transaction_id, global_position, archived);
 
 
 --
@@ -1060,10 +1060,10 @@ CREATE INDEX ix_subscriptions_active ON beckett.subscriptions USING btree (group
 
 
 --
--- Name: messages_active_id_deleted_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
+-- Name: messages_active_id_archived_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
 --
 
-ALTER INDEX beckett.messages_id_deleted_key ATTACH PARTITION beckett.messages_active_id_deleted_key;
+ALTER INDEX beckett.messages_id_archived_key ATTACH PARTITION beckett.messages_active_id_archived_key;
 
 
 --
@@ -1074,31 +1074,31 @@ ALTER INDEX beckett.messages_pkey ATTACH PARTITION beckett.messages_active_pkey;
 
 
 --
--- Name: messages_active_stream_name_stream_position_deleted_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
+-- Name: messages_active_stream_name_stream_position_archived_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
 --
 
-ALTER INDEX beckett.messages_stream_name_stream_position_deleted_key ATTACH PARTITION beckett.messages_active_stream_name_stream_position_deleted_key;
-
-
---
--- Name: messages_deleted_id_deleted_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
---
-
-ALTER INDEX beckett.messages_id_deleted_key ATTACH PARTITION beckett.messages_deleted_id_deleted_key;
+ALTER INDEX beckett.messages_stream_name_stream_position_archived_key ATTACH PARTITION beckett.messages_active_stream_name_stream_position_archived_key;
 
 
 --
--- Name: messages_deleted_pkey; Type: INDEX ATTACH; Schema: beckett; Owner: -
+-- Name: messages_archived_id_archived_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
 --
 
-ALTER INDEX beckett.messages_pkey ATTACH PARTITION beckett.messages_deleted_pkey;
+ALTER INDEX beckett.messages_id_archived_key ATTACH PARTITION beckett.messages_archived_id_archived_key;
 
 
 --
--- Name: messages_deleted_stream_name_stream_position_deleted_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
+-- Name: messages_archived_pkey; Type: INDEX ATTACH; Schema: beckett; Owner: -
 --
 
-ALTER INDEX beckett.messages_stream_name_stream_position_deleted_key ATTACH PARTITION beckett.messages_deleted_stream_name_stream_position_deleted_key;
+ALTER INDEX beckett.messages_pkey ATTACH PARTITION beckett.messages_archived_pkey;
+
+
+--
+-- Name: messages_archived_stream_name_stream_position_archived_key; Type: INDEX ATTACH; Schema: beckett; Owner: -
+--
+
+ALTER INDEX beckett.messages_stream_name_stream_position_archived_key ATTACH PARTITION beckett.messages_archived_stream_name_stream_position_archived_key;
 
 
 --
