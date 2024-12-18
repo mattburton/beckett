@@ -1,10 +1,9 @@
 using Beckett.Database;
 using Beckett.Subscriptions.Queries;
-using Microsoft.Extensions.Primitives;
 
-namespace Beckett.Dashboard.Subscriptions.Actions;
+namespace Beckett.Dashboard.Subscriptions.Actions.Handlers;
 
-public static class Resume
+public static class ResumeHandler
 {
     public static async Task<IResult> Post(
         HttpContext context,
