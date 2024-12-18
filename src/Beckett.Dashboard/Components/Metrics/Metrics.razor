@@ -1,0 +1,31 @@
+@inherits Component<Metrics.ViewModel>
+@inject IDashboard DashboardService
+
+<a href="@Dashboard.Prefix/subscriptions/lagging"
+   class="badge text-bg-info text-decoration-none"
+   title="Lagging Subscriptions">
+  @Model.Lagging
+</a>
+<a href="@Dashboard.Prefix/subscriptions/retries"
+   class="badge text-bg-warning text-decoration-none"
+   title="Retries">
+  @Model.Retries
+</a>
+<a href="@Dashboard.Prefix/subscriptions/failed"
+   class="badge text-bg-danger text-decoration-none"
+   title="Failed">
+  @Model.Failed
+</a>
+
+@code {
+
+  public record ViewModel(long Lagging, long Retries, long Failed);
+
+  protected override async Task OnInitializedAsync()
+  {
+    var result = await DashboardService.Metrics.GetSubscriptionMetrics(CancellationToken.None);
+
+    Model = new ViewModel(result.Lagging, result.Retries, result.Failed);
+  }
+
+}

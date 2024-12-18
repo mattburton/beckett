@@ -21,28 +21,8 @@
       Subscriptions
     </a>
   </li>
-  <li class="nav-item">
-    <a href="@Dashboard.Prefix/subscriptions/lagging"
-       class="badge text-bg-info text-decoration-none"
-       title="Lagging Subscriptions"
-       hx-get="@Dashboard.Prefix/metrics/lag"
-       hx-trigger="load, every 10s">
-      0
-    </a>
-    <a href="@Dashboard.Prefix/subscriptions/retries"
-       class="badge text-bg-warning text-decoration-none"
-       title="Retries"
-       hx-get="@Dashboard.Prefix/metrics/retries"
-       hx-trigger="load, every 10s">
-      0
-    </a>
-    <a href="@Dashboard.Prefix/subscriptions/failed"
-       class="badge text-bg-danger text-decoration-none"
-       title="Failed"
-       hx-get="@Dashboard.Prefix/metrics/failed"
-       hx-trigger="load, every 10s">
-      0
-    </a>
+  <li class="nav-item" hx-get="@Dashboard.Prefix/components/metrics" hx-trigger="every 10s">
+    <Metrics Model="new Metrics.Metrics.ViewModel(0, 0, 0)"></Metrics>
   </li>
 </ul>
 

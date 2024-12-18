@@ -802,3 +802,42 @@ SELECT value
 FROM metric
 LIMIT 1;
 $$;
+
+CREATE OR REPLACE FUNCTION __schema__.get_subscription_metrics()
+  RETURNS TABLE (
+    lagging bigint,
+    retries bigint,
+    failed bigint
+  )
+  LANGUAGE sql
+AS
+$$
+WITH lagging AS (
+    SELECT count(*) as lagging
+    FROM __schema__.subscriptions s
+    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    WHERE s.status = 'active'
+    AND c.status = 'active'
+    AND c.lagging = true
+    GROUP BY c.group_name, c.name
+    UNION ALL
+    SELECT 0
+    LIMIT 1
+),
+retries AS (
+    SELECT count(*) as retries
+    FROM __schema__.subscriptions s
+    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    WHERE s.status != 'uninitialized'
+    AND c.status = 'retry'
+ ),
+failed AS (
+    SELECT count(*) as failed
+    FROM __schema__.subscriptions s
+    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    WHERE s.status != 'uninitialized'
+    AND c.status = 'failed'
+)
+SELECT l.lagging, r.retries, f.failed
+FROM lagging AS l, retries AS r, failed AS f;
+$$;

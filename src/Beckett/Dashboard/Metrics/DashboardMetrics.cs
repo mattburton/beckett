@@ -5,18 +5,8 @@ namespace Beckett.Dashboard.Metrics;
 
 public class DashboardMetrics(IPostgresDatabase database, PostgresOptions options) : IDashboardMetrics
 {
-    public Task<long> GetSubscriptionFailedCount(CancellationToken cancellationToken)
+    public Task<GetSubscriptionMetricsResult> GetSubscriptionMetrics(CancellationToken cancellationToken)
     {
-        return database.Execute(new GetSubscriptionFailedCount(options), cancellationToken);
-    }
-
-    public Task<long> GetSubscriptionLag(CancellationToken cancellationToken)
-    {
-        return database.Execute(new GetSubscriptionLagCount(options), cancellationToken);
-    }
-
-    public Task<long> GetSubscriptionRetryCount(CancellationToken cancellationToken)
-    {
-        return database.Execute(new GetSubscriptionRetryCount(options), cancellationToken);
+        return database.Execute(new GetSubscriptionMetrics(options), cancellationToken);
     }
 }
