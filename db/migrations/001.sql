@@ -52,23 +52,23 @@ CREATE TABLE IF NOT EXISTS __schema__.messages
   stream_position bigint NOT NULL,
   transaction_id xid8 DEFAULT pg_current_xact_id() NOT NULL,
   timestamp timestamp with time zone DEFAULT now() NOT NULL,
-  deleted boolean NOT NULL DEFAULT false,
+  archived boolean NOT NULL DEFAULT false,
   stream_name text NOT NULL,
   type text NOT NULL,
   data jsonb NOT NULL,
   metadata jsonb NOT NULL,
-  PRIMARY KEY (global_position, deleted),
-  UNIQUE (id, deleted),
-  UNIQUE (stream_name, stream_position, deleted)
-) PARTITION BY LIST (deleted);
+  PRIMARY KEY (global_position, archived),
+  UNIQUE (id, archived),
+  UNIQUE (stream_name, stream_position, archived)
+) PARTITION BY LIST (archived);
 
 GRANT UPDATE ON __schema__.messages TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.messages_active PARTITION OF __schema__.messages FOR VALUES IN (false);
 
-CREATE TABLE IF NOT EXISTS __schema__.messages_deleted PARTITION OF __schema__.messages FOR VALUES IN (true);
+CREATE TABLE IF NOT EXISTS __schema__.messages_archived PARTITION OF __schema__.messages FOR VALUES IN (true);
 
-CREATE INDEX IF NOT EXISTS ix_messages_active_global_read_stream ON beckett.messages_active (transaction_id, global_position, deleted);
+CREATE INDEX IF NOT EXISTS ix_messages_active_global_read_stream ON beckett.messages_active (transaction_id, global_position, archived);
 
 CREATE INDEX IF NOT EXISTS ix_messages_active_stream_category ON __schema__.messages_active (__schema__.stream_category(stream_name));
 
@@ -107,7 +107,7 @@ BEGIN
   INTO _current_version
   FROM __schema__.messages m
   WHERE m.stream_name = _stream_name
-  AND m.deleted = false;
+  AND m.archived = false;
 
   IF (_expected_version < -2) THEN
     RAISE EXCEPTION 'Invalid value for expected version: %', _expected_version;
@@ -185,7 +185,7 @@ BEGIN
   INTO _stream_version
   FROM __schema__.messages m
   WHERE m.stream_name = _stream_name
-  AND m.deleted = false;
+  AND m.archived = false;
 
   IF (_stream_version IS NULL) THEN
     _stream_version = 0;
@@ -207,7 +207,7 @@ BEGIN
     AND (_ending_stream_position IS NULL OR m.stream_position <= _ending_stream_position)
     AND (_starting_global_position IS NULL OR m.global_position >= _starting_global_position)
     AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
-    AND m.deleted = false
+    AND m.archived = false
     ORDER BY CASE WHEN _read_forwards = true THEN m.stream_position END,
              CASE WHEN _read_forwards = false THEN m.stream_position END DESC
     LIMIT _count;
