@@ -1,27 +1,29 @@
 using System.Text.RegularExpressions;
+using Beckett.Commands;
 using Taskmaster.TaskLists.AddTask;
 
-namespace Taskmaster.TaskLists.Mentions;
+namespace Taskmaster.TaskLists.AssignReviewTask;
 
-public partial class MentionsHandler(IMessageStore messageStore) : IMessageHandler<TaskAdded>
+public partial class TaskAddedHandler(ICommandInvoker commandInvoker) : IMessageHandler<TaskAdded>
 {
     public async Task Handle(TaskAdded message, IMessageContext context, CancellationToken cancellationToken)
     {
-        if (!message.Task.Contains('@'))
+        var match = Username().Match(message.Task);
+
+        if (!match.Success)
         {
             return;
         }
 
-        var username = Username().Match(message.Task).Value.TrimStart('@');
+        var username = match.Value.TrimStart('@');
 
         var followUpTask = message.Task.Replace("@", "");
 
-        var item = $"Hi {username} - please follow up on {followUpTask}";
+        var task = $"{username} - review required: {followUpTask}";
 
-        await messageStore.AppendToStream(
+        await commandInvoker.Execute(
             TaskList.StreamName(message.TaskListId),
-            ExpectedVersion.StreamExists,
-            message with { Task = item },
+            new AddTaskCommand(Guid.NewGuid(), task),
             cancellationToken
         );
     }

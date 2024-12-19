@@ -1,4 +1,5 @@
-using Beckett;
+using Beckett.Commands;
+using Taskmaster.TaskLists;
 using Taskmaster.TaskLists.AddTask;
 
 namespace API.TaskLists;
@@ -8,13 +9,17 @@ public static class AddTask
     public static async Task<IResult> Handler(
         Guid id,
         Request request,
-        IMessageStore messageStore,
+        ICommandInvoker commandInvoker,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            var result = await new AddTaskCommand(id, request.Item).Execute(messageStore, cancellationToken);
+            var result = await commandInvoker.Execute(
+                TaskList.StreamName(id),
+                new AddTaskCommand(id, request.Item),
+                cancellationToken
+            );
 
             return Results.Ok(new Response(id, request.Item, result.StreamVersion));
         }

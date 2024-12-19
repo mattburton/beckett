@@ -4,7 +4,6 @@ using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using Taskmaster;
 using Taskmaster.Infrastructure.Database;
 using Taskmaster.TaskLists;
 
@@ -21,14 +20,7 @@ try
     await builder.AddTaskmasterDatabase();
 
     builder.Services.AddBeckett(
-        options =>
-        {
-            options.WithSubscriptionGroup("Taskmaster");
-
-            options.Subscriptions.MaxRetryCount<RetryableException>(10);
-
-            options.Subscriptions.MaxRetryCount<TerminalException>(0);
-        }
+        options => { options.WithSubscriptionGroup("Taskmaster"); }
     ).WithSubscriptionsFrom(typeof(TaskList).Assembly);
 
     builder.Services.AddOpenTelemetry()

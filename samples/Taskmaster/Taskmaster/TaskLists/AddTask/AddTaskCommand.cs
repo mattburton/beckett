@@ -6,11 +6,13 @@ public record AddTaskCommand(Guid Id, string Task) : ICommand<AddTaskCommand.Dec
 {
     public IEnumerable<object> Execute(DecisionState state)
     {
-        throw new NotImplementedException();
+        if (state.Items.Contains(Task))
+        {
+            throw new TaskAlreadyAddedException();
+        }
+
+        yield return new Message(new TaskAdded(Id, Task)).WithCorrelationId(Guid.NewGuid().ToString());
     }
-
-    public async Task<AppendResult> Execute(IMessageStore messageStore, CancellationToken cancellationToken)
-
 
     public class DecisionState : IApply
     {

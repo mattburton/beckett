@@ -1,4 +1,4 @@
-@base_url = http://localhost:5222/taskmaster
+@base_url = http://localhost:5222/tasks
 
 ### Create List
 
@@ -72,7 +72,7 @@ POST {{base_url}}/{{id}}
 Content-Type: application/json
 
 {
-  "task": "{{$random.uuid}} cc: @bob"
+  "task": "{{$random.uuid}} cc: @Bob"
 }
 
 ### Get List

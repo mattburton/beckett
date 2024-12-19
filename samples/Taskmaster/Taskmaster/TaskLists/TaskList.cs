@@ -1,8 +1,7 @@
 using Taskmaster.TaskLists.AddTask;
 using Taskmaster.TaskLists.CompleteTask;
 using Taskmaster.TaskLists.CreateList;
-using Taskmaster.TaskLists.Mentions;
-using Taskmaster.TaskLists.Notifications;
+using TaskAddedHandler = Taskmaster.TaskLists.AssignReviewTask.TaskAddedHandler;
 
 namespace Taskmaster.TaskLists;
 
@@ -16,17 +15,13 @@ public class TaskList : IBeckettModule
     {
         builder.Map<TaskAdded>("task_added");
         builder.Map<TaskCompleted>("task_completed");
-        builder.Map<TaskListCreated>("todo_list_created");
+        builder.Map<TaskListCreated>("task_list_created");
     }
 
     public void Subscriptions(ISubscriptionBuilder builder)
     {
-        builder.AddSubscription("Mentions")
+        builder.AddSubscription("task_lists:assign_review_task")
             .Message<TaskAdded>()
-            .Handler<MentionsHandler>();
-
-        builder.AddSubscription("Notifications")
-            .Category(Category)
-            .Handler<NotificationHandler>();
+            .Handler<TaskAddedHandler>();
     }
 }

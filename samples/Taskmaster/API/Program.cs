@@ -49,7 +49,7 @@ try
 
     app.MapBeckettDashboard("/beckett");
 
-    app.MapGroup("/taskmaster").TaskListRoutes();
+    app.MapGroup("/tasks").TaskListRoutes();
 
     app.Run();
 }

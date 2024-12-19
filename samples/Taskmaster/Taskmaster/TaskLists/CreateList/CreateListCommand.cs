@@ -1,12 +1,11 @@
+using Beckett.Commands;
+
 namespace Taskmaster.TaskLists.CreateList;
 
-public record CreateListCommand(Guid Id, string Name)
+public record CreateListCommand(Guid Id, string Name) : ICommand
 {
-    public Task<AppendResult> Execute(IMessageStore messageStore, CancellationToken cancellationToken) =>
-        messageStore.AppendToStream(
-            TaskList.StreamName(Id),
-            ExpectedVersion.StreamDoesNotExist,
-            new TaskListCreated(Id, Name),
-            cancellationToken
-        );
+    public IEnumerable<object> Execute()
+    {
+        yield return new TaskListCreated(Id, Name);
+    }
 }

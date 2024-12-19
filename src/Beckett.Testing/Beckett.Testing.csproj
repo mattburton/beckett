@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+      <PackageId>Beckett.Testing</PackageId>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="xunit.assert" Version="2.9.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Beckett\Beckett.csproj" />
+    </ItemGroup>
+
+</Project>
