@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Beckett.Configuration;
 
-public class CategorySubscriptionBuilder(Subscription subscription, IServiceCollection services) : ICategorySubscriptionBuilder
+public class CategorySubscriptionBuilder(Subscription subscription, IServiceCollection services)
+    : ICategorySubscriptionBuilder
 {
     public IMessageSubscriptionBuilder<TMessage> Message<TMessage>()
     {
@@ -39,7 +40,10 @@ public class CategorySubscriptionBuilder(Subscription subscription, IServiceColl
         return Handler(handlerType, serviceLifetime);
     }
 
-    public ISubscriptionSettingsBuilder Handler(Type handlerType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public ISubscriptionSettingsBuilder Handler(
+        Type handlerType,
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient
+    )
     {
         if (!typeof(IMessageHandler).IsAssignableFrom(handlerType))
         {
@@ -56,14 +60,19 @@ public class CategorySubscriptionBuilder(Subscription subscription, IServiceColl
         return new SubscriptionSettingsBuilder(subscription);
     }
 
-    public ISubscriptionSettingsBuilder BatchHandler<THandler>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient) where THandler : IMessageBatchHandler
+    public ISubscriptionSettingsBuilder BatchHandler<THandler>(
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient
+    ) where THandler : IMessageBatchHandler
     {
         var handlerType = typeof(THandler);
 
         return BatchHandler(handlerType);
     }
 
-    public ISubscriptionSettingsBuilder BatchHandler(Type handlerType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public ISubscriptionSettingsBuilder BatchHandler(
+        Type handlerType,
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient
+    )
     {
         if (!typeof(IMessageBatchHandler).IsAssignableFrom(handlerType))
         {

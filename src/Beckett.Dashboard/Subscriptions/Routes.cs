@@ -1,4 +1,10 @@
-using Beckett.Dashboard.Subscriptions.Handlers;
+using Beckett.Dashboard.Subscriptions.Checkpoint;
+using Beckett.Dashboard.Subscriptions.Failed;
+using Beckett.Dashboard.Subscriptions.Lagging;
+using Beckett.Dashboard.Subscriptions.Reservations;
+using Beckett.Dashboard.Subscriptions.Retries;
+using Beckett.Dashboard.Subscriptions.Subscription;
+using Beckett.Dashboard.Subscriptions.Subscriptions;
 
 namespace Beckett.Dashboard.Subscriptions;
 
@@ -8,7 +14,7 @@ public class Routes : IConfigureRoutes
     {
         var routes = builder.MapGroup("/subscriptions");
 
-        routes.MapGet("/", IndexHandler.Get);
+        routes.MapGet("/", SubscriptionsHandler.Get);
         routes.MapGet("/checkpoints/{id:long}", CheckpointHandler.Get);
         routes.MapGet("/failed", FailedHandler.Get);
         routes.MapGet("/lagging", LaggingHandler.Get);

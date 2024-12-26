@@ -2,13 +2,13 @@ namespace Beckett.MessageStorage;
 
 public class ReadStreamOptions
 {
-    public long? StartingStreamPosition { get; set; }
-    public long? EndingStreamPosition { get; set; }
-    public long? StartingGlobalPosition { get; set; }
-    public long? EndingGlobalPosition { get; set; }
-    public long? Count { get; set; }
-    public bool? ReadForwards { get; set; }
-    public bool? RequirePrimary { get; set; }
+    public long? StartingStreamPosition { get; init; }
+    public long? EndingStreamPosition { get; init; }
+    public long? StartingGlobalPosition { get; init; }
+    public long? EndingGlobalPosition { get; init; }
+    public int? Count { get; init; }
+    public bool? ReadForwards { get; init; }
+    public bool? RequirePrimary { get; init; }
 
     public static ReadStreamOptions From(ReadOptions options)
     {

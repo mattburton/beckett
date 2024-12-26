@@ -1,3 +1,12 @@
 namespace Beckett;
 
-public class StreamDoesNotExistException(string message) : Exception(message);
+public class StreamDoesNotExistException : Exception
+{
+    public StreamDoesNotExistException()
+    {
+    }
+
+    public StreamDoesNotExistException(string? message) : base(message)
+    {
+    }
+}

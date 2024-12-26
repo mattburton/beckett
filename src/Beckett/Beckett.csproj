@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Npgsql" Version="9.0.2" />
-    <PackageReference Include="OpenTelemetry" Version="1.10.0" />
-    <PackageReference Include="Polly" Version="8.5.0" />
-    <PackageReference Include="UUIDNext" Version="4.0.0" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions"/>
+    <PackageReference Include="Npgsql"/>
+    <PackageReference Include="OpenTelemetry"/>
+    <PackageReference Include="Polly"/>
+    <PackageReference Include="UUIDNext" Condition="'$(TargetFramework)' == 'net8.0'"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="../../db/migrations/*.sql" LinkBase="Database/Migrations" />
+    <EmbeddedResource Include="../../db/migrations/*.sql" LinkBase="Database/Migrations"/>
   </ItemGroup>
 
 </Project>

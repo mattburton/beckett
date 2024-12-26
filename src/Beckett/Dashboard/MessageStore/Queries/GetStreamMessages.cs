@@ -19,7 +19,7 @@ public class GetStreamMessages(
             from {options.Schema}.messages
             where stream_name = $1
             and ($2 is null or (id::text ilike '%' || $2 || '%' or type ilike '%' || $2 || '%'))
-            and deleted = false
+            and archived = false
             order by stream_position
             offset $3
             limit $4;

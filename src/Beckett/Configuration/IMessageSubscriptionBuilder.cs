@@ -11,7 +11,7 @@ public interface IMessageSubscriptionBuilder<out TMessage>
     /// </summary>
     /// <typeparam name="T">The message type to subscribe to</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
-    IMessageSubscriptionBuilder And<T>();
+    IMessageSubscriptionBuilder Message<T>();
 
     /// <summary>
     /// Configure the handler for this subscription which will be registered in the container using the specified
@@ -46,7 +46,7 @@ public interface IMessageSubscriptionBuilder
     /// </summary>
     /// <typeparam name="TMessage">The message type to subscribe to</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
-    IMessageSubscriptionBuilder And<TMessage>();
+    IMessageSubscriptionBuilder Message<TMessage>();
 
     /// <summary>
     /// Subscribe to a specific message type for this subscription. When this message type is read from the global
@@ -55,7 +55,7 @@ public interface IMessageSubscriptionBuilder
     /// </summary>
     /// <param name="messageType">The message type to subscribe to</param>
     /// <returns>Builder to further configure the subscription</returns>
-    IMessageSubscriptionBuilder And(Type messageType);
+    IMessageSubscriptionBuilder Message(Type messageType);
 
     /// <summary>
     /// Configure the handler for this subscription. The handler type <typeparamref name="THandler"/> must be a
@@ -67,7 +67,8 @@ public interface IMessageSubscriptionBuilder
     /// <param name="serviceLifetime">Service lifetime to use when registering the handler in the container</param>
     /// <typeparam name="THandler">Handler type</typeparam>
     /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionSettingsBuilder Handler<THandler>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient) where THandler : IMessageHandler;
+    ISubscriptionSettingsBuilder Handler<THandler>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+        where THandler : IMessageHandler;
 
     /// <summary>
     /// Configure the handler for this subscription. The handler type must implement <see cref="IMessageHandler"/> and
@@ -80,4 +81,27 @@ public interface IMessageSubscriptionBuilder
     /// <param name="serviceLifetime">Service lifetime to use when registering the handler in the container</param>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionSettingsBuilder Handler(Type handlerType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient);
+
+    /// <summary>
+    /// Configure the batch handler for this subscription which will be registered in the container using the specified
+    /// service lifetime unless it has already been registered. Any exceptions thrown by the handler will result in
+    /// Beckett retrying the subscription based on its configuration.
+    /// </summary>
+    /// <param name="serviceLifetime">Service lifetime to use when registering the handler in the container</param>
+    /// <typeparam name="THandler">Handler type</typeparam>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionSettingsBuilder BatchHandler<THandler>(
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient
+    ) where THandler : IMessageBatchHandler;
+
+    /// <summary>
+    /// Configure the batch handler for this subscription which will be registered in the container using the specified
+    /// service lifetime unless it has already been registered. Any exceptions thrown by the handler will result in
+    /// Beckett retrying the subscription based on its configuration.
+    /// </summary>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionSettingsBuilder BatchHandler(
+        Type handlerType,
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient
+    );
 }

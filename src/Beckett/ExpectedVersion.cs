@@ -7,7 +7,7 @@ namespace Beckett;
 /// list of special values for various scenarios - <see cref="StreamDoesNotExist"/>, <see cref="StreamExists"/>,
 /// <see cref="Any"/>
 /// </summary>
-public readonly struct ExpectedVersion
+public readonly record struct ExpectedVersion
 {
     private ExpectedVersion(long value)
     {

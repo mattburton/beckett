@@ -1,3 +1,6 @@
+using Beckett.Projections;
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Beckett.Configuration;
 
 public interface ISubscriptionConfigurationBuilder
@@ -54,4 +57,18 @@ public interface ISubscriptionConfigurationBuilder
     /// <param name="messageTypes">The message types to subscribe to</param>
     /// <returns>Builder to further configure the subscription</returns>
     IMessageSubscriptionBuilder Messages(IEnumerable<Type> messageTypes);
+
+    /// <summary>
+    /// Configure the handler for this subscription which will be registered in the container using the specified
+    /// service lifetime unless it has already been registered. Any exceptions thrown by the handler will result in
+    /// Beckett retrying the subscription based on its configuration.
+    /// </summary>
+    /// <param name="serviceLifetime">Service lifetime to use when registering the handler in the container</param>
+    /// <typeparam name="TProjection">Projection handler</typeparam>
+    /// <typeparam name="TReadModel">Read model</typeparam>
+    /// <typeparam name="TKey">Read model key</typeparam>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionSettingsBuilder Projection<TProjection, TReadModel, TKey>(
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient
+    ) where TProjection : IProjection<TReadModel, TKey> where TReadModel : IApply, new();
 }

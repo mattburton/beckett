@@ -19,7 +19,7 @@ public class GetCategoryStreams(
             from {options.Schema}.messages
             where {options.Schema}.stream_category(stream_name) = $1
             and ($2 is null or stream_name ilike '%' || $2 || '%')
-            and deleted = false
+            and archived = false
             group by stream_name
             order by max(timestamp) desc
             offset $3
