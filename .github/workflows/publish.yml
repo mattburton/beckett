@@ -29,6 +29,8 @@ jobs:
         run: dotnet pack src/Beckett/Beckett.csproj --configuration Release --output ${{ env.NuGetDirectory }}
       - name: Create Beckett.Dashboard NuGet Package
         run: dotnet pack src/Beckett.Dashboard/Beckett.Dashboard.csproj --configuration Release --output ${{ env.NuGetDirectory }}
+      - name: Create Beckett.Testing NuGet Package
+        run: dotnet pack src/Beckett.Testing/Beckett.Testing.csproj --configuration Release --output ${{ env.NuGetDirectory }}
       - name: Publish NuGet Package
         run: |
           foreach($file in (Get-ChildItem "${{ env.NuGetDirectory }}" -Recurse -Include *.nupkg)) {

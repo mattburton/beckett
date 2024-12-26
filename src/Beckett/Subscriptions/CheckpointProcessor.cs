@@ -118,11 +118,11 @@ public class CheckpointProcessor(
         CancellationToken cancellationToken
     )
     {
-        List<MessageContext> messages;
+        IReadOnlyList<StreamMessage> streamMessages;
 
         try
         {
-            messages = await ReadMessageBatch(
+            streamMessages = await ReadMessageBatch(
                 checkpoint,
                 streamName,
                 startingStreamPosition,
@@ -150,7 +150,7 @@ public class CheckpointProcessor(
 
         try
         {
-            if (messages.Count == 0)
+            if (streamMessages.Count == 0)
             {
                 return NoMessages.Instance;
             }
@@ -161,14 +161,14 @@ public class CheckpointProcessor(
                     checkpoint,
                     subscription,
                     streamName,
-                    messages,
+                    streamMessages,
                     cancellationToken
                 );
             }
 
             var lastProcessedStreamPosition = checkpoint.StreamPosition;
 
-            foreach (var messageContext in messages.Where(x => subscription.SubscribedToMessage(x.Type)))
+            foreach (var streamMessage in streamMessages.Where(x => subscription.SubscribedToMessage(x.Type)))
             {
                 try
                 {
@@ -178,9 +178,9 @@ public class CheckpointProcessor(
                         return new Success(lastProcessedStreamPosition);
                     }
 
-                    await DispatchMessageToHandler(checkpoint, subscription, messageContext, cancellationToken);
+                    await DispatchMessageToHandler(checkpoint, subscription, streamMessage, cancellationToken);
 
-                    lastProcessedStreamPosition = messageContext.StreamPosition;
+                    lastProcessedStreamPosition = streamMessage.StreamPosition;
                 }
                 catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
                 {
@@ -191,19 +191,19 @@ public class CheckpointProcessor(
                     logger.LogError(
                         e,
                         "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [Message ID: {MessageId}, Checkpoint: {CheckpointId}]",
-                        messageContext.Type,
+                        streamMessage.Type,
                         subscription.Name,
                         streamName,
                         subscription.HandlerName,
-                        messageContext.Id,
+                        streamMessage.Id,
                         checkpoint.Id
                     );
 
-                    return new Error(messageContext.StreamPosition, e);
+                    return new Error(streamMessage.StreamPosition, e);
                 }
             }
 
-            return new Success(messages[^1].StreamPosition);
+            return new Success(streamMessages[^1].StreamPosition);
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -224,10 +224,21 @@ public class CheckpointProcessor(
     private async Task DispatchMessageToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        MessageContext messageContext,
+        StreamMessage streamMessage,
         CancellationToken cancellationToken
     )
     {
+        var messageContext = new MessageContext(
+            streamMessage.Id,
+            streamMessage.StreamName,
+            streamMessage.StreamPosition,
+            streamMessage.GlobalPosition,
+            streamMessage.Type,
+            streamMessage.Data,
+            streamMessage.Metadata,
+            streamMessage.Timestamp
+        );
+
         using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
 
         using var messageLoggingScope = MessageLoggingScope(messageContext);
@@ -260,14 +271,13 @@ public class CheckpointProcessor(
         Checkpoint checkpoint,
         Subscription subscription,
         string streamName,
-        List<MessageContext> messages,
+        IReadOnlyList<StreamMessage> messages,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            var messageBatch = messages.Where(x => subscription.SubscribedToMessage(x.Type)).Cast<IMessageContext>()
-                .ToList();
+            var messageBatch = new MessageBatch(streamName, messages);
 
             if (subscription.HandlerType == null)
             {
@@ -310,7 +320,7 @@ public class CheckpointProcessor(
         }
     }
 
-    private async Task<List<MessageContext>> ReadMessageBatch(
+    private async Task<IReadOnlyList<StreamMessage>> ReadMessageBatch(
         Checkpoint checkpoint,
         string streamName,
         long startingStreamPosition,
@@ -332,18 +342,7 @@ public class CheckpointProcessor(
 
         logger.FoundMessagesToProcessForCheckpoint(stream.Messages.Count, checkpoint.Id);
 
-        return stream.Messages.Select(
-            message => new MessageContext(
-                message.Id,
-                message.StreamName,
-                message.StreamPosition,
-                message.GlobalPosition,
-                message.Type,
-                message.Data,
-                message.Metadata,
-                message.Timestamp
-            )
-        ).ToList();
+        return stream.Messages;
     }
 
     private void SuccessTraceLogging(Checkpoint checkpoint, Success success)

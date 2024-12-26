@@ -1,3 +1,12 @@
 namespace Beckett;
 
-public class OptimisticConcurrencyException(string message) : Exception(message);
+public class OptimisticConcurrencyException : Exception
+{
+    public OptimisticConcurrencyException()
+    {
+    }
+
+    public OptimisticConcurrencyException(string? message) : base(message)
+    {
+    }
+}

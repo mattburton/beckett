@@ -21,7 +21,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
                         SELECT MAX(stream_position) as stream_version
                         FROM {options.Schema}.messages
                         WHERE stream_name = m.stream_name
-                        AND deleted = false
+                        AND archived = false
                    ) as stream_version,
                    m.type,
                    m.timestamp,
@@ -30,7 +30,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
             FROM {options.Schema}.messages AS m
             WHERE m.stream_name = $1
             AND m.stream_position = $2
-            AND m.deleted = false;
+            AND m.archived = false;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

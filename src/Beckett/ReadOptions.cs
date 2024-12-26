@@ -7,37 +7,37 @@ public class ReadOptions
     /// <summary>
     /// The starting position in the stream to read from (inclusive)
     /// </summary>
-    public long? StartingStreamPosition { get; set; }
+    public long? StartingStreamPosition { get; init; }
 
     /// <summary>
     /// The ending position in the stream to read until (inclusive)
     /// </summary>
-    public long? EndingStreamPosition { get; set; }
+    public long? EndingStreamPosition { get; init; }
 
     /// <summary>
     /// The starting global position in the stream to read from (inclusive)
     /// </summary>
-    public long? StartingGlobalPosition { get; set; }
+    public long? StartingGlobalPosition { get; init; }
 
     /// <summary>
     /// The ending global position in the stream to read until (inclusive)
     /// </summary>
-    public long? EndingGlobalPosition { get; set; }
+    public long? EndingGlobalPosition { get; init; }
 
     /// <summary>
     /// The number of messages to read from the stream
     /// </summary>
-    public long? Count { get; set; }
+    public int? Count { get; init; }
 
     /// <summary>
     /// Whether to read the stream forwards or backwards in terms of the stream position order
     /// </summary>
-    public bool? ReadForwards { get; set; }
+    public bool? ReadForwards { get; init; }
 
     /// <summary>
     /// Require a primary / leader connection when performing the read
     /// </summary>
-    public bool? RequirePrimary { get; set; }
+    public bool? RequirePrimary { get; init; }
 
     /// <summary>
     /// Read only the last message appended to a given stream. This is a convenience method for setting the

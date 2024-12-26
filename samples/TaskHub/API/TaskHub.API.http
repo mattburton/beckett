@@ -1,0 +1,55 @@
+@base_url = http://localhost:5222/taskhub
+
+### Create List
+
+POST {{base_url}}
+Content-Type: application/json
+
+{
+  "id": "{{$random.uuid}}",
+  "name": "list_{{$random.uuid}}"
+}
+> {%
+  client.global.set("id", response.body.id)
+%}
+
+### Change List Name
+
+PUT {{base_url}}/{{id}}/name
+Content-Type: application/json
+
+{
+  "name": "new_name_{{$random.uuid}}"
+}
+
+### Delete List
+
+DELETE {{base_url}}/{{id}}
+Content-Type: application/json
+
+### Get Lists
+
+GET {{base_url}}
+Content-Type: application/json
+
+### Get List
+
+GET {{base_url}}/{{id}}
+Accept: application/json
+
+### Add Task
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "task": "task_{{$random.uuid}}"
+}
+> {%
+  client.global.set("task", response.body.task)
+%}
+
+### Complete Task
+
+POST {{base_url}}/{{id}}/complete/{{task}}
+Content-Type: application/json

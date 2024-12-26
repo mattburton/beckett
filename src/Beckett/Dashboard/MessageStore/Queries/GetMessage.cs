@@ -19,7 +19,7 @@ public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQue
                         SELECT MAX(stream_position) as stream_version
                         FROM {options.Schema}.messages
                         WHERE stream_name = m.stream_name
-                        AND deleted = false
+                        AND archived = false
                    ) as stream_version,
                    m.type,
                    m.timestamp,
@@ -27,7 +27,7 @@ public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQue
                    m.metadata
             FROM {options.Schema}.messages AS m
             WHERE m.id = $1
-            AND m.deleted = false;
+            AND m.archived = false;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });

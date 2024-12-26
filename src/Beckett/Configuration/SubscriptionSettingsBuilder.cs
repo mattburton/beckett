@@ -24,7 +24,10 @@ public class SubscriptionSettingsBuilder(Subscription subscription) : ISubscript
     {
         if (maxRetryCount < 0)
         {
-            throw new ArgumentException("The max retry count must be greater than or equal to 0", nameof(maxRetryCount));
+            throw new ArgumentException(
+                "The max retry count must be greater than or equal to 0",
+                nameof(maxRetryCount)
+            );
         }
 
         subscription.MaxRetriesByExceptionType[typeof(Exception)] = maxRetryCount;
@@ -37,7 +40,10 @@ public class SubscriptionSettingsBuilder(Subscription subscription) : ISubscript
     {
         if (maxRetryCount < 0)
         {
-            throw new ArgumentException("The max retry count must be greater than or equal to 0", nameof(maxRetryCount));
+            throw new ArgumentException(
+                "The max retry count must be greater than or equal to 0",
+                nameof(maxRetryCount)
+            );
         }
 
         subscription.MaxRetriesByExceptionType[typeof(TException)] = maxRetryCount;

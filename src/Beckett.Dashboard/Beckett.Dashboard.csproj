@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>Beckett.Dashboard</PackageId>
@@ -17,6 +17,19 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Components\BaseLayout.razor" />
+    <AdditionalFiles Include="Components\GlobalBehavior.razor" />
+    <AdditionalFiles Include="Components\Metrics\Metrics.razor" />
+    <AdditionalFiles Include="Components\Navbar.razor" />
+    <AdditionalFiles Include="Components\Paging.razor" />
+    <AdditionalFiles Include="Components\Search.razor" />
+    <AdditionalFiles Include="Components\ThemeBehavior.razor" />
+    <AdditionalFiles Include="Components\_Imports.razor" />
+    <AdditionalFiles Include="MessageStore\Components\Layout.razor" />
+    <AdditionalFiles Include="MessageStore\Components\LayoutWithoutSearch.razor" />
   </ItemGroup>
 
 </Project>

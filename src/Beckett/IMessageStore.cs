@@ -1,3 +1,7 @@
+using Beckett.Messages;
+using Beckett.MessageStorage;
+using Beckett.OpenTelemetry;
+
 namespace Beckett;
 
 public interface IMessageStore
@@ -10,7 +14,7 @@ public interface IMessageStore
     /// <param name="messages">The messages to append</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The result of the append operation</returns>
-    Task<AppendResult> AppendToStream(
+    Task<IAppendResult> AppendToStream(
         string streamName,
         ExpectedVersion expectedVersion,
         IEnumerable<Message> messages,
@@ -25,7 +29,7 @@ public interface IMessageStore
     /// <param name="options">The read options</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns></returns>
-    Task<MessageStream> ReadStream(
+    Task<IMessageStream> ReadStream(
         string streamName,
         ReadOptions options,
         CancellationToken cancellationToken
@@ -43,7 +47,7 @@ public static class MessageStoreExtensions
     /// <param name="message">The message to append</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The result of the append operation</returns>
-    public static Task<AppendResult> AppendToStream(
+    public static Task<IAppendResult> AppendToStream(
         this IMessageStore messageStore,
         string streamName,
         ExpectedVersion expectedVersion,
@@ -60,7 +64,7 @@ public static class MessageStoreExtensions
     /// <param name="message">The message to append</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The result of the append operation</returns>
-    public static Task<AppendResult> AppendToStream(
+    public static Task<IAppendResult> AppendToStream(
         this IMessageStore messageStore,
         string streamName,
         ExpectedVersion expectedVersion,
@@ -77,7 +81,7 @@ public static class MessageStoreExtensions
     /// <param name="messages">The messages to append</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The result of the append operation</returns>
-    public static Task<AppendResult> AppendToStream(
+    public static Task<IAppendResult> AppendToStream(
         this IMessageStore messageStore,
         string streamName,
         ExpectedVersion expectedVersion,
@@ -97,9 +101,61 @@ public static class MessageStoreExtensions
     /// <param name="streamName">The name of the stream</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns></returns>
-    public static Task<MessageStream> ReadStream(
+    public static Task<IMessageStream> ReadStream(
         this IMessageStore messageStore,
         string streamName,
         CancellationToken cancellationToken
     ) => messageStore.ReadStream(streamName, ReadOptions.Default, cancellationToken);
+}
+
+public class MessageStore(
+    IMessageStorage messageStorage,
+    IInstrumentation instrumentation
+) : IMessageStore
+{
+    public async Task<IAppendResult> AppendToStream(
+        string streamName,
+        ExpectedVersion expectedVersion,
+        IEnumerable<Message> messages,
+        CancellationToken cancellationToken
+    )
+    {
+        var activityMetadata = new Dictionary<string, string>();
+
+        using var activity = instrumentation.StartAppendToStreamActivity(streamName, activityMetadata);
+
+        var messagesToAppend = messages.ToList();
+
+        foreach (var message in messagesToAppend)
+        {
+            message.Metadata.Prepend(activityMetadata);
+        }
+
+        var result = await messageStorage.AppendToStream(
+            streamName,
+            expectedVersion,
+            messagesToAppend,
+            cancellationToken
+        );
+
+        return new AppendResult(result.StreamVersion);
+    }
+
+    public async Task<IMessageStream> ReadStream(
+        string streamName,
+        ReadOptions options,
+        CancellationToken cancellationToken
+    )
+    {
+        using var activity = instrumentation.StartReadStreamActivity(streamName);
+
+        var result = await messageStorage.ReadStream(streamName, ReadStreamOptions.From(options), cancellationToken);
+
+        return new MessageStream(
+            result.StreamName,
+            result.StreamVersion,
+            result.Messages,
+            AppendToStream
+        );
+    }
 }

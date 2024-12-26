@@ -1,3 +1,12 @@
 namespace Beckett;
 
-public class StreamAlreadyExistsException(string message) : Exception(message);
+public class StreamAlreadyExistsException : Exception
+{
+    public StreamAlreadyExistsException()
+    {
+    }
+
+    public StreamAlreadyExistsException(string? message) : base(message)
+    {
+    }
+}

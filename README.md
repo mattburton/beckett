@@ -9,4 +9,5 @@ Building blocks for event sourcing and message-based applications:
 - Scheduled Messages - schedule messages to be sent at a future time with cancellation support
 - Open Telemetry - built-in support to provide tracing and metrics
 - Dashboard - browse messages, retry failed subscriptions, and more
+- Test Helpers - easily write unit tests for Given-When-Then style specifications, fakes to simplify testing without mocks, and more
 - Bring Your Own Event Store - Beckett provides a simple Postgres-based message store or use your own by implementing the `IMessageStorage` interface

@@ -19,7 +19,7 @@ public class GetCategories(
                    count(*) over() as total_results
             from {options.Schema}.messages
             where ($1 is null or {options.Schema}.stream_category(stream_name) ilike '%' || $1 || '%')
-            and deleted = false
+            and archived = false
             group by {options.Schema}.stream_category(stream_name)
             order by {options.Schema}.stream_category(stream_name)
             offset $2
