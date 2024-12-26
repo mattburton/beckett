@@ -2,5 +2,5 @@ namespace Beckett.Subscriptions;
 
 public interface ICheckpointConsumer
 {
-    void StartPolling();
+    Task StartPolling(CancellationToken cancellationToken);
 }

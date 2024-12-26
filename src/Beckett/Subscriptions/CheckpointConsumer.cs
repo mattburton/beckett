@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
@@ -5,51 +6,30 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class CheckpointConsumer(
+    Channel<CheckpointAvailable> channel,
     int instance,
     IPostgresDatabase database,
     ICheckpointProcessor checkpointProcessor,
     BeckettOptions options,
-    ILogger<CheckpointConsumer> logger,
-    CancellationToken stoppingToken
+    ILogger<CheckpointConsumer> logger
 ) : ICheckpointConsumer
 {
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
-    private Task? _task;
-    private bool _continue;
-
-    public void StartPolling()
+    public async Task StartPolling(CancellationToken cancellationToken)
     {
-        lock (_lock)
-        {
-            if (_task is { IsCompleted: false })
-            {
-                logger.NewCheckpointsAvailableWhileConsumerIsActive(instance);
+        logger.StartingCheckpointPolling(instance);
 
-                _continue = true;
-
-                return;
-            }
-
-            _task = Poll();
-        }
-    }
-
-    private async Task Poll()
-    {
-        while (true)
+        while (await channel.Reader.WaitToReadAsync(cancellationToken))
         {
             try
             {
-                if (stoppingToken.IsCancellationRequested)
+                if (!channel.Reader.TryRead(out _))
                 {
-                    break;
+                    continue;
                 }
 
-                logger.StartingCheckpointPolling(instance);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                logger.AttemptingToReserveCheckpoint(instance);
 
                 var checkpoint = await database.Execute(
                     new ReserveNextAvailableCheckpoint(
@@ -57,32 +37,23 @@ public class CheckpointConsumer(
                         options.Subscriptions.ReservationTimeout,
                         options.Postgres
                     ),
-                    stoppingToken
+                    cancellationToken
                 );
 
                 if (checkpoint == null)
                 {
-                    if (_continue)
-                    {
-                        logger.WillContinuePollingCheckpoints(instance);
+                    logger.NoAvailableCheckpoints(instance);
 
-                        _continue = false;
-
-                        continue;
-                    }
-
-                    logger.NoNewCheckpointsFoundExiting(instance);
-
-                    break;
+                    continue;
                 }
 
                 if (!checkpoint.IsRetryOrFailure && checkpoint.StreamPosition >= checkpoint.StreamVersion)
                 {
-                    logger.SkippingCheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance);
+                    logger.CheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance);
 
                     await database.Execute(
                         new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
-                        stoppingToken
+                        cancellationToken
                     );
 
                     continue;
@@ -97,21 +68,20 @@ public class CheckpointConsumer(
                     continue;
                 }
 
-                if (stoppingToken.IsCancellationRequested)
-                {
-                    break;
-                }
+                cancellationToken.ThrowIfCancellationRequested();
 
                 await checkpointProcessor.Process(
                     instance,
                     checkpoint,
                     subscription,
-                    stoppingToken
+                    cancellationToken
                 );
+
+                channel.Writer.TryWrite(CheckpointAvailable.Instance);
             }
             catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
             {
-                break;
+                throw;
             }
             catch (Exception e)
             {
@@ -123,20 +93,17 @@ public class CheckpointConsumer(
 
 public static partial class Log
 {
-    [LoggerMessage(0, LogLevel.Trace, "New checkpoints are available but consumer is already active - setting continue flag to true for consumer {Consumer}")]
-    public static partial void NewCheckpointsAvailableWhileConsumerIsActive(this ILogger logger, int consumer);
-
     [LoggerMessage(0, LogLevel.Trace, "Starting checkpoint polling for consumer {Consumer}")]
     public static partial void StartingCheckpointPolling(this ILogger logger, int consumer);
 
-    [LoggerMessage(0, LogLevel.Trace, "No new checkpoints were found but will continue polling since the continue flag has been set to true for consumer {Consumer}")]
-    public static partial void WillContinuePollingCheckpoints(this ILogger logger, int consumer);
+    [LoggerMessage(0, LogLevel.Trace, "Attempting to reserve checkpoint for consumer {Consumer}")]
+    public static partial void AttemptingToReserveCheckpoint(this ILogger logger, int consumer);
 
-    [LoggerMessage(0, LogLevel.Trace, "No new checkpoints found - exiting consumer {Consumer}")]
-    public static partial void NoNewCheckpointsFoundExiting(this ILogger logger, int consumer);
+    [LoggerMessage(0, LogLevel.Trace, "No available checkpoints - will continue to wait for consumer {Consumer}")]
+    public static partial void NoAvailableCheckpoints(this ILogger logger, int consumer);
 
     [LoggerMessage(0, LogLevel.Trace, "Skipping checkpoint {CheckpointId} - already caught up at stream position {StreamPosition} - releasing reservation and continuing polling in consumer {Consumer}")]
-    public static partial void SkippingCheckpointAlreadyCaughtUp(this ILogger logger, long checkpointId, long streamPosition, int consumer);
+    public static partial void CheckpointAlreadyCaughtUp(this ILogger logger, long checkpointId, long streamPosition, int consumer);
 
     [LoggerMessage(0, LogLevel.Trace, "Subscription {SubscriptionName} not registered for group {GroupName} - skipping checkpoint {CheckpointId} in consumer {Consumer}")]
     public static partial void SubscriptionNotRegistered(this ILogger logger, string subscriptionName, string groupName, long checkpointId, int consumer);

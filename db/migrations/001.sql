@@ -419,7 +419,7 @@ BEGIN
     NEW.process_at = now();
   END IF;
 
-  IF (NEW.process_at IS NOT NULL) THEN
+  IF (NEW.name != '$global' AND NEW.process_at IS NOT NULL) THEN
     PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
   END IF;
 
