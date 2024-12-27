@@ -844,6 +844,17 @@ FROM lagging AS l, retries AS r, failed AS f;
 $$;
 
 -------------------------------------------------
+-- DASHBOARD SUPPORT
+-------------------------------------------------
+CREATE MATERIALIZED VIEW __schema__.tenants AS
+SELECT metadata ->> '$tenant' AS tenant
+FROM __schema__.messages_active
+WHERE metadata ->> '$tenant' IS NOT NULL
+GROUP BY tenant;
+
+CREATE UNIQUE INDEX on __schema__.tenants (tenant);
+
+-------------------------------------------------
 -- UTILITIES
 -------------------------------------------------
 CREATE OR REPLACE FUNCTION __schema__.try_advisory_lock(
