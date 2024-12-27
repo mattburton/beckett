@@ -21,7 +21,7 @@ try
 
     builder.Services.AddSerilog((_, configuration) => configuration.ReadFrom.Configuration(builder.Configuration));
 
-    await builder.AddTaskmasterDatabase();
+    await builder.AddTaskHubDatabase();
 
     builder.Services.AddBeckett().WithMessageTypesFrom(typeof(TaskList).Assembly);
 

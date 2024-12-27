@@ -7,7 +7,7 @@ namespace TaskHub.Infrastructure.Database;
 
 public static class ServiceCollectionExtensions
 {
-    public static async Task AddTaskmasterDatabase(this IHostApplicationBuilder builder)
+    public static async Task AddTaskHubDatabase(this IHostApplicationBuilder builder)
     {
         var migrationsConnectionString = builder.Configuration.GetConnectionString("Migrations") ??
                                          throw new Exception("Missing Migrations connection string");
