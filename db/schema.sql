@@ -114,6 +114,17 @@ $$;
 
 
 --
+-- Name: advisory_unlock(text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.advisory_unlock(_key text) RETURNS boolean
+    LANGUAGE sql
+    AS $$
+SELECT pg_advisory_unlock(abs(hashtextextended(_key, 0)));
+$$;
+
+
+--
 -- Name: append_to_stream(text, bigint, beckett.message[]); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -718,6 +729,17 @@ $$;
 
 
 --
+-- Name: try_advisory_lock(text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.try_advisory_lock(_key text) RETURNS boolean
+    LANGUAGE sql
+    AS $$
+SELECT pg_try_advisory_lock(abs(hashtextextended(_key, 0)));
+$$;
+
+
+--
 -- Name: update_checkpoint_position(bigint, bigint, timestamp with time zone); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -875,6 +897,18 @@ CREATE TABLE beckett.subscriptions (
     name text NOT NULL,
     status beckett.subscription_status DEFAULT 'uninitialized'::beckett.subscription_status NOT NULL
 );
+
+
+--
+-- Name: tenants; Type: MATERIALIZED VIEW; Schema: beckett; Owner: -
+--
+
+CREATE MATERIALIZED VIEW beckett.tenants AS
+ SELECT (metadata ->> '$tenant'::text) AS tenant
+   FROM beckett.messages_active
+  WHERE ((metadata ->> '$tenant'::text) IS NOT NULL)
+  GROUP BY (metadata ->> '$tenant'::text)
+  WITH NO DATA;
 
 
 --
@@ -1057,6 +1091,13 @@ CREATE INDEX ix_scheduled_messages_deliver_at ON beckett.scheduled_messages USIN
 --
 
 CREATE INDEX ix_subscriptions_active ON beckett.subscriptions USING btree (group_name, name, status) WHERE (status = 'active'::beckett.subscription_status);
+
+
+--
+-- Name: tenants_tenant_idx; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE UNIQUE INDEX tenants_tenant_idx ON beckett.tenants USING btree (tenant);
 
 
 --

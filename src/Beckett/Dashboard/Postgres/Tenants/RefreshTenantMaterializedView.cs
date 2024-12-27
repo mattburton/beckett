@@ -11,34 +11,40 @@ public class RefreshTenantMaterializedView(
     IPostgresDatabase database,
     PostgresOptions options,
     ILogger<RefreshTenantMaterializedView> logger
-) : IHostedService
+) : BackgroundService
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+
         while (true)
         {
             try
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                stoppingToken.ThrowIfCancellationRequested();
 
                 const string key = "Beckett:RefreshTenantMaterializedView";
 
                 await using var connection = dataSource.CreateConnection();
 
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(stoppingToken);
 
-                var locked = await database.Execute(new TryAdvisoryLock(key, options), connection, cancellationToken);
+                var locked = await database.Execute(new TryAdvisoryLock(key, options), connection, stoppingToken);
 
                 if (locked)
                 {
-                    await database.Execute(new Query(options), connection, cancellationToken);
+                    logger.LogTrace("Starting tenant materialized view refresh");
 
-                    await database.Execute(new AdvisoryUnlock(key, options), connection, cancellationToken);
+                    await database.Execute(new Query(options), connection, stoppingToken);
+
+                    await database.Execute(new AdvisoryUnlock(key, options), connection, stoppingToken);
+
+                    logger.LogTrace("Tenant materialized view refresh completed");
                 }
 
-                await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
-            catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+            catch (OperationCanceledException e) when (e.CancellationToken == stoppingToken)
             {
                 throw;
             }
@@ -48,8 +54,6 @@ public class RefreshTenantMaterializedView(
             }
         }
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     private class Query(PostgresOptions options) : IPostgresDatabaseQuery<int>
     {

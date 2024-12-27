@@ -852,6 +852,8 @@ FROM __schema__.messages_active
 WHERE metadata ->> '$tenant' IS NOT NULL
 GROUP BY tenant;
 
+ALTER MATERIALIZED VIEW __schema__.tenants OWNER TO beckett;
+
 CREATE UNIQUE INDEX on __schema__.tenants (tenant);
 
 -------------------------------------------------

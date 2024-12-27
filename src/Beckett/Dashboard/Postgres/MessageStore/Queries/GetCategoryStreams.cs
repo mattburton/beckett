@@ -5,6 +5,7 @@ using NpgsqlTypes;
 namespace Beckett.Dashboard.Postgres.MessageStore.Queries;
 
 public class GetCategoryStreams(
+    string tenant,
     string category,
     string? query,
     int offset,
@@ -15,17 +16,20 @@ public class GetCategoryStreams(
     public async Task<GetCategoryStreamsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select stream_name, max(timestamp) as last_updated, count(*) over() as total_results
-            from {options.Schema}.messages
-            where {options.Schema}.stream_category(stream_name) = $1
-            and ($2 is null or stream_name ilike '%' || $2 || '%')
-            and archived = false
+            select stream_name,
+                   max(timestamp) as last_updated,
+                   count(*) over() as total_results
+            from {options.Schema}.messages_active
+            where metadata ->> '$tenant' = $1
+            and {options.Schema}.stream_category(stream_name) = $2
+            and ($3 is null or stream_name ilike '%' || $3 || '%')
             group by stream_name
             order by max(timestamp) desc
-            offset $3
-            limit $4;
+            offset $4
+            limit $5;
         ";
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
@@ -36,10 +40,11 @@ public class GetCategoryStreams(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = category;
-        command.Parameters[1].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
-        command.Parameters[2].Value = offset;
-        command.Parameters[3].Value = limit;
+        command.Parameters[0].Value = tenant;
+        command.Parameters[1].Value = category;
+        command.Parameters[2].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
+        command.Parameters[3].Value = offset;
+        command.Parameters[4].Value = limit;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

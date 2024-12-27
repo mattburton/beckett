@@ -2,7 +2,10 @@ namespace Beckett.Dashboard;
 
 public interface IDashboardMessageStore
 {
+    Task<GetTenantsResult> GetTenants(CancellationToken cancellationToken);
+
     Task<GetCategoriesResult> GetCategories(
+        string tenant,
         string? query,
         int page,
         int pageSize,
@@ -10,6 +13,7 @@ public interface IDashboardMessageStore
     );
 
     Task<GetCategoryStreamsResult> GetCategoryStreams(
+        string tenant,
         string category,
         string? query,
         int page,
@@ -37,6 +41,8 @@ public interface IDashboardMessageStore
         CancellationToken cancellationToken
     );
 }
+
+public record GetTenantsResult(List<string> Tenants);
 
 public record GetCategoriesResult(List<GetCategoriesResult.Category> Categories, int TotalResults)
 {

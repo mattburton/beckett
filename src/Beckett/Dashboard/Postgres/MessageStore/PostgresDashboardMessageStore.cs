@@ -5,7 +5,20 @@ namespace Beckett.Dashboard.Postgres.MessageStore;
 
 public class PostgresDashboardMessageStore(IPostgresDatabase database, PostgresOptions options) : IDashboardMessageStore
 {
+    public async Task<GetTenantsResult> GetTenants(CancellationToken cancellationToken)
+    {
+        var results = await database.Execute(new GetTenants(options), cancellationToken);
+
+        if (results.Tenants.Count == 0)
+        {
+            results.Tenants.Add(BeckettContext.DefaultTenant);
+        }
+
+        return results;
+    }
+
     public Task<GetCategoriesResult> GetCategories(
+        string tenant,
         string? query,
         int page,
         int pageSize,
@@ -14,10 +27,11 @@ public class PostgresDashboardMessageStore(IPostgresDatabase database, PostgresO
     {
         var offset = Pagination.ToOffset(page, pageSize);
 
-        return database.Execute(new GetCategories(query, offset, pageSize, options), cancellationToken);
+        return database.Execute(new GetCategories(tenant, query, offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetCategoryStreamsResult> GetCategoryStreams(
+        string tenant,
         string category,
         string? query,
         int page,
@@ -27,7 +41,7 @@ public class PostgresDashboardMessageStore(IPostgresDatabase database, PostgresO
     {
         var offset = Pagination.ToOffset(page, pageSize);
 
-        return database.Execute(new GetCategoryStreams(category, query, offset, pageSize, options), cancellationToken);
+        return database.Execute(new GetCategoryStreams(tenant, category, query, offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetCorrelatedMessagesResult> GetCorrelatedMessages(
