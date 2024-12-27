@@ -68,11 +68,12 @@ CREATE TABLE IF NOT EXISTS __schema__.messages_active PARTITION OF __schema__.me
 
 CREATE TABLE IF NOT EXISTS __schema__.messages_archived PARTITION OF __schema__.messages FOR VALUES IN (true);
 
-CREATE INDEX IF NOT EXISTS ix_messages_active_global_read_stream ON beckett.messages_active (transaction_id, global_position, archived);
+CREATE INDEX IF NOT EXISTS ix_messages_active_global_read_stream ON __schema__.messages_active (transaction_id, global_position, archived);
 
-CREATE INDEX IF NOT EXISTS ix_messages_active_stream_category ON __schema__.messages_active (__schema__.stream_category(stream_name));
+CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema__.messages_active ((metadata ->> '$tenant'), beckett.stream_category(stream_name))
+  WHERE metadata ->> '$tenant' IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id ON beckett.messages_active ((metadata ->> '$correlation_id'))
+CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id ON __schema__.messages_active ((metadata ->> '$correlation_id'))
   WHERE metadata ->> '$correlation_id' IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION __schema__.stream_hash(

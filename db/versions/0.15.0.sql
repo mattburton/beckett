@@ -1,3 +1,8 @@
+DROP INDEX IF EXISTS beckett.ix_messages_active_stream_category;
+
+CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on beckett.messages_active ((metadata ->> '$tenant'), beckett.stream_category(stream_name))
+  WHERE metadata ->> '$tenant' IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION beckett.checkpoint_preprocessor() RETURNS trigger
   LANGUAGE plpgsql
 AS $$

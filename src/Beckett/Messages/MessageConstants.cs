@@ -6,5 +6,6 @@ public static class MessageConstants
     {
         public const string CausationId = "$causation_id";
         public const string CorrelationId = "$correlation_id";
+        public const string Tenant = "$tenant";
     }
 }
