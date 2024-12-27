@@ -1,4 +1,5 @@
 using Beckett.Database;
+using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.MessageStorage;
 using Beckett.Subscriptions.Queries;
@@ -35,9 +36,12 @@ public class SubscriptionInitializer(
                 continue;
             }
 
-            var advisoryLockId = subscription.GetAdvisoryLockId(options.Subscriptions.GroupName);
+            var advisoryLockKey = subscription.GetAdvisoryLockKey(options.Subscriptions.GroupName);
 
-            var locked = await database.Execute(new TryAdvisoryLock(advisoryLockId), cancellationToken);
+            var locked = await database.Execute(
+                new TryAdvisoryLock(advisoryLockKey, options.Postgres),
+                cancellationToken
+            );
 
             if (!locked)
             {
@@ -50,7 +54,7 @@ public class SubscriptionInitializer(
             }
             finally
             {
-                await database.Execute(new AdvisoryUnlock(advisoryLockId), cancellationToken);
+                await database.Execute(new AdvisoryUnlock(advisoryLockKey, options.Postgres), cancellationToken);
             }
         }
     }
@@ -189,6 +193,14 @@ public static partial class Log
     [LoggerMessage(0, LogLevel.Information, "Finished initializing subscription {SubscriptionName}")]
     public static partial void FinishedInitializingSubscription(this ILogger logger, string subscriptionName);
 
-    [LoggerMessage(0, LogLevel.Information, "Initializing subscription {SubscriptionName} - current global position {GlobalPosition}")]
-    public static partial void SubscriptionInitializationPosition(this ILogger logger, string subscriptionName, long globalPosition);
+    [LoggerMessage(
+        0,
+        LogLevel.Information,
+        "Initializing subscription {SubscriptionName} - current global position {GlobalPosition}"
+    )]
+    public static partial void SubscriptionInitializationPosition(
+        this ILogger logger,
+        string subscriptionName,
+        long globalPosition
+    );
 }

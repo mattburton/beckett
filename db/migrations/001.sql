@@ -842,3 +842,26 @@ failed AS (
 SELECT l.lagging, r.retries, f.failed
 FROM lagging AS l, retries AS r, failed AS f;
 $$;
+
+-------------------------------------------------
+-- UTILITIES
+-------------------------------------------------
+CREATE OR REPLACE FUNCTION __schema__.try_advisory_lock(
+  _key text
+)
+  RETURNS boolean
+  LANGUAGE sql
+AS
+$$
+SELECT pg_try_advisory_lock(abs(hashtextextended(_key, 0)));
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.advisory_unlock(
+  _key text
+)
+  RETURNS boolean
+  LANGUAGE sql
+AS
+$$
+SELECT pg_advisory_unlock(abs(hashtextextended(_key, 0)));
+$$;
