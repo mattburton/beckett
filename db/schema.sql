@@ -1039,10 +1039,10 @@ CREATE INDEX ix_messages_active_global_read_stream ON beckett.messages_active US
 
 
 --
--- Name: ix_messages_active_stream_category; Type: INDEX; Schema: beckett; Owner: -
+-- Name: ix_messages_active_tenant_stream_category; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_messages_active_stream_category ON beckett.messages_active USING btree (beckett.stream_category(stream_name));
+CREATE INDEX ix_messages_active_tenant_stream_category ON beckett.messages_active USING btree (((metadata ->> '$tenant'::text)), beckett.stream_category(stream_name)) WHERE ((metadata ->> '$tenant'::text) IS NOT NULL);
 
 
 --

@@ -45,6 +45,7 @@ public static class TelemetryConstants
         public const string StreamName = "message.stream_name";
         public const string GlobalPosition = "message.global_position";
         public const string StreamPosition = "message.stream_position";
+        public const string Tenant = "message.tenant";
         public const string Type = "message.type";
     }
 }

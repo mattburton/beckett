@@ -64,66 +64,32 @@ public class Instrumentation : IInstrumentation, IDisposable
     {
         var activity = _activitySource.StartActivity(TelemetryConstants.Activities.AppendToStream);
 
-        if (activity == null)
+        activity?.AddTag(TelemetryConstants.Streams.Name, streamName);
+
+        if (activity is not null)
         {
-            return activity;
+            _propagator.Inject(
+                new PropagationContext(activity.Context, default),
+                metadata,
+                (meta, key, value) => meta[key] = value
+            );
         }
 
-        activity.AddTag(TelemetryConstants.Streams.Name, streamName);
-
-        _propagator.Inject(
-            new PropagationContext(activity.Context, default),
-            metadata,
-            (meta, key, value) => meta[key] = value
-        );
-
-        var correlationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.CorrelationId);
+        var correlationId = BeckettContext.GetCorrelationId();
 
         if (correlationId != null)
         {
             metadata.Add(MessageConstants.Metadata.CorrelationId, correlationId);
         }
 
-        var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
+        var causationId = activity?.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
 
         if (causationId != null)
         {
             metadata.Add(MessageConstants.Metadata.CausationId, causationId);
         }
 
-        return activity;
-    }
-
-    public Activity? StartSessionAppendToStreamActivity(string streamName, Dictionary<string, string> metadata)
-    {
-        var activity = _activitySource.StartActivity(TelemetryConstants.Activities.SessionAppendToStream);
-
-        if (activity == null)
-        {
-            return activity;
-        }
-
-        activity.AddTag(TelemetryConstants.Streams.Name, streamName);
-
-        _propagator.Inject(
-            new PropagationContext(activity.Context, default),
-            metadata,
-            (meta, key, value) => meta[key] = value
-        );
-
-        var correlationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.CorrelationId);
-
-        if (correlationId != null)
-        {
-            metadata.Add(MessageConstants.Metadata.CorrelationId, correlationId);
-        }
-
-        var causationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.Id);
-
-        if (causationId != null)
-        {
-            metadata.Add(MessageConstants.Metadata.CausationId, causationId);
-        }
+        metadata.Add(MessageConstants.Metadata.Tenant, BeckettContext.GetTenant());
 
         return activity;
     }
@@ -136,9 +102,6 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         return activity;
     }
-
-    public Activity? StartReadStreamBatchActivity() =>
-        _activitySource.StartActivity(TelemetryConstants.Activities.ReadStreamBatch);
 
     public Activity? StartScheduleMessageActivity(string streamName, Dictionary<string, string> metadata)
     {
@@ -157,7 +120,7 @@ public class Instrumentation : IInstrumentation, IDisposable
             (meta, key, value) => meta[key] = value
         );
 
-        var correlationId = activity.Parent?.GetBaggageItem(TelemetryConstants.Message.CorrelationId);
+        var correlationId = BeckettContext.GetCorrelationId();
 
         if (correlationId != null)
         {
@@ -171,11 +134,10 @@ public class Instrumentation : IInstrumentation, IDisposable
             metadata.Add(MessageConstants.Metadata.CausationId, causationId);
         }
 
+        metadata.Add(MessageConstants.Metadata.Tenant, BeckettContext.GetTenant());
+
         return activity;
     }
-
-    public Activity? StartSessionSaveChangesActivity() =>
-        _activitySource.StartActivity(TelemetryConstants.Activities.SessionSaveChanges);
 
     public Activity? StartHandleMessageActivity(Subscription subscription, IMessageContext messageContext)
     {
@@ -218,7 +180,20 @@ public class Instrumentation : IInstrumentation, IDisposable
                 out var causationIdProperty
             ))
         {
-            activity.AddTag(TelemetryConstants.Message.CausationId, causationIdProperty.GetString());
+            var causationId = causationIdProperty.GetString();
+
+            activity.AddTag(TelemetryConstants.Message.CausationId, causationId);
+        }
+
+        if (messageContext.Metadata.RootElement.TryGetProperty(
+                MessageConstants.Metadata.Tenant,
+                out var tenantProperty
+            ))
+        {
+            var tenant = tenantProperty.GetString();
+
+            activity.AddTag(TelemetryConstants.Message.Tenant, tenant);
+            activity.AddBaggage(TelemetryConstants.Message.Tenant, tenant);
         }
 
         activity.AddTag(TelemetryConstants.Message.StreamName, messageContext.StreamName);

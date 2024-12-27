@@ -17,7 +17,7 @@ try
 
     builder.Services.AddSerilog((_, configuration) => configuration.ReadFrom.Configuration(builder.Configuration));
 
-    await builder.AddTaskmasterDatabase();
+    await builder.AddTaskHubDatabase();
 
     builder.Services.AddBeckett(
         options => { options.WithSubscriptionGroup("TaskHub"); }
@@ -31,7 +31,6 @@ try
                 .AddBeckett()
                 .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317"))
         );
-
 
     var host = builder.Build();
 
