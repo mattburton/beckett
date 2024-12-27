@@ -1,8 +1,11 @@
+using Beckett.Dashboard.MessageStore.Components;
+
 namespace Beckett.Dashboard.MessageStore.Streams;
 
 public static class StreamsHandler
 {
     public static async Task<IResult> Get(
+        HttpContext context,
         string category,
         string? query,
         int? page,
@@ -11,11 +14,13 @@ public static class StreamsHandler
         CancellationToken cancellationToken
     )
     {
+        var tenant = TenantFilter.GetCurrentTenant(context);
         var decodedCategory = HttpUtility.UrlDecode(category);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
         var result = await dashboard.MessageStore.GetCategoryStreams(
+            tenant,
             decodedCategory,
             query,
             pageParameter,

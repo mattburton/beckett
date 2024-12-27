@@ -5,7 +5,7 @@ namespace Beckett;
 
 public static class BeckettContext
 {
-    private const string DefaultTenant = "default";
+    public const string DefaultTenant = "default";
 
     public static string? GetCorrelationId() =>
         Activity.Current?.GetBaggageItem(TelemetryConstants.Message.CorrelationId);

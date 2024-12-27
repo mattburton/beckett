@@ -842,3 +842,39 @@ failed AS (
 SELECT l.lagging, r.retries, f.failed
 FROM lagging AS l, retries AS r, failed AS f;
 $$;
+
+-------------------------------------------------
+-- DASHBOARD SUPPORT
+-------------------------------------------------
+CREATE MATERIALIZED VIEW __schema__.tenants AS
+SELECT metadata ->> '$tenant' AS tenant
+FROM __schema__.messages_active
+WHERE metadata ->> '$tenant' IS NOT NULL
+GROUP BY tenant;
+
+ALTER MATERIALIZED VIEW __schema__.tenants OWNER TO beckett;
+
+CREATE UNIQUE INDEX on __schema__.tenants (tenant);
+
+-------------------------------------------------
+-- UTILITIES
+-------------------------------------------------
+CREATE OR REPLACE FUNCTION __schema__.try_advisory_lock(
+  _key text
+)
+  RETURNS boolean
+  LANGUAGE sql
+AS
+$$
+SELECT pg_try_advisory_lock(abs(hashtextextended(_key, 0)));
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.advisory_unlock(
+  _key text
+)
+  RETURNS boolean
+  LANGUAGE sql
+AS
+$$
+SELECT pg_advisory_unlock(abs(hashtextextended(_key, 0)));
+$$;

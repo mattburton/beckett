@@ -1,0 +1,28 @@
+@inherits LayoutComponentBase
+@layout BaseLayout
+
+<CascadingValue Value="CurrentTenant">
+  <SectionContent SectionName="navbar">
+    <Navbar Area="Area.MessageStore"/>
+    @if (Dashboard.Options.TenantFilterEnabled)
+    {
+      <TenantFilter Model="new TenantFilter.ViewModel([])"></TenantFilter>
+    }
+    <Search/>
+  </SectionContent>
+  @Body
+</CascadingValue>
+
+@code {
+
+  [CascadingParameter]
+  public HttpContext? Context { get; set; }
+
+  private string? CurrentTenant { get; set; }
+
+  protected override void OnInitialized()
+  {
+    CurrentTenant = TenantFilter.GetCurrentTenant(Context);
+  }
+
+}

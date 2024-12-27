@@ -14,4 +14,10 @@ public class DashboardOptions
     /// from Beckett.
     /// </summary>
     public bool MessageStoreEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Control whether to display the tenant filter on the dashboard. If your message store does not support
+    /// multi-tenancy, or you only have a single tenant you can choose to disable this option.
+    /// </summary>
+    public bool TenantFilterEnabled { get; set; } = true;
 }

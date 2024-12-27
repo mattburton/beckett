@@ -46,7 +46,7 @@ public class Subscription(string name)
         }
     }
 
-    internal int GetAdvisoryLockId(string groupName) => $"{groupName}:{Name}".GetDeterministicHashCode();
+    internal string GetAdvisoryLockKey(string groupName) => $"{groupName}:{Name}";
 
     internal int GetMaxRetryCount(BeckettOptions options, Type exceptionType)
     {
