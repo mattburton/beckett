@@ -27,4 +27,10 @@
     <EmbeddedResource Include="../../db/migrations/*.sql" LinkBase="Database/Migrations"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Beckett.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>

@@ -2,7 +2,6 @@ using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Subscriptions.Initialization;
 using Beckett.Subscriptions.Queries;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +12,6 @@ public class BootstrapSubscriptions(
     IPostgresDatabase database,
     BeckettOptions options,
     ISubscriptionInitializer subscriptionInitializer,
-    IServiceProvider serviceProvider,
     ILogger<BootstrapSubscriptions> logger
 ) : IHostedService
 {
@@ -43,9 +41,7 @@ public class BootstrapSubscriptions(
 
             foreach (var subscription in SubscriptionRegistry.All())
             {
-                EnsureSubscriptionHandlerIsRegistered(subscription);
-
-                subscription.EnsureHandlerIsConfigured();
+                subscription.BuildHandler();
 
                 logger.LogTrace(
                     "Adding or updating subscription {Name} in group {GroupName}",
@@ -147,25 +143,4 @@ public class BootstrapSubscriptions(
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private void EnsureSubscriptionHandlerIsRegistered(Subscription subscription)
-    {
-        if (subscription.HandlerType == null)
-        {
-            return;
-        }
-
-        try
-        {
-            var scope = serviceProvider.CreateScope();
-
-            scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
-        }
-        catch
-        {
-            throw new InvalidOperationException(
-                $"The subscription handler {subscription.HandlerType} for {subscription.Name} has not been registered in the container"
-            );
-        }
-    }
 }

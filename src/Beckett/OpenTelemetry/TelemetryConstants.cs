@@ -18,10 +18,7 @@ public static class TelemetryConstants
     {
         public const string AppendToStream = $"{ActivitySource.Name}.{nameof(AppendToStream)}";
         public const string ReadStream = $"{ActivitySource.Name}.{nameof(ReadStream)}";
-        public const string ReadStreamBatch = $"{ActivitySource.Name}.{nameof(ReadStreamBatch)}";
         public const string ScheduleMessage = $"{ActivitySource.Name}.{nameof(ScheduleMessage)}";
-        public const string SessionAppendToStream = $"{ActivitySource.Name}.{nameof(SessionAppendToStream)}";
-        public const string SessionSaveChanges = $"{ActivitySource.Name}.{nameof(SessionSaveChanges)}";
     }
 
     public static class Streams
