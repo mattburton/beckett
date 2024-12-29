@@ -61,11 +61,12 @@ public interface ISubscriptionConfigurationBuilder
     /// <summary>
     /// Configure the handler for this subscription. Handler methods can be a lambda expression, a local function, an
     /// instance method or a static method. The parameters will determine the type of handler - if the method accepts
-    /// an <see cref="IReadOnlyList{T}"/> of type <see cref="IMessageContext"/> then it is a batch handler, otherwise it
-    /// handles individual messages via <see cref="IMessageContext"/> and / or an actual message type. Handler methods
-    /// must return <see cref="Task"/> and therefore can accept a <see cref="CancellationToken"/> parameter as well.
-    /// Dependency injection is also supported - any other parameters will be resolved from the container. Any
-    /// exceptions thrown by the handler will result in Beckett retrying the subscription based on its configuration.
+    /// an <see cref="IReadOnlyList{T}"/> of type <see cref="IMessageContext"/> or <see cref="object"/> then it is a
+    /// batch handler, otherwise it handles individual messages via <see cref="IMessageContext"/> and / or a typed
+    /// message instance. Handler methods are async and must return <see cref="Task"/> and therefore can accept a
+    /// <see cref="CancellationToken"/> parameter as well. Dependency injection is also supported - any other parameters
+    /// will be resolved from a per-handler service scope. Any exceptions thrown by the handler will result in Beckett
+    /// retrying the subscription based on its configuration.
     /// </summary>
     /// <param name="handler">The subscription handler</param>
     /// <returns>Builder to further configure the subscription</returns>
