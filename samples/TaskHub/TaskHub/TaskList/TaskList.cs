@@ -5,7 +5,9 @@ namespace TaskHub.TaskList;
 
 public class TaskList : IBeckettModule
 {
-    public static string StreamName(Guid id) => $"TaskList-{id}";
+    private const string Category = "TaskList";
+
+    public static string StreamName(Guid id) => $"{Category}-{id}";
 
     public void MessageTypes(IMessageTypeBuilder builder)
     {
@@ -20,5 +22,16 @@ public class TaskList : IBeckettModule
     {
         builder.AddSubscription("task_list:get_lists_projection")
             .Projection<GetListsProjection, GetListsReadModel, Guid>();
+
+        builder.AddSubscription("task_list:wire_tap")
+            .Category(Category)
+            .Handler(
+                (IMessageContext context) =>
+                {
+                    Console.WriteLine($"[MESSAGE] type: {context.Type}, id: {context.Id}");
+
+                    return Task.CompletedTask;
+                }
+            );
     }
 }

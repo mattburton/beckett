@@ -1,12 +1,13 @@
 namespace Beckett.Projections;
 
-public static class ProjectionProcessor
+public static class ProjectionHandler<TProjection, TState, TKey> where TProjection : IProjection<TState, TKey>
+    where TState : IApply, new()
 {
-    public static async Task Process<T, TKey>(
-        IProjection<T, TKey> projection,
+    public static async Task Handle(
+        TProjection projection,
         IMessageBatch batch,
         CancellationToken cancellationToken
-    ) where T : IApply, new()
+    )
     {
         var configuration = new ProjectionConfiguration<TKey>();
 
@@ -54,7 +55,7 @@ public static class ProjectionProcessor
 
         var model = result.Model;
 
-        if (projection is IHandleApply<T> applyHandler)
+        if (projection is IHandleApply<TState> applyHandler)
         {
             foreach (var message in messagesToApply)
             {
@@ -83,16 +84,15 @@ public static class ProjectionProcessor
         await projection.Create(model, cancellationToken);
     }
 
-    private static async Task<(T Model, bool Loaded)> LoadModel<T, TKey>(
-        IProjection<T, TKey> projection,
+    private static async Task<(TState Model, bool Loaded)> LoadModel(
+        TProjection projection,
         TKey key,
         ProjectionAction actionToPerform,
         bool ignoreIfNotFound,
         CancellationToken cancellationToken
     )
-        where T : IApply, new()
     {
-        T? model;
+        TState? model;
         var loaded = false;
 
         if (actionToPerform != ProjectionAction.Create)
@@ -104,11 +104,11 @@ public static class ProjectionProcessor
                 if (!ignoreIfNotFound)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot {actionToPerform.ToString().ToLowerInvariant()} {typeof(T).Name} with key {key} - read model not found"
+                        $"Cannot {actionToPerform.ToString().ToLowerInvariant()} {typeof(TState).Name} with key {key} - read model not found"
                     );
                 }
 
-                model = new T();
+                model = new TState();
             }
             else
             {
@@ -117,18 +117,18 @@ public static class ProjectionProcessor
         }
         else
         {
-            model = new T();
+            model = new TState();
         }
 
         return (model, loaded);
     }
 
-    private static async Task HandleDelete<T, TKey>(
-        IProjection<T, TKey> projection,
+    private static async Task HandleDelete(
+        TProjection projection,
         TKey key,
         ProjectionAction initialActionToPerform,
         CancellationToken cancellationToken
-    ) where T : IApply, new()
+    )
     {
         if (initialActionToPerform == ProjectionAction.Create)
         {

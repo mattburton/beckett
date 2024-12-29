@@ -6,44 +6,39 @@ public class Subscription(string name)
 {
     internal string Name { get; } = name;
     internal string? Category { get; set; }
-    internal HashSet<string> MessageTypes { get; } = [];
-    internal bool BatchHandler { get; set; } = false;
-    internal Type? HandlerType { get; set; }
+    internal HashSet<Type> MessageTypes { get; } = [];
+    internal HashSet<string> MessageTypeNames { get; } = [];
+    internal Delegate? HandlerDelegate { get; set; }
+    internal SubscriptionHandler Handler { get; private set; } = null!;
     internal string? HandlerName { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
     internal int Priority { get; set; } = int.MaxValue;
 
-    internal bool IsCategoryOnly => Category != null && MessageTypes.Count == 0;
+    internal bool IsCategoryOnly => Category != null && MessageTypeNames.Count == 0;
 
-    internal bool IsMessageTypesOnly => Category == null && MessageTypes.Count > 0;
+    internal bool IsMessageTypesOnly => Category == null && MessageTypeNames.Count > 0;
 
     internal bool CategoryMatches(string streamName) => Category != null && streamName.StartsWith(Category);
 
-    internal void RegisterMessageType(string messageType) => MessageTypes.Add(messageType);
-
     internal void RegisterMessageType<T>() => RegisterMessageType(typeof(T));
 
-    internal void RegisterMessageType(Type messageType) => RegisterMessageType(MessageTypeMap.GetName(messageType));
-
-    internal bool SubscribedToMessage(string messageType) => IsCategoryOnly || MessageTypes.Contains(messageType);
-
-    internal void EnsureHandlerIsConfigured()
+    internal void RegisterMessageType(Type messageType)
     {
-        if (HandlerType == null)
+        MessageTypeNames.Add(MessageTypeMap.GetName(messageType));
+        MessageTypes.Add(messageType);
+    }
+
+    internal bool SubscribedToMessage(string messageType) => IsCategoryOnly || MessageTypeNames.Contains(messageType);
+
+    internal void BuildHandler()
+    {
+        if (HandlerDelegate == null)
         {
             throw new InvalidOperationException($"The subscription {Name} does not have a handler configured.");
         }
-    }
 
-    internal void EnsureOnlyHandlerMessageTypeIsMapped<TMessage>()
-    {
-        if (MessageTypes.Count > 1)
-        {
-            throw new InvalidOperationException(
-                $"The subscription {Name} is only expecting the message type {typeof(TMessage).Name} and has additional types mapped to it."
-            );
-        }
+        Handler = new SubscriptionHandler(this, HandlerDelegate);
     }
 
     internal string GetAdvisoryLockKey(string groupName) => $"{groupName}:{Name}";

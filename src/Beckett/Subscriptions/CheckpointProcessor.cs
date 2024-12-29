@@ -36,7 +36,7 @@ public class CheckpointProcessor(
         {
             startingStreamPosition = checkpoint.StreamPosition;
 
-            if (!subscription.BatchHandler)
+            if (!subscription.Handler.IsBatchHandler)
             {
                 batchSize = 1;
             }
@@ -155,7 +155,7 @@ public class CheckpointProcessor(
                 return NoMessages.Instance;
             }
 
-            if (subscription.BatchHandler)
+            if (subscription.Handler.IsBatchHandler)
             {
                 return await DispatchMessageBatchToHandler(
                     checkpoint,
@@ -190,11 +190,10 @@ public class CheckpointProcessor(
                 {
                     logger.LogError(
                         e,
-                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [Message ID: {MessageId}, Checkpoint: {CheckpointId}]",
+                        "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} [Message ID: {MessageId}, Checkpoint: {CheckpointId}]",
                         streamMessage.Type,
                         subscription.Name,
                         streamName,
-                        subscription.HandlerName,
                         streamMessage.Id,
                         checkpoint.Id
                     );
@@ -245,26 +244,9 @@ public class CheckpointProcessor(
 
         logger.HandlingMessageForCheckpoint(messageContext.Id, checkpoint.Id);
 
-        if (subscription.HandlerType == null)
-        {
-            throw new InvalidOperationException(
-                $"Subscription handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
-            );
-        }
-
         using var scope = serviceProvider.CreateScope();
 
-        var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
-
-        switch (handler)
-        {
-            case IMessageHandler instance:
-                await instance.Handle(messageContext, cancellationToken);
-                break;
-            case IMessageHandlerAdapter adapter:
-                await adapter.Handle(messageContext, cancellationToken);
-                break;
-        }
+        await subscription.Handler.Invoke(messageContext, scope.ServiceProvider, cancellationToken);
     }
 
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
@@ -279,25 +261,9 @@ public class CheckpointProcessor(
         {
             var messageBatch = new MessageBatch(streamName, messages);
 
-            if (subscription.HandlerType == null)
-            {
-                throw new InvalidOperationException(
-                    $"Subscription batch handler type is not configured for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
-                );
-            }
-
             using var scope = serviceProvider.CreateScope();
 
-            var handler = scope.ServiceProvider.GetRequiredService(subscription.HandlerType);
-
-            if (handler is not IMessageBatchHandler batchHandler)
-            {
-                throw new InvalidOperationException(
-                    $"Invalid batch handler type for {subscription.Name} [Checkpoint: {checkpoint.Id}]"
-                );
-            }
-
-            await batchHandler.Handle(messageBatch, cancellationToken);
+            await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, cancellationToken);
 
             return new Success(messages[^1].StreamPosition);
         }
@@ -309,10 +275,9 @@ public class CheckpointProcessor(
         {
             logger.LogError(
                 e,
-                "Error dispatching message batch to subscription {SubscriptionType} for stream {StreamName} using handler {HandlerType} [Checkpoint: {CheckpointId}]",
+                "Error dispatching message batch to subscription {SubscriptionName} for stream {StreamName} [Checkpoint: {CheckpointId}]",
                 subscription.Name,
                 streamName,
-                subscription.HandlerName,
                 checkpoint.Id
             );
 

@@ -161,7 +161,12 @@ public class Instrumentation : IInstrumentation, IDisposable
         activity.AddTag(TelemetryConstants.Subscription.GroupName, _options.Subscriptions.GroupName);
         activity.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
         activity.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
-        activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.HandlerName);
+
+        if (!string.IsNullOrWhiteSpace(subscription.HandlerName))
+        {
+            activity.AddTag(TelemetryConstants.Subscription.Handler, subscription.HandlerName);
+        }
+
         activity.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
 
         if (messageContext.Metadata.RootElement.TryGetProperty(

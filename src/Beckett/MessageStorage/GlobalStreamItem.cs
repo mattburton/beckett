@@ -12,7 +12,7 @@ public record GlobalStreamItem(
     public bool AppliesTo(Subscription subscription)
     {
         var categoryMatch = subscription.CategoryMatches(StreamName);
-        var messageTypeMatch = subscription.MessageTypes.Contains(MessageType);
+        var messageTypeMatch = subscription.MessageTypeNames.Contains(MessageType);
 
         if (subscription.IsCategoryOnly)
         {
