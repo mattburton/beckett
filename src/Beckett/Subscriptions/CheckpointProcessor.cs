@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.Messages;
 using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Queries;
@@ -227,16 +226,7 @@ public class CheckpointProcessor(
         CancellationToken cancellationToken
     )
     {
-        var messageContext = new MessageContext(
-            streamMessage.Id,
-            streamMessage.StreamName,
-            streamMessage.StreamPosition,
-            streamMessage.GlobalPosition,
-            streamMessage.Type,
-            streamMessage.Data,
-            streamMessage.Metadata,
-            streamMessage.Timestamp
-        );
+        var messageContext = streamMessage.ToMessageContext();
 
         using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
 
@@ -259,7 +249,7 @@ public class CheckpointProcessor(
     {
         try
         {
-            var messageBatch = new MessageBatch(streamName, messages);
+            var messageBatch = messages.Select(x => x.ToMessageContext()).ToList();
 
             using var scope = serviceProvider.CreateScope();
 
@@ -402,7 +392,7 @@ public class CheckpointProcessor(
         return logger.BeginScope(state);
     }
 
-    private IDisposable? MessageLoggingScope(MessageContext messageContext)
+    private IDisposable? MessageLoggingScope(IMessageContext messageContext)
     {
         const string id = "beckett.message.id";
         const string type = "beckett.message.type";

@@ -99,7 +99,9 @@ public class SubscriptionHandlerTests : IDisposable
     {
         _subscription.RegisterMessageType<TestMessage>();
         TestMessage? receivedMessage = null;
-        var handler = new SubscriptionHandler(_subscription, (TestMessage message, CancellationToken _) =>
+        var handler = new SubscriptionHandler(
+            _subscription,
+            (TestMessage message, CancellationToken _) =>
             {
                 receivedMessage = message;
 
@@ -226,21 +228,19 @@ public class SubscriptionHandlerTests : IDisposable
         DateTimeOffset.UtcNow
     );
 
-    private static MessageBatch BuildMessageBatch() => new(
-        "test-123",
-        [
-            new StreamMessage(
-                Guid.NewGuid().ToString(),
-                "test-123",
-                1,
-                1,
-                "test-message",
-                JsonDocument.Parse("{}"),
-                JsonDocument.Parse("{}"),
-                DateTimeOffset.UtcNow
-            )
-        ]
-    );
+    private static IReadOnlyList<IMessageContext> BuildMessageBatch() =>
+    [
+        new MessageContext(
+            Guid.NewGuid().ToString(),
+            "test-123",
+            1,
+            1,
+            "test-message",
+            JsonDocument.Parse("{}"),
+            JsonDocument.Parse("{}"),
+            DateTimeOffset.UtcNow
+        )
+    ];
 
     private static class MessageContextHandler
     {
@@ -282,9 +282,9 @@ public class SubscriptionHandlerTests : IDisposable
 
     private static class MessageBatchHandler
     {
-        public static IMessageBatch? ReceivedBatch { get; private set; }
+        public static IReadOnlyList<IMessageContext>? ReceivedBatch { get; private set; }
 
-        public static Task Handle(IMessageBatch batch, CancellationToken cancellationToken)
+        public static Task Handle(IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
         {
             ReceivedBatch = batch;
 
@@ -302,7 +302,7 @@ public class SubscriptionHandlerTests : IDisposable
 
     private static class InvalidHandlerWithContextAndBatch
     {
-        public static Task Handle(IMessageContext context, IMessageBatch batch, CancellationToken cancellationToken)
+        public static Task Handle(IMessageContext context, IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
@@ -310,7 +310,7 @@ public class SubscriptionHandlerTests : IDisposable
 
     private static class InvalidHandlerWithBatchAndMessage
     {
-        public static Task Handle(IMessageBatch batch, TestMessage message, CancellationToken cancellationToken)
+        public static Task Handle(IReadOnlyList<IMessageContext> batch, TestMessage message, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }

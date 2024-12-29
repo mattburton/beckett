@@ -7,7 +7,7 @@ namespace Beckett.Subscriptions;
 public class SubscriptionHandler
 {
     private static readonly Type MessageContextType = typeof(IMessageContext);
-    private static readonly Type MessageBatchType = typeof(IMessageBatch);
+    private static readonly Type MessageBatchType = typeof(IReadOnlyList<IMessageContext>);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
 
     private readonly Subscription _subscription;
@@ -60,7 +60,7 @@ public class SubscriptionHandler
         return _invoker(arguments);
     }
 
-    public Task Invoke(IMessageBatch batch, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task Invoke(IReadOnlyList<IMessageContext> batch, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var arguments = new object[_parameters.Length];
 
@@ -168,7 +168,7 @@ public class SubscriptionHandler
     }
 
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == typeof(IMessageContext) ||
-                                                            x.ParameterType == typeof(IMessageBatch) ||
+                                                            x.ParameterType == typeof(IReadOnlyList<IMessageContext>) ||
                                                             x.ParameterType == typeof(CancellationToken);
 
     private static Func<object[], Task> BuildInvoker(Delegate handler)
