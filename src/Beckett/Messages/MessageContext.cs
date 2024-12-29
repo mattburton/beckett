@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Beckett.Messages;
 
-public readonly record struct MessageContext(
+public record MessageContext(
     string Id,
     string StreamName,
     long StreamPosition,

@@ -8,7 +8,4 @@ public interface IAppendResult
     long StreamVersion { get; }
 }
 
-public readonly struct AppendResult(long streamVersion) : IAppendResult
-{
-    public long StreamVersion { get; } = streamVersion;
-}
+public readonly record struct AppendResult(long StreamVersion) : IAppendResult;

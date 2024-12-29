@@ -109,7 +109,7 @@ public static class MessageStreamExtensions
     ) => messageStream.Append(messages.Select(x => new Message(x)), cancellationToken);
 }
 
-public readonly struct MessageStream(
+public class MessageStream(
     string streamName,
     long streamVersion,
     IReadOnlyList<StreamMessage> streamMessages,
