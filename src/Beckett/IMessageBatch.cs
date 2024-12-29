@@ -9,7 +9,7 @@ public interface IMessageBatch
     IReadOnlyList<object> Messages { get; }
 }
 
-public readonly struct MessageBatch(string streamName, IReadOnlyList<StreamMessage> streamMessages) : IMessageBatch
+public class MessageBatch(string streamName, IReadOnlyList<StreamMessage> streamMessages) : IMessageBatch
 {
     public string StreamName { get; } = streamName;
 

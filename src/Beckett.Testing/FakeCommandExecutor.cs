@@ -32,7 +32,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedStreamName = streamName;
         ReceivedCommand = command;
 
-        var result = (CommandResult)(_result ?? new CommandResult());
+        var result = (CommandResult)(_result ?? new CommandResult(1));
 
         return Task.FromResult(result);
     }
@@ -52,7 +52,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedStreamName = streamName;
         ReceivedCommand = command;
 
-        var result = (CommandResult)(_result ?? new CommandResult());
+        var result = (CommandResult)(_result ?? new CommandResult(1));
 
         return Task.FromResult(result);
     }
@@ -72,7 +72,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedStreamName = streamName;
         ReceivedCommand = command;
 
-        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>());
+        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>(1, default!));
 
         return Task.FromResult(result);
     }
@@ -92,7 +92,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedStreamName = streamName;
         ReceivedCommand = command;
 
-        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>());
+        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>(1, default!));
 
         return Task.FromResult(result);
     }
@@ -114,7 +114,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedCommand = command;
         ReceivedOptions = options;
 
-        var result = (CommandResult)(_result ?? new CommandResult());
+        var result = (CommandResult)(_result ?? new CommandResult(1));
 
         return Task.FromResult(result);
     }
@@ -136,7 +136,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedCommand = command;
         ReceivedOptions = options;
 
-        var result = (CommandResult)(_result ?? new CommandResult());
+        var result = (CommandResult)(_result ?? new CommandResult(1));
 
         return Task.FromResult(result);
     }
@@ -158,7 +158,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedCommand = command;
         ReceivedOptions = options;
 
-        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>());
+        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>(1, default!));
 
         return Task.FromResult(result);
     }
@@ -180,7 +180,7 @@ public class FakeCommandExecutor : ICommandExecutor
         ReceivedCommand = command;
         ReceivedOptions = options;
 
-        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>());
+        var result = (CommandResult<TResult>)(_result ?? new CommandResult<TResult>(1, default!));
 
         return Task.FromResult(result);
     }

@@ -6,7 +6,7 @@ namespace Beckett;
 /// <summary>
 /// Message envelope used to write messages in Beckett
 /// </summary>
-public readonly record struct Message
+public class Message
 {
     private static readonly JsonDocument EmptyJsonDocument = JsonDocument.Parse("{}");
     private static readonly Type MetadataDictionaryType = typeof(Dictionary<string, string>);

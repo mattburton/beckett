@@ -3,7 +3,7 @@ using Beckett.Messages;
 
 namespace Beckett;
 
-public readonly record struct StreamMessage(
+public record StreamMessage(
     string Id,
     string StreamName,
     long StreamPosition,

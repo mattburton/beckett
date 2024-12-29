@@ -1,5 +1,5 @@
 namespace Beckett.Commands;
 
-public readonly record struct CommandResult<TResult>(long StreamVersion, TResult Result);
+public record CommandResult<TResult>(long StreamVersion, TResult Result);
 
-public readonly record struct CommandResult(long StreamVersion);
+public record CommandResult(long StreamVersion);
