@@ -23,4 +23,15 @@ public record StreamMessage(
     public object? Message => _message.Value;
 
     public Dictionary<string, string> MessageMetadata => _messageMetadata.Value;
+
+    public IMessageContext ToMessageContext() => new MessageContext(
+        Id,
+        StreamName,
+        StreamPosition,
+        GlobalPosition,
+        Type,
+        Data,
+        Metadata,
+        Timestamp
+    );
 }

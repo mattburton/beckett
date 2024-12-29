@@ -7,7 +7,8 @@ namespace Beckett.Subscriptions;
 public class SubscriptionHandler
 {
     private static readonly Type MessageContextType = typeof(IMessageContext);
-    private static readonly Type MessageBatchType = typeof(IMessageBatch);
+    private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
+    private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
 
     private readonly Subscription _subscription;
@@ -60,15 +61,19 @@ public class SubscriptionHandler
         return _invoker(arguments);
     }
 
-    public Task Invoke(IMessageBatch batch, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task Invoke(IReadOnlyList<IMessageContext> batch, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var arguments = new object[_parameters.Length];
 
         for (var i = 0; i < _parameters.Length; i++)
         {
-            if (_parameters[i].ParameterType == MessageBatchType)
+            if (_parameters[i].ParameterType == BatchType)
             {
                 arguments[i] = batch;
+            }
+            else if (_parameters[i].ParameterType == UnwrappedBatchType)
+            {
+                arguments[i] = batch.Where(x => x.Message != null).Select(x => x.Message!).ToList();
             }
             else if (_parameters[i].ParameterType == CancellationTokenType)
             {
@@ -99,7 +104,7 @@ public class SubscriptionHandler
     private void ValidateHandler()
     {
         var messageContextHandler = false;
-        var messageBatchHandler = false;
+        var batchHandler = false;
         var typedMessageHandler = false;
 
         foreach (var parameter in _parameters)
@@ -109,11 +114,11 @@ public class SubscriptionHandler
                 messageContextHandler = true;
             }
 
-            if (parameter.ParameterType == MessageBatchType)
+            if (parameter.ParameterType == BatchType || parameter.ParameterType == UnwrappedBatchType)
             {
                 IsBatchHandler = true;
 
-                messageBatchHandler = true;
+                batchHandler = true;
             }
 
             if (_subscription.MessageTypes.Contains(parameter.ParameterType))
@@ -122,14 +127,14 @@ public class SubscriptionHandler
             }
         }
 
-        if (messageContextHandler && messageBatchHandler)
+        if (messageContextHandler && batchHandler)
         {
             throw new InvalidOperationException(
                 $"Subscription handlers can only accept a message or a message batch, not both. [Subscription: {_subscription.Name}]"
             );
         }
 
-        if (messageBatchHandler && typedMessageHandler)
+        if (batchHandler && typedMessageHandler)
         {
             throw new InvalidOperationException(
                 $"Message batch handlers cannot also handle individual messages [Subscription: {_subscription.Name}]"
@@ -143,7 +148,7 @@ public class SubscriptionHandler
             );
         }
 
-        if (!messageContextHandler && !messageBatchHandler && !typedMessageHandler)
+        if (!messageContextHandler && !batchHandler && !typedMessageHandler)
         {
             throw new InvalidOperationException(
                 $"Subscription handlers must handle either a message or a message batc [Subscription: {_subscription.Name}]"
@@ -168,7 +173,7 @@ public class SubscriptionHandler
     }
 
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == typeof(IMessageContext) ||
-                                                            x.ParameterType == typeof(IMessageBatch) ||
+                                                            x.ParameterType == typeof(IReadOnlyList<IMessageContext>) ||
                                                             x.ParameterType == typeof(CancellationToken);
 
     private static Func<object[], Task> BuildInvoker(Delegate handler)

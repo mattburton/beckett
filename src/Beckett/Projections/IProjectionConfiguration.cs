@@ -34,9 +34,9 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
 
     public IReadOnlyList<Type> GetMessageTypes() => _map.Keys.ToArray();
 
-    public IReadOnlyList<StreamMessage> Filter(IMessageBatch batch)
+    public IReadOnlyList<IMessageContext> Filter(IReadOnlyList<IMessageContext> batch)
     {
-        return batch.StreamMessages.Where(x => x.MessageType != null && _map.ContainsKey(x.MessageType)).ToList();
+        return batch.Where(x => x.MessageType != null && _map.ContainsKey(x.MessageType)).ToList();
     }
 
     public ProjectionMessageConfiguration<TKey> GetConfigurationFor(Type messageType) => _map[messageType];

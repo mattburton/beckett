@@ -5,7 +5,7 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
 {
     public static async Task Handle(
         TProjection projection,
-        IMessageBatch batch,
+        IReadOnlyList<IMessageContext> batch,
         CancellationToken cancellationToken
     )
     {
