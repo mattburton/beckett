@@ -69,17 +69,32 @@ public class SubscriptionHandlerTests : IDisposable
     }
 
     [Fact]
-    public void supports_message_batch_handler()
+    public void supports_batch_handler()
     {
         _subscription.RegisterMessageType<TestMessage>();
-        var handler = new SubscriptionHandler(_subscription, MessageBatchHandler.Handle);
+        var handler = new SubscriptionHandler(_subscription, BatchHandler.Handle);
         var batch = BuildMessageBatch();
 
         handler.Invoke(batch, _serviceProvider, CancellationToken.None);
 
         Assert.True(handler.IsBatchHandler);
-        Assert.NotNull(MessageBatchHandler.ReceivedBatch);
-        Assert.Equal(batch, MessageBatchHandler.ReceivedBatch);
+        Assert.NotNull(BatchHandler.ReceivedBatch);
+        Assert.Equal(batch, BatchHandler.ReceivedBatch);
+    }
+
+    [Fact]
+    public void supports_unwrapped_batch_handler()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        var handler = new SubscriptionHandler(_subscription, UnwrappedBatchHandler.Handle);
+        var batch = BuildMessageBatch();
+        var expectedBatch = batch.Select(x => x.Message!).ToList();
+
+        handler.Invoke(batch, _serviceProvider, CancellationToken.None);
+
+        Assert.True(handler.IsBatchHandler);
+        Assert.NotNull(UnwrappedBatchHandler.ReceivedBatch);
+        Assert.Equal(expectedBatch, UnwrappedBatchHandler.ReceivedBatch);
     }
 
     [Fact]
@@ -280,11 +295,23 @@ public class SubscriptionHandlerTests : IDisposable
         }
     }
 
-    private static class MessageBatchHandler
+    private static class BatchHandler
     {
         public static IReadOnlyList<IMessageContext>? ReceivedBatch { get; private set; }
 
         public static Task Handle(IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
+        {
+            ReceivedBatch = batch;
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private static class UnwrappedBatchHandler
+    {
+        public static IReadOnlyList<object>? ReceivedBatch { get; private set; }
+
+        public static Task Handle(IReadOnlyList<object> batch, CancellationToken cancellationToken)
         {
             ReceivedBatch = batch;
 
