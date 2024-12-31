@@ -346,13 +346,16 @@ CREATE FUNCTION beckett.get_subscription_metrics() RETURNS TABLE(lagging bigint,
     LANGUAGE sql
     AS $$
 WITH lagging AS (
-    SELECT count(*) as lagging
-    FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status = 'active'
-    AND c.status = 'active'
-    AND c.lagging = true
-    GROUP BY c.group_name, c.name
+    WITH lagging_subscriptions AS (
+        SELECT COUNT(*) AS lagging
+        FROM beckett.subscriptions s
+        INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+        WHERE s.status = 'active'
+        AND c.status = 'active'
+        AND c.lagging = TRUE
+        GROUP BY c.group_name, c.name
+    )
+    SELECT count(*) as lagging FROM lagging_subscriptions
     UNION ALL
     SELECT 0
     LIMIT 1
@@ -442,7 +445,8 @@ BEGIN
   SELECT m.transaction_id
   INTO _transaction_id
   FROM beckett.messages m
-  WHERE m.global_position = _starting_global_position;
+  WHERE m.global_position = _starting_global_position
+  AND m.archived = false;
 
   IF (_transaction_id IS NULL) THEN
     _transaction_id = '0'::xid8;
@@ -456,6 +460,7 @@ BEGIN
     FROM beckett.messages m
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+    AND m.archived = false
     ORDER BY m.transaction_id, m.global_position
     LIMIT _batch_size;
 END;

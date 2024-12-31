@@ -6,6 +6,6 @@ public static class MetricsHandler
     {
         var result = await dashboard.Metrics.GetSubscriptionMetrics(cancellationToken);
 
-        return Results.Extensions.Render<Metrics>(new Metrics.ViewModel(result.Lagging, result.Retries, result.Failed));
+        return Results.Extensions.Render<Metrics>(new Metrics.ViewModel(result.Lagging, result.Retries, result.Failed, false));
     }
 }

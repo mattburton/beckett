@@ -19,13 +19,18 @@
 
 @code {
 
-  public record ViewModel(long Lagging, long Retries, long Failed);
+  public record ViewModel(long Lagging, long Retries, long Failed, bool InitialLoad);
 
   protected override async Task OnInitializedAsync()
   {
+    if (!Model.InitialLoad)
+    {
+      return;
+    }
+
     var result = await DashboardService.Metrics.GetSubscriptionMetrics(CancellationToken.None);
 
-    Model = new ViewModel(result.Lagging, result.Retries, result.Failed);
+    Model = new ViewModel(result.Lagging, result.Retries, result.Failed, false);
   }
 
 }
