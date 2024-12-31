@@ -209,6 +209,12 @@ BEGIN
 END;
 $$;
 
+-- drop recurring message support
+DROP FUNCTION beckett.add_or_update_recurring_message;
+DROP FUNCTION beckett.get_recurring_messages_to_deliver;
+DROP FUNCTION beckett.update_recurring_message_next_occurrence;
+DROP TABLE beckett.recurring_messages;
+
 -- dashboard tenants materialized view
 CREATE MATERIALIZED VIEW beckett.tenants AS
 SELECT metadata ->> '$tenant' AS tenant
