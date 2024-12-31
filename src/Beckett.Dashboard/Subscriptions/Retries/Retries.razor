@@ -53,6 +53,7 @@
       <th>Name</th>
       <th>Stream Name</th>
       <th style="width: 12em;">Stream Position</th>
+      <th style="width: 16em;">Last Attempted</th>
     </tr>
     </thead>
     <tbody>
@@ -68,12 +69,15 @@
           <a href="@Dashboard.Prefix/subscriptions/checkpoints/@checkpoint.Id">@checkpoint.StreamName</a>
         </td>
         <td>@checkpoint.StreamPosition</td>
+        <td>
+          <span class="timestamp">@checkpoint.LastAttempted.ToString("O")</span>
+        </td>
       </tr>
     }
     @if (Model.Retries.Count == 0)
     {
       <tr>
-        <td colspan="5">
+        <td colspan="6">
           No retries found.
         </td>
       </tr>

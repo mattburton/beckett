@@ -15,7 +15,12 @@ public interface IDashboardSubscriptions
         CancellationToken cancellationToken
     );
 
-    Task<GetReservationsResult> GetReservations(string? query, int page, int pageSize, CancellationToken cancellationToken);
+    Task<GetReservationsResult> GetReservations(
+        string? query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken
+    );
 
     Task<GetRetriesResult> GetRetries(string? query, int page, int pageSize, CancellationToken cancellationToken);
 
@@ -58,7 +63,8 @@ public record GetRetriesResult(List<GetRetriesResult.Retry> Retries, int TotalRe
         string GroupName,
         string Name,
         string StreamName,
-        long StreamPosition
+        long StreamPosition,
+        DateTimeOffset LastAttempted
     );
 }
 
@@ -95,5 +101,12 @@ public class GetCheckpointResult
 
 public record GetFailedResult(List<GetFailedResult.Failure> Failures, int TotalResults)
 {
-    public record Failure(long Id, string GroupName, string Name, string StreamName, long StreamPosition);
+    public record Failure(
+        long Id,
+        string GroupName,
+        string Name,
+        string StreamName,
+        long StreamPosition,
+        DateTimeOffset LastAttempted
+    );
 }
