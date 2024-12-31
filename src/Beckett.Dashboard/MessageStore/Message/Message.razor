@@ -96,7 +96,7 @@
         Metadata
       </div>
       <ul class="list-group list-group-flush">
-        @foreach (var item in Model.Message.Metadata)
+        @foreach (var item in Model.Message.Metadata.OrderBy(x => x.Key))
         {
           switch (item.Key)
           {
