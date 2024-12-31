@@ -14,11 +14,11 @@ public class GetFailed(
     public async Task<GetFailedResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT id, group_name, name, stream_name, stream_position, count(*) over() as total_results
+            SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
             FROM {options.Schema}.checkpoints
             WHERE status = 'failed'
             AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
-            ORDER BY group_name, name, stream_name, stream_position
+            ORDER BY updated_at desc, group_name, name, stream_name, stream_position
             OFFSET $2
             LIMIT $3;
         ";
@@ -44,7 +44,7 @@ public class GetFailed(
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            totalResults ??= reader.GetFieldValue<int>(5);
+            totalResults ??= reader.GetFieldValue<int>(6);
 
             results.Add(
                 new GetFailedResult.Failure(
@@ -52,7 +52,8 @@ public class GetFailed(
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
                     reader.GetFieldValue<string>(3),
-                    reader.GetFieldValue<long>(4)
+                    reader.GetFieldValue<long>(4),
+                    reader.GetFieldValue<DateTimeOffset>(5)
                 )
             );
         }
