@@ -2,7 +2,7 @@ using TaskHub.TaskList.Events;
 
 namespace TaskHub.TaskList.CompleteTask;
 
-public record CompleteTaskCommand(Guid TaskListId, string Task) : ICommand<CompleteTaskCommand.State>
+public partial record CompleteTaskCommand(Guid TaskListId, string Task) : ICommand<CompleteTaskCommand.State>
 {
     public IEnumerable<object> Execute(State state)
     {
@@ -14,16 +14,14 @@ public record CompleteTaskCommand(Guid TaskListId, string Task) : ICommand<Compl
         yield return new TaskCompleted(TaskListId, Task);
     }
 
-    public class State : IApply
+    [ReadModel]
+    public partial class State
     {
         public HashSet<string> CompletedItems { get; } = [];
 
-        public void Apply(object message)
+        private void Apply(TaskCompleted e)
         {
-            if (message is TaskCompleted e)
-            {
-                CompletedItems.Add(e.Task);
-            }
+            CompletedItems.Add(e.Task);
         }
     }
 }

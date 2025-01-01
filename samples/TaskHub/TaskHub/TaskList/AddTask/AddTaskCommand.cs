@@ -2,7 +2,7 @@ using TaskHub.TaskList.Events;
 
 namespace TaskHub.TaskList.AddTask;
 
-public record AddTaskCommand(Guid TaskListId, string Task) : ICommand<AddTaskCommand.State>
+public partial record AddTaskCommand(Guid TaskListId, string Task) : ICommand<AddTaskCommand.State>
 {
     public IEnumerable<object> Execute(State state)
     {
@@ -14,21 +14,13 @@ public record AddTaskCommand(Guid TaskListId, string Task) : ICommand<AddTaskCom
         yield return new TaskAdded(TaskListId, Task);
     }
 
-    public class State : IApply
+    [ReadModel]
+    public partial class State
     {
         public HashSet<string> Items { get; } = [];
 
-        public void Apply(object message)
-        {
-            switch (message)
-            {
-                case TaskAdded e:
-                    Apply(e);
-                    break;
-            }
-        }
-
         private void Apply(TaskAdded e) => Items.Add(e.Task);
+
     }
 }
 
