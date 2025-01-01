@@ -33,4 +33,11 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)\..\Beckett.SourceGenerators\bin\$(Configuration)\netstandard2.0\Beckett.SourceGenerators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false"/>
+  </ItemGroup>
+
 </Project>

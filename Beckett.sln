@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "samples\TaskHub\Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beckett.Testing", "src\Beckett.Testing\Beckett.Testing.csproj", "{238A0F1F-0B14-4F53-92C1-A32488A8A96B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beckett.SourceGenerators", "src\Beckett.SourceGenerators\Beckett.SourceGenerators.csproj", "{F75D8D08-1665-4C89-9BF3-775DB452C084}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{238A0F1F-0B14-4F53-92C1-A32488A8A96B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{238A0F1F-0B14-4F53-92C1-A32488A8A96B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{238A0F1F-0B14-4F53-92C1-A32488A8A96B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F75D8D08-1665-4C89-9BF3-775DB452C084}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F75D8D08-1665-4C89-9BF3-775DB452C084}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F75D8D08-1665-4C89-9BF3-775DB452C084}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F75D8D08-1665-4C89-9BF3-775DB452C084}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EF59B95F-62EA-40AC-9F27-121138C1D031} = {A75ADB60-FDB3-48B5-82AA-FE7032842EF5}

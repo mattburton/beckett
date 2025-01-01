@@ -2,27 +2,12 @@ using TaskHub.TaskList.Events;
 
 namespace TaskHub.TaskList.GetList;
 
-public class GetListReadModel : IApply
+[ReadModel]
+public partial class GetListReadModel
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
     public List<TaskItem> Tasks { get; init; } = [];
-
-    public void Apply(object message)
-    {
-        switch (message)
-        {
-            case TaskListAdded e:
-                Apply(e);
-                break;
-            case TaskAdded e:
-                Apply(e);
-                break;
-            case TaskCompleted e:
-                Apply(e);
-                break;
-        }
-    }
 
     private void Apply(TaskListAdded e)
     {
