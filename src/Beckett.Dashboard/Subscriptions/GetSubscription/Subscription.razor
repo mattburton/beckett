@@ -1,0 +1,68 @@
+
+@inherits Component<Subscription.ViewModel>
+@layout LayoutWithoutSearch
+
+<SubscriptionNavbar ActiveLink="SubscriptionNavbar.Links.None"/>
+
+<div id="subscription-details"
+     hx-get="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name"
+     hx-trigger="every 10s"
+     hx-select="#subscription-details"
+     hx-swap="outerHTML">
+  <div class="card m-4">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="fs-4">
+          @{
+            var statusIndicator = Model.Details.Status switch
+            {
+              SubscriptionStatus.Active => "text-bg-success",
+              SubscriptionStatus.Paused => "text-bg-secondary",
+              SubscriptionStatus.Uninitialized => "text-bg-warning",
+              _ => throw new ArgumentOutOfRangeException()
+            };
+          }
+          <span class="badge rounded-pill @statusIndicator p-2 me-1">
+            <span class="visually-hidden">Status: @Model.Details.Status</span>
+          </span>
+          Subscription
+        </div>
+        @if (Model.Details.Status == SubscriptionStatus.Active)
+        {
+          <div>
+            <a href="#"
+               class="btn btn-primary"
+               title="Pause Subscription"
+               hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/pause"
+               hx-on::response-error="alert('Unable to pause subscription at this time - please try again later')">
+              Pause
+            </a>
+          </div>
+        }
+        @if (Model.Details.Status == SubscriptionStatus.Paused)
+        {
+          <div>
+            <a href="#"
+               class="btn btn-primary"
+               title="Resume Subscription"
+               hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/resume"
+               hx-on::response-error="alert('Unable to resume subscription at this time - please try again later')">
+              Resume
+            </a>
+          </div>
+        }
+      </div>
+    </div>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item"><span class="fw-bolder">Group Name:</span> @Model.Details.GroupName</li>
+      <li class="list-group-item"><span class="fw-bolder">Name:</span> @Model.Details.Name</li>
+      <li class="list-group-item"><span class="fw-bolder">Status:</span> @Model.Details.Status</li>
+    </ul>
+  </div>
+</div>
+
+@code {
+
+  public record ViewModel(GetSubscriptionResult Details);
+
+}

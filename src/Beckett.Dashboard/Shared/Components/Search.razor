@@ -1,0 +1,32 @@
+<form class="d-flex" role="search" method="GET">
+  <input id="search"
+         class="form-control me-2"
+         type="search"
+         placeholder="Search"
+         aria-label="Search"
+         name="query"
+         value="@Query">
+  <button class="btn btn-primary" type="submit">Search</button>
+</form>
+<script type="text/javascript">
+  document.addEventListener('keyup', e => {
+    if (e.code.toLocaleLowerCase() !== 'slash') {
+      return;
+    }
+
+    e.preventDefault();
+
+    document.getElementById('search').focus();
+  });
+</script>
+
+@code {
+
+  [CascadingParameter]
+  public HttpContext? Context { get; set; }
+
+  private string? Query { get; set; }
+
+  protected override void OnParametersSet() => Query = Context?.Request.Query["query"];
+
+}

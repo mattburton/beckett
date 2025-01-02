@@ -1,0 +1,51 @@
+<div class="p-2 bg-body-tertiary d-flex justify-content-between align-items-center">
+  <ul class="nav nav-pills @(ActiveLink == Links.None ? "my-2" : "")">
+    <li class="nav-item">
+      <a class="nav-link @(ActiveLink == Links.Subscriptions ? "active" : "")"
+         href="@Dashboard.Prefix/subscriptions">
+        Subscriptions
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link @(ActiveLink == Links.Lagging ? "active" : "")"
+         href="@Dashboard.Prefix/subscriptions/checkpoints/lagging">
+        Lagging
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link @(ActiveLink == Links.Retries ? "active" : "")"
+         href="@Dashboard.Prefix/subscriptions/checkpoints/retries">
+        Retries
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link @(ActiveLink == Links.Failed ? "active" : "")"
+         href="@Dashboard.Prefix/subscriptions/checkpoints/failed">
+        Failed
+      </a>
+    </li>
+  </ul>
+  @if (Model != null)
+  {
+    <Paging ViewModel="Model"></Paging>
+  }
+</div>
+
+@code {
+
+  [Parameter]
+  public IPagedViewModel? Model { get; set; }
+
+  [Parameter, EditorRequired]
+  public Links ActiveLink { get; set; }
+
+  public enum Links
+  {
+    None,
+    Subscriptions,
+    Lagging,
+    Retries,
+    Failed
+  }
+
+}
