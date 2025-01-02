@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDashboardSubscriptions, PostgresDashboardSubscriptions>();
         services.AddSingleton<IDashboard, DefaultDashboard>();
 
+        services.AddSingleton<ITenantMaterializedViewManager, TenantMaterializedViewManager>();
         services.AddHostedService<RefreshTenantMaterializedView>();
     }
 }
