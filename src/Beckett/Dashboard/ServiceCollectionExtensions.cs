@@ -1,7 +1,7 @@
 using Beckett.Dashboard.Postgres.MessageStore;
 using Beckett.Dashboard.Postgres.Metrics;
+using Beckett.Dashboard.Postgres.Services;
 using Beckett.Dashboard.Postgres.Subscriptions;
-using Beckett.Dashboard.Postgres.Tenants;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Dashboard;

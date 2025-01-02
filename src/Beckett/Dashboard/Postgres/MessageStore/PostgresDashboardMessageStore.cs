@@ -1,9 +1,14 @@
 using Beckett.Dashboard.Postgres.MessageStore.Queries;
 using Beckett.Database;
+using Beckett.Database.Queries;
 
 namespace Beckett.Dashboard.Postgres.MessageStore;
 
-public class PostgresDashboardMessageStore(IPostgresDatabase database, PostgresOptions options) : IDashboardMessageStore
+public class PostgresDashboardMessageStore(
+    IPostgresDataSource dataSource,
+    IPostgresDatabase database,
+    PostgresOptions options
+) : IDashboardMessageStore
 {
     public async Task<GetTenantsResult> GetTenants(CancellationToken cancellationToken)
     {
@@ -15,6 +20,26 @@ public class PostgresDashboardMessageStore(IPostgresDatabase database, PostgresO
         }
 
         return results;
+    }
+
+    public async Task RefreshTenants(CancellationToken cancellationToken)
+    {
+        const string key = "Beckett:RefreshTenantMaterializedView";
+
+        await using var connection = dataSource.CreateConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
+        var locked = await database.Execute(new TryAdvisoryLock(key, options), connection, cancellationToken);
+
+        if (!locked)
+        {
+            return;
+        }
+
+        await database.Execute(new RefreshTenants(options), connection, cancellationToken);
+
+        await database.Execute(new AdvisoryUnlock(key, options), connection, cancellationToken);
     }
 
     public Task<GetCategoriesResult> GetCategories(
@@ -41,7 +66,10 @@ public class PostgresDashboardMessageStore(IPostgresDatabase database, PostgresO
     {
         var offset = Pagination.ToOffset(page, pageSize);
 
-        return database.Execute(new GetCategoryStreams(tenant, category, query, offset, pageSize, options), cancellationToken);
+        return database.Execute(
+            new GetCategoryStreams(tenant, category, query, offset, pageSize, options),
+            cancellationToken
+        );
     }
 
     public Task<GetCorrelatedMessagesResult> GetCorrelatedMessages(
