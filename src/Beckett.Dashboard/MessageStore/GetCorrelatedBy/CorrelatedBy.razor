@@ -1,0 +1,70 @@
+@inherits Component<CorrelatedBy.ViewModel>
+@layout LayoutSearchOnly
+
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Dashboard.Prefix/message-store">
+          Messages
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        Correlated By: @Model.CorrelationId
+      </li>
+    </ol>
+    <Paging ViewModel="Model"></Paging>
+  </div>
+</nav>
+
+<div class="p-2">
+  <table class="table table-striped">
+    <thead>
+    <tr>
+      <th style="width: 22em;">Message ID</th>
+      <th style="width: 10em;">Stream Position</th>
+      <th>Type</th>
+      <th style="width: 16em;">Timestamp</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var message in Model.Messages)
+    {
+      <tr>
+        <td>
+          <a href="@Dashboard.Prefix/message-store/messages/@message.Id">@message.Id</a>
+        </td>
+        <td>@message.StreamPosition</td>
+        <td>@message.Type</td>
+        <td>
+          <div class="timestamp">@message.Timestamp.ToString("O")</div>
+        </td>
+      </tr>
+    }
+    @if (Model.Messages.Count == 0)
+    {
+      <tr>
+        <td colspan="4">
+          No correlated messages found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
+
+@code {
+
+  public record ViewModel(
+    string CorrelationId,
+    string? Query,
+    IReadOnlyList<GetCorrelatedMessagesResult.Message> Messages,
+    int Page,
+    int PageSize,
+    int TotalResults
+  ) : IPagedViewModel
+  {
+    public string UrlTemplate => $"{Dashboard.Prefix}/message-store/correlated-by/{CorrelationId}?page={{0}}&pageSize={{1}}&query={{2}}";
+  }
+
+}

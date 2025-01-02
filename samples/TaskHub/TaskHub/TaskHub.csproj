@@ -19,6 +19,21 @@
     <PackageReference Include="Npgsql.DependencyInjection"/>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <ProjectReference Include="..\..\..\src\Beckett.Testing\Beckett.Testing.csproj"/>
+    <PackageReference Include="coverlet.collector"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <PackageReference Include="xunit"/>
+    <PackageReference Include="xunit.runner.visualstudio"/>
+    
+    <Using Include="Xunit"/>
+    <Using Include="Beckett.Testing"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="**/Tests/*.cs"/>
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Beckett.SourceGenerators\Beckett.SourceGenerators.csproj"
                       OutputItemType="Analyzer"

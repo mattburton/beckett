@@ -1,0 +1,69 @@
+
+@inherits Component<Lagging.ViewModel>
+@layout LayoutWithoutSearch
+
+<SubscriptionNavbar Model="Model" ActiveLink="SubscriptionNavbar.Links.Lagging"/>
+
+<div class="p-2 pt-0"
+     hx-get="@Dashboard.Prefix/subscriptions/lagging"
+     hx-trigger="every 10s"
+     hx-select="#list-view"
+     hx-swap="innerHTML">
+  <table id="list-view" class="table table-striped mb-0">
+    <thead>
+    <tr>
+      <th style="width: 18em;">
+        <div class="d-flex align-items-end" style="height: 2.25em;">
+          Group Name
+        </div>
+      </th>
+      <th>Name</th>
+      <th style="width: 12em;">Total Lag</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var subscription in Model.Subscriptions)
+    {
+      <tr>
+        <td>@subscription.GroupName</td>
+        <td>@subscription.Name</td>
+        <td>@subscription.TotalLag</td>
+      </tr>
+    }
+    @if (Model.Subscriptions.Count == 0)
+    {
+      <tr>
+        <td colspan="3">
+          No lagging subscriptions found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
+
+<div class="d-flex justify-content-end me-2">
+  <a class="btn btn-outline-secondary" href="@Dashboard.Prefix/subscriptions/checkpoints/reservations">
+    Reservations
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right"
+         viewBox="0 0 16 16">
+      <path fill-rule="evenodd"
+            d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
+    </svg>
+  </a>
+</div>
+
+@code {
+
+  public record ViewModel(
+    List<GetLaggingSubscriptionsResult.Subscription> Subscriptions,
+    string? Query,
+    int Page,
+    int PageSize,
+    int TotalResults
+  ) : IPagedViewModel
+  {
+    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions/lagging?page={{0}}&pageSize={{1}}";
+  }
+
+}

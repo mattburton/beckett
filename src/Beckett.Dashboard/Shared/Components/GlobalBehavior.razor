@@ -1,0 +1,44 @@
+<script type="text/javascript">
+  const dateTimeFormatOptions = Intl.DateTimeFormat().resolvedOptions();
+
+  const options = {
+    timeZone: dateTimeFormatOptions.timeZone,
+    timeZoneName: dateTimeFormatOptions.timeZoneName,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    fractionalSecondDigits: 3
+  };
+
+  htmx.onLoad(function (content) {
+    transformTimestamps(content);
+
+    setupPopovers(content);
+  });
+
+  function transformTimestamps(content) {
+    content.querySelectorAll(".timestamp").forEach((element) => {
+      element.innerText = new Date(Date.parse(element.innerText)).toLocaleString(dateTimeFormatOptions.locale, options);
+      element.style = "display: inline";
+    });
+  }
+
+  function setupPopovers(content) {
+    content.querySelectorAll('[data-bs-toggle="popover"]').forEach((element) => new bootstrap.Popover(element));
+  }
+
+  function changeTheme() {
+    const htmlElement = document.querySelector("html");
+
+    const theme = htmlElement.getAttribute("data-bs-theme");
+
+    const newTheme = theme === "dark" ? "light" : "dark";
+
+    htmlElement.setAttribute("data-bs-theme", newTheme);
+
+    localStorage.setItem("theme", newTheme);
+  }
+</script>

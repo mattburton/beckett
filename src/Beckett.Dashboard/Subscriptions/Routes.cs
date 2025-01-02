@@ -1,10 +1,7 @@
-using Beckett.Dashboard.Subscriptions.Checkpoint;
-using Beckett.Dashboard.Subscriptions.Failed;
-using Beckett.Dashboard.Subscriptions.Lagging;
-using Beckett.Dashboard.Subscriptions.Reservations;
-using Beckett.Dashboard.Subscriptions.Retries;
-using Beckett.Dashboard.Subscriptions.Subscription;
-using Beckett.Dashboard.Subscriptions.Subscriptions;
+using Beckett.Dashboard.Subscriptions.GetSubscription;
+using Beckett.Dashboard.Subscriptions.GetSubscriptions;
+using Beckett.Dashboard.Subscriptions.Pause;
+using Beckett.Dashboard.Subscriptions.Resume;
 
 namespace Beckett.Dashboard.Subscriptions;
 
@@ -14,12 +11,9 @@ public class Routes : IConfigureRoutes
     {
         var routes = builder.MapGroup("/subscriptions");
 
-        routes.MapGet("/", SubscriptionsHandler.Get);
-        routes.MapGet("/checkpoints/{id:long}", CheckpointHandler.Get);
-        routes.MapGet("/failed", FailedHandler.Get);
-        routes.MapGet("/lagging", LaggingHandler.Get);
-        routes.MapGet("/reservations", ReservationsHandler.Get);
-        routes.MapGet("/retries", RetriesHandler.Get);
-        routes.MapGet("/{groupName}/{name}", SubscriptionHandler.Get);
+        routes.MapGet("/", GetSubscriptionsHandler.Get);
+        routes.MapGet("/{groupName}/{name}", GetSubscriptionHandler.Get);
+        routes.MapPost("/{groupName}/{name}/pause", PauseHandler.Post).DisableAntiforgery();
+        routes.MapPost("/{groupName}/{name}/resume", ResumeHandler.Post).DisableAntiforgery();
     }
 }

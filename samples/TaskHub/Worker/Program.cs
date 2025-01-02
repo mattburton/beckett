@@ -5,7 +5,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using TaskHub.Infrastructure.Database;
-using TaskHub.TaskList;
+using TaskHub.TaskLists;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()

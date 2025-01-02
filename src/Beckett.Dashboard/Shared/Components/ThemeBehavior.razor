@@ -1,0 +1,24 @@
+<script>
+  (function () {
+    const storedTheme = localStorage.getItem("theme");
+
+    if (storedTheme?.length) {
+      document.querySelector("html").setAttribute("data-bs-theme", storedTheme);
+
+      return;
+    }
+
+    if (document.querySelector("html").getAttribute("data-bs-theme") === "auto") {
+      function updateColorMode() {
+        document.querySelector("html").setAttribute(
+          "data-bs-theme",
+          window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+        );
+      }
+
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateColorMode);
+
+      updateColorMode();
+    }
+  })();
+</script>

@@ -1,0 +1,75 @@
+@inherits Component<TenantFilter.ViewModel>
+@inject IDashboard DashboardService
+
+<form id="tenantFilter" class="d-flex input-group w-auto me-2" method="GET">
+  <span class="input-group-text" for="tenant">
+    Tenant
+    <div id="refresh-tenants-spinner" class="spinner-border spinner-border-sm ms-2 htmx-indicator" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </span>
+  <select class="form-select" id="tenant" name="tenant">
+    @foreach (var tenant in Model.Tenants)
+    {
+      if (tenant == CurrentTenant)
+      {
+        <option value="@tenant" selected>@tenant</option>
+      }
+      else
+      {
+        <option value="@tenant">@tenant</option>
+      }
+    }
+  </select>
+</form>
+<script type="text/javascript">
+  document.getElementById("tenant").addEventListener("change", function () {
+    document.getElementById("tenantFilter").submit();
+  });
+</script>
+
+@code {
+
+  private const string QueryParameterName = "tenant";
+  private const string CookieName = "beckett.tenant";
+
+  [CascadingParameter] public string? CurrentTenant { get; set; }
+
+  public record ViewModel(List<string> Tenants);
+
+  public static string GetCurrentTenant(HttpContext? context)
+  {
+    if (context == null)
+    {
+      return BeckettContext.GetTenant();
+    }
+
+    if (!context.Request.Query.TryGetValue(QueryParameterName, out var tenantFromQuery))
+    {
+      return context.Request.Cookies.TryGetValue(CookieName, out var tenantFromCookie)
+        ? tenantFromCookie
+        : BeckettContext.GetTenant();
+    }
+
+    var tenantFromQueryValue = tenantFromQuery.ToString();
+
+    context.Response.Cookies.Append(
+      CookieName,
+      tenantFromQueryValue,
+      new CookieOptions
+      {
+        HttpOnly = true
+      }
+    );
+
+    return tenantFromQueryValue;
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    var result = await DashboardService.MessageStore.GetTenants(CancellationToken.None);
+
+    Model = new ViewModel(result.Tenants);
+  }
+
+}

@@ -1,0 +1,55 @@
+@inherits Component<Subscriptions.ViewModel>
+@layout Layout
+
+<SubscriptionNavbar Model="Model" ActiveLink="SubscriptionNavbar.Links.Subscriptions"/>
+
+<div class="p-2 pt-0">
+  <table class="table table-striped">
+    <thead>
+    <tr>
+      <th style="width: 18em;">
+        <div class="d-flex align-items-end" style="height: 2.25em;">
+          Group Name
+        </div>
+      </th>
+      <th>Name</th>
+      <th style="width: 12em;">Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var subscription in Model.Subscriptions)
+    {
+      <tr>
+        <td>@subscription.GroupName</td>
+        <td>
+          <a href="@Dashboard.Prefix/subscriptions/@subscription.GroupName/@subscription.Name">@subscription.Name</a>
+        </td>
+        <td>@subscription.Status</td>
+      </tr>
+    }
+    @if (Model.Subscriptions.Count == 0)
+    {
+      <tr>
+        <td colspan="3">
+          No subscriptions found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
+
+@code {
+
+  public record ViewModel(
+    List<GetSubscriptionsResult.Subscription> Subscriptions,
+    string? Query,
+    int Page,
+    int PageSize,
+    int TotalResults
+  ) : IPagedViewModel
+  {
+    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
+  }
+
+}
