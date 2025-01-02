@@ -2,7 +2,12 @@
 @inject IDashboard DashboardService
 
 <form id="tenantFilter" class="d-flex input-group w-auto me-2" method="GET">
-  <span class="input-group-text" for="tenant">Tenant</span>
+  <span class="input-group-text" for="tenant">
+    Tenant
+    <div id="refresh-tenants-spinner" class="spinner-border spinner-border-sm ms-2 htmx-indicator" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </span>
   <select class="form-select" id="tenant" name="tenant">
     @foreach (var tenant in Model.Tenants)
     {

@@ -2,10 +2,10 @@ using Beckett.Database;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Beckett.Dashboard.Postgres.Tenants;
+namespace Beckett.Dashboard.Postgres.Services;
 
 public class RefreshTenantMaterializedView(
-    ITenantMaterializedViewManager tenantMaterializedViewManager,
+    IDashboard dashboard,
     PostgresOptions options,
     ILogger<RefreshTenantMaterializedView> logger
 ) : BackgroundService
@@ -20,7 +20,7 @@ public class RefreshTenantMaterializedView(
             {
                 stoppingToken.ThrowIfCancellationRequested();
 
-                await tenantMaterializedViewManager.Refresh(stoppingToken);
+                await dashboard.MessageStore.RefreshTenants(stoppingToken);
 
                 await Task.Delay(options.TenantRefreshInterval, stoppingToken);
             }

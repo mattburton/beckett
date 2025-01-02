@@ -1,7 +1,7 @@
 using Beckett.Dashboard.Postgres.MessageStore;
 using Beckett.Dashboard.Postgres.Metrics;
+using Beckett.Dashboard.Postgres.Services;
 using Beckett.Dashboard.Postgres.Subscriptions;
-using Beckett.Dashboard.Postgres.Tenants;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Dashboard;
@@ -15,7 +15,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDashboardSubscriptions, PostgresDashboardSubscriptions>();
         services.AddSingleton<IDashboard, DefaultDashboard>();
 
-        services.AddSingleton<ITenantMaterializedViewManager, TenantMaterializedViewManager>();
         services.AddHostedService<RefreshTenantMaterializedView>();
     }
 }
