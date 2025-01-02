@@ -1,6 +1,6 @@
 namespace TaskHub.TaskLists.CompleteTask;
 
-public class CompleteTaskHandler
+public static class CompleteTaskHandler
 {
     public static async Task<IResult> Post(
         Guid taskListId,

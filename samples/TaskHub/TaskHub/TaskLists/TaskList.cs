@@ -5,7 +5,7 @@ namespace TaskHub.TaskLists;
 
 public class TaskList : IBeckettModule
 {
-    private const string Category = "TaskList";
+    private const string Category = "task_list";
 
     public static string StreamName(Guid id) => $"{Category}-{id}";
 
@@ -20,10 +20,10 @@ public class TaskList : IBeckettModule
 
     public void Subscriptions(ISubscriptionBuilder builder)
     {
-        builder.AddSubscription("task_list:get_lists_projection")
-            .Projection<GetListsProjection, GetListsReadModel, Guid>();
+        builder.AddSubscription("task_lists:task_list_view_projection")
+            .Projection<TaskListViewProjection, TaskListView, Guid>();
 
-        builder.AddSubscription("task_list:wire_tap")
+        builder.AddSubscription("task_lists:wire_tap")
             .Category(Category)
             .Handler(
                 (IMessageContext context) =>

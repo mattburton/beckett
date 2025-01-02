@@ -7,7 +7,7 @@ public class ChangeListNameHandlerTests
     {
         var taskListId = Guid.NewGuid();
         var name = Guid.NewGuid().ToString();
-        var expectedStreamName = TaskHub.TaskLists.TaskList.StreamName(taskListId);
+        var expectedStreamName = TaskList.StreamName(taskListId);
         var expectedCommand = new ChangeListNameCommand(taskListId, name);
         var commandExecutor = new FakeCommandExecutor();
         var request = new ChangeListNameHandler.Request(name);

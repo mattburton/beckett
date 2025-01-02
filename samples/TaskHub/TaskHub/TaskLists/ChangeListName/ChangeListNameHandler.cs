@@ -1,6 +1,6 @@
 namespace TaskHub.TaskLists.ChangeListName;
 
-public class ChangeListNameHandler
+public static class ChangeListNameHandler
 {
     public static async Task<IResult> Post(
         Guid id,

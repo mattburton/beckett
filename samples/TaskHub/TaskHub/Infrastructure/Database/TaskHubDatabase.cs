@@ -30,7 +30,7 @@ public static class TaskHubDatabase
         await taskmasterSchema.ExecuteNonQueryAsync();
 
         await using var taskListsTable = dataSource.CreateCommand(@"
-            CREATE TABLE IF NOT EXISTS taskhub.task_lists (
+            CREATE TABLE IF NOT EXISTS taskhub.task_list_view (
                 id uuid PRIMARY KEY,
                 name text
             );

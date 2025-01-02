@@ -1,6 +1,6 @@
 namespace TaskHub.TaskLists.DeleteList;
 
-public class DeleteListHandler
+public static class DeleteListHandler
 {
     public static async Task<IResult> Delete(
         Guid id,

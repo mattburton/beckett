@@ -6,7 +6,7 @@ public class DeleteListHandlerTests
     public async Task executes_add_list_command()
     {
         var id = Guid.NewGuid();
-        var expectedStreamName = TaskHub.TaskLists.TaskList.StreamName(id);
+        var expectedStreamName = TaskList.StreamName(id);
         var expectedCommand = new DeleteListCommand(id);
         var expectedVersion = ExpectedVersion.StreamExists;
         var commandExecutor = new FakeCommandExecutor();

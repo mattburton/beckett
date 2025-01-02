@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.GetLists;
 
-public class GetListsProjection(NpgsqlDataSource dataSource) : IProjection<GetListsReadModel, Guid>
+public class TaskListViewProjection(NpgsqlDataSource dataSource) : IProjection<TaskListView, Guid>
 {
     public void Configure(IProjectionConfiguration<Guid> configuration)
     {
@@ -11,9 +11,9 @@ public class GetListsProjection(NpgsqlDataSource dataSource) : IProjection<GetLi
         configuration.DeletedBy<TaskListDeleted>(x => x.Id);
     }
 
-    public async Task<GetListsReadModel?> Load(Guid key, CancellationToken cancellationToken)
+    public async Task<TaskListView?> Load(Guid key, CancellationToken cancellationToken)
     {
-        const string sql = "SELECT id, name FROM taskhub.task_lists WHERE id = $1;";
+        const string sql = "SELECT id, name FROM taskhub.task_list_view WHERE id = $1;";
 
         var command = dataSource.CreateCommand(sql);
 
@@ -28,16 +28,16 @@ public class GetListsProjection(NpgsqlDataSource dataSource) : IProjection<GetLi
             return null;
         }
 
-        return new GetListsReadModel
+        return new TaskListView
         {
             Id = reader.GetGuid(0),
             Name = reader.GetString(1)
         };
     }
 
-    public async Task Create(GetListsReadModel model, CancellationToken cancellationToken)
+    public async Task Create(TaskListView model, CancellationToken cancellationToken)
     {
-        const string sql = "INSERT INTO taskhub.task_lists (id, name) VALUES ($1, $2);";
+        const string sql = "INSERT INTO taskhub.task_list_view (id, name) VALUES ($1, $2);";
 
         var command = dataSource.CreateCommand(sql);
 
@@ -47,9 +47,9 @@ public class GetListsProjection(NpgsqlDataSource dataSource) : IProjection<GetLi
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task Update(GetListsReadModel model, CancellationToken cancellationToken)
+    public async Task Update(TaskListView model, CancellationToken cancellationToken)
     {
-        const string sql = "UPDATE taskhub.task_lists SET name = $2 WHERE id = $1;";
+        const string sql = "UPDATE taskhub.task_list_view SET name = $2 WHERE id = $1;";
 
         var command = dataSource.CreateCommand(sql);
 
@@ -59,9 +59,9 @@ public class GetListsProjection(NpgsqlDataSource dataSource) : IProjection<GetLi
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task Delete(GetListsReadModel model, CancellationToken cancellationToken)
+    public async Task Delete(TaskListView model, CancellationToken cancellationToken)
     {
-        const string sql = "DELETE FROM taskhub.task_lists WHERE id = $1;";
+        const string sql = "DELETE FROM taskhub.task_list_view WHERE id = $1;";
 
         var command = dataSource.CreateCommand(sql);
 

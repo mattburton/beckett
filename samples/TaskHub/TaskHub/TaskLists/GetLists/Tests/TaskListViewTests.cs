@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.GetLists.Tests;
 
-public class GetListsReadModelTests : StateSpecificationFixture<GetListsReadModel>
+public class TaskListViewTests : StateSpecificationFixture<TaskListView>
 {
     [Fact]
     public void task_list_added()
@@ -12,7 +12,7 @@ public class GetListsReadModelTests : StateSpecificationFixture<GetListsReadMode
 
         Specification
             .Given(new TaskListAdded(taskListId, name))
-            .Then(new GetListsReadModel
+            .Then(new TaskListView
             {
                 Id = taskListId,
                 Name = name
@@ -31,7 +31,7 @@ public class GetListsReadModelTests : StateSpecificationFixture<GetListsReadMode
                 new TaskListAdded(taskListId, name),
                 new TaskListNameChanged(taskListId, newName)
             )
-            .Then(new GetListsReadModel
+            .Then(new TaskListView
             {
                 Id = taskListId,
                 Name = newName

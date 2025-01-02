@@ -1,6 +1,6 @@
 namespace TaskHub.TaskLists.GetList;
 
-public class GetListHandler
+public static class GetListHandler
 {
     public static async Task<IResult> Get(
         Guid id,
@@ -8,8 +8,10 @@ public class GetListHandler
         CancellationToken cancellationToken
     )
     {
-        var model = await new GetListQuery(id).Execute(messageStore, cancellationToken);
+        var stream = await messageStore.ReadStream(TaskList.StreamName(id), cancellationToken);
 
-        return model == null ? Results.NotFound() : Results.Ok(model);
+        var state = stream.IsEmpty ? null : stream.ProjectTo<TaskListDetails>();
+
+        return state == null ? Results.NotFound() : Results.Ok(state);
     }
 }

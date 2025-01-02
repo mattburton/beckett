@@ -8,7 +8,7 @@ public class GetListsHandlerTests
     public async Task executes_get_lists_query()
     {
         var database = new FakeDatabase();
-        database.Returns(new List<GetListsReadModel>());
+        database.Returns(new List<TaskListView>());
 
         await GetListsHandler.Get(database, CancellationToken.None);
 

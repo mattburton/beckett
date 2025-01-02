@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.GetList.Tests;
 
-public class GetListReadModelTests : StateSpecificationFixture<GetListReadModel>
+public class TaskListDetailsTests : StateSpecificationFixture<TaskListDetails>
 {
     [Fact]
     public void task_list_added()
@@ -11,7 +11,7 @@ public class GetListReadModelTests : StateSpecificationFixture<GetListReadModel>
         var name = Guid.NewGuid().ToString();
 
         Specification.Given(new TaskListAdded(taskListId, name)).Then(
-            new GetListReadModel
+            new TaskListDetails
             {
                 Id = taskListId,
                 Name = name
@@ -32,13 +32,13 @@ public class GetListReadModelTests : StateSpecificationFixture<GetListReadModel>
                 new TaskAdded(taskListId, task)
             )
             .Then(
-                new GetListReadModel
+                new TaskListDetails
                 {
                     Id = taskListId,
                     Name = name,
                     Tasks =
                     [
-                        new GetListReadModel.TaskItem(task, false)
+                        new TaskListDetails.TaskItem(task, false)
                     ]
                 }
             );
@@ -61,15 +61,15 @@ public class GetListReadModelTests : StateSpecificationFixture<GetListReadModel>
                 new TaskAdded(taskListId, task3)
             )
             .Then(
-                new GetListReadModel
+                new TaskListDetails
                 {
                     Id = taskListId,
                     Name = name,
                     Tasks =
                     [
-                        new GetListReadModel.TaskItem(task1, false),
-                        new GetListReadModel.TaskItem(task2, false),
-                        new GetListReadModel.TaskItem(task3, false)
+                        new TaskListDetails.TaskItem(task1, false),
+                        new TaskListDetails.TaskItem(task2, false),
+                        new TaskListDetails.TaskItem(task3, false)
                     ]
                 }
             );
@@ -89,13 +89,13 @@ public class GetListReadModelTests : StateSpecificationFixture<GetListReadModel>
                 new TaskCompleted(taskListId, task)
             )
             .Then(
-                new GetListReadModel
+                new TaskListDetails
                 {
                     Id = taskListId,
                     Name = name,
                     Tasks =
                     [
-                        new GetListReadModel.TaskItem(task, true)
+                        new TaskListDetails.TaskItem(task, true)
                     ]
                 }
             );
