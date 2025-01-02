@@ -21,7 +21,13 @@ public static class ReservationsHandler
         );
 
         return Results.Extensions.Render<Reservations>(
-            new Reservations.ViewModel(result.Reservations, query, pageParameter, pageSizeParameter, result.TotalResults)
+            new Reservations.ViewModel(
+                result.Reservations,
+                query,
+                pageParameter,
+                pageSizeParameter,
+                result.TotalResults
+            )
         );
     }
 }

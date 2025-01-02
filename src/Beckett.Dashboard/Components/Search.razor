@@ -22,14 +22,10 @@
 
 @code {
 
-  [CascadingParameter]
-  public HttpContext? Context { get; set; }
+  [CascadingParameter] public HttpContext? Context { get; set; }
 
   private string? Query { get; set; }
 
-  protected override void OnParametersSet()
-  {
-    Query = Context?.Request.Query["query"];
-  }
+  protected override void OnParametersSet() => Query = Context?.Request.Query["query"];
 
 }

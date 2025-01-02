@@ -2,10 +2,10 @@
 @layout LayoutWithoutSearch
 
 <script type="text/javascript">
-  document.body.addEventListener("retry_requested", function(){
+  document.body.addEventListener("retry_requested", function () {
     alert('Retry requested');
   });
-  document.body.addEventListener("checkpoint_skipped", function(){
+  document.body.addEventListener("checkpoint_skipped", function () {
     alert('Checkpoint error skipped');
   });
 </script>
@@ -89,7 +89,8 @@
         <span class="fw-bolder">Stream Name:</span>
         @if (Dashboard.Options.MessageStoreEnabled)
         {
-          <a href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamName)">
+          <a
+            href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamName)">
             @Model.Details.StreamName
           </a>
         }
@@ -102,7 +103,8 @@
         <span class="fw-bolder">Stream Position:</span>
         @if (Dashboard.Options.MessageStoreEnabled)
         {
-          <a href="@Dashboard.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamName)/@Model.Details.StreamPosition">
+          <a
+            href="@Dashboard.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamName)/@Model.Details.StreamPosition">
             @Model.Details.StreamPosition
           </a>
         }
@@ -141,7 +143,7 @@
     </ul>
   </div>
 
-  @foreach(var retry in Model.Details.Retries.OrderByDescending(x => x.Timestamp))
+  @foreach (var retry in Model.Details.Retries.OrderByDescending(x => x.Timestamp))
   {
     <div class="card m-4">
       <div class="card-header d-flex justify-content-between align-items-center bg-danger bg-opacity-10 text-body">

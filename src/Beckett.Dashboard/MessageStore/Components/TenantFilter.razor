@@ -23,7 +23,7 @@
   </select>
 </form>
 <script type="text/javascript">
-  document.getElementById("tenant").addEventListener("change", function() {
+  document.getElementById("tenant").addEventListener("change", function () {
     document.getElementById("tenantFilter").submit();
   });
 </script>
@@ -33,8 +33,7 @@
   private const string QueryParameterName = "tenant";
   private const string CookieName = "beckett.tenant";
 
-  [CascadingParameter]
-  public string? CurrentTenant { get; set; }
+  [CascadingParameter] public string? CurrentTenant { get; set; }
 
   public record ViewModel(List<string> Tenants);
 
@@ -54,10 +53,14 @@
 
     var tenantFromQueryValue = tenantFromQuery.ToString();
 
-    context.Response.Cookies.Append(CookieName, tenantFromQueryValue, new CookieOptions
-    {
-      HttpOnly = true
-    });
+    context.Response.Cookies.Append(
+      CookieName,
+      tenantFromQueryValue,
+      new CookieOptions
+      {
+        HttpOnly = true
+      }
+    );
 
     return tenantFromQueryValue;
   }
@@ -68,4 +71,5 @@
 
     Model = new ViewModel(result.Tenants);
   }
+
 }

@@ -29,7 +29,7 @@
     <thead>
     <tr>
       <th style="width: 1em;">
-        <input type="checkbox" id="select-all" onclick="selectAll()" />
+        <input type="checkbox" id="select-all" onclick="selectAll()"/>
       </th>
       <th style="width: 16em;">
         <div class="d-flex align-items-end" style="height: 2.25em;">
@@ -57,11 +57,11 @@
     </tr>
     </thead>
     <tbody>
-    @foreach(var checkpoint in Model.Failures)
+    @foreach (var checkpoint in Model.Failures)
     {
       <tr>
         <td>
-          <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id" />
+          <input type="checkbox" class="select-item" name="id" value="@checkpoint.Id"/>
         </td>
         <td>@checkpoint.GroupName</td>
         <td>@checkpoint.Name</td>

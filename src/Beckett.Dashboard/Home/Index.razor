@@ -1,7 +1,8 @@
 @layout Layout
 @inject IDashboard DashboardService
 
-<div id="metrics" class="row mt-4 mx-2" hx-get="@Dashboard.Prefix/" hx-trigger="every 10s" hx-select="#metrics" hx-swap="outerHTML">
+<div id="metrics" class="row mt-4 mx-2" hx-get="@Dashboard.Prefix/" hx-trigger="every 10s" hx-select="#metrics"
+     hx-swap="outerHTML">
   <div class="col-sm-4 mb-3 mb-sm-0">
     <div class="card">
       <div class="card-header">

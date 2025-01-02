@@ -15,14 +15,10 @@
 
 @code {
 
-  [CascadingParameter]
-  public HttpContext? Context { get; set; }
+  [CascadingParameter] public HttpContext? Context { get; set; }
 
   private string? CurrentTenant { get; set; }
 
-  protected override void OnInitialized()
-  {
-    CurrentTenant = TenantFilter.GetCurrentTenant(Context);
-  }
+  protected override void OnInitialized() => CurrentTenant = TenantFilter.GetCurrentTenant(Context);
 
 }

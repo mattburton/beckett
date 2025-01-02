@@ -57,15 +57,15 @@
 
 @code {
 
-   public record ViewModel(
-     List<GetSubscriptionsResult.Subscription> Subscriptions,
-     string? Query,
-     int Page,
-     int PageSize,
-     int TotalResults
-   ) : IPagedViewModel
-   {
-     public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
-   }
+  public record ViewModel(
+    List<GetSubscriptionsResult.Subscription> Subscriptions,
+    string? Query,
+    int Page,
+    int PageSize,
+    int TotalResults
+  ) : IPagedViewModel
+  {
+    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
+  }
 
- }
+}

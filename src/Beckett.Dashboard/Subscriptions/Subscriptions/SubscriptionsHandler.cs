@@ -19,7 +19,13 @@ public static class SubscriptionsHandler
         );
 
         return Results.Extensions.Render<Subscriptions>(
-            new Subscriptions.ViewModel(result.Subscriptions, null, pageParameter, pageSizeParameter, result.TotalResults)
+            new Subscriptions.ViewModel(
+                result.Subscriptions,
+                null,
+                pageParameter,
+                pageSizeParameter,
+                result.TotalResults
+            )
         );
     }
 }

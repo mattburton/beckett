@@ -10,7 +10,8 @@
         </a>
       </li>
       <li class="breadcrumb-item">
-        <a class="link-body-emphasis fw-semibold" href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)">
+        <a class="link-body-emphasis fw-semibold"
+           href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)">
           @Model.Category
         </a>
       </li>
@@ -33,7 +34,7 @@
     </tr>
     </thead>
     <tbody>
-    @foreach(var message in Model.Messages)
+    @foreach (var message in Model.Messages)
     {
       <tr>
         <td>

@@ -42,16 +42,22 @@
       }
       <div class="pt-2 text-nowrap">@Model.Message.StreamPosition of @Model.Message.StreamVersion</div>
       <div>
-        <a href="@previousLink" class="ms-2 btn btn-outline-secondary @(Model.Message.StreamPosition == 1 ? "disabled" : "")">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+        <a href="@previousLink"
+           class="ms-2 btn btn-outline-secondary @(Model.Message.StreamPosition == 1 ? "disabled" : "")">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left"
+               viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
           </svg>
         </a>
       </div>
       <div class="ms-1">
-        <a href="@nextLink" class="btn btn-outline-secondary @(Model.Message.StreamPosition == Model.Message.StreamVersion ? "disabled" : "")">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
+        <a href="@nextLink"
+           class="btn btn-outline-secondary @(Model.Message.StreamPosition == Model.Message.StreamVersion ? "disabled" : "")">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right"
+               viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
           </svg>
         </a>
       </div>
@@ -65,9 +71,12 @@
       <div class="card-header d-flex justify-content-between align-items-center pe-2">
         <div>@Model.Message.Type</div>
         <div>
-          <button id="copy-button" type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-title="Copied to clipboard" data-bs-placement="top" data-bs-trigger="click">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-copy" viewBox="0 0 16 16">
-              <path fill-rule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"></path>
+          <button id="copy-button" type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
+                  data-bs-title="Copied to clipboard" data-bs-placement="top" data-bs-trigger="click">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-copy"
+                 viewBox="0 0 16 16">
+              <path fill-rule="evenodd"
+                    d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"></path>
             </svg>
           </button>
         </div>
@@ -88,7 +97,8 @@
         <li class="list-group-item">Global Position: @Model.Message.GlobalPosition</li>
         <li class="list-group-item">Stream Position: @Model.Message.StreamPosition</li>
         <li class="list-group-item">Stream Version: @Model.Message.StreamVersion</li>
-        <li class="list-group-item">Timestamp: <span class="timestamp">@Model.Message.Timestamp.ToString("O")</span></li>
+        <li class="list-group-item">Timestamp: <span class="timestamp">@Model.Message.Timestamp.ToString("O")</span>
+        </li>
       </ul>
     </div>
     <div class="card me-2" style="max-height: 75vh">
@@ -102,12 +112,14 @@
           {
             case MessageConstants.Metadata.CausationId:
               <li class="list-group-item">
-                @MessageConstants.Metadata.CausationId: <a href="@Dashboard.Prefix/message-store/messages/@item.Value">@item.Value</a>
+                @MessageConstants.Metadata.CausationId: <a
+                  href="@Dashboard.Prefix/message-store/messages/@item.Value">@item.Value</a>
               </li>
               break;
             case MessageConstants.Metadata.CorrelationId:
               <li class="list-group-item">
-                @MessageConstants.Metadata.CorrelationId: <a href="@Dashboard.Prefix/message-store/correlated-by/@item.Value">@item.Value</a>
+                @MessageConstants.Metadata.CorrelationId: <a
+                  href="@Dashboard.Prefix/message-store/correlated-by/@item.Value">@item.Value</a>
               </li>
               break;
             default:
@@ -134,7 +146,7 @@
     message.innerHTML = JSON.stringify(messageData, undefined, 4);
   }
 
-  function configureCopyButton(message){
+  function configureCopyButton(message) {
     const copyButton = document.getElementById("copy-button");
     const tooltip = bootstrap.Tooltip.getOrCreateInstance(copyButton);
 
@@ -145,13 +157,13 @@
     });
 
     copyButton.addEventListener("mouseout", () => {
-      setTimeout(function(){
+      setTimeout(function () {
         tooltip.hide();
       }, 2000);
     });
   }
 
-  (function() {
+  (function () {
     const message = document.getElementById("message");
 
     renderMessage(message);

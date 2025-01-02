@@ -75,22 +75,18 @@ public enum Area
 
 public class Component<TModel> : ComponentBase
 {
-    [Parameter, EditorRequired] public required TModel Model { get; set; }
+    [Parameter, EditorRequired]
+    public required TModel Model { get; set; }
 }
 
 public static class ResultExtensions
 {
     private const string ModelPropertyName = "Model";
 
-    public static IResult Render<T>(this IResultExtensions _) where T : ComponentBase
-    {
-        return new RazorComponentResult<T>();
-    }
+    public static IResult Render<T>(this IResultExtensions _) where T : ComponentBase => new RazorComponentResult<T>();
 
-    public static IResult Render<T>(this IResultExtensions _, object model) where T : ComponentBase
-    {
-        return new RazorComponentResult<T>(new Dictionary<string, object?> { { ModelPropertyName, model } });
-    }
+    public static IResult Render<T>(this IResultExtensions _, object model) where T : ComponentBase =>
+        new RazorComponentResult<T>(new Dictionary<string, object?> { { ModelPropertyName, model } });
 }
 
 public interface IConfigureRoutes

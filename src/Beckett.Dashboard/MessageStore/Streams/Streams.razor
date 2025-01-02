@@ -26,11 +26,12 @@
     </tr>
     </thead>
     <tbody>
-    @foreach(var stream in Model.Streams)
+    @foreach (var stream in Model.Streams)
     {
       <tr>
         <td>
-          <a href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)/@HttpUtility.UrlEncode(stream.StreamName)">
+          <a
+            href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Category)/@HttpUtility.UrlEncode(stream.StreamName)">
             @stream.StreamName
           </a>
         </td>
