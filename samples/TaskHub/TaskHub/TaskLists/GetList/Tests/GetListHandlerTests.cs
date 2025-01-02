@@ -10,13 +10,13 @@ public class GetListHandlerTests
         var id = Guid.NewGuid();
         var name = Guid.NewGuid().ToString();
         var task = Guid.NewGuid().ToString();
-        var streamName = TaskHub.TaskLists.TaskList.StreamName(id);
+        var streamName = TaskList.StreamName(id);
         var messageStore = new FakeMessageStore();
         messageStore.HasExistingMessages(streamName, new TaskListAdded(id, name), new TaskAdded(id, task));
 
         var result = await GetListHandler.Get(id, messageStore, CancellationToken.None);
 
-        var response = Assert.IsType<Ok<GetListReadModel>>(result);
+        var response = Assert.IsType<Ok<TaskListDetails>>(result);
         Assert.NotNull(response.Value);
         Assert.Equal(id, response.Value.Id);
         Assert.Equal(name, response.Value.Name);

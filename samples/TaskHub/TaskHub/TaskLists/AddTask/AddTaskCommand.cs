@@ -14,7 +14,7 @@ public partial record AddTaskCommand(Guid TaskListId, string Task) : ICommand<Ad
         yield return new TaskAdded(TaskListId, Task);
     }
 
-    [ReadModel]
+    [State]
     public partial class State
     {
         public HashSet<string> Items { get; } = [];

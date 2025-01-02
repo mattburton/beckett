@@ -16,7 +16,7 @@ public class CompleteTaskCommandTests : CommandSpecificationFixture<CompleteTask
     }
 
     [Fact]
-    public void fails_when_task_already_completed()
+    public void error_when_task_already_completed()
     {
         var taskListId = Guid.NewGuid();
         var task = Guid.NewGuid().ToString();

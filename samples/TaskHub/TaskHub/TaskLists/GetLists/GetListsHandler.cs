@@ -1,6 +1,6 @@
 namespace TaskHub.TaskLists.GetLists;
 
-public class GetListsHandler
+public static class GetListsHandler
 {
     public static async Task<IResult> Get(
         IDatabase database,

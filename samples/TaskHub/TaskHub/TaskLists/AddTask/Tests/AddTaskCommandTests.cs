@@ -16,7 +16,7 @@ public class AddTaskCommandTests : CommandSpecificationFixture<AddTaskCommand, A
     }
 
     [Fact]
-    public void failure_when_task_already_added()
+    public void error_when_task_already_added()
     {
         var taskListId = Guid.NewGuid();
         var task = Guid.NewGuid().ToString();

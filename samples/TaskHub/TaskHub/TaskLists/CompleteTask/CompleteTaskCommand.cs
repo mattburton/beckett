@@ -14,7 +14,7 @@ public partial record CompleteTaskCommand(Guid TaskListId, string Task) : IComma
         yield return new TaskCompleted(TaskListId, Task);
     }
 
-    [ReadModel]
+    [State]
     public partial class State
     {
         public HashSet<string> CompletedItems { get; } = [];

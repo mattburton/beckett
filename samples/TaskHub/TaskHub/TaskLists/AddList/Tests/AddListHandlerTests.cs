@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http.HttpResults;
-
 namespace TaskHub.TaskLists.AddList.Tests;
 
 public class AddListHandlerTests
@@ -9,7 +7,7 @@ public class AddListHandlerTests
     {
         var id = Guid.NewGuid();
         var name = Guid.NewGuid().ToString();
-        var expectedStreamName = TaskHub.TaskLists.TaskList.StreamName(id);
+        var expectedStreamName = TaskList.StreamName(id);
         var expectedCommand = new AddListCommand(id, name);
         var expectedVersion = ExpectedVersion.StreamDoesNotExist;
         var commandExecutor = new FakeCommandExecutor();

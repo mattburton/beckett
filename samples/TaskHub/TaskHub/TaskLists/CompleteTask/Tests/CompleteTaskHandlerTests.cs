@@ -7,7 +7,7 @@ public class CompleteTaskHandlerTests
     {
         var taskListId = Guid.NewGuid();
         var task = Guid.NewGuid().ToString();
-        var expectedStreamName = TaskHub.TaskLists.TaskList.StreamName(taskListId);
+        var expectedStreamName = TaskList.StreamName(taskListId);
         var expectedCommand = new CompleteTaskCommand(taskListId, task);
         var commandExecutor = new FakeCommandExecutor();
 

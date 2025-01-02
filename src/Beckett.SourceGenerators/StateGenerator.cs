@@ -7,19 +7,19 @@ using Microsoft.CodeAnalysis.Text;
 namespace Beckett.SourceGenerators;
 
 [Generator]
-public sealed class ReadModelGenerator : IIncrementalGenerator
+public sealed class StateGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(
             ctx => ctx.AddSource(
-                "ReadModelAttribute.g.cs",
-                SourceText.From(ReadModelTemplates.Attribute, Encoding.UTF8)
+                "StateAttribute.g.cs",
+                SourceText.From(StateTemplates.Attribute, Encoding.UTF8)
             )
         );
 
         var readModels = context.SyntaxProvider.ForAttributeWithMetadataName(
-                "Beckett.ReadModelAttribute",
+                "Beckett.StateAttribute",
                 predicate: static (node, _) => IsSyntaxTargetForGeneration(node),
                 transform: static (context, _) => GetTargetForGeneration(context)
             )
@@ -28,31 +28,31 @@ public sealed class ReadModelGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(readModels, (sourceContext, data) => Execute(data, sourceContext));
     }
 
-    private static void Execute(ReadModel? readModel, SourceProductionContext context)
+    private static void Execute(State? readModel, SourceProductionContext context)
     {
         if (readModel is not { } value)
         {
             return;
         }
 
-        var result = ReadModelTemplates.ReadModel(value);
-        var fileName = ReadModelTemplates.FileName(value);
+        var result = StateTemplates.StateClass(value);
+        var fileName = StateTemplates.FileName(value);
 
         context.AddSource(fileName, SourceText.From(result, Encoding.UTF8));
     }
 
-    private static ReadModel? GetTargetForGeneration(GeneratorAttributeSyntaxContext context)
+    private static State? GetTargetForGeneration(GeneratorAttributeSyntaxContext context)
     {
-        return context.TargetSymbol is not INamedTypeSymbol symbol ? null : new ReadModel(symbol);
+        return context.TargetSymbol is not INamedTypeSymbol symbol ? null : new State(symbol);
     }
 
     private static bool IsSyntaxTargetForGeneration(SyntaxNode node) =>
         node is ClassDeclarationSyntax { AttributeLists.Count: > 0 };
 }
 
-public readonly record struct ReadModel
+public readonly record struct State
 {
-    public ReadModel(INamedTypeSymbol symbol)
+    public State(INamedTypeSymbol symbol)
     {
         ContainingNamespace = symbol.ContainingNamespace.ToString();
         ContainingTypeName = symbol.ContainingType?.Name;
@@ -109,41 +109,41 @@ public readonly record struct ReadModel
     }
 }
 
-public static class ReadModelTemplates
+public static class StateTemplates
 {
     public const string Attribute = @"
 namespace Beckett
 {
     [System.AttributeUsage(System.AttributeTargets.Class)]
-    public class ReadModelAttribute : System.Attribute
+    public class StateAttribute : System.Attribute
     {
     }
 }
     ";
 
-    public static string FileName(ReadModel readModel)
+    public static string FileName(State state)
     {
-        return readModel.ContainingTypeName != null
-            ? $"{readModel.ContainingNamespace}.{readModel.ContainingTypeName}.{readModel.Name}.g.cs"
-            : $"{readModel.ContainingNamespace}.{readModel.Name}.g.cs";
+        return state.ContainingTypeName != null
+            ? $"{state.ContainingNamespace}.{state.ContainingTypeName}.{state.Name}.g.cs"
+            : $"{state.ContainingNamespace}.{state.Name}.g.cs";
     }
 
-    public static string ReadModel(ReadModel readModel)
+    public static string StateClass(State state)
     {
-        return readModel.ContainingTypeName != null
-            ? NestedReadModel(readModel)
+        return state.ContainingTypeName != null
+            ? NestedStateClass(state)
             : $@"
 using Beckett;
 
-namespace {readModel.ContainingNamespace}
+namespace {state.ContainingNamespace}
 {{
-    {readModel.AccessModifier} partial class {readModel.Name} : IApply
+    {state.AccessModifier} partial class {state.Name} : IApply
     {{
         public void Apply(object message)
         {{
             switch (message)
             {{
-                {string.Join("\n", readModel.MessageTypes.Select(MessageTypeSwitchCase))}
+                {string.Join("\n", state.MessageTypes.Select(MessageTypeSwitchCase))}
             }}
         }}
     }}
@@ -151,20 +151,20 @@ namespace {readModel.ContainingNamespace}
     ";
     }
 
-    public static string NestedReadModel(ReadModel readModel) => $@"
+    public static string NestedStateClass(State state) => $@"
 using Beckett;
 
-namespace {readModel.ContainingNamespace}
+namespace {state.ContainingNamespace}
 {{
-    {readModel.ContainingTypeAccessModifier} partial {(readModel.ContainingTypeIsRecord ? "record" : "class")} {readModel.ContainingTypeName}
+    {state.ContainingTypeAccessModifier} partial {(state.ContainingTypeIsRecord ? "record" : "class")} {state.ContainingTypeName}
     {{
-        {readModel.AccessModifier} partial class {readModel.Name} : IApply
+        {state.AccessModifier} partial class {state.Name} : IApply
         {{
             public void Apply(object message)
             {{
                 switch (message)
                 {{
-                    {string.Join("\n", readModel.MessageTypes.Select(MessageTypeSwitchCase))}
+                    {string.Join("\n", state.MessageTypes.Select(MessageTypeSwitchCase))}
                 }}
             }}
         }}

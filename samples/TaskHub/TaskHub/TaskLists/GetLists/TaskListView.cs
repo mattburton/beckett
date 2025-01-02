@@ -2,8 +2,8 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.GetLists;
 
-[ReadModel]
-public partial class GetListsReadModel
+[State]
+public partial class TaskListView
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
