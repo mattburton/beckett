@@ -9,11 +9,11 @@ public class PostgresDashboardSubscriptions(
     PostgresOptions options
 ) : IDashboardSubscriptions
 {
-    public Task<GetSubscriptionsResult> GetSubscriptions(int page, int pageSize, CancellationToken cancellationToken)
+    public Task<GetSubscriptionsResult> GetSubscriptions(string? query, int page, int pageSize, CancellationToken cancellationToken)
     {
         var offset = Pagination.ToOffset(page, pageSize);
 
-        return database.Execute(new GetSubscriptions(offset, pageSize, options), cancellationToken);
+        return database.Execute(new GetSubscriptions(query, offset, pageSize, options), cancellationToken);
     }
 
     public Task<GetSubscriptionResult?> GetSubscription(

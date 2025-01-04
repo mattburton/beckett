@@ -3,6 +3,7 @@ namespace Beckett.Dashboard.Subscriptions.GetSubscriptions;
 public static class GetSubscriptionsHandler
 {
     public static async Task<IResult> Get(
+        string? query,
         int? page,
         int? pageSize,
         IDashboard dashboard,
@@ -13,6 +14,7 @@ public static class GetSubscriptionsHandler
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
         var result = await dashboard.Subscriptions.GetSubscriptions(
+            query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
@@ -21,7 +23,7 @@ public static class GetSubscriptionsHandler
         return Results.Extensions.Render<Subscriptions>(
             new Subscriptions.ViewModel(
                 result.Subscriptions,
-                null,
+                query,
                 pageParameter,
                 pageSizeParameter,
                 result.TotalResults
