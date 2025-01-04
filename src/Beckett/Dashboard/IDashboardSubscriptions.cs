@@ -29,6 +29,8 @@ public interface IDashboardSubscriptions
     Task<GetFailedResult> GetFailed(string? query, int page, int pageSize, CancellationToken cancellationToken);
 
     Task ReleaseCheckpointReservation(long id, CancellationToken cancellationToken);
+
+    Task ResetSubscription(string groupName, string name, CancellationToken cancellationToken);
 }
 
 public record GetSubscriptionsResult(List<GetSubscriptionsResult.Subscription> Subscriptions, int TotalResults)
