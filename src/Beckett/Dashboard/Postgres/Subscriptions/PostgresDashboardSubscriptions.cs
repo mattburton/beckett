@@ -1,5 +1,6 @@
 using Beckett.Dashboard.Postgres.Subscriptions.Queries;
 using Beckett.Database;
+using Beckett.Subscriptions.Queries;
 
 namespace Beckett.Dashboard.Postgres.Subscriptions;
 
@@ -64,5 +65,10 @@ public class PostgresDashboardSubscriptions(
         var offset = Pagination.ToOffset(page, pageSize);
 
         return database.Execute(new GetFailed(query, offset, pageSize, options), cancellationToken);
+    }
+
+    public Task ReleaseCheckpointReservation(long id, CancellationToken cancellationToken)
+    {
+        return database.Execute(new ReleaseCheckpointReservation(id, options), cancellationToken);
     }
 }

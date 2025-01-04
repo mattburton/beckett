@@ -19,6 +19,7 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
                    stream_position,
                    status,
                    process_at,
+                   reserved_until,
                    retries
             FROM {options.Schema}.checkpoints
             WHERE id = $1;
@@ -51,7 +52,8 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
             StreamPosition = reader.GetFieldValue<long>(5),
             Status = reader.GetFieldValue<CheckpointStatus>(6),
             ProcessAt = reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
-            Retries = reader.IsDBNull(8) ? [] : reader.GetFieldValue<RetryType[]>(8)
+            ReservedUntil = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
+            Retries = reader.IsDBNull(9) ? [] : reader.GetFieldValue<RetryType[]>(9)
         };
     }
 }

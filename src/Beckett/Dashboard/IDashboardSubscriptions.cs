@@ -27,6 +27,8 @@ public interface IDashboardSubscriptions
     Task<GetCheckpointResult?> GetCheckpoint(long id, CancellationToken cancellationToken);
 
     Task<GetFailedResult> GetFailed(string? query, int page, int pageSize, CancellationToken cancellationToken);
+
+    Task ReleaseCheckpointReservation(long id, CancellationToken cancellationToken);
 }
 
 public record GetSubscriptionsResult(List<GetSubscriptionsResult.Subscription> Subscriptions, int TotalResults)
@@ -78,6 +80,7 @@ public class GetCheckpointResult
     public required long StreamPosition { get; init; }
     public required CheckpointStatus Status { get; init; }
     public DateTimeOffset? ProcessAt { get; init; }
+    public DateTimeOffset? ReservedUntil { get; init; }
     public required RetryType[] Retries { get; init; }
 
     public int TotalAttempts => Retries?.Length > 0 ? Retries.Length - 1 : 0;
