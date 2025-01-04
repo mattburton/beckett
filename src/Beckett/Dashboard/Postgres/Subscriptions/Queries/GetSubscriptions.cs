@@ -32,7 +32,7 @@ public class GetSubscriptions(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = query;
+        command.Parameters[0].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
         command.Parameters[1].Value = offset;
         command.Parameters[2].Value = limit;
 
