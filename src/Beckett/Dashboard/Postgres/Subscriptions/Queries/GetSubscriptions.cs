@@ -6,6 +6,7 @@ using NpgsqlTypes;
 namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
 
 public class GetSubscriptions(
+    string? query,
     int offset,
     int limit,
     PostgresOptions options
@@ -16,11 +17,13 @@ public class GetSubscriptions(
         command.CommandText = $@"
             SELECT group_name, name, status, count(*) over() as total_results
             FROM {options.Schema}.subscriptions
+            WHERE ($1 is null or name ILIKE '%' || $1 || '%')
             ORDER BY group_name, name
-            OFFSET $1
-            LIMIT $2;
+            OFFSET $2
+            LIMIT $3;
         ";
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
@@ -29,8 +32,9 @@ public class GetSubscriptions(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = offset;
-        command.Parameters[1].Value = limit;
+        command.Parameters[0].Value = query;
+        command.Parameters[1].Value = offset;
+        command.Parameters[2].Value = limit;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

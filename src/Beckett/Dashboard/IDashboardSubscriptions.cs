@@ -5,7 +5,7 @@ namespace Beckett.Dashboard;
 
 public interface IDashboardSubscriptions
 {
-    Task<GetSubscriptionsResult> GetSubscriptions(int page, int pageSize, CancellationToken cancellationToken);
+    Task<GetSubscriptionsResult> GetSubscriptions(string? query, int page, int pageSize, CancellationToken cancellationToken);
 
     Task<GetSubscriptionResult?> GetSubscription(string groupName, string name, CancellationToken cancellationToken);
 
