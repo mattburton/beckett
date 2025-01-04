@@ -3,7 +3,11 @@
 @layout LayoutWithoutSearch
 
 <SubscriptionNavbar ActiveLink="SubscriptionNavbar.Links.None"/>
-
+<script type="text/javascript">
+  document.body.addEventListener("subscription_reset", function () {
+    alert('Subscription reset successfully');
+  });
+</script>
 <div id="subscription-details"
      hx-get="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name"
      hx-trigger="every 10s"
@@ -27,30 +31,33 @@
           </span>
           Subscription
         </div>
-        @if (Model.Details.Status == SubscriptionStatus.Active)
-        {
-          <div>
-            <a href="#"
-               class="btn btn-primary"
-               title="Pause Subscription"
-               hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/pause"
-               hx-on::response-error="alert('Unable to pause subscription at this time - please try again later')">
+        <div>
+          @if (Model.Details.Status == SubscriptionStatus.Active)
+          {
+            <button class="btn btn-primary"
+                    title="Pause Subscription"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/pause"
+                    hx-on::response-error="alert('Unable to pause subscription at this time - please try again later')">
               Pause
-            </a>
-          </div>
-        }
-        @if (Model.Details.Status == SubscriptionStatus.Paused)
-        {
-          <div>
-            <a href="#"
-               class="btn btn-primary"
-               title="Resume Subscription"
-               hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/resume"
-               hx-on::response-error="alert('Unable to resume subscription at this time - please try again later')">
+            </button>
+          }
+          @if (Model.Details.Status == SubscriptionStatus.Paused)
+          {
+            <button class="btn btn-primary"
+                    title="Resume Subscription"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/resume"
+                    hx-on::response-error="alert('Unable to resume subscription at this time - please try again later')">
               Resume
-            </a>
-          </div>
-        }
+            </button>
+          }
+          <button class="btn btn-danger ms-2"
+                  title="Reset Subscription"
+                  hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/reset"
+                  hx-confirm="Are you sure you want to reset this subscription?"
+                  hx-on::response-error="alert('Unable to reset subscription at this time - please try again later')">
+            Reset
+          </button>
+        </div>
       </div>
     </div>
     <ul class="list-group list-group-flush">

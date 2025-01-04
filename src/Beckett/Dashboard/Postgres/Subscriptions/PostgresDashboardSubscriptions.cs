@@ -71,4 +71,9 @@ public class PostgresDashboardSubscriptions(
     {
         return database.Execute(new ReleaseCheckpointReservation(id, options), cancellationToken);
     }
+
+    public Task ResetSubscription(string groupName, string name, CancellationToken cancellationToken)
+    {
+        return database.Execute(new ResetSubscription(groupName, name, options), cancellationToken);
+    }
 }
