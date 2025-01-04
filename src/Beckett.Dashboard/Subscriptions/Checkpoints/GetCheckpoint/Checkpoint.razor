@@ -8,6 +8,9 @@
   document.body.addEventListener("checkpoint_skipped", function () {
     alert('Checkpoint error skipped');
   });
+  document.body.addEventListener("reservation_released", function () {
+    alert('Checkpoint reservation released');
+  });
 </script>
 
 <SubscriptionNavbar ActiveLink="SubscriptionNavbar.Links.None"/>
@@ -53,6 +56,17 @@
                     hx-on::response-error="alert('Unable to skip checkpoint forward at this time - please try again later')">
               Skip
             </button>
+            @if (Model.Details.ReservedUntil.HasValue)
+            {
+              <button href="#"
+                      class="btn btn-danger ms-2"
+                      title="Release checkpoint reservation"
+                      hx-post="@Dashboard.Prefix/subscriptions/checkpoints/@Model.Details.Id/release-reservation"
+                      hx-confirm="Are you sure you want to release the reservation? This is typically used to clear out orphaned checkpoint reservations after restarting the host, otherwise multiple workers trying to process the same checkpoint could lead to unintended consequences."
+                      hx-on::response-error="alert('Unable to skip checkpoint forward at this time - please try again later')">
+                Release
+              </button>
+            }
           </div>
         }
       </div>
@@ -123,6 +137,15 @@
             }
           </span>
           @Model.Details.ProcessAt.Value.ToFriendlyTimeDisplay()
+        </li>
+      }
+      @if (Model.Details.ReservedUntil.HasValue)
+      {
+        <li class="list-group-item">
+          <span class="fw-bolder">
+            Reserved For:
+          </span>
+          @Model.Details.ReservedUntil.Value.ToFriendlyTimeDisplay()
         </li>
       }
     </ul>

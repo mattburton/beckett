@@ -5,6 +5,7 @@ using Beckett.Dashboard.Subscriptions.Checkpoints.GetFailed;
 using Beckett.Dashboard.Subscriptions.Checkpoints.GetLagging;
 using Beckett.Dashboard.Subscriptions.Checkpoints.GetReservations;
 using Beckett.Dashboard.Subscriptions.Checkpoints.GetRetries;
+using Beckett.Dashboard.Subscriptions.Checkpoints.ReleaseReservation;
 using Beckett.Dashboard.Subscriptions.Checkpoints.Retry;
 using Beckett.Dashboard.Subscriptions.Checkpoints.Skip;
 
@@ -17,6 +18,7 @@ public class Routes : IConfigureRoutes
         var routes = builder.MapGroup("/subscriptions/checkpoints");
 
         routes.MapGet("/{id:long}", GetCheckpointHandler.Get);
+        routes.MapPost("/{id:long}/release-reservation", ReleaseReservationHandler.Post).DisableAntiforgery();
         routes.MapPost("/{id:long}/retry", RetryHandler.Post).DisableAntiforgery();
         routes.MapPost("/{id:long}/skip", SkipHandler.Post).DisableAntiforgery();
         routes.MapPost("/bulk-retry", BulkRetryHandler.Post).DisableAntiforgery();
