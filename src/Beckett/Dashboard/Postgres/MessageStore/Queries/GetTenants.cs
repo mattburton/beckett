@@ -7,7 +7,7 @@ public class GetTenants(PostgresOptions options) : IPostgresDatabaseQuery<GetTen
 {
     public async Task<GetTenantsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select tenant from {options.Schema}.tenants;";
+        command.CommandText = $"select tenant from {options.Schema}.tenants order by tenant;";
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
