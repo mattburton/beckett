@@ -5,7 +5,7 @@
 <SubscriptionNavbar Model="Model" ActiveLink="SubscriptionNavbar.Links.Lagging"/>
 
 <div class="p-2 pt-0"
-     hx-get="@Dashboard.Prefix/subscriptions/lagging"
+     hx-get="@Dashboard.Prefix/subscriptions/checkpoints/lagging"
      hx-trigger="every 10s"
      hx-select="#list-view"
      hx-swap="innerHTML">
@@ -63,7 +63,7 @@
     int TotalResults
   ) : IPagedViewModel
   {
-    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions/lagging?page={{0}}&pageSize={{1}}";
+    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions/checkpoints/lagging?page={{0}}&pageSize={{1}}";
   }
 
 }
