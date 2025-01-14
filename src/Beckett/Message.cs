@@ -60,7 +60,7 @@ public class Message
     public JsonDocument Data { get; }
     public Dictionary<string, string> Metadata { get; }
 
-    public Message AddMetadata(string key, string? value)
+    public Message WithMetadata(string key, string? value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(value);
@@ -70,9 +70,14 @@ public class Message
         return this;
     }
 
-    public Message WithCorrelationId(string correlationId) => AddMetadata(
+    public Message WithCorrelationId(string correlationId) => WithMetadata(
         MessageConstants.Metadata.CorrelationId,
         correlationId
+    );
+
+    public Message WithTenant(string tenant) => WithMetadata(
+        MessageConstants.Metadata.Tenant,
+        tenant
     );
 
     internal JsonDocument SerializedMetadata =>
