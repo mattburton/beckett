@@ -1,7 +1,7 @@
 namespace Beckett.Projections;
 
 public static class ProjectionHandler<TProjection, TState, TKey> where TProjection : IProjection<TState, TKey>
-    where TState : IApply, new()
+    where TState : class, IApply, new()
 {
     public static async Task Handle(
         TProjection projection,

@@ -67,7 +67,7 @@ public class SubscriptionConfigurationBuilder(
     public ISubscriptionConfigurationBuilder Projection<TProjection, TState, TKey>(
         ServiceLifetime lifetime = ServiceLifetime.Transient
     )
-        where TProjection : IProjection<TState, TKey> where TState : IApply, new()
+        where TProjection : IProjection<TState, TKey> where TState : class, IApply, new()
     {
         var handlerType = typeof(TProjection);
 

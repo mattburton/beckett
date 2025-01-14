@@ -58,7 +58,7 @@ public interface IMessageStream
     /// </summary>
     /// <typeparam name="TState"></typeparam>
     /// <returns></returns>
-    TState ProjectTo<TState>() where TState : IApply, new();
+    TState ProjectTo<TState>() where TState : class, IApply, new();
 
     /// <summary>
     /// Throw a <see cref="StreamDoesNotExistException"/> if the stream does not exist.
@@ -139,7 +139,7 @@ public class MessageStream(
         return new MessageStream(StreamName, -1, streamMessages, appendToStream);
     }
 
-    public TState ProjectTo<TState>() where TState : IApply, new() => Messages.ProjectTo<TState>();
+    public TState ProjectTo<TState>() where TState : class, IApply, new() => Messages.ProjectTo<TState>();
 
     public void ThrowIfNotFound()
     {

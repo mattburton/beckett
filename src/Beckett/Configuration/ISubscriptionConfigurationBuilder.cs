@@ -96,7 +96,7 @@ public interface ISubscriptionConfigurationBuilder
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder Projection<TProjection, TReadModel, TKey>(
         ServiceLifetime lifetime = ServiceLifetime.Transient
-    ) where TProjection : IProjection<TReadModel, TKey> where TReadModel : IApply, new();
+    ) where TProjection : IProjection<TReadModel, TKey> where TReadModel : class, IApply, new();
 
     /// <summary>
     /// Configure the starting position of the subscription. When adding a new subscription to an existing system this
