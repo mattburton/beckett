@@ -1,5 +1,3 @@
-using TaskHub.Infrastructure.DependencyInjection;
-using TaskHub.Infrastructure.Email;
 using TaskHub.Infrastructure.Routing;
 using TaskHub.TaskLists.Events;
 using TaskHub.TaskLists.Slices.AddList;
@@ -13,7 +11,7 @@ using TaskHub.TaskLists.Slices.UserMentionNotification;
 
 namespace TaskHub.TaskLists;
 
-public class TaskListModule : IBeckettModule, IConfigureRoutes, IConfigureServices
+public class TaskListModule : IBeckettModule, IConfigureRoutes
 {
     private const string Category = "task_list";
 
@@ -62,10 +60,5 @@ public class TaskListModule : IBeckettModule, IConfigureRoutes, IConfigureServic
         routes.MapPost("/{taskListId:guid}/complete/{task}", CompleteTaskEndpoint.Handle);
         routes.MapDelete("/{id:guid}", DeleteListEndpoint.Handle);
         routes.MapGet("/{id:guid}", GetListEndpoint.Handle);
-    }
-
-    public void Services(IServiceCollection services)
-    {
-        services.TryAddSingleton<IEmailService, LoggingEmailService>();
     }
 }
