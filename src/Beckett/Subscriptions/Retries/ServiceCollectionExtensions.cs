@@ -4,7 +4,7 @@ namespace Beckett.Subscriptions.Retries;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddRetrySupport(this IServiceCollection services, BeckettOptions options)
+    internal static void AddRetrySupport(this IServiceCollection services, BeckettOptions options)
     {
         services.AddSingleton(options.Subscriptions.Retries);
 

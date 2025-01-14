@@ -8,7 +8,7 @@ namespace Beckett.Database;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
+    internal static void AddPostgresSupport(this IServiceCollection services, BeckettOptions options)
     {
         services.AddSingleton(options.Postgres);
 
