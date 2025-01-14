@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries;
@@ -9,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class CheckpointProcessor(
-    IMessageStorage messageStorage,
+    IMessageStore messageStore,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
     BeckettOptions options,
@@ -117,11 +116,11 @@ public class CheckpointProcessor(
         CancellationToken cancellationToken
     )
     {
-        IReadOnlyList<StreamMessage> streamMessages;
+        IReadOnlyList<IMessageContext> messageBatch;
 
         try
         {
-            streamMessages = await ReadMessageBatch(
+            messageBatch = await ReadMessageBatch(
                 checkpoint,
                 streamName,
                 startingStreamPosition,
@@ -149,7 +148,7 @@ public class CheckpointProcessor(
 
         try
         {
-            if (streamMessages.Count == 0)
+            if (messageBatch.Count == 0)
             {
                 return NoMessages.Instance;
             }
@@ -160,14 +159,14 @@ public class CheckpointProcessor(
                     checkpoint,
                     subscription,
                     streamName,
-                    streamMessages,
+                    messageBatch,
                     cancellationToken
                 );
             }
 
             var lastProcessedStreamPosition = checkpoint.StreamPosition;
 
-            foreach (var streamMessage in streamMessages.Where(x => subscription.SubscribedToMessage(x.Type)))
+            foreach (var streamMessage in messageBatch.Where(x => subscription.SubscribedToMessage(x.Type)))
             {
                 try
                 {
@@ -201,7 +200,7 @@ public class CheckpointProcessor(
                 }
             }
 
-            return new Success(streamMessages[^1].StreamPosition);
+            return new Success(messageBatch[^1].StreamPosition);
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -222,12 +221,10 @@ public class CheckpointProcessor(
     private async Task DispatchMessageToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        StreamMessage streamMessage,
+        IMessageContext messageContext,
         CancellationToken cancellationToken
     )
     {
-        var messageContext = streamMessage.ToMessageContext();
-
         using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
 
         using var messageLoggingScope = MessageLoggingScope(messageContext);
@@ -243,13 +240,13 @@ public class CheckpointProcessor(
         Checkpoint checkpoint,
         Subscription subscription,
         string streamName,
-        IReadOnlyList<StreamMessage> messages,
+        IReadOnlyList<IMessageContext> messages,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            var messageBatch = messages.Select(x => x.ToMessageContext()).ToList();
+            var messageBatch = messages.ToList();
 
             using var scope = serviceProvider.CreateScope();
 
@@ -275,7 +272,7 @@ public class CheckpointProcessor(
         }
     }
 
-    private async Task<IReadOnlyList<StreamMessage>> ReadMessageBatch(
+    private async Task<IReadOnlyList<IMessageContext>> ReadMessageBatch(
         Checkpoint checkpoint,
         string streamName,
         long startingStreamPosition,
@@ -285,9 +282,9 @@ public class CheckpointProcessor(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var stream = await messageStorage.ReadStream(
+        var stream = await messageStore.ReadStream(
             streamName,
-            new ReadStreamOptions
+            new ReadOptions
             {
                 StartingStreamPosition = startingStreamPosition,
                 Count = batchSize
@@ -295,9 +292,9 @@ public class CheckpointProcessor(
             cancellationToken
         );
 
-        logger.FoundMessagesToProcessForCheckpoint(stream.Messages.Count, checkpoint.Id);
+        logger.FoundMessagesToProcessForCheckpoint(stream.StreamMessages.Count, checkpoint.Id);
 
-        return stream.Messages;
+        return stream.StreamMessages;
     }
 
     private void SuccessTraceLogging(Checkpoint checkpoint, Success success)

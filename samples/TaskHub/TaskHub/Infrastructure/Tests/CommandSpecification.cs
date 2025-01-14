@@ -1,3 +1,5 @@
+using Beckett.Messages;
+
 namespace TaskHub.Infrastructure.Tests;
 
 public class CommandSpecification<TCommand> where TCommand : ICommand
@@ -59,13 +61,13 @@ public class CommandSpecification<TCommand> where TCommand : ICommand
 public class CommandSpecification<TCommand, TState>
     where TCommand : ICommand<TState> where TState : class, IApply, new()
 {
-    private readonly List<object> _given = [];
+    private readonly List<IMessageContext> _given = [];
     private readonly List<object> _then = [];
     private Exception? _exception;
 
     public CommandSpecification<TCommand, TState> Given(params object[] events)
     {
-        _given.AddRange(events);
+        _given.AddRange(events.Select(x => new NullMessageContext(x)));
 
         return this;
     }

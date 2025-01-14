@@ -59,12 +59,12 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
         {
             foreach (var message in messagesToApply)
             {
-                state = await applyHandler.Apply(state, message.Message!, cancellationToken);
+                state = await applyHandler.Apply(state, message, cancellationToken);
             }
         }
         else
         {
-            state = messagesToApply.Select(x => x.Message!).ApplyTo(state);
+            state = messagesToApply.ApplyTo(state);
         }
 
         if (actionToPerform == ProjectionAction.Create)

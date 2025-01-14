@@ -15,7 +15,7 @@ public interface IMessageStream
     /// <summary>
     /// The stream messages
     /// </summary>
-    IReadOnlyList<StreamMessage> StreamMessages { get; }
+    IReadOnlyList<IMessageContext> StreamMessages { get; }
 
     /// <summary>
     /// The stream messages deserialized as instances of their corresponding .NET types, skipping those where the type
@@ -112,13 +112,13 @@ public static class MessageStreamExtensions
 public class MessageStream(
     string streamName,
     long streamVersion,
-    IReadOnlyList<StreamMessage> streamMessages,
+    IReadOnlyList<IMessageContext> streamMessages,
     AppendToStreamDelegate appendToStream
 ) : IMessageStream
 {
     public string StreamName { get; } = streamName;
     public long StreamVersion { get; } = streamVersion;
-    public IReadOnlyList<StreamMessage> StreamMessages { get; } = streamMessages.ToList();
+    public IReadOnlyList<IMessageContext> StreamMessages { get; } = streamMessages.ToList();
 
     public IReadOnlyList<object> Messages =>
         StreamMessages.Where(x => x.Message != null).Select(x => x.Message!).ToList();
@@ -139,7 +139,7 @@ public class MessageStream(
         return new MessageStream(StreamName, -1, streamMessages, appendToStream);
     }
 
-    public TState ProjectTo<TState>() where TState : class, IApply, new() => Messages.ProjectTo<TState>();
+    public TState ProjectTo<TState>() where TState : class, IApply, new() => StreamMessages.ProjectTo<TState>();
 
     public void ThrowIfNotFound()
     {

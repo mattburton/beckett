@@ -139,9 +139,9 @@ namespace {state.ContainingNamespace}
 {{
     {state.AccessModifier} partial class {state.Name} : IApply
     {{
-        public void Apply(object message)
+        public void Apply(IMessageContext context)
         {{
-            switch (message)
+            switch (context.Message)
             {{
                 {string.Join("\n", state.MessageTypes.Select(MessageTypeSwitchCase))}
             }}
@@ -160,9 +160,9 @@ namespace {state.ContainingNamespace}
     {{
         {state.AccessModifier} partial class {state.Name} : IApply
         {{
-            public void Apply(object message)
+            public void Apply(IMessageContext context)
             {{
-                switch (message)
+                switch (context.Message)
                 {{
                     {string.Join("\n", state.MessageTypes.Select(MessageTypeSwitchCase))}
                 }}
