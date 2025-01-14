@@ -21,21 +21,30 @@ public static class TaskHubDatabase
 
         await assignRole.ExecuteNonQueryAsync();
 
-        await using var taskmasterSchema = dataSource.CreateCommand(@"
-            CREATE SCHEMA IF NOT EXISTS taskhub;
-            GRANT USAGE ON SCHEMA taskhub to taskhub;
-            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA taskhub TO taskhub;
+        await using var schemas = dataSource.CreateCommand(@"
+            CREATE SCHEMA IF NOT EXISTS task_lists;
+            GRANT USAGE ON SCHEMA task_lists to taskhub;
+            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA task_lists TO taskhub;
+
+            CREATE SCHEMA IF NOT EXISTS users;
+            GRANT USAGE ON SCHEMA users to taskhub;
+            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA users TO taskhub;
         ");
 
-        await taskmasterSchema.ExecuteNonQueryAsync();
+        await schemas.ExecuteNonQueryAsync();
 
-        await using var taskListsTable = dataSource.CreateCommand(@"
-            CREATE TABLE IF NOT EXISTS taskhub.task_list_view (
+        await using var tables = dataSource.CreateCommand(@"
+            CREATE TABLE IF NOT EXISTS task_lists.get_lists_read_model (
                 id uuid PRIMARY KEY,
                 name text
             );
+
+            CREATE TABLE IF NOT EXISTS users.get_users_read_model (
+                username text PRIMARY KEY,
+                email text
+            );
         ");
 
-        await taskListsTable.ExecuteNonQueryAsync();
+        await tables.ExecuteNonQueryAsync();
     }
 }

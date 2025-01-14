@@ -8,6 +8,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using TaskHub.Infrastructure.Database;
+using TaskHub.Infrastructure.DependencyInjection;
 using TaskHub.Infrastructure.Routing;
 using TaskHub.TaskLists;
 
@@ -23,7 +24,9 @@ try
 
     await builder.AddTaskHubDatabase();
 
-    builder.Services.AddBeckett().WithMessageTypesFrom(typeof(TaskList).Assembly);
+    builder.Services.ConfigureServices();
+
+    builder.Services.AddBeckett().WithMessageTypesFrom(typeof(TaskListModule).Assembly);
 
     builder.Services.AddBeckettDashboard();
 
