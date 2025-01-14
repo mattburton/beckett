@@ -2,9 +2,9 @@ using Beckett.Subscriptions.Retries;
 
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.Retry;
 
-public static class RetryHandler
+public static class RetryEndpoint
 {
-    public static async Task<IResult> Post(
+    public static async Task<IResult> Handle(
         HttpContext context,
         long id,
         IRetryClient retryClient,

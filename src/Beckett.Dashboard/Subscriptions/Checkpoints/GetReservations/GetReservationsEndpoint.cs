@@ -1,11 +1,8 @@
-using Beckett.Dashboard.MessageStore.Shared.Components;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetReservations;
 
-namespace Beckett.Dashboard.MessageStore.GetCategories;
-
-public static class GetCategoriesHandler
+public static class GetReservationsEndpoint
 {
-    public static async Task<IResult> Get(
-        HttpContext context,
+    public static async Task<IResult> Handle(
         string? query,
         int? page,
         int? pageSize,
@@ -13,21 +10,19 @@ public static class GetCategoriesHandler
         CancellationToken cancellationToken
     )
     {
-        var tenant = TenantFilter.GetCurrentTenant(context);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.MessageStore.GetCategories(
-            tenant,
+        var result = await dashboard.Subscriptions.GetReservations(
             query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
         );
 
-        return Results.Extensions.Render<Categories>(
-            new Categories.ViewModel(
-                result.Categories,
+        return Results.Extensions.Render<Reservations>(
+            new Reservations.ViewModel(
+                result.Reservations,
                 query,
                 pageParameter,
                 pageSizeParameter,

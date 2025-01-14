@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetFailed;
 
-public static class GetFailedHandler
+public static class GetFailedEndpoint
 {
-    public static async Task<IResult> Get(
+    public static async Task<IResult> Handle(
         string? query,
         int? page,
         int? pageSize,

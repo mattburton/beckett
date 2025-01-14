@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.MessageStore.GetMessages;
 
-public static class GetMessagesHandler
+public static class GetMessagesEndpoint
 {
-    public static async Task<IResult> Get(
+    public static async Task<IResult> Handle(
         string category,
         string streamName,
         string? query,

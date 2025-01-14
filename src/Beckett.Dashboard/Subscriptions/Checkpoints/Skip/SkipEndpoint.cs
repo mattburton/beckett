@@ -2,9 +2,9 @@ using Beckett.Subscriptions.Retries;
 
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.Skip;
 
-public static class SkipHandler
+public static class SkipEndpoint
 {
-    public static async Task<IResult> Post(
+    public static async Task<IResult> Handle(
         HttpContext context,
         long id,
         IRetryClient retryClient,

@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetLagging;
 
-public static class GetLaggingHandler
+public static class GetLaggingEndpoint
 {
-    public static async Task<IResult> Get(
+    public static async Task<IResult> Handle(
         int? page,
         int? pageSize,
         IDashboard dashboard,
