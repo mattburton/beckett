@@ -2,9 +2,9 @@ using Beckett.Dashboard.MessageStore.Shared.Components;
 
 namespace Beckett.Dashboard.MessageStore.GetStreams;
 
-public static class GetStreamsHandler
+public static class GetStreamsEndpoint
 {
-    public static async Task<IResult> Get(
+    public static async Task<IResult> Handle(
         HttpContext context,
         string category,
         string? query,

@@ -17,11 +17,11 @@ public class Routes : IConfigureRoutes
 
         var routes = builder.MapGroup("/message-store");
 
-        routes.MapGet("/", GetCategoriesHandler.Get);
-        routes.MapGet("/categories/{category}", GetStreamsHandler.Get);
-        routes.MapGet("/categories/{category}/{streamName}", GetMessagesHandler.Get);
-        routes.MapGet("/correlated-by/{correlationId}", GetCorrelatedByHandler.Get);
-        routes.MapGet("/messages/{id}", GetMessageHandler.GetById);
-        routes.MapGet("/streams/{streamName}/{streamPosition:long}", GetMessageHandler.GetByStreamPosition);
+        routes.MapGet("/", GetCategoriesEndpoint.Handle);
+        routes.MapGet("/categories/{category}", GetStreamsEndpoint.Handle);
+        routes.MapGet("/categories/{category}/{streamName}", GetMessagesEndpoint.Handle);
+        routes.MapGet("/correlated-by/{correlationId}", GetCorrelatedByEndpoint.Handle);
+        routes.MapGet("/messages/{id}", GetMessageByIdEndpoint.Handle);
+        routes.MapGet("/streams/{streamName}/{streamPosition:long}", GetMessageByStreamPositionEndpoint.Handle);
     }
 }

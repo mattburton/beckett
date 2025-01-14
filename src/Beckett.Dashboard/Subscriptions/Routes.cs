@@ -12,10 +12,10 @@ public class Routes : IConfigureRoutes
     {
         var routes = builder.MapGroup("/subscriptions");
 
-        routes.MapGet("/", GetSubscriptionsHandler.Get);
-        routes.MapGet("/{groupName}/{name}", GetSubscriptionHandler.Get);
-        routes.MapPost("/{groupName}/{name}/pause", PauseHandler.Post).DisableAntiforgery();
-        routes.MapPost("/{groupName}/{name}/reset", ResetHandler.Post).DisableAntiforgery();
-        routes.MapPost("/{groupName}/{name}/resume", ResumeHandler.Post).DisableAntiforgery();
+        routes.MapGet("/", GetSubscriptionsEndpoint.Handle);
+        routes.MapGet("/{groupName}/{name}", GetSubscriptionEndpoint.Handle);
+        routes.MapPost("/{groupName}/{name}/pause", PauseEndpoint.Handle).DisableAntiforgery();
+        routes.MapPost("/{groupName}/{name}/reset", ResetEndpoint.Handle).DisableAntiforgery();
+        routes.MapPost("/{groupName}/{name}/resume", ResumeEndpoint.Handle).DisableAntiforgery();
     }
 }

@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Metrics.GetMetrics;
 
-public static class GetMetricsHandler
+public static class GetMetricsEndpoint
 {
-    public static async Task<IResult> Get(IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handle(IDashboard dashboard, CancellationToken cancellationToken)
     {
         var result = await dashboard.Metrics.GetSubscriptionMetrics(cancellationToken);
 

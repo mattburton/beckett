@@ -17,15 +17,15 @@ public class Routes : IConfigureRoutes
     {
         var routes = builder.MapGroup("/subscriptions/checkpoints");
 
-        routes.MapGet("/{id:long}", GetCheckpointHandler.Get);
-        routes.MapPost("/{id:long}/release-reservation", ReleaseReservationHandler.Post).DisableAntiforgery();
-        routes.MapPost("/{id:long}/retry", RetryHandler.Post).DisableAntiforgery();
-        routes.MapPost("/{id:long}/skip", SkipHandler.Post).DisableAntiforgery();
-        routes.MapPost("/bulk-retry", BulkRetryHandler.Post).DisableAntiforgery();
-        routes.MapPost("/bulk-skip", BulkSkipHandler.Post).DisableAntiforgery();
-        routes.MapGet("/failed", GetFailedHandler.Get);
-        routes.MapGet("/lagging", GetLaggingHandler.Get);
-        routes.MapGet("/reservations", GetReservationsHandler.Get);
-        routes.MapGet("/retries", GetRetriesHandler.Get);
+        routes.MapGet("/{id:long}", GetCheckpointEndpoint.Handle);
+        routes.MapPost("/{id:long}/release-reservation", ReleaseReservationEndpoint.Handle).DisableAntiforgery();
+        routes.MapPost("/{id:long}/retry", RetryEndpoint.Handle).DisableAntiforgery();
+        routes.MapPost("/{id:long}/skip", SkipEndpoint.Handle).DisableAntiforgery();
+        routes.MapPost("/bulk-retry", BulkRetryEndpoint.Handle).DisableAntiforgery();
+        routes.MapPost("/bulk-skip", BulkSkipEndpoint.Handle).DisableAntiforgery();
+        routes.MapGet("/failed", GetFailedEndpoint.Handle);
+        routes.MapGet("/lagging", GetLaggingEndpoint.Handle);
+        routes.MapGet("/reservations", GetReservationsEndpoint.Handle);
+        routes.MapGet("/retries", GetRetriesEndpoint.Handle);
     }
 }

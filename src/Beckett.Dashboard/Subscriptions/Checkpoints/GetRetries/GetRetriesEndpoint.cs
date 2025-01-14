@@ -1,8 +1,8 @@
-namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetReservations;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetRetries;
 
-public static class GetReservationsHandler
+public static class GetRetriesEndpoint
 {
-    public static async Task<IResult> Get(
+    public static async Task<IResult> Handle(
         string? query,
         int? page,
         int? pageSize,
@@ -13,16 +13,16 @@ public static class GetReservationsHandler
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.Subscriptions.GetReservations(
+        var result = await dashboard.Subscriptions.GetRetries(
             query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
         );
 
-        return Results.Extensions.Render<Reservations>(
-            new Reservations.ViewModel(
-                result.Reservations,
+        return Results.Extensions.Render<Retries>(
+            new Retries.ViewModel(
+                result.Retries,
                 query,
                 pageParameter,
                 pageSizeParameter,

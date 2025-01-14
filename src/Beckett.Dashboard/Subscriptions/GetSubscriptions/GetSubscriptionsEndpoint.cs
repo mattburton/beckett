@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Subscriptions.GetSubscriptions;
 
-public static class GetSubscriptionsHandler
+public static class GetSubscriptionsEndpoint
 {
-    public static async Task<IResult> Get(
+    public static async Task<IResult> Handle(
         string? query,
         int? page,
         int? pageSize,

@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Subscriptions.GetSubscription;
 
-public static class GetSubscriptionHandler
+public static class GetSubscriptionEndpoint
 {
-    public static async Task<IResult> Get(
+    public static async Task<IResult> Handle(
         string groupName,
         string name,
         IDashboard dashboard,

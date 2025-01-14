@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetCheckpoint;
 
-public static class GetCheckpointHandler
+public static class GetCheckpointEndpoint
 {
-    public static async Task<IResult> Get(long id, IDashboard dashboard, CancellationToken cancellationToken)
+    public static async Task<IResult> Handle(long id, IDashboard dashboard, CancellationToken cancellationToken)
     {
         var result = await dashboard.Subscriptions.GetCheckpoint(id, cancellationToken);
 

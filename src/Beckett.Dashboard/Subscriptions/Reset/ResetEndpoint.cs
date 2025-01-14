@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Subscriptions.Reset;
 
-public static class ResetHandler
+public static class ResetEndpoint
 {
-    public static async Task<IResult> Post(
+    public static async Task<IResult> Handle(
         HttpContext context,
         string groupName,
         string name,

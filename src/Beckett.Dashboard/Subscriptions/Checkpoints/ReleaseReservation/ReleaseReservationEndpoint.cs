@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.ReleaseReservation;
 
-public static class ReleaseReservationHandler
+public static class ReleaseReservationEndpoint
 {
-    public static async Task<IResult> Post(
+    public static async Task<IResult> Handle(
         HttpContext context,
         long id,
         IDashboard dashboard,

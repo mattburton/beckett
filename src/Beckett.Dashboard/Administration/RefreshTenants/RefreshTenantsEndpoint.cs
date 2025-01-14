@@ -1,8 +1,8 @@
 namespace Beckett.Dashboard.Administration.RefreshTenants;
 
-public static class RefreshTenantsHandler
+public static class RefreshTenantsEndpoint
 {
-    public static async Task<IResult> Post(
+    public static async Task<IResult> Handle(
         HttpContext context,
         IDashboard dashboard,
         CancellationToken cancellationToken

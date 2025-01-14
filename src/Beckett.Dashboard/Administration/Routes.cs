@@ -8,6 +8,6 @@ public class Routes : IConfigureRoutes
     {
         var routes = builder.MapGroup("/administration");
 
-        routes.MapPost("/refresh-tenants", RefreshTenantsHandler.Post);
+        routes.MapPost("/refresh-tenants", RefreshTenantsEndpoint.Handle);
     }
 }

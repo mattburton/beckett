@@ -1,9 +1,11 @@
-namespace Beckett.Dashboard.MessageStore.GetCorrelatedBy;
+using Beckett.Dashboard.MessageStore.Shared.Components;
 
-public static class GetCorrelatedByHandler
+namespace Beckett.Dashboard.MessageStore.GetCategories;
+
+public static class GetCategoriesEndpoint
 {
-    public static async Task<IResult> Get(
-        string correlationId,
+    public static async Task<IResult> Handle(
+        HttpContext context,
         string? query,
         int? page,
         int? pageSize,
@@ -11,22 +13,22 @@ public static class GetCorrelatedByHandler
         CancellationToken cancellationToken
     )
     {
+        var tenant = TenantFilter.GetCurrentTenant(context);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.MessageStore.GetCorrelatedMessages(
-            correlationId,
+        var result = await dashboard.MessageStore.GetCategories(
+            tenant,
             query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
         );
 
-        return Results.Extensions.Render<CorrelatedBy>(
-            new CorrelatedBy.ViewModel(
-                correlationId,
+        return Results.Extensions.Render<Categories>(
+            new Categories.ViewModel(
+                result.Categories,
                 query,
-                result.Messages,
                 pageParameter,
                 pageSizeParameter,
                 result.TotalResults
