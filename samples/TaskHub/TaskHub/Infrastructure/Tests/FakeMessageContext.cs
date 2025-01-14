@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace TaskHub.Infrastructure.Tests;
 
-public class NullMessageContext(object message) : IMessageContext
+public class FakeMessageContext(object message) : IMessageContext
 {
     public string Id => null!;
     public string StreamName => null!;

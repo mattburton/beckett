@@ -185,7 +185,7 @@ public class CommandExecutor(IMessageStore messageStore) : ICommandExecutor
 
         var messages = stream.StreamMessages.ToList();
 
-        messages.AddRange(result.Select(x => new NullMessageContext(x)));
+        messages.AddRange(result.Select(x => new FakeMessageContext(x)));
 
         return new ExecuteResult(messages, appendResult.StreamVersion);
     }

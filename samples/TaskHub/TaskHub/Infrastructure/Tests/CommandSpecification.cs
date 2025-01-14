@@ -67,7 +67,7 @@ public class CommandSpecification<TCommand, TState>
 
     public CommandSpecification<TCommand, TState> Given(params object[] events)
     {
-        _given.AddRange(events.Select(x => new NullMessageContext(x)));
+        _given.AddRange(events.Select(x => new FakeMessageContext(x)));
 
         return this;
     }
