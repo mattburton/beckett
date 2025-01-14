@@ -430,13 +430,13 @@
       "beckett.dashboard": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.16.5, )"
+          "Beckett": "[0.16.6, )"
         }
       },
       "taskhub": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.16.5, )",
+          "Beckett": "[0.16.6, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.0, )",
           "Microsoft.NET.Test.Sdk": "[17.12.0, )",
           "Npgsql.DependencyInjection": "[9.0.2, )",

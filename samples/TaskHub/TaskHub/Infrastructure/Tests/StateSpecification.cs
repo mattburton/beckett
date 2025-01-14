@@ -9,7 +9,7 @@ public class StateSpecification<T> where T : class, IApply, new()
 
     public StateSpecification<T> Given(params object[] events)
     {
-        _given.AddRange(events.Select(x => new FakeMessageContext(x)));
+        _given.AddRange(events.Select(MessageContext.From));
 
         return this;
     }

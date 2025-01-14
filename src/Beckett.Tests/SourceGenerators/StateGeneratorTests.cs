@@ -1,5 +1,5 @@
 using System.Reflection;
-using Beckett.Tests.Fakes;
+using Beckett.Messages;
 
 namespace Beckett.Tests.SourceGenerators;
 
@@ -25,7 +25,7 @@ public class StateGeneratorTests
             var state = new TestState();
             const int expectedValue = 1;
             var message = new TestMessage(expectedValue);
-            var context = new FakeMessageContext(message);
+            var context = MessageContext.From(message);
 
             state.Apply(context);
 
@@ -38,7 +38,7 @@ public class StateGeneratorTests
             var state = new TestState();
             const int expectedValue = 1;
             var message = new TestMessageWithContext(expectedValue);
-            var context = new FakeMessageContext(message);
+            var context = MessageContext.From(message);
 
             state.Apply(context);
 
