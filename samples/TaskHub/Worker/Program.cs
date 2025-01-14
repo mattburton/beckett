@@ -5,6 +5,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using TaskHub.Infrastructure.Database;
+using TaskHub.Infrastructure.DependencyInjection;
 using TaskHub.TaskLists;
 
 Log.Logger = new LoggerConfiguration()
@@ -19,9 +20,11 @@ try
 
     await builder.AddTaskHubDatabase();
 
+    builder.Services.ConfigureServices();
+
     builder.Services.AddBeckett(
         options => { options.WithSubscriptionGroup("TaskHub"); }
-    ).WithSubscriptionsFrom(typeof(TaskList).Assembly);
+    ).WithSubscriptionsFrom(typeof(TaskListModule).Assembly);
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("taskhub-worker"))

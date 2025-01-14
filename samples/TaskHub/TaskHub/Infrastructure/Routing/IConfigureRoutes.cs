@@ -2,5 +2,5 @@ namespace TaskHub.Infrastructure.Routing;
 
 public interface IConfigureRoutes
 {
-    void Configure(IEndpointRouteBuilder builder);
+    void Routes(IEndpointRouteBuilder builder);
 }

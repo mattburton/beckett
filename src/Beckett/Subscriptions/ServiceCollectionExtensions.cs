@@ -9,7 +9,7 @@ namespace Beckett.Subscriptions;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
+    internal static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
     {
         services.AddSingleton(options.Subscriptions);
 

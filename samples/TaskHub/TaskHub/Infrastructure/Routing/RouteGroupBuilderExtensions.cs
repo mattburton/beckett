@@ -12,7 +12,7 @@ public static class RouteGroupBuilderExtensions
 
         foreach (var routeConfiguration in routes)
         {
-            routeConfiguration.Configure(builder);
+            routeConfiguration.Routes(builder);
         }
 
         return builder;

@@ -1,8 +1,28 @@
 @base_url = http://localhost:5222/taskhub
 
-### Create List
+### Add User
 
-POST {{base_url}}
+POST {{base_url}}/users
+Content-Type: application/json
+
+{
+  "username": "bob",
+  "email": "bob@company.com"
+}
+
+### Get Users
+
+GET {{base_url}}/users
+Content-Type: application/json
+
+### Get User
+
+GET {{base_url}}/users/bob
+Content-Type: application/json
+
+### Add List
+
+POST {{base_url}}/task-lists
 Content-Type: application/json
 
 {
@@ -15,7 +35,7 @@ Content-Type: application/json
 
 ### Change List Name
 
-PUT {{base_url}}/{{id}}/name
+PUT {{base_url}}/task-lists/{{id}}/name
 Content-Type: application/json
 
 {
@@ -24,22 +44,22 @@ Content-Type: application/json
 
 ### Delete List
 
-DELETE {{base_url}}/{{id}}
+DELETE {{base_url}}/task-lists/{{id}}
 Content-Type: application/json
 
 ### Get Lists
 
-GET {{base_url}}
+GET {{base_url}}/task-lists
 Content-Type: application/json
 
 ### Get List
 
-GET {{base_url}}/{{id}}
+GET {{base_url}}/task-lists/{{id}}
 Accept: application/json
 
 ### Add Task
 
-POST {{base_url}}/{{id}}
+POST {{base_url}}/task-lists/{{id}}
 Content-Type: application/json
 
 {
@@ -49,7 +69,19 @@ Content-Type: application/json
   client.global.set("task", response.body.task)
 %}
 
+### Add Task / Notify User
+
+POST {{base_url}}/task-lists/{{id}}
+Content-Type: application/json
+
+{
+  "task": "task_{{$random.uuid}} cc:@bob"
+}
+> {%
+  client.global.set("task", response.body.task)
+%}
+
 ### Complete Task
 
-POST {{base_url}}/{{id}}/complete/{{task}}
+POST {{base_url}}/task-lists/{{id}}/complete/{{task}}
 Content-Type: application/json

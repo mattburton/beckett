@@ -1,7 +1,7 @@
 namespace Beckett.Projections;
 
 public static class ProjectionHandler<TProjection, TState, TKey> where TProjection : IProjection<TState, TKey>
-    where TState : IApply, new()
+    where TState : class, IApply, new()
 {
     public static async Task Handle(
         TProjection projection,
@@ -51,40 +51,40 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
             return;
         }
 
-        var result = await LoadModel(projection, key, actionToPerform, ignoreIfNotFound, cancellationToken);
+        var result = await LoadState(projection, key, actionToPerform, ignoreIfNotFound, cancellationToken);
 
-        var model = result.Model;
+        var state = result.State;
 
         if (projection is IHandleApply<TState> applyHandler)
         {
             foreach (var message in messagesToApply)
             {
-                model = await applyHandler.Apply(model, message.Message!, cancellationToken);
+                state = await applyHandler.Apply(state, message.Message!, cancellationToken);
             }
         }
         else
         {
-            model = messagesToApply.Select(x => x.Message!).ApplyTo(model);
+            state = messagesToApply.Select(x => x.Message!).ApplyTo(state);
         }
 
         if (actionToPerform == ProjectionAction.Create)
         {
-            await projection.Create(model, cancellationToken);
+            await projection.Create(state, cancellationToken);
 
             return;
         }
 
         if (result.Loaded)
         {
-            await projection.Update(model, cancellationToken);
+            await projection.Update(state, cancellationToken);
 
             return;
         }
 
-        await projection.Create(model, cancellationToken);
+        await projection.Create(state, cancellationToken);
     }
 
-    private static async Task<(TState Model, bool Loaded)> LoadModel(
+    private static async Task<(TState State, bool Loaded)> LoadState(
         TProjection projection,
         TKey key,
         ProjectionAction actionToPerform,
@@ -92,23 +92,23 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
         CancellationToken cancellationToken
     )
     {
-        TState? model;
+        TState? state;
         var loaded = false;
 
         if (actionToPerform != ProjectionAction.Create)
         {
-            model = await projection.Load(key, cancellationToken);
+            state = await projection.Read(key, cancellationToken);
 
-            if (model == null)
+            if (state == null)
             {
                 if (!ignoreIfNotFound)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot {actionToPerform.ToString().ToLowerInvariant()} {typeof(TState).Name} with key {key} - read model not found"
+                        $"Cannot {actionToPerform.ToString().ToLowerInvariant()} {typeof(TState).Name} with key {key} - projection not found"
                     );
                 }
 
-                model = new TState();
+                state = new TState();
             }
             else
             {
@@ -117,10 +117,10 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
         }
         else
         {
-            model = new TState();
+            state = new TState();
         }
 
-        return (model, loaded);
+        return (state, loaded);
     }
 
     private static async Task HandleDelete(
@@ -136,13 +136,13 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
             return;
         }
 
-        var model = await projection.Load(key, cancellationToken);
+        var state = await projection.Read(key, cancellationToken);
 
-        if (model == null)
+        if (state == null)
         {
             return;
         }
 
-        await projection.Delete(model, cancellationToken);
+        await projection.Delete(state, cancellationToken);
     }
 }

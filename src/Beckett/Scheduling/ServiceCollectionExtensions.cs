@@ -5,7 +5,7 @@ namespace Beckett.Scheduling;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddScheduledMessageSupport(this IServiceCollection services, BeckettOptions options)
+    internal static void AddScheduledMessageSupport(this IServiceCollection services, BeckettOptions options)
     {
         services.AddSingleton(options.Scheduling);
 

@@ -44,7 +44,7 @@ public sealed class MessageTests : IDisposable
         var input = new TestMessage(Guid.NewGuid());
         var message = new Message(input);
 
-        message.AddMetadata("test-key", "test-value");
+        message.WithMetadata("test-key", "test-value");
 
         Assert.Single(message.Metadata, new KeyValuePair<string, string>("test-key", "test-value"));
     }
@@ -59,6 +59,18 @@ public sealed class MessageTests : IDisposable
         message.WithCorrelationId(expectedCorrelationId);
 
         Assert.Single(message.Metadata, new KeyValuePair<string, string>("$correlation_id", expectedCorrelationId));
+    }
+
+    [Fact]
+    public void can_add_tenant_to_message_metadata()
+    {
+        const string expectedTenant = "tenant";
+        var input = new TestMessage(Guid.NewGuid());
+        var message = new Message(input);
+
+        message.WithTenant(expectedTenant);
+
+        Assert.Single(message.Metadata, new KeyValuePair<string, string>("$tenant", expectedTenant));
     }
 
     private record TestMessage(Guid Id);

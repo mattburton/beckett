@@ -1,4 +1,3 @@
-using Beckett.Commands;
 using Beckett.Configuration;
 using Beckett.Dashboard;
 using Beckett.Database;
@@ -34,8 +33,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
 
         services.AddSingleton<IMessageStore, MessageStore>();
-
-        services.AddCommandSupport();
 
         services.AddDashboardSupport();
 

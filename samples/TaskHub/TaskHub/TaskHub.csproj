@@ -17,17 +17,19 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
     <PackageReference Include="Npgsql.DependencyInjection"/>
+    <PackageReference Include="Scrutor" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <ProjectReference Include="..\..\..\src\Beckett.Testing\Beckett.Testing.csproj"/>
     <PackageReference Include="coverlet.collector"/>
     <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <PackageReference Include="Testcontainers.PostgreSql"/>
+    <PackageReference Include="Testcontainers.Xunit"/>
     <PackageReference Include="xunit"/>
     <PackageReference Include="xunit.runner.visualstudio"/>
-    
+
     <Using Include="Xunit"/>
-    <Using Include="Beckett.Testing"/>
+    <Using Include="TaskHub.Infrastructure.Tests"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Release'">

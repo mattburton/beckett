@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using Beckett.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett;
 
@@ -45,12 +44,7 @@ public interface IMessageTypeBuilder
 
 public interface ISubscriptionBuilder
 {
-    /// <summary>
-    /// Host service collection to register additional dependencies required by the application module
-    /// </summary>
-    IServiceCollection Services { get; }
-
-    /// <summary>
+   /// <summary>
     /// Add a subscription to the subscription group hosted by this application and configure it using the resulting
     /// <see cref="ISubscriptionConfigurationBuilder"/>
     /// </summary>
