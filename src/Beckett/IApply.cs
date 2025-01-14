@@ -7,9 +7,9 @@ namespace Beckett;
 /// {
 ///     public bool WorkflowComplete { get; set; }
 ///
-///     public void Apply(object message)
+///     public void Apply(IMessageContext context)
 ///     {
-///         switch (message)
+///         switch (context.Message)
 ///             case WorkflowComplete:
 ///                 WorkflowComplete = true;
 ///                 break;
@@ -23,5 +23,5 @@ namespace Beckett;
 /// </summary>
 public interface IApply
 {
-    void Apply(object message);
+    void Apply(IMessageContext context);
 }

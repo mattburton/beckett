@@ -26,8 +26,8 @@ public class InMemoryMessageStorageTests : IDisposable
 
         var stream = await storage.ReadStream(streamName, new ReadStreamOptions(), CancellationToken.None);
 
-        Assert.Single(stream.Messages);
-        var message = Assert.IsType<TestEvent>(stream.Messages[0].Message);
+        Assert.Single(stream.StreamMessages);
+        var message = Assert.IsType<TestEvent>(MessageContext.From(stream.StreamMessages[0]).Message);
         Assert.Equal(1, message.Number);
     }
 

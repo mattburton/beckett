@@ -1,3 +1,4 @@
+using Beckett.Messages;
 using Beckett.MessageStorage;
 using Beckett.MessageStorage.InMemory;
 
@@ -31,7 +32,7 @@ public class FakeMessageStore : IMessageStore
         return new MessageStream(
             result.StreamName,
             result.StreamVersion,
-            result.Messages,
+            result.StreamMessages.Select(MessageContext.From).ToList(),
             AppendToStream
         );
     }
@@ -72,7 +73,7 @@ public class FakeMessageStore : IMessageStore
         return new MessageStream(
             result.StreamName,
             result.StreamVersion,
-            result.Messages,
+            result.StreamMessages.Select(MessageContext.From).ToList(),
             AppendToStream
         );
     }

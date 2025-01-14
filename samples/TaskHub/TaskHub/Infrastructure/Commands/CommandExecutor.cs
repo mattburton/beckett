@@ -1,3 +1,5 @@
+using Beckett.Messages;
+
 namespace TaskHub.Infrastructure.Commands;
 
 public class CommandExecutor(IMessageStore messageStore) : ICommandExecutor
@@ -105,7 +107,7 @@ public class CommandExecutor(IMessageStore messageStore) : ICommandExecutor
 
         if (result.Count == 0)
         {
-            return new ExecuteResult(stream.Messages, stream.StreamVersion);
+            return new ExecuteResult(stream.StreamMessages, stream.StreamVersion);
         }
 
         return await AppendToStream(streamName, result, stream, options, cancellationToken);
@@ -126,7 +128,7 @@ public class CommandExecutor(IMessageStore messageStore) : ICommandExecutor
 
         if (result.Count == 0)
         {
-            return new ExecuteResult(stream.Messages, stream.StreamVersion);
+            return new ExecuteResult(stream.StreamMessages, stream.StreamVersion);
         }
 
         return await AppendToStream(streamName, result, stream, options, cancellationToken);
@@ -181,12 +183,12 @@ public class CommandExecutor(IMessageStore messageStore) : ICommandExecutor
             appendResult = await stream.Append(result, cancellationToken);
         }
 
-        var messages = stream.Messages.ToList();
+        var messages = stream.StreamMessages.ToList();
 
-        messages.AddRange(result);
+        messages.AddRange(result.Select(x => new FakeMessageContext(x)));
 
         return new ExecuteResult(messages, appendResult.StreamVersion);
     }
 
-    private record ExecuteResult(IReadOnlyList<object> Messages, long StreamVersion);
+    private record ExecuteResult(IReadOnlyList<IMessageContext> Messages, long StreamVersion);
 }

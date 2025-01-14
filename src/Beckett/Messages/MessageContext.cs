@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Beckett.MessageStorage;
 
 namespace Beckett.Messages;
 
@@ -22,4 +23,15 @@ public record MessageContext(
     public object? Message => _message.Value;
 
     public Dictionary<string, string> MessageMetadata => _messageMetadata.Value;
+
+    public static IMessageContext From(StreamMessage streamMessage) => new MessageContext(
+        streamMessage.Id,
+        streamMessage.StreamName,
+        streamMessage.StreamPosition,
+        streamMessage.GlobalPosition,
+        streamMessage.Type,
+        streamMessage.Data,
+        streamMessage.Metadata,
+        streamMessage.Timestamp
+    );
 }

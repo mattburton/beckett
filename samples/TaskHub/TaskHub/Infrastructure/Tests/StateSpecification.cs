@@ -1,13 +1,15 @@
+using Beckett.Messages;
+
 namespace TaskHub.Infrastructure.Tests;
 
 public class StateSpecification<T> where T : class, IApply, new()
 {
-    private readonly List<object> _given = [];
+    private readonly List<IMessageContext> _given = [];
     private T _then = new();
 
     public StateSpecification<T> Given(params object[] events)
     {
-        _given.AddRange(events);
+        _given.AddRange(events.Select(x => new FakeMessageContext(x)));
 
         return this;
     }

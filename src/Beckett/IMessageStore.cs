@@ -154,7 +154,7 @@ public class MessageStore(
         return new MessageStream(
             result.StreamName,
             result.StreamVersion,
-            result.Messages,
+            result.StreamMessages.Select(MessageContext.From).ToList(),
             AppendToStream
         );
     }

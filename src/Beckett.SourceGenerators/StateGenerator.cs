@@ -52,6 +52,9 @@ public sealed class StateGenerator : IIncrementalGenerator
 
 public readonly record struct State
 {
+    private const string ApplyMethodName = "Apply";
+    private const string IMessageContextTypeName = "IMessageContext";
+
     public State(INamedTypeSymbol symbol)
     {
         ContainingNamespace = symbol.ContainingNamespace.ToString();
@@ -60,11 +63,11 @@ public readonly record struct State
         ContainingTypeIsRecord = symbol.ContainingType?.IsRecord ?? false;
         Name = symbol.Name;
         AccessModifier = AccessibilityModifier(symbol.DeclaredAccessibility);
-        MessageTypes = symbol.GetMembers("Apply")
+        ApplyMethods = symbol.GetMembers(ApplyMethodName)
             .OfType<IMethodSymbol>()
             .Where(x => x.ReturnsVoid)
-            .Where(x => x.Parameters.Length == 1)
-            .Select(BuildMessageTypeFullName)
+            .Where(IsApplyMethod)
+            .Select(BuildApplyMethod)
             .ToArray();
     }
 
@@ -74,9 +77,14 @@ public readonly record struct State
     public readonly bool ContainingTypeIsRecord;
     public readonly string Name;
     public readonly string? AccessModifier;
-    public readonly string[] MessageTypes;
+    public readonly ApplyMethod[] ApplyMethods;
 
-    private static string BuildMessageTypeFullName(IMethodSymbol method)
+    private static bool IsApplyMethod(IMethodSymbol method)
+    {
+        return method.Parameters.Length == 1 || SecondArgumentIsMessageContext(method);
+    }
+
+    private static ApplyMethod BuildApplyMethod(IMethodSymbol method)
     {
         var message = method.Parameters[0];
 
@@ -93,8 +101,12 @@ public readonly record struct State
 
         builder.Append(message.Type.Name);
 
-        return builder.ToString();
+        return new ApplyMethod(builder.ToString(), SecondArgumentIsMessageContext(method));
     }
+
+    // ReSharper disable once MergeIntoPattern
+    private static bool SecondArgumentIsMessageContext(IMethodSymbol method) => method.Parameters.Length == 2 &&
+        method.Parameters[1].Type.Name == IMessageContextTypeName;
 
     private static string? AccessibilityModifier(Accessibility? accessibility)
     {
@@ -107,6 +119,12 @@ public readonly record struct State
             _ => null
         };
     }
+}
+
+public readonly struct ApplyMethod(string messageType, bool includeContext)
+{
+    public string MessageType { get; } = messageType;
+    public bool IncludeContext { get; } = includeContext;
 }
 
 public static class StateTemplates
@@ -139,11 +157,11 @@ namespace {state.ContainingNamespace}
 {{
     {state.AccessModifier} partial class {state.Name} : IApply
     {{
-        public void Apply(object message)
+        public void Apply(IMessageContext context)
         {{
-            switch (message)
+            switch (context.Message)
             {{
-                {string.Join("\n", state.MessageTypes.Select(MessageTypeSwitchCase))}
+                {string.Join("\n", state.ApplyMethods.Select(MessageTypeSwitchCase))}
             }}
         }}
     }}
@@ -151,7 +169,7 @@ namespace {state.ContainingNamespace}
     ";
     }
 
-    public static string NestedStateClass(State state) => $@"
+    private static string NestedStateClass(State state) => $@"
 using Beckett;
 
 namespace {state.ContainingNamespace}
@@ -160,11 +178,11 @@ namespace {state.ContainingNamespace}
     {{
         {state.AccessModifier} partial class {state.Name} : IApply
         {{
-            public void Apply(object message)
+            public void Apply(IMessageContext context)
             {{
-                switch (message)
+                switch (context.Message)
                 {{
-                    {string.Join("\n", state.MessageTypes.Select(MessageTypeSwitchCase))}
+                    {string.Join("\n", state.ApplyMethods.Select(MessageTypeSwitchCase))}
                 }}
             }}
         }}
@@ -172,9 +190,9 @@ namespace {state.ContainingNamespace}
 }}
     ";
 
-    private static string MessageTypeSwitchCase(string messageType) => $@"
-                case {messageType} m:
-                    Apply(m);
+    private static string MessageTypeSwitchCase(ApplyMethod applyMethod) => $@"
+                case {applyMethod.MessageType} m:
+                    {(applyMethod.IncludeContext ? "Apply(m, context)" : "Apply(m)")};
                     break;
 ";
 }
