@@ -5,7 +5,7 @@ namespace TaskHub.TaskLists.Slices.UserMentionNotification.Tests;
 public class SendUserMentionNotificationCommandTests : CommandSpecificationFixture<SendUserMentionNotificationCommand>
 {
     [Fact]
-    public void task_list_added()
+    public void user_mention_notification_sent()
     {
         var taskListId = Generate.Guid();
         var task = Generate.String();
