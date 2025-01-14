@@ -1,26 +1,32 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <IsPackable>false</IsPackable>
-        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Beckett\Beckett.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Beckett\Beckett.csproj"/>
+  </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="coverlet.collector"/>
-      <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-      <PackageReference Include="xunit"/>
-      <PackageReference Include="xunit.runner.visualstudio"/>
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <PackageReference Include="xunit"/>
+    <PackageReference Include="xunit.runner.visualstudio"/>
+  </ItemGroup>
 
-    <ItemGroup>
-      <Using Include="Xunit"/>
-    </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Beckett.SourceGenerators\Beckett.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"/>
+  </ItemGroup>
 
 </Project>
