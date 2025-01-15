@@ -39,9 +39,9 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
             var lastConfiguration = configuration.GetConfigurationFor(lastMessageType);
 
             var action = firstConfiguration.Action;
-            var ignoreIfNotFound = firstConfiguration.IgnoreIfNotFound;
+            var ignoreWhenNotFound = firstConfiguration.IgnoreWhenNotFound;
 
-            var key = firstConfiguration.Key(
+            var key = firstConfiguration.GetKey<TKey>(
                 firstMessage.Message ??
                 throw new InvalidOperationException($"Unable to deserialize message of type {firstMessage.Type}")
             );
@@ -53,7 +53,7 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
                 return;
             }
 
-            var result = await LoadState(projection, key, action, ignoreIfNotFound, cancellationToken);
+            var result = await LoadState(projection, key, action, ignoreWhenNotFound, cancellationToken);
 
             var state = keyBatch.ApplyTo(result.State);
 
@@ -72,7 +72,7 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
         TProjection projection,
         TKey key,
         ProjectionAction action,
-        bool ignoreIfNotFound,
+        bool ignoreWhenNotFound,
         CancellationToken cancellationToken
     )
     {
@@ -85,7 +85,7 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
 
             if (state == null)
             {
-                if (!ignoreIfNotFound && action != ProjectionAction.CreateOrUpdate)
+                if (!ignoreWhenNotFound && action != ProjectionAction.CreateOrUpdate)
                 {
                     throw new InvalidOperationException(
                         $"Cannot {action.ToString().ToLowerInvariant()} {typeof(TState).Name} with key {key} - projection not found"

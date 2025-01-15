@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+using Beckett.Messages;
 using Beckett.Projections;
 
 namespace Beckett.Tests.Projections;
@@ -10,11 +10,7 @@ public partial class ProjectionConfigurationTests
         [Fact]
         public void is_valid()
         {
-            var projection =
-                (IProjection<TestReadModel, Guid>)RuntimeHelpers.GetUninitializedObject(
-                    typeof(TestReadModelProjection)
-                );
-
+            var projection = new TestReadModelProjection();
             var configuration = new ProjectionConfiguration<Guid>();
 
             projection.Configure(configuration);
@@ -35,11 +31,7 @@ public partial class ProjectionConfigurationTests
         [Fact]
         public void throws()
         {
-            var projection =
-                (IProjection<TestReadModel, Guid>)RuntimeHelpers.GetUninitializedObject(
-                    typeof(TestReadModelProjectionMissingConfiguration)
-                );
-
+            var projection = new TestReadModelProjectionMissingConfiguration();
             var configuration = new ProjectionConfiguration<Guid>();
 
             projection.Configure(configuration);
@@ -55,11 +47,7 @@ public partial class ProjectionConfigurationTests
         [Fact]
         public void throws()
         {
-            var projection =
-                (IProjection<TestReadModel, Guid>)RuntimeHelpers.GetUninitializedObject(
-                    typeof(TestReadModelProjectionMissingApplyMethod)
-                );
-
+            var projection = new TestReadModelProjectionMissingApplyMethod();
             var configuration = new ProjectionConfiguration<Guid>();
 
             projection.Configure(configuration);
@@ -67,6 +55,41 @@ public partial class ProjectionConfigurationTests
             var exception = Assert.Throws<Exception>(() => configuration.Validate(new TestReadModel()));
             Assert.Contains("Configured but not applied", exception.Message);
             Assert.Contains(typeof(TestUpdateMessageNotApplied).FullName!, exception.Message);
+        }
+    }
+
+    public class when_ignore_filter_is_configured
+    {
+        [Fact]
+        public void excludes_messages_matching_filter()
+        {
+            var projection = new TestReadModelProjection();
+            var configuration = new ProjectionConfiguration<Guid>();
+            projection.Configure(configuration);
+            var batch = new List<IMessageContext>
+            {
+                MessageContext.From(new TestCreateMessage(Guid.Empty))
+            };
+
+            var filteredBatch = configuration.Filter(batch);
+
+            Assert.Empty(filteredBatch);
+        }
+
+        [Fact]
+        public void includes_messages_that_do_not_match_filter()
+        {
+            var projection = new TestReadModelProjection();
+            var configuration = new ProjectionConfiguration<Guid>();
+            projection.Configure(configuration);
+            var batch = new List<IMessageContext>
+            {
+                MessageContext.From(new TestCreateMessage(Guid.NewGuid()))
+            };
+
+            var filteredBatch = configuration.Filter(batch);
+
+            Assert.Single(filteredBatch);
         }
     }
 
@@ -86,7 +109,7 @@ public partial class ProjectionConfigurationTests
     {
         public void Configure(IProjectionConfiguration<Guid> configuration)
         {
-            configuration.CreatedBy<TestCreateMessage>(x => x.Id);
+            configuration.CreatedBy<TestCreateMessage>(x => x.Id).IgnoreWhen(x => x.Id == Guid.Empty);
             configuration.UpdatedBy<TestUpdateMessage>(x => x.Id);
         }
 
