@@ -44,7 +44,7 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
         }
 
         var configuredMessageTypes = GetMessageTypesExcludingDeletedBy().ToArray();
-        var appliedMessageTypes = diagnostics.AppliedMessageTypes;
+        var appliedMessageTypes = diagnostics.AppliedMessageTypes();
 
         if (configuredMessageTypes.Length == appliedMessageTypes.Length)
         {

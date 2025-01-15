@@ -31,5 +31,5 @@ public interface IApply
 /// </summary>
 public interface IApplyDiagnostics
 {
-    Type[] AppliedMessageTypes { get; }
+    Type[] AppliedMessageTypes();
 }

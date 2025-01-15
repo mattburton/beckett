@@ -165,7 +165,7 @@ namespace {state.ContainingNamespace}
             }}
         }}
 
-        public Type[] AppliedMessageTypes => [
+        public Type[] AppliedMessageTypes() => [
             {string.Join(",\n", state.ApplyMethods.Select(MessageTypeArrayLine))}
         ];
     }}
@@ -190,7 +190,7 @@ namespace {state.ContainingNamespace}
                 }}
             }}
 
-            public Type[] AppliedMessageTypes => [
+            public Type[] AppliedMessageTypes() => [
                 {string.Join(",\n", state.ApplyMethods.Select(MessageTypeArrayLine))}
             ];
         }}
