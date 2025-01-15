@@ -20,91 +20,75 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
             return;
         }
 
-        var startingMessage = messagesToApply[0];
-        var lastMessage = messagesToApply[^1];
+        foreach (var keyBatch in  messagesToApply.GroupBy(x => configuration.GetKey(x)))
+        {
+            var firstMessage = keyBatch.First();
+            var lastMessage = keyBatch.Last();
 
-        var startingMessageType = startingMessage.MessageType ??
+            var firstMessageType = firstMessage.MessageType ??
+                                   throw new InvalidOperationException(
+                                       $"Unable to deserialize message of type {firstMessage.Type}"
+                                   );
+
+            var lastMessageType = lastMessage.MessageType ??
                                   throw new InvalidOperationException(
-                                      $"Unable to deserialize message of type {startingMessage.Type}"
+                                      $"Unable to deserialize message of type {lastMessage.Type}"
                                   );
 
-        var lastMessageType = lastMessage.MessageType ??
-                              throw new InvalidOperationException(
-                                  $"Unable to deserialize message of type {lastMessage.Type}"
-                              );
+            var firstConfiguration = configuration.GetConfigurationFor(firstMessageType);
+            var lastConfiguration = configuration.GetConfigurationFor(lastMessageType);
 
-        var startingMessageConfiguration = configuration.GetConfigurationFor(startingMessageType);
-        var lastMessageConfiguration = configuration.GetConfigurationFor(lastMessageType);
+            var action = firstConfiguration.Action;
+            var ignoreWhenNotFound = firstConfiguration.IgnoreWhenNotFound;
 
-        var actionToPerform = startingMessageConfiguration.Action;
-        var ignoreIfNotFound = startingMessageConfiguration.IgnoreIfNotFound;
+            var key = firstConfiguration.GetKey<TKey>(
+                firstMessage.Message ??
+                throw new InvalidOperationException($"Unable to deserialize message of type {firstMessage.Type}")
+            );
 
-        var key = startingMessageConfiguration.Key(
-            startingMessage.Message ??
-            throw new InvalidOperationException($"Unable to deserialize message of type {startingMessage.Type}")
-        );
-
-        if (lastMessageConfiguration.Action == ProjectionAction.Delete)
-        {
-            await HandleDelete(projection, key, actionToPerform, cancellationToken);
-
-            return;
-        }
-
-        var result = await LoadState(projection, key, actionToPerform, ignoreIfNotFound, cancellationToken);
-
-        var state = result.State;
-
-        if (projection is IHandleApply<TState> applyHandler)
-        {
-            foreach (var message in messagesToApply)
+            if (lastConfiguration.Action == ProjectionAction.Delete)
             {
-                state = await applyHandler.Apply(state, message, cancellationToken);
+                await HandleDelete(projection, key, action, cancellationToken);
+
+                return;
             }
-        }
-        else
-        {
-            state = messagesToApply.ApplyTo(state);
-        }
 
-        if (actionToPerform == ProjectionAction.Create)
-        {
+            var result = await LoadState(projection, key, action, ignoreWhenNotFound, cancellationToken);
+
+            var state = keyBatch.ApplyTo(result.State);
+
+            if (result.Loaded)
+            {
+                await projection.Update(state, cancellationToken);
+
+                return;
+            }
+
             await projection.Create(state, cancellationToken);
-
-            return;
         }
-
-        if (result.Loaded)
-        {
-            await projection.Update(state, cancellationToken);
-
-            return;
-        }
-
-        await projection.Create(state, cancellationToken);
     }
 
     private static async Task<(TState State, bool Loaded)> LoadState(
         TProjection projection,
         TKey key,
-        ProjectionAction actionToPerform,
-        bool ignoreIfNotFound,
+        ProjectionAction action,
+        bool ignoreWhenNotFound,
         CancellationToken cancellationToken
     )
     {
         TState? state;
         var loaded = false;
 
-        if (actionToPerform != ProjectionAction.Create)
+        if (action != ProjectionAction.Create)
         {
             state = await projection.Read(key, cancellationToken);
 
             if (state == null)
             {
-                if (!ignoreIfNotFound)
+                if (!ignoreWhenNotFound && action != ProjectionAction.CreateOrUpdate)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot {actionToPerform.ToString().ToLowerInvariant()} {typeof(TState).Name} with key {key} - projection not found"
+                        $"Cannot {action.ToString().ToLowerInvariant()} {typeof(TState).Name} with key {key} - projection not found"
                     );
                 }
 

@@ -79,6 +79,8 @@ public class SubscriptionConfigurationBuilder(
 
         projection.Configure(configuration);
 
+        configuration.Validate(new TState());
+
         Messages(configuration.GetMessageTypes());
 
         subscription.HandlerDelegate = ProjectionHandler<TProjection, TState, TKey>.Handle;
