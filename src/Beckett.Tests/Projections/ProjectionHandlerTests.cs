@@ -148,29 +148,6 @@ public partial class ProjectionHandlerTests
 
                 Assert.True(projection.Results[expectedId].Updated);
             }
-
-            [Fact]
-            public async Task deletes_projection()
-            {
-                var expectedId = Guid.NewGuid();
-                var projection = new TestReadModel.Projection();
-                var batch = new List<IMessageContext>
-                {
-                    MessageContext.From(new TestDeleteMessageWithIgnoreWhenNotFound(expectedId))
-                };
-                projection.Results.Add(expectedId, new TestReadModel
-                {
-                    Id = expectedId,
-                });
-
-                await ProjectionHandler<TestReadModel.Projection, TestReadModel, Guid>.Handle(
-                    projection,
-                    batch,
-                    CancellationToken.None
-                );
-
-                Assert.DoesNotContain(expectedId, projection.Results.Keys);
-            }
         }
 
         public class when_projection_does_not_exist
@@ -192,25 +169,6 @@ public partial class ProjectionHandlerTests
                 );
 
                 Assert.Contains(expectedId, projection.Results.Keys);
-            }
-
-            [Fact]
-            public async Task does_nothing_for_delete()
-            {
-                var expectedId = Guid.NewGuid();
-                var projection = new TestReadModel.Projection();
-                var batch = new List<IMessageContext>
-                {
-                    MessageContext.From(new TestDeleteMessageWithIgnoreWhenNotFound(expectedId))
-                };
-
-                await ProjectionHandler<TestReadModel.Projection, TestReadModel, Guid>.Handle(
-                    projection,
-                    batch,
-                    CancellationToken.None
-                );
-
-                Assert.Empty(projection.Results.Keys);
             }
         }
     }
@@ -281,7 +239,6 @@ public partial class ProjectionHandlerTests
                 configuration.UpdatedBy<TestUpdateMessage>(x => x.Id);
                 configuration.UpdatedBy<TestUpdateMessageWithIgnoreWhenNotFound>(x => x.Id).IgnoreWhenNotFound();
                 configuration.DeletedBy<TestDeleteMessage>(x => x.Id);
-                configuration.DeletedBy<TestDeleteMessageWithIgnoreWhenNotFound>(x => x.Id).IgnoreWhenNotFound();
             }
 
             public Task Create(TestReadModel state, CancellationToken cancellationToken)
@@ -369,7 +326,5 @@ public partial class ProjectionHandlerTests
     public record TestUpdateMessage(Guid Id);
     public record TestUpdateMessageWithIgnoreWhenNotFound(Guid Id);
     public record TestDeleteMessage(Guid Id);
-    public record TestDeleteMessageWithIgnoreWhenNotFound(Guid Id);
-
     public record TestMessageWithCompositeKey(int Id, DateOnly Date);
 }
