@@ -6,5 +6,5 @@ public interface IProjection<T, TKey> where T : IApply, new()
     Task Create(T state, CancellationToken cancellationToken);
     Task<T?> Read(TKey key, CancellationToken cancellationToken);
     Task Update(T state, CancellationToken cancellationToken);
-    Task Delete(T state, CancellationToken cancellationToken);
+    Task Delete(TKey key, CancellationToken cancellationToken);
 }

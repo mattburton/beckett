@@ -49,13 +49,13 @@ public class GetUsersReadModelProjection(NpgsqlDataSource dataSource) : IProject
     public Task Update(GetUsersReadModel state, CancellationToken cancellationToken) =>
         throw new NotImplementedException();
 
-    public async Task Delete(GetUsersReadModel state, CancellationToken cancellationToken)
+    public async Task Delete(string key, CancellationToken cancellationToken)
     {
         const string sql = "DELETE FROM users.get_users_read_model WHERE username = $1;";
 
         var command = dataSource.CreateCommand(sql);
 
-        command.Parameters.AddWithValue(state.Username);
+        command.Parameters.AddWithValue(key);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

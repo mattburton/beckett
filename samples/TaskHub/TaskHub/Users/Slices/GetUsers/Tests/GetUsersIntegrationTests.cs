@@ -25,7 +25,7 @@ public class GetUsersIntegrationTests(DatabaseFixture database) : IClassFixture<
         var projection = new GetUsersReadModelProjection(database.DataSource);
         await projection.Create(state, CancellationToken.None);
 
-        await projection.Delete(state, CancellationToken.None);
+        await projection.Delete(state.Username, CancellationToken.None);
 
         var readModel = await projection.Read(state.Username, CancellationToken.None);
         Assert.Null(readModel);
