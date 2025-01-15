@@ -53,19 +53,7 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
 
         var result = await LoadState(projection, key, actionToPerform, ignoreIfNotFound, cancellationToken);
 
-        var state = result.State;
-
-        if (projection is IHandleApply<TState> applyHandler)
-        {
-            foreach (var message in messagesToApply)
-            {
-                state = await applyHandler.Apply(state, message, cancellationToken);
-            }
-        }
-        else
-        {
-            state = messagesToApply.ApplyTo(state);
-        }
+        var state = messagesToApply.ApplyTo(result.State);
 
         if (actionToPerform == ProjectionAction.Create)
         {
