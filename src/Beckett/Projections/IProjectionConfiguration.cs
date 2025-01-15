@@ -87,6 +87,8 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
         return batch.Where(x => x.MessageType != null && _map.ContainsKey(x.MessageType)).ToList();
     }
 
+    public TKey GetKey(IMessageContext context) => GetConfigurationFor(context.MessageType!).Key(context.Message!);
+
     public ProjectionMessageConfiguration<TKey> GetConfigurationFor(Type messageType) => _map[messageType];
 
     private Type[] GetMessageTypesExcludingDeletedBy() =>
