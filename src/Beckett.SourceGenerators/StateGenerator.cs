@@ -155,7 +155,7 @@ using Beckett;
 
 namespace {state.ContainingNamespace}
 {{
-    {state.AccessModifier} partial class {state.Name} : IApply
+    {state.AccessModifier} partial class {state.Name} : IApply, IApplyDiagnostics
     {{
         public void Apply(IMessageContext context)
         {{
@@ -164,6 +164,10 @@ namespace {state.ContainingNamespace}
                 {string.Join("\n", state.ApplyMethods.Select(MessageTypeSwitchCase))}
             }}
         }}
+
+        public Type[] AppliedMessageTypes => [
+            {string.Join(",\n", state.ApplyMethods.Select(MessageTypeArrayLine))}
+        ];
     }}
 }}
     ";
@@ -176,7 +180,7 @@ namespace {state.ContainingNamespace}
 {{
     {state.ContainingTypeAccessModifier} partial {(state.ContainingTypeIsRecord ? "record" : "class")} {state.ContainingTypeName}
     {{
-        {state.AccessModifier} partial class {state.Name} : IApply
+        {state.AccessModifier} partial class {state.Name} : IApply, IApplyDiagnostics
         {{
             public void Apply(IMessageContext context)
             {{
@@ -185,6 +189,10 @@ namespace {state.ContainingNamespace}
                     {string.Join("\n", state.ApplyMethods.Select(MessageTypeSwitchCase))}
                 }}
             }}
+
+            public Type[] AppliedMessageTypes => [
+                {string.Join(",\n", state.ApplyMethods.Select(MessageTypeArrayLine))}
+            ];
         }}
     }}
 }}
@@ -194,5 +202,9 @@ namespace {state.ContainingNamespace}
                 case {applyMethod.MessageType} m:
                     {(applyMethod.IncludeContext ? "Apply(m, context)" : "Apply(m)")};
                     break;
+";
+
+    private static string MessageTypeArrayLine(ApplyMethod applyMethod) => $@"
+                typeof({applyMethod.MessageType})
 ";
 }

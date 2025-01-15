@@ -20,6 +20,18 @@ public class StateGeneratorTests
         }
 
         [Fact]
+        public void applied_message_types_are_available()
+        {
+            var state = new TestState();
+
+            Assert.Collection(
+                state.AppliedMessageTypes,
+                type => Assert.Equal(typeof(TestMessage), type),
+                type => Assert.Equal(typeof(TestMessageWithContext), type)
+            );
+        }
+
+        [Fact]
         public void applies_message()
         {
             var state = new TestState();

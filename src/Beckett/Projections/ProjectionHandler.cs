@@ -20,28 +20,28 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
             return;
         }
 
-        var startingMessage = messagesToApply[0];
+        var firstMessage = messagesToApply[0];
         var lastMessage = messagesToApply[^1];
 
-        var startingMessageType = startingMessage.MessageType ??
-                                  throw new InvalidOperationException(
-                                      $"Unable to deserialize message of type {startingMessage.Type}"
-                                  );
+        var firstMessageType = firstMessage.MessageType ??
+                               throw new InvalidOperationException(
+                                   $"Unable to deserialize message of type {firstMessage.Type}"
+                               );
 
         var lastMessageType = lastMessage.MessageType ??
                               throw new InvalidOperationException(
                                   $"Unable to deserialize message of type {lastMessage.Type}"
                               );
 
-        var startingMessageConfiguration = configuration.GetConfigurationFor(startingMessageType);
+        var firstMessageConfiguration = configuration.GetConfigurationFor(firstMessageType);
         var lastMessageConfiguration = configuration.GetConfigurationFor(lastMessageType);
 
-        var actionToPerform = startingMessageConfiguration.Action;
-        var ignoreIfNotFound = startingMessageConfiguration.IgnoreIfNotFound;
+        var actionToPerform = firstMessageConfiguration.Action;
+        var ignoreIfNotFound = firstMessageConfiguration.IgnoreIfNotFound;
 
-        var key = startingMessageConfiguration.Key(
-            startingMessage.Message ??
-            throw new InvalidOperationException($"Unable to deserialize message of type {startingMessage.Type}")
+        var key = firstMessageConfiguration.Key(
+            firstMessage.Message ??
+            throw new InvalidOperationException($"Unable to deserialize message of type {firstMessage.Type}")
         );
 
         if (lastMessageConfiguration.Action == ProjectionAction.Delete)
