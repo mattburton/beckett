@@ -260,9 +260,9 @@ public partial class ProjectionHandlerTests
                 return Task.CompletedTask;
             }
 
-            public Task Delete(TestReadModel state, CancellationToken cancellationToken)
+            public Task Delete(Guid key, CancellationToken cancellationToken)
             {
-                Results.Remove(state.Id);
+                Results.Remove(key);
 
                 return Task.CompletedTask;
             }
@@ -312,9 +312,9 @@ public partial class ProjectionHandlerTests
                 return Task.CompletedTask;
             }
 
-            public Task Delete(ReadModelWithCompositeKey state, CancellationToken cancellationToken)
+            public Task Delete(string key, CancellationToken cancellationToken)
             {
-                Results.Remove(state.CompositeKey);
+                Results.Remove(key);
 
                 return Task.CompletedTask;
             }

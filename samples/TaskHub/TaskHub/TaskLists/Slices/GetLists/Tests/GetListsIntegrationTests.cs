@@ -55,7 +55,7 @@ public class GetListsIntegrationTests(DatabaseFixture database) : IClassFixture<
         var projection = new GetListsReadModelProjection(database.DataSource);
         await projection.Create(state, CancellationToken.None);
 
-        await projection.Delete(state, CancellationToken.None);
+        await projection.Delete(state.Id, CancellationToken.None);
 
         var readModel = await projection.Read(state.Id, CancellationToken.None);
         Assert.Null(readModel);

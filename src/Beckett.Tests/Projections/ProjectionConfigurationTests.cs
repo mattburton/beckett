@@ -122,7 +122,7 @@ public partial class ProjectionConfigurationTests
         public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task Delete(TestReadModel state, CancellationToken cancellationToken) =>
+        public Task Delete(Guid key, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
     }
 
@@ -142,7 +142,7 @@ public partial class ProjectionConfigurationTests
         public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task Delete(TestReadModel state, CancellationToken cancellationToken) =>
+        public Task Delete(Guid key, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
     }
 
@@ -164,7 +164,7 @@ public partial class ProjectionConfigurationTests
         public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task Delete(TestReadModel state, CancellationToken cancellationToken) =>
+        public Task Delete(Guid key, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
     }
 

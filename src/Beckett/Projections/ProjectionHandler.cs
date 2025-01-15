@@ -120,13 +120,6 @@ public static class ProjectionHandler<TProjection, TState, TKey> where TProjecti
             return;
         }
 
-        var state = await projection.Read(key, cancellationToken);
-
-        if (state == null)
-        {
-            return;
-        }
-
-        await projection.Delete(state, cancellationToken);
+        await projection.Delete(key, cancellationToken);
     }
 }

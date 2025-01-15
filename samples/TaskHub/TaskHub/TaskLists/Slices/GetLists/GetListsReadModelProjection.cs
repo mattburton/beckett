@@ -59,13 +59,13 @@ public class GetListsReadModelProjection(NpgsqlDataSource dataSource) : IProject
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task Delete(GetListsReadModel state, CancellationToken cancellationToken)
+    public async Task Delete(Guid key, CancellationToken cancellationToken)
     {
         const string sql = "DELETE FROM task_lists.get_lists_read_model WHERE id = $1;";
 
         var command = dataSource.CreateCommand(sql);
 
-        command.Parameters.AddWithValue(state.Id);
+        command.Parameters.AddWithValue(key);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
