@@ -21,7 +21,7 @@
       Subscriptions
     </a>
   </li>
-  <li class="nav-item" hx-get="@Dashboard.Prefix/components/metrics" hx-trigger="every 10s">
+  <li class="nav-item" hx-get="@Dashboard.Prefix/metrics" hx-trigger="every 10s">
     <Metrics Model="new Metrics.ViewModel(0, 0, 0, true)"></Metrics>
   </li>
 </ul>
