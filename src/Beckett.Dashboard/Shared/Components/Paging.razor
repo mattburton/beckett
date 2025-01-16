@@ -1,22 +1,40 @@
 <div class="m-2 d-flex align-items-start flex-nowrap">
   <div class="pt-2 text-nowrap">@(ViewModel.From) - @(ViewModel.To) of @(ViewModel.TotalResults)</div>
   <div>
-    <a href="@(ViewModel.PreviousLink())"
-       class="ms-2 btn btn-outline-secondary @(ViewModel.Page == 1 ? "disabled" : "")">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left"
-           viewBox="0 0 16 16">
-        <path fill-rule="evenodd"
-              d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+    <a href="@(ViewModel.FirstPageLink())"
+       class="ms-2 btn btn-outline-secondary @(ViewModel.Page == 1 ? "disabled" : "")"
+       title="First Page">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-bar-left" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M11.854 3.646a.5.5 0 0 1 0 .708L8.207 8l3.647 3.646a.5.5 0 0 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 0 1 .708 0M4.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 1 0v-13a.5.5 0 0 0-.5-.5"/>
       </svg>
     </a>
   </div>
   <div class="ms-1">
-    <a href="@(ViewModel.NextLink())"
-       class="btn btn-outline-secondary @(ViewModel.Page == ViewModel.TotalPages ? "disabled" : "")">
+    <a href="@(ViewModel.PreviousPageLink())"
+       class="btn btn-outline-secondary @(ViewModel.Page == 1 ? "disabled" : "")"
+       title="Previous Page">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left"
+           viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+      </svg>
+    </a>
+  </div>
+  <div class="ms-1">
+    <a href="@(ViewModel.NextPageLink())"
+       class="btn btn-outline-secondary @(ViewModel.Page < ViewModel.TotalPages ? "" : "disabled")"
+       title="Next Page">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right"
            viewBox="0 0 16 16">
-        <path fill-rule="evenodd"
-              d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
+        <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
+      </svg>
+    </a>
+  </div>
+  <div class="ms-1">
+    <a href="@(ViewModel.LastPageLink())"
+       class="btn btn-outline-secondary @(ViewModel.Page < ViewModel.TotalPages ? "" : "disabled")"
+       title="Last Page">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-bar-right" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M4.146 3.646a.5.5 0 0 0 0 .708L7.793 8l-3.647 3.646a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708 0M11.5 1a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-1 0v-13a.5.5 0 0 1 .5-.5"/>
       </svg>
     </a>
   </div>
