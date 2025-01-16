@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.Slices.GetLists;
 
-public class GetListsReadModelProjection(NpgsqlDataSource dataSource) : IProjection<GetListsReadModel, Guid>
+public class GetListsProjection(NpgsqlDataSource dataSource) : IProjection<GetListsReadModel, Guid>
 {
     public void Configure(IProjectionConfiguration<Guid> configuration)
     {

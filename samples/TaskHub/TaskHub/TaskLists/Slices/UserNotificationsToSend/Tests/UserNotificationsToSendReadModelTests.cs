@@ -1,8 +1,8 @@
 using TaskHub.TaskLists.Events;
 
-namespace TaskHub.TaskLists.Slices.UserMentionNotification.Tests;
+namespace TaskHub.TaskLists.Slices.UserNotificationsToSend.Tests;
 
-public class NotificationToSendReadModelTests : StateSpecificationFixture<NotificationToSendReadModel>
+public class UserNotificationsToSendReadModelTests : StateSpecificationFixture<UserNotificationsToSendReadModel>
 {
     [Fact]
     public void user_mentioned_in_task()
@@ -15,9 +15,9 @@ public class NotificationToSendReadModelTests : StateSpecificationFixture<Notifi
             .Given(
                 new UserMentionedInTask(taskListId, task, username)
             ).Then(
-                new NotificationToSendReadModel
+                new UserNotificationsToSendReadModel
                 {
-                    SentNotifications = new Dictionary<string, bool>
+                    Notifications = new Dictionary<string, bool>
                     {
                         { task, false }
                     }
@@ -37,9 +37,9 @@ public class NotificationToSendReadModelTests : StateSpecificationFixture<Notifi
                 new UserMentionedInTask(taskListId, task, username),
                 new UserMentionNotificationSent(taskListId, task, username)
             ).Then(
-                new NotificationToSendReadModel
+                new UserNotificationsToSendReadModel
                 {
-                    SentNotifications = new Dictionary<string, bool>
+                    Notifications = new Dictionary<string, bool>
                     {
                         { task, true }
                     }

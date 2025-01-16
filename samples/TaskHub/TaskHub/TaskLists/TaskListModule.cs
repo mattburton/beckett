@@ -7,7 +7,9 @@ using TaskHub.TaskLists.Slices.CompleteTask;
 using TaskHub.TaskLists.Slices.DeleteList;
 using TaskHub.TaskLists.Slices.GetList;
 using TaskHub.TaskLists.Slices.GetLists;
-using TaskHub.TaskLists.Slices.UserMentionNotification;
+using TaskHub.TaskLists.Slices.UserLookup;
+using TaskHub.TaskLists.Slices.UserNotificationV1;
+using TaskHub.TaskLists.Slices.UserNotificationV2;
 
 namespace TaskHub.TaskLists;
 
@@ -30,12 +32,19 @@ public class TaskListModule : IBeckettModule, IConfigureRoutes
 
     public void Subscriptions(ISubscriptionBuilder builder)
     {
-        builder.AddSubscription("task_lists:get_lists_read_model_projection")
-            .Projection<GetListsReadModelProjection, GetListsReadModel, Guid>();
+        builder.AddSubscription("task_lists:get_lists_projection")
+            .Projection<GetListsProjection, GetListsReadModel, Guid>();
 
-        builder.AddSubscription("task_lists:user_mention_notification")
+        builder.AddSubscription("task_lists:user_lookup_projection")
+            .Projection<UserLookupProjection, UserLookupReadModel, string>();
+
+        builder.AddSubscription("task_lists:user_notification:v1")
             .Message<UserMentionedInTask>()
-            .Handler(UserMentionedInTaskHandler.Handle);
+            .Handler(UserMentionedInTaskHandlerV1.Handle);
+
+        builder.AddSubscription("task_lists:user_notification:v2")
+            .Message<UserMentionedInTask>()
+            .Handler(UserMentionedInTaskHandlerV2.Handle);
 
         builder.AddSubscription("task_lists:wire_tap")
             .Category(Category)

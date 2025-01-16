@@ -1,14 +1,16 @@
+using TaskHub.Users.Contracts.Queries;
+
 namespace TaskHub.Users.Slices.GetUser;
 
 public static class GetUserEndpoint
 {
     public static async Task<IResult> Handle(
         string username,
-        IQueryExecutor queryExecutor,
+        IQueryDispatcher queryDispatcher,
         CancellationToken cancellationToken
     )
     {
-        var result = await queryExecutor.Execute(new GetUserQuery(username), cancellationToken);
+        var result = await queryDispatcher.Dispatch(new GetUserQuery(username), cancellationToken);
 
         return result == null ? Results.NotFound() : Results.Ok(result);
     }

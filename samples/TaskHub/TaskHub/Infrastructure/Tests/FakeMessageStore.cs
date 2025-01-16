@@ -67,7 +67,7 @@ public class FakeMessageStore : IMessageStore
 
         var result = _storage.ReadStream(streamName, new ReadStreamOptions
         {
-            StartingStreamPosition = startingStreamPosition + 1
+            StartingStreamPosition = startingStreamPosition
         }, CancellationToken.None).GetAwaiter().GetResult();
 
         return new MessageStream(

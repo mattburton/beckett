@@ -1,10 +1,10 @@
 namespace TaskHub.Infrastructure.Tests;
 
-public class FakeQueryExecutor : IQueryExecutor
+public class FakeQueryDispatcher : IQueryDispatcher
 {
     private readonly Dictionary<object, object?> _expectedResults = [];
 
-    public Task<TResult?> Execute<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
+    public Task<TResult?> Dispatch<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
         where TResult : class =>
         _expectedResults.TryGetValue(query, out var result)
             ? Task.FromResult((TResult?)result)

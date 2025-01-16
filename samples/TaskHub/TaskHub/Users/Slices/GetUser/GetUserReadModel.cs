@@ -15,5 +15,5 @@ public partial class GetUserReadModel
         Email = e.Email;
     }
 
-    private void Apply(UserDeleted e) => Deleted = true;
+    private void Apply(UserDeleted _) => Deleted = true;
 }

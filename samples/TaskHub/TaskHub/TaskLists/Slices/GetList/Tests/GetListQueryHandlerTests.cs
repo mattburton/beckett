@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.Slices.GetList.Tests;
 
-public class GetListQueryTests
+public class GetListQueryHandlerTests
 {
     public class when_list_exists
     {
@@ -14,7 +14,7 @@ public class GetListQueryTests
             var task = Generate.String();
             var streamName = TaskListModule.StreamName(id);
             var messageStore = new FakeMessageStore();
-            var handler = new GetListQuery.Handler(messageStore);
+            var handler = new GetListQueryHandler(messageStore);
             var query = new GetListQuery(id);
             messageStore.HasExistingMessages(streamName, new TaskListAdded(id, name), new TaskAdded(id, task));
 
@@ -35,7 +35,7 @@ public class GetListQueryTests
         {
             var id = Generate.Guid();
             var messageStore = new FakeMessageStore();
-            var handler = new GetListQuery.Handler(messageStore);
+            var handler = new GetListQueryHandler(messageStore);
             var query = new GetListQuery(id);
 
             var result = await handler.Handle(query, CancellationToken.None);

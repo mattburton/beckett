@@ -2,7 +2,7 @@ using TaskHub.Users.Events;
 
 namespace TaskHub.Users.Slices.GetUsers;
 
-public class GetUsersReadModelProjection(NpgsqlDataSource dataSource) : IProjection<GetUsersReadModel, string>
+public class GetUsersProjection(NpgsqlDataSource dataSource) : IProjection<GetUsersReadModel, string>
 {
     public void Configure(IProjectionConfiguration<string> configuration)
     {

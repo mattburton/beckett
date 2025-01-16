@@ -8,7 +8,7 @@ public class GetUsersIntegrationTests(DatabaseFixture database) : IClassFixture<
     public async Task creates_read_model()
     {
         var state = GenerateReadModel();
-        var projection = new GetUsersReadModelProjection(database.DataSource);
+        var projection = new GetUsersProjection(database.DataSource);
         await projection.Create(state, CancellationToken.None);
 
         var readModel = await projection.Read(state.Username, CancellationToken.None);
@@ -22,7 +22,7 @@ public class GetUsersIntegrationTests(DatabaseFixture database) : IClassFixture<
     public async Task deletes_read_model()
     {
         var state = GenerateReadModel();
-        var projection = new GetUsersReadModelProjection(database.DataSource);
+        var projection = new GetUsersProjection(database.DataSource);
         await projection.Create(state, CancellationToken.None);
 
         await projection.Delete(state.Username, CancellationToken.None);
@@ -40,7 +40,7 @@ public class GetUsersIntegrationTests(DatabaseFixture database) : IClassFixture<
             GenerateReadModel(),
             GenerateReadModel()
         };
-        var handler = new GetUsersQuery.Handler(database.DataSource);
+        var handler = new GetUsersQueryHandler(database.DataSource);
         var query = new GetUsersQuery();
         await SetupDatabase(expectedResults);
 
@@ -55,7 +55,7 @@ public class GetUsersIntegrationTests(DatabaseFixture database) : IClassFixture<
 
     private async Task SetupDatabase(List<GetUsersReadModel> expectedResults)
     {
-        var projection = new GetUsersReadModelProjection(database.DataSource);
+        var projection = new GetUsersProjection(database.DataSource);
 
         foreach (var readModel in expectedResults)
         {
@@ -64,6 +64,6 @@ public class GetUsersIntegrationTests(DatabaseFixture database) : IClassFixture<
     }
 
     private static GetUsersReadModel GenerateReadModel() => StateBuilder.Build<GetUsersReadModel>(
-        new UserRegistered(Guid.NewGuid().ToString(), Guid.NewGuid().ToString())
+        new UserRegistered(Generate.String(), Generate.String())
     );
 }

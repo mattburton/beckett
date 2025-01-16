@@ -1,3 +1,4 @@
+using TaskHub.Users.Contracts.Queries;
 using TaskHub.Users.Events;
 
 namespace TaskHub.Users.Slices.GetUser.Tests;
@@ -15,7 +16,7 @@ public class GetUserEndpointTests
             var expectedResult = StateBuilder.Build<GetUserReadModel>(
                 new UserRegistered(username, email)
             );
-            var queryDispatcher = new FakeQueryExecutor();
+            var queryDispatcher = new FakeQueryDispatcher();
             queryDispatcher.Returns(expectedQuery, expectedResult);
 
             var result = await GetUserEndpoint.Handle(username, queryDispatcher, CancellationToken.None);
@@ -31,7 +32,7 @@ public class GetUserEndpointTests
         public async Task returns_not_found()
         {
             var username = Generate.String();
-            var queryDispatcher = new FakeQueryExecutor();
+            var queryDispatcher = new FakeQueryDispatcher();
 
             var result = await GetUserEndpoint.Handle(username, queryDispatcher, CancellationToken.None);
 

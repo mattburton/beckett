@@ -17,7 +17,7 @@ public class GetListEndpointTests
                 new TaskListAdded(id, name),
                 new TaskAdded(id, task)
             );
-            var queryDispatcher = new FakeQueryExecutor();
+            var queryDispatcher = new FakeQueryDispatcher();
             queryDispatcher.Returns(expectedQuery, expectedResult);
 
             var result = await GetListEndpoint.Handle(id, queryDispatcher, CancellationToken.None);
@@ -33,7 +33,7 @@ public class GetListEndpointTests
         public async Task returns_not_found()
         {
             var id = Generate.Guid();
-            var queryDispatcher = new FakeQueryExecutor();
+            var queryDispatcher = new FakeQueryDispatcher();
 
             var result = await GetListEndpoint.Handle(id, queryDispatcher, CancellationToken.None);
 

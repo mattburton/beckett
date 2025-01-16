@@ -8,7 +8,7 @@ public class GetListsIntegrationTests(DatabaseFixture database) : IClassFixture<
     public async Task reads_read_model()
     {
         var state = GenerateReadModel();
-        var projection = new GetListsReadModelProjection(database.DataSource);
+        var projection = new GetListsProjection(database.DataSource);
         await projection.Create(state, CancellationToken.None);
 
         var readModel = await projection.Read(state.Id, CancellationToken.None);
@@ -22,7 +22,7 @@ public class GetListsIntegrationTests(DatabaseFixture database) : IClassFixture<
     public async Task creates_read_model()
     {
         var state = GenerateReadModel();
-        var projection = new GetListsReadModelProjection(database.DataSource);
+        var projection = new GetListsProjection(database.DataSource);
 
         await projection.Create(state, CancellationToken.None);
 
@@ -36,7 +36,7 @@ public class GetListsIntegrationTests(DatabaseFixture database) : IClassFixture<
     public async Task updates_read_model()
     {
         var state = GenerateReadModel();
-        var projection = new GetListsReadModelProjection(database.DataSource);
+        var projection = new GetListsProjection(database.DataSource);
         await projection.Create(state, CancellationToken.None);
 
         state.Name = "updated name";
@@ -52,7 +52,7 @@ public class GetListsIntegrationTests(DatabaseFixture database) : IClassFixture<
     public async Task deletes_read_model()
     {
         var state = GenerateReadModel();
-        var projection = new GetListsReadModelProjection(database.DataSource);
+        var projection = new GetListsProjection(database.DataSource);
         await projection.Create(state, CancellationToken.None);
 
         await projection.Delete(state.Id, CancellationToken.None);
@@ -70,7 +70,7 @@ public class GetListsIntegrationTests(DatabaseFixture database) : IClassFixture<
             GenerateReadModel(),
             GenerateReadModel()
         };
-        var handler = new GetListsQuery.Handler(database.DataSource);
+        var handler = new GetListsQueryHandler(database.DataSource);
         var query = new GetListsQuery();
         await SetupDatabase(expectedResults);
 
@@ -85,7 +85,7 @@ public class GetListsIntegrationTests(DatabaseFixture database) : IClassFixture<
 
     private async Task SetupDatabase(List<GetListsReadModel> expectedResults)
     {
-        var projection = new GetListsReadModelProjection(database.DataSource);
+        var projection = new GetListsProjection(database.DataSource);
 
         foreach (var readModel in expectedResults)
         {

@@ -39,6 +39,11 @@ public static class TaskHubDatabase
                 name text
             );
 
+            CREATE TABLE IF NOT EXISTS task_lists.user_lookup_read_model (
+                username text PRIMARY KEY,
+                email text
+            );
+
             CREATE TABLE IF NOT EXISTS users.get_users_read_model (
                 username text PRIMARY KEY,
                 email text

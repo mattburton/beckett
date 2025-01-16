@@ -1,6 +1,6 @@
 using TaskHub.TaskLists.Events;
 
-namespace TaskHub.TaskLists.Slices.UserMentionNotification.Tests;
+namespace TaskHub.TaskLists.Slices.UserNotificationV1.Tests;
 
 public class SendUserMentionNotificationCommandTests : CommandSpecificationFixture<SendUserMentionNotificationCommand>
 {

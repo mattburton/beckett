@@ -9,7 +9,7 @@ public class GetListsEndpointTests
         [Fact]
         public async Task returns_ok_with_result()
         {
-            var queryDispatcher = new FakeQueryExecutor();
+            var queryDispatcher = new FakeQueryDispatcher();
             var expectedQuery = new GetListsQuery();
             var expectedResults = new List<GetListsReadModel>
             {

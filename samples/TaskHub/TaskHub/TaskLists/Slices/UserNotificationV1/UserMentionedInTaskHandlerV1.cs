@@ -1,32 +1,38 @@
 using TaskHub.Infrastructure.Email;
 using TaskHub.TaskLists.Events;
-using TaskHub.Users.Slices.GetUser;
+using TaskHub.TaskLists.Slices.UserNotificationsToSend;
+using TaskHub.Users.Contracts.Queries;
 
-namespace TaskHub.TaskLists.Slices.UserMentionNotification;
+namespace TaskHub.TaskLists.Slices.UserNotificationV1;
 
-public static class UserMentionedInTaskHandler
+public static class UserMentionedInTaskHandlerV1
 {
     public static async Task Handle(
         UserMentionedInTask message,
-        IQueryExecutor queryExecutor,
+        IQueryDispatcher queryDispatcher,
         IEmailService emailService,
         ICommandExecutor commandExecutor,
         CancellationToken cancellationToken
     )
     {
-        var user = await queryExecutor.Execute(new GetUserQuery(message.Username), cancellationToken);
+        if (!message.Task.Contains("V1"))
+        {
+            return;
+        }
+
+        var user = await queryDispatcher.Dispatch(new GetUserQuery(message.Username), cancellationToken);
 
         if (user == null)
         {
             return;
         }
 
-        var notificationToSend = await queryExecutor.Execute(
-            new NotificationToSendQuery(message.TaskListId),
+        var notificationsToSend = await queryDispatcher.Dispatch(
+            new UserNotificationsToSendQuery(message.TaskListId),
             cancellationToken
         );
 
-        if (notificationToSend == null || notificationToSend.AlreadySentFor(message.Task))
+        if (notificationsToSend == null || notificationsToSend.AlreadySentFor(message.Task))
         {
             return;
         }
@@ -35,7 +41,7 @@ public static class UserMentionedInTaskHandler
             new EmailMessage(
                 "notifications@taskhub.com",
                 user.Email,
-                "TaskHub Notification",
+                "User Mention Notification - V1",
                 $"You were mentioned in a task: {message.Task}"
             ),
             cancellationToken

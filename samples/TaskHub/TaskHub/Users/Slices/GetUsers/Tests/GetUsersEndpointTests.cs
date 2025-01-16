@@ -9,17 +9,17 @@ public class GetUsersEndpointTests
         [Fact]
         public async Task returns_ok_with_result()
         {
-            var queryDispatcher = new FakeQueryExecutor();
+            var queryDispatcher = new FakeQueryDispatcher();
             var expectedQuery = new GetUsersQuery();
-            var expectedResults = new List<GetUsersReadModel>
+            var expectedResults = new List<TaskLists.Slices.UserLookup.UserLookupReadModel>
             {
-                StateBuilder.Build<GetUsersReadModel>(new UserRegistered("username", "email"))
+                StateBuilder.Build<TaskLists.Slices.UserLookup.UserLookupReadModel>(new UserRegistered("username", "email"))
             };
             queryDispatcher.Returns(expectedQuery, expectedResults);
 
             var result = await GetUsersEndpoint.Handle(queryDispatcher, CancellationToken.None);
 
-            var actualResults = Assert.IsType<Ok<IReadOnlyList<GetUsersReadModel>>>(result);
+            var actualResults = Assert.IsType<Ok<IReadOnlyList<TaskLists.Slices.UserLookup.UserLookupReadModel>>>(result);
             Assert.Equal(expectedResults, actualResults.Value);
         }
     }

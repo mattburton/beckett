@@ -1,8 +1,9 @@
+using TaskHub.Users.Contracts.Queries;
 using TaskHub.Users.Events;
 
 namespace TaskHub.Users.Slices.GetUser.Tests;
 
-public class GetUserQueryTests
+public class GetUserQueryHandlerTests
 {
     public class when_user_exists
     {
@@ -13,7 +14,7 @@ public class GetUserQueryTests
             var email = Generate.String();
             var streamName = UserModule.StreamName(username);
             var messageStore = new FakeMessageStore();
-            var handler = new GetUserQuery.Handler(messageStore);
+            var handler = new GetUserQueryHandler(messageStore);
             var query = new GetUserQuery(username);
             messageStore.HasExistingMessages(streamName, new UserRegistered(username, email));
 
@@ -32,7 +33,7 @@ public class GetUserQueryTests
         {
             var username = Generate.String();
             var messageStore = new FakeMessageStore();
-            var handler = new GetUserQuery.Handler(messageStore);
+            var handler = new GetUserQueryHandler(messageStore);
             var query = new GetUserQuery(username);
 
             var result = await handler.Handle(query, CancellationToken.None);
