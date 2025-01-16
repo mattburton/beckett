@@ -11,7 +11,7 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
 
     public async Task Create(UserLookupReadModel state, CancellationToken cancellationToken)
     {
-        const string sql = "INSERT INTO task_lists.user_lookup_read_model (username, email) VALUES ($1, $2);";
+        const string sql = "INSERT INTO task_lists.user_lookup (username, email) VALUES ($1, $2);";
 
         var command = dataSource.CreateCommand(sql);
 
@@ -23,7 +23,7 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
 
     public async Task<UserLookupReadModel?> Read(string key, CancellationToken cancellationToken)
     {
-        const string sql = "SELECT username, email FROM task_lists.user_lookup_read_model WHERE username = $1;";
+        const string sql = "SELECT username, email FROM task_lists.user_lookup WHERE username = $1;";
 
         var command = dataSource.CreateCommand(sql);
 

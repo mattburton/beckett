@@ -1,12 +1,12 @@
 using TaskHub.Infrastructure.Routing;
 using TaskHub.TaskLists.Events;
-using TaskHub.TaskLists.Slices.AddList;
 using TaskHub.TaskLists.Slices.AddTask;
-using TaskHub.TaskLists.Slices.ChangeListName;
+using TaskHub.TaskLists.Slices.AddTaskList;
+using TaskHub.TaskLists.Slices.ChangeTaskListName;
 using TaskHub.TaskLists.Slices.CompleteTask;
-using TaskHub.TaskLists.Slices.DeleteList;
-using TaskHub.TaskLists.Slices.GetList;
-using TaskHub.TaskLists.Slices.GetLists;
+using TaskHub.TaskLists.Slices.DeleteTaskList;
+using TaskHub.TaskLists.Slices.TaskList;
+using TaskHub.TaskLists.Slices.TaskLists;
 using TaskHub.TaskLists.Slices.UserLookup;
 using TaskHub.TaskLists.Slices.UserNotificationV1;
 using TaskHub.TaskLists.Slices.UserNotificationV2;
@@ -32,8 +32,8 @@ public class TaskListModule : IBeckettModule, IConfigureRoutes
 
     public void Subscriptions(ISubscriptionBuilder builder)
     {
-        builder.AddSubscription("task_lists:get_lists_projection")
-            .Projection<GetListsProjection, GetListsReadModel, Guid>();
+        builder.AddSubscription("task_lists:task_lists_projection")
+            .Projection<TaskListsProjection, TaskListsReadModel, Guid>();
 
         builder.AddSubscription("task_lists:user_lookup_projection")
             .Projection<UserLookupProjection, UserLookupReadModel, string>();
@@ -51,7 +51,7 @@ public class TaskListModule : IBeckettModule, IConfigureRoutes
             .Handler(
                 (IMessageContext context) =>
                 {
-                    Console.WriteLine($"[MESSAGE] type: {context.Type}, id: {context.Id}");
+                    Console.WriteLine($"[MESSAGE] category: {Category}, stream: {context.StreamName}, type: {context.Type}, id: {context.Id}");
 
                     return Task.CompletedTask;
                 }
@@ -62,12 +62,12 @@ public class TaskListModule : IBeckettModule, IConfigureRoutes
     {
         var routes = builder.MapGroup("task-lists");
 
-        routes.MapPost("/", AddListEndpoint.Handle);
-        routes.MapGet("/", GetListsEndpoint.Handle);
+        routes.MapPost("/", AddTaskListEndpoint.Handle);
+        routes.MapGet("/", GetTaskListsEndpoint.Handle);
         routes.MapPost("/{taskListId:guid}", AddTaskEndpoint.Handle);
-        routes.MapPut("/{id:guid}/name", ChangeListNameEndpoint.Handle);
+        routes.MapPut("/{id:guid}/name", ChangeTaskListNameEndpoint.Handle);
         routes.MapPost("/{taskListId:guid}/complete/{task}", CompleteTaskEndpoint.Handle);
-        routes.MapDelete("/{id:guid}", DeleteListEndpoint.Handle);
-        routes.MapGet("/{id:guid}", GetListEndpoint.Handle);
+        routes.MapDelete("/{id:guid}", DeleteTaskListEndpoint.Handle);
+        routes.MapGet("/{id:guid}", GetTaskListEndpoint.Handle);
     }
 }

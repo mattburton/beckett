@@ -20,7 +20,7 @@ public static class UserMentionedInTaskHandlerV1
             return;
         }
 
-        var user = await queryDispatcher.Dispatch(new GetUserQuery(message.Username), cancellationToken);
+        var user = await queryDispatcher.Dispatch(new UserQuery(message.Username), cancellationToken);
 
         if (user == null)
         {

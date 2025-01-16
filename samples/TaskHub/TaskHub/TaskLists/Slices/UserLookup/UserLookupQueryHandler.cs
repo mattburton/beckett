@@ -9,7 +9,7 @@ public class UserLookupQueryHandler(
         CancellationToken cancellationToken
     )
     {
-        const string sql = "SELECT username, email FROM task_lists.user_lookup_read_model WHERE username = $1;";
+        const string sql = "SELECT username, email FROM task_lists.user_lookup WHERE username = $1;";
 
         await using var command = dataSource.CreateCommand(sql);
 

@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 using TaskHub.TaskLists.Slices.UserNotificationsToSend;
 using TaskHub.Users.Contracts.Queries;
 using TaskHub.Users.Events;
-using TaskHub.Users.Slices.GetUser;
+using TaskHub.Users.Slices.User;
 
 namespace TaskHub.TaskLists.Slices.UserNotificationV1.Tests;
 
@@ -18,23 +18,23 @@ public class UserMentionedInTaskHandlerV1Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.String();
+                var task = Generate.Extensions.Task();
                 var emailService = new FakeEmailService();
-                var queryExecutor = new FakeQueryDispatcher();
+                var queryDispatcher = new FakeQueryDispatcher();
                 var commandExecutor = new FakeCommandExecutor();
-                var getUserQuery = new GetUserQuery(username);
-                var userReadModel = StateBuilder.Build<GetUserReadModel>(new UserRegistered(username, email));
+                var getUserQuery = new UserQuery(username);
+                var userReadModel = StateBuilder.Build<UserReadModel>(new UserRegistered(username, email));
                 var notificationToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var notificationToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username)
                 );
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryExecutor.Returns(getUserQuery, userReadModel);
-                queryExecutor.Returns(notificationToSendQuery, notificationToSendReadModel);
+                queryDispatcher.Returns(getUserQuery, userReadModel);
+                queryDispatcher.Returns(notificationToSendQuery, notificationToSendReadModel);
 
                 await UserMentionedInTaskHandlerV1.Handle(
                     message,
-                    queryExecutor,
+                    queryDispatcher,
                     emailService,
                     commandExecutor,
                     CancellationToken.None
@@ -51,12 +51,12 @@ public class UserMentionedInTaskHandlerV1Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.String();
+                var task = Generate.Extensions.Task();
                 var emailService = new FakeEmailService();
-                var queryExecutor = new FakeQueryDispatcher();
+                var queryDispatcher = new FakeQueryDispatcher();
                 var commandExecutor = new FakeCommandExecutor();
-                var getUserQuery = new GetUserQuery(username);
-                var userReadModel = StateBuilder.Build<GetUserReadModel>(new UserRegistered(username, email));
+                var getUserQuery = new UserQuery(username);
+                var userReadModel = StateBuilder.Build<UserReadModel>(new UserRegistered(username, email));
                 var notificationToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var notificationToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username)
@@ -64,12 +64,12 @@ public class UserMentionedInTaskHandlerV1Tests
                 var expectedStreamName = TaskListModule.StreamName(taskListId);
                 var expectedCommand = new SendUserMentionNotificationCommand(taskListId, task, username);
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryExecutor.Returns(getUserQuery, userReadModel);
-                queryExecutor.Returns(notificationToSendQuery, notificationToSendReadModel);
+                queryDispatcher.Returns(getUserQuery, userReadModel);
+                queryDispatcher.Returns(notificationToSendQuery, notificationToSendReadModel);
 
                 await UserMentionedInTaskHandlerV1.Handle(
                     message,
-                    queryExecutor,
+                    queryDispatcher,
                     emailService,
                     commandExecutor,
                     CancellationToken.None
@@ -89,24 +89,24 @@ public class UserMentionedInTaskHandlerV1Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.String();
+                var task = Generate.Extensions.Task();
                 var emailService = new FakeEmailService();
-                var queryExecutor = new FakeQueryDispatcher();
+                var queryDispatcher = new FakeQueryDispatcher();
                 var commandExecutor = new FakeCommandExecutor();
-                var getUserQuery = new GetUserQuery(username);
-                var userReadModel = StateBuilder.Build<GetUserReadModel>(new UserRegistered(username, email));
+                var getUserQuery = new UserQuery(username);
+                var userReadModel = StateBuilder.Build<UserReadModel>(new UserRegistered(username, email));
                 var notificationToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var notificationToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username),
                     new UserMentionNotificationSent(taskListId, task, username)
                 );
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryExecutor.Returns(getUserQuery, userReadModel);
-                queryExecutor.Returns(notificationToSendQuery, notificationToSendReadModel);
+                queryDispatcher.Returns(getUserQuery, userReadModel);
+                queryDispatcher.Returns(notificationToSendQuery, notificationToSendReadModel);
 
                 await UserMentionedInTaskHandlerV1.Handle(
                     message,
-                    queryExecutor,
+                    queryDispatcher,
                     emailService,
                     commandExecutor,
                     CancellationToken.None
@@ -121,24 +121,24 @@ public class UserMentionedInTaskHandlerV1Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.String();
+                var task = Generate.Extensions.Task();
                 var emailService = new FakeEmailService();
-                var queryExecutor = new FakeQueryDispatcher();
+                var queryDispatcher = new FakeQueryDispatcher();
                 var commandExecutor = new FakeCommandExecutor();
-                var getUserQuery = new GetUserQuery(username);
-                var userReadModel = StateBuilder.Build<GetUserReadModel>(new UserRegistered(username, email));
+                var getUserQuery = new UserQuery(username);
+                var userReadModel = StateBuilder.Build<UserReadModel>(new UserRegistered(username, email));
                 var notificationToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var notificationToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username),
                     new UserMentionNotificationSent(taskListId, task, username)
                 );
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryExecutor.Returns(getUserQuery, userReadModel);
-                queryExecutor.Returns(notificationToSendQuery, notificationToSendReadModel);
+                queryDispatcher.Returns(getUserQuery, userReadModel);
+                queryDispatcher.Returns(notificationToSendQuery, notificationToSendReadModel);
 
                 await UserMentionedInTaskHandlerV1.Handle(
                     message,
-                    queryExecutor,
+                    queryDispatcher,
                     emailService,
                     commandExecutor,
                     CancellationToken.None
@@ -155,13 +155,13 @@ public class UserMentionedInTaskHandlerV1Tests
         public async Task does_not_send_email()
         {
             var emailService = new FakeEmailService();
-            var queryExecutor = new FakeQueryDispatcher();
+            var queryDispatcher = new FakeQueryDispatcher();
             var commandExecutor = new FakeCommandExecutor();
             var message = new UserMentionedInTask(Generate.Guid(), Generate.String(), Generate.String());
 
             await UserMentionedInTaskHandlerV1.Handle(
                 message,
-                queryExecutor,
+                queryDispatcher,
                 emailService,
                 commandExecutor,
                 CancellationToken.None
@@ -174,13 +174,13 @@ public class UserMentionedInTaskHandlerV1Tests
         public async Task does_not_execute_command()
         {
             var emailService = new FakeEmailService();
-            var queryExecutor = new FakeQueryDispatcher();
+            var queryDispatcher = new FakeQueryDispatcher();
             var commandExecutor = new FakeCommandExecutor();
             var message = new UserMentionedInTask(Generate.Guid(), Generate.String(), Generate.String());
 
             await UserMentionedInTaskHandlerV1.Handle(
                 message,
-                queryExecutor,
+                queryDispatcher,
                 emailService,
                 commandExecutor,
                 CancellationToken.None
@@ -189,4 +189,9 @@ public class UserMentionedInTaskHandlerV1Tests
             Assert.Null(commandExecutor.Received);
         }
     }
+}
+
+public static class GenerateMethods
+{
+    public static string Task(this Generate _) => Generate.String() + " [V1]";
 }

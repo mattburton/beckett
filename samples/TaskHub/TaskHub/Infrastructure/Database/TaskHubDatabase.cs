@@ -34,17 +34,17 @@ public static class TaskHubDatabase
         await schemas.ExecuteNonQueryAsync();
 
         await using var tables = dataSource.CreateCommand(@"
-            CREATE TABLE IF NOT EXISTS task_lists.get_lists_read_model (
+            CREATE TABLE IF NOT EXISTS task_lists.task_lists (
                 id uuid PRIMARY KEY,
                 name text
             );
 
-            CREATE TABLE IF NOT EXISTS task_lists.user_lookup_read_model (
+            CREATE TABLE IF NOT EXISTS task_lists.user_lookup (
                 username text PRIMARY KEY,
                 email text
             );
 
-            CREATE TABLE IF NOT EXISTS users.get_users_read_model (
+            CREATE TABLE IF NOT EXISTS users.users (
                 username text PRIMARY KEY,
                 email text
             );
