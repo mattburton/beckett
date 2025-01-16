@@ -116,11 +116,19 @@ public static class PagedViewModelExtensions
         model.Query
     );
 
-    public static string PreviousLink(this IPagedViewModel model) => model.Page > 1
+    public static string FirstPageLink(this IPagedViewModel model) => model.Page > 1
+        ? string.Format(model.UrlTemplate, 1, model.PageSize, model.Query)
+        : "#";
+
+    public static string PreviousPageLink(this IPagedViewModel model) => model.Page > 1
         ? string.Format(model.UrlTemplate, model.Page - 1, model.PageSize, model.Query)
         : "#";
 
-    public static string NextLink(this IPagedViewModel model) => model.Page < model.TotalPages
+    public static string NextPageLink(this IPagedViewModel model) => model.Page < model.TotalPages
         ? string.Format(model.UrlTemplate, model.Page + 1, model.PageSize, model.Query)
+        : "#";
+
+    public static string LastPageLink(this IPagedViewModel model) => model.Page < model.TotalPages
+        ? string.Format(model.UrlTemplate, model.TotalPages, model.PageSize, model.Query)
         : "#";
 }
