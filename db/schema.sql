@@ -578,7 +578,8 @@ CREATE FUNCTION beckett.release_checkpoint_reservation(_id bigint) RETURNS void
     AS $$
 BEGIN
   UPDATE beckett.checkpoints
-  SET reserved_until = NULL
+  SET process_at = NULL,
+      reserved_until = NULL
   WHERE id = _id;
 END;
 $$;

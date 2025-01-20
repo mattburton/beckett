@@ -633,7 +633,8 @@ AS
 $$
 BEGIN
   UPDATE __schema__.checkpoints
-  SET reserved_until = NULL
+  SET process_at = NULL,
+      reserved_until = NULL
   WHERE id = _id;
 END;
 $$;

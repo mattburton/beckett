@@ -17,26 +17,31 @@ public class CheckpointConsumerGroup(
     );
 
     private readonly int[] _instances = Instances(options);
-    private readonly ConcurrentDictionary<int, ICheckpointConsumer> _consumers = new();
+
+    // ReSharper disable once CollectionNeverQueried.Local
+    private readonly ConcurrentDictionary<int, Task> _consumers = new();
 
     public void Initialize(CancellationToken stoppingToken)
     {
         foreach (var instance in _instances)
         {
-            var consumer = _consumers.GetOrAdd(
+            _consumers.GetOrAdd(
                 instance,
-                new CheckpointConsumer(
-                    _channel,
-                    instance,
-                    database,
-                    checkpointProcessor,
-                    options,
-                    logger
+                Task.Run(
+                    () => new CheckpointConsumer(
+                        _channel,
+                        instance,
+                        database,
+                        checkpointProcessor,
+                        options,
+                        logger
+                    ).StartPolling(stoppingToken),
+                    stoppingToken
                 )
             );
-
-            consumer.StartPolling(stoppingToken);
         }
+
+        stoppingToken.Register(() => _channel.Writer.Complete());
     }
 
     public void StartPolling(string groupName)
