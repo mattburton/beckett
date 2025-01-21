@@ -96,18 +96,33 @@ public class PostgresNotificationListener(
         handler.Handle(e.Payload, _cancellationToken.GetValueOrDefault());
     }
 
-    private static ElapsedEventHandler KeepAlive(NpgsqlConnection connection) =>
+    private ElapsedEventHandler KeepAlive(NpgsqlConnection connection) =>
         (_, _) =>
         {
-            if (connection.FullState == (ConnectionState.Open | ConnectionState.Fetching))
+            if (connection.State is not (ConnectionState.Closed or ConnectionState.Connecting or ConnectionState.Broken))
             {
+                logger.LogInformation("Connection open, skipping keep alive");
+
                 return;
             }
 
-            using var command = connection.CreateCommand();
+            try
+            {
+                using var command = connection.CreateCommand();
 
-            command.CommandText = "select true;";
+                command.CommandText = "select true;";
 
-            command.ExecuteNonQuery();
+                command.ExecuteNonQuery();
+
+                logger.LogInformation("Keep alive successful");
+            }
+            catch (NpgsqlOperationInProgressException)
+            {
+                // ignore
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Unhandled exception during keep alive");
+            }
         };
 }
