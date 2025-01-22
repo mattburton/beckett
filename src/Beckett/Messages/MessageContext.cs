@@ -40,7 +40,7 @@ public record MessageContext(
         streamMessage.Timestamp
     );
 
-    public static IMessageContext From(object message) => new MessageContext(
+    public static MessageContext From(object message) => new(
         string.Empty,
         string.Empty,
         0,
