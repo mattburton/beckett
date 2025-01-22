@@ -33,7 +33,7 @@ public class SubscriptionInitializer(
 
             if (subscription == null)
             {
-                logger.LogWarning("Subscription {SubscriptionName} does not exist - setting status to 'unknown'", subscriptionName);
+                logger.LogWarning("Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'", subscriptionName);
 
                 await database.Execute(
                     new SetSubscriptionStatus(
