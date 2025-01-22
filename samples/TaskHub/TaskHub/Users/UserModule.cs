@@ -1,24 +1,24 @@
+using TaskHub.Infrastructure.Modules;
 using TaskHub.Infrastructure.Routing;
 using TaskHub.Users.Contracts.Notifications;
 using TaskHub.Users.Events;
 using TaskHub.Users.Slices.DeleteUser;
+using TaskHub.Users.Slices.NotifyUserAdded;
 using TaskHub.Users.Slices.RegisterUser;
 using TaskHub.Users.Slices.User;
-using TaskHub.Users.Slices.UserAddedNotification;
 using TaskHub.Users.Slices.Users;
 
 namespace TaskHub.Users;
 
-public class UserModule : IBeckettModule, IConfigureRoutes
+public class UserModule : IModule, IConfigureRoutes
 {
     private const string Category = "user";
 
     public static string StreamName(string username) => $"{Category}-{username}";
 
-    public static string NotificationStreamName(string username) => $"{Category}_notifications-{username}";
-
     public void MessageTypes(IMessageTypeBuilder builder)
     {
+        // events
         builder.Map<UserRegistered>("user_registered");
         builder.Map<UserDeleted>("user_deleted");
 

@@ -156,6 +156,6 @@ public class FakeCommandExecutor : ICommandExecutor
     public void Returns<TResult>(CommandResult<TResult> result) => _result = result;
 
     public void Throws<TException>(TException exception) where TException : Exception => _exception = exception;
-}
 
-public record ExecutedCommand(string StreamName, object Command, CommandOptions? Options);
+    public record ExecutedCommand(string StreamName, object Command, CommandOptions? Options);
+}
