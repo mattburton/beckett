@@ -88,8 +88,6 @@ public class CheckpointConsumer(
                 catch (Exception e)
                 {
                     logger.LogError(e, "Error processing checkpoint [Consumer: {Consumer}]", consumer);
-
-                    channel.Writer.TryWrite(CheckpointAvailable.Instance);
                 }
             }
         }
