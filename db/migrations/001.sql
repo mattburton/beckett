@@ -361,7 +361,8 @@ CREATE TYPE __schema__.retry AS
 CREATE TYPE __schema__.subscription_status AS ENUM (
   'uninitialized',
   'active',
-  'paused'
+  'paused',
+  'unknown'
 );
 
 CREATE TYPE __schema__.checkpoint_status AS ENUM (
@@ -520,6 +521,21 @@ AND stream_name = '$initializing';
 
 UPDATE __schema__.subscriptions
 SET status = 'active'
+WHERE group_name = _group_name
+AND name = _name;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.set_subscription_status(
+  _group_name text,
+  _name text,
+  _status __schema__.subscription_status
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+UPDATE __schema__.subscriptions
+SET status = _status
 WHERE group_name = _group_name
 AND name = _name;
 $$;

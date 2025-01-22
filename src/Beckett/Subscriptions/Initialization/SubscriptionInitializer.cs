@@ -33,6 +33,18 @@ public class SubscriptionInitializer(
 
             if (subscription == null)
             {
+                logger.LogWarning("Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'", subscriptionName);
+
+                await database.Execute(
+                    new SetSubscriptionStatus(
+                        options.Subscriptions.GroupName,
+                        subscriptionName,
+                        SubscriptionStatus.Unknown,
+                        options.Postgres
+                    ),
+                    cancellationToken
+                );
+
                 continue;
             }
 
