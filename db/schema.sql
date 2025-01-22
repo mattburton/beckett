@@ -91,7 +91,8 @@ CREATE TYPE beckett.scheduled_message AS (
 CREATE TYPE beckett.subscription_status AS ENUM (
     'uninitialized',
     'active',
-    'paused'
+    'paused',
+    'unknown'
 );
 
 
@@ -673,6 +674,20 @@ VALUES (
   _scheduled_message.deliver_at
 )
 ON CONFLICT (id) DO NOTHING;
+$$;
+
+
+--
+-- Name: set_subscription_status(text, text, beckett.subscription_status); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.set_subscription_status(_group_name text, _name text, _status beckett.subscription_status) RETURNS void
+    LANGUAGE sql
+    AS $$
+UPDATE beckett.subscriptions
+SET status = _status
+WHERE group_name = _group_name
+AND name = _name;
 $$;
 
 
