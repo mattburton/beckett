@@ -1,3 +1,4 @@
+using TaskHub.Infrastructure.Modules;
 using TaskHub.Infrastructure.Routing;
 using TaskHub.TaskLists.Events;
 using TaskHub.TaskLists.Slices.AddTask;
@@ -13,7 +14,7 @@ using TaskHub.TaskLists.Slices.UserNotificationV2;
 
 namespace TaskHub.TaskLists;
 
-public class TaskListModule : IBeckettModule, IConfigureRoutes
+public class TaskListModule : IModule, IConfigureRoutes
 {
     private const string Category = "task_list";
 

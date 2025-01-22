@@ -10,6 +10,9 @@ public static class ServiceCollectionExtensions
             .Select(Activator.CreateInstance)
             .Cast<IConfigureServices>();
 
-        foreach (var configuration in serviceConfigurations) configuration.Services(services);
+        foreach (var configuration in serviceConfigurations)
+        {
+            configuration.Services(services);
+        }
     }
 }

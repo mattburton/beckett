@@ -39,9 +39,9 @@ public class UserMentionedInTaskHandlerV2Tests
                     CancellationToken.None
                 );
 
-                Assert.NotNull(emailService.SentEmail);
-                Assert.Equal(email, emailService.SentEmail.To);
-                Assert.Contains(task, emailService.SentEmail.Body);
+                Assert.NotNull(emailService.Received);
+                Assert.Equal(email, emailService.Received.To);
+                Assert.Contains(task, emailService.Received.Body);
             }
 
             [Fact]
@@ -111,7 +111,7 @@ public class UserMentionedInTaskHandlerV2Tests
                     CancellationToken.None
                 );
 
-                Assert.Null(emailService.SentEmail);
+                Assert.Null(emailService.Received);
             }
 
             [Fact]
@@ -166,7 +166,7 @@ public class UserMentionedInTaskHandlerV2Tests
                 CancellationToken.None
             );
 
-            Assert.Null(emailService.SentEmail);
+            Assert.Null(emailService.Received);
         }
 
         [Fact]

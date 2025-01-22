@@ -7,7 +7,12 @@ namespace Beckett.Configuration;
 
 public class BeckettBuilder(IServiceCollection services) : IBeckettBuilder
 {
-    public IServiceCollection Services { get; } = services;
+    public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
+
+    public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
+
+    public void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster) =>
+        MessageUpcaster.Register(oldTypeName, newTypeName, upcaster);
 
     public ISubscriptionConfigurationBuilder AddSubscription(string name)
     {
@@ -16,13 +21,6 @@ public class BeckettBuilder(IServiceCollection services) : IBeckettBuilder
             throw new InvalidOperationException($"There is already a subscription with the name {name}");
         }
 
-        return new SubscriptionConfigurationBuilder(subscription, Services);
+        return new SubscriptionConfigurationBuilder(subscription, services);
     }
-
-    public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
-
-    public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
-
-    public void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster) =>
-        MessageUpcaster.Register(oldTypeName, newTypeName, upcaster);
 }

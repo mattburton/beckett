@@ -6,6 +6,7 @@ using OpenTelemetry.Trace;
 using Serilog;
 using TaskHub.Infrastructure.Database;
 using TaskHub.Infrastructure.DependencyInjection;
+using TaskHub.Infrastructure.Modules;
 using TaskHub.TaskLists;
 
 Log.Logger = new LoggerConfiguration()
