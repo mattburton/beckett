@@ -23,6 +23,7 @@
               SubscriptionStatus.Active => "text-bg-success",
               SubscriptionStatus.Paused => "text-bg-secondary",
               SubscriptionStatus.Uninitialized => "text-bg-warning",
+              SubscriptionStatus.Unknown => "text-bg-warning",
               _ => throw new ArgumentOutOfRangeException()
             };
           }
