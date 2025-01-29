@@ -7,7 +7,7 @@ public interface IDashboardSubscriptions
 {
     Task<GetSubscriptionsResult> GetSubscriptions(string? query, int page, int pageSize, CancellationToken cancellationToken);
 
-    Task<GetSubscriptionResult?> GetSubscription(string groupName, string name, CancellationToken cancellationToken);
+    Task<GetSubscriptionResult?> GetSubscription(int id, CancellationToken cancellationToken);
 
     Task<GetLaggingSubscriptionsResult> GetLaggingSubscriptions(
         int page,
@@ -30,22 +30,22 @@ public interface IDashboardSubscriptions
 
     Task ReleaseCheckpointReservation(long id, CancellationToken cancellationToken);
 
-    Task ResetSubscription(string groupName, string name, CancellationToken cancellationToken);
+    Task ResetSubscription(int id, CancellationToken cancellationToken);
 }
 
 public record GetSubscriptionsResult(List<GetSubscriptionsResult.Subscription> Subscriptions, int TotalResults)
 {
-    public record Subscription(string GroupName, string Name, SubscriptionStatus Status);
+    public record Subscription(int Id, string GroupName, string SubscriptionName, SubscriptionStatus Status);
 }
 
-public record GetSubscriptionResult(string GroupName, string Name, SubscriptionStatus Status);
+public record GetSubscriptionResult(int Id, string GroupName, string SubscriptionName, SubscriptionStatus Status);
 
 public record GetLaggingSubscriptionsResult(
     List<GetLaggingSubscriptionsResult.Subscription> Subscriptions,
     int TotalResults
 )
 {
-    public record Subscription(string GroupName, string Name, int TotalLag);
+    public record Subscription(string GroupName, string SubscriptionName, int TotalLag);
 }
 
 public record GetReservationsResult(List<GetReservationsResult.Reservation> Reservations, int TotalResults)
@@ -53,7 +53,7 @@ public record GetReservationsResult(List<GetReservationsResult.Reservation> Rese
     public record Reservation(
         long Id,
         string GroupName,
-        string Name,
+        string SubscriptionName,
         string StreamName,
         long StreamPosition,
         DateTimeOffset ReservedUntil
@@ -65,7 +65,7 @@ public record GetRetriesResult(List<GetRetriesResult.Retry> Retries, int TotalRe
     public record Retry(
         long Id,
         string GroupName,
-        string Name,
+        string SubscriptionName,
         string StreamName,
         long StreamPosition,
         DateTimeOffset LastAttempted
@@ -75,8 +75,9 @@ public record GetRetriesResult(List<GetRetriesResult.Retry> Retries, int TotalRe
 public class GetCheckpointResult
 {
     public required long Id { get; init; }
+    public required int SubscriptionId { get; init; }
     public required string GroupName { get; init; }
-    public required string Name { get; init; }
+    public required string SubscriptionName { get; init; }
     public required string StreamName { get; init; }
     public required long StreamVersion { get; init; }
     public required long StreamPosition { get; init; }
@@ -109,7 +110,7 @@ public record GetFailedResult(List<GetFailedResult.Failure> Failures, int TotalR
     public record Failure(
         long Id,
         string GroupName,
-        string Name,
+        string SubscriptionName,
         string StreamName,
         long StreamPosition,
         DateTimeOffset LastAttempted

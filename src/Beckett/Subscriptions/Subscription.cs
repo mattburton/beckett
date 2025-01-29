@@ -4,6 +4,7 @@ namespace Beckett.Subscriptions;
 
 public class Subscription(string name)
 {
+    internal int Id { get; set; }
     internal string Name { get; } = name;
     internal string? Category { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];

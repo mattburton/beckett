@@ -5,7 +5,7 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class RecoverExpiredCheckpointReservations(
-    string groupName,
+    int groupId,
     int batchSize,
     PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
@@ -14,7 +14,7 @@ public class RecoverExpiredCheckpointReservations(
     {
         command.CommandText = $"SELECT {options.Schema}.recover_expired_checkpoint_reservations($1, $2); ";
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
         if (options.PrepareStatements)
@@ -22,7 +22,7 @@ public class RecoverExpiredCheckpointReservations(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
+        command.Parameters[0].Value = groupId;
         command.Parameters[1].Value = batchSize;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);

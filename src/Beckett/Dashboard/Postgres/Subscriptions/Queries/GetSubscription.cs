@@ -6,29 +6,29 @@ using NpgsqlTypes;
 namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
 
 public class GetSubscription(
-    string groupName,
-    string name,
+    int id,
     PostgresOptions options) : IPostgresDatabaseQuery<GetSubscriptionResult?>
 {
     public async Task<GetSubscriptionResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT group_name, name, status
-            FROM {options.Schema}.subscriptions
-            WHERE group_name = $1
-            AND name = $2;
+            SELECT s.id,
+                   g.name,
+                   s.name,
+                   s.status
+            FROM {options.Schema}.subscriptions s
+            INNER JOIN {options.Schema}.groups g ON s.group_id = g.id
+            WHERE s.id = $1;
         ";
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
         if (options.PrepareStatements)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
+        command.Parameters[0].Value = id;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -40,9 +40,10 @@ public class GetSubscription(
         }
 
         return new GetSubscriptionResult(
-            reader.GetFieldValue<string>(0),
+            reader.GetFieldValue<int>(0),
             reader.GetFieldValue<string>(1),
-            reader.GetFieldValue<SubscriptionStatus>(2)
+            reader.GetFieldValue<string>(2),
+            reader.GetFieldValue<SubscriptionStatus>(3)
         );
     }
 }

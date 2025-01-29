@@ -5,25 +5,22 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class SetSubscriptionToActive(
-    string groupName,
-    string name,
+    int id,
     PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.set_subscription_to_active($1, $2);";
+        command.CommandText = $"select {options.Schema}.set_subscription_to_active($1);";
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
         if (options.PrepareStatements)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
+        command.Parameters[0].Value = id;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

@@ -25,11 +25,9 @@ public class BootstrapSubscriptions(
 
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-            await database.Execute(
-                new EnsureCheckpointExists(
+            options.Subscriptions.GroupId = await database.Execute(
+                new GetOrAddGroup(
                     options.Subscriptions.GroupName,
-                    GlobalCheckpoint.Name,
-                    GlobalCheckpoint.StreamName,
                     options.Postgres
                 ),
                 connection,
@@ -49,18 +47,16 @@ public class BootstrapSubscriptions(
                     options.Subscriptions.GroupName
                 );
 
-                var status = await database.Execute(
-                    new AddOrUpdateSubscription(
-                        options.Subscriptions.GroupName,
-                        subscription.Name,
-                        options.Postgres
-                    ),
+                var result = await database.Execute(
+                    new GetOrAddSubscription(options.Subscriptions.GroupId, subscription.Name, options.Postgres),
                     connection,
                     transaction,
                     cancellationToken
                 );
 
-                if (status == SubscriptionStatus.Active)
+                subscription.Id = result.Id;
+
+                if (result.Status == SubscriptionStatus.Active)
                 {
                     logger.LogTrace(
                         "Subscription {Name} in group {GroupName} is already active - no need for further action.",
@@ -81,11 +77,7 @@ public class BootstrapSubscriptions(
                     );
 
                     await database.Execute(
-                        new SetSubscriptionToActive(
-                            options.Subscriptions.GroupName,
-                            subscription.Name,
-                            options.Postgres
-                        ),
+                        new SetSubscriptionToActive(subscription.Id, options.Postgres),
                         connection,
                         transaction,
                         cancellationToken
@@ -104,8 +96,7 @@ public class BootstrapSubscriptions(
                 checkpoints.Add(
                     new CheckpointType
                     {
-                        GroupName = options.Subscriptions.GroupName,
-                        Name = subscription.Name,
+                        SubscriptionId = subscription.Id,
                         StreamName = InitializationConstants.StreamName,
                         StreamVersion = 0
                     }

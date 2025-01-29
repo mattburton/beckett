@@ -44,9 +44,9 @@ public class CheckpointConsumerGroup(
         stoppingToken.Register(() => _channel.Writer.Complete());
     }
 
-    public void StartPolling(string groupName)
+    public void StartPolling(string payload)
     {
-        if (options.Subscriptions.GroupName != groupName)
+        if (!SubscriptionRegistry.HasSubscription(payload))
         {
             return;
         }

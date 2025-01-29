@@ -4,5 +4,5 @@ public interface ICheckpointConsumerGroup
 {
     void Initialize(CancellationToken stoppingToken);
 
-    void StartPolling(string groupName);
+    void StartPolling(string payload);
 }

@@ -9,7 +9,7 @@
   });
 </script>
 <div id="subscription-details"
-     hx-get="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name"
+     hx-get="@Dashboard.Prefix/subscriptions/@Model.Details.Id"
      hx-trigger="every 10s"
      hx-select="#subscription-details"
      hx-swap="outerHTML">
@@ -37,7 +37,7 @@
           {
             <button class="btn btn-primary"
                     title="Pause Subscription"
-                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/pause"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.Id/pause"
                     hx-on::response-error="alert('Unable to pause subscription at this time - please try again later')">
               Pause
             </button>
@@ -46,14 +46,14 @@
           {
             <button class="btn btn-primary"
                     title="Resume Subscription"
-                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/resume"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.Id/resume"
                     hx-on::response-error="alert('Unable to resume subscription at this time - please try again later')">
               Resume
             </button>
           }
           <button class="btn btn-danger ms-2"
                   title="Reset Subscription"
-                  hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/reset"
+                  hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.Id/reset"
                   hx-confirm="Are you sure you want to reset this subscription?"
                   hx-on::response-error="alert('Unable to reset subscription at this time - please try again later')">
             Reset
@@ -63,7 +63,7 @@
     </div>
     <ul class="list-group list-group-flush">
       <li class="list-group-item"><span class="fw-bolder">Group Name:</span> @Model.Details.GroupName</li>
-      <li class="list-group-item"><span class="fw-bolder">Name:</span> @Model.Details.Name</li>
+      <li class="list-group-item"><span class="fw-bolder">Name:</span> @Model.Details.SubscriptionName</li>
       <li class="list-group-item"><span class="fw-bolder">Status:</span> @Model.Details.Status</li>
     </ul>
   </div>

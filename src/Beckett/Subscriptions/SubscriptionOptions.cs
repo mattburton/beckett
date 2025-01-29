@@ -11,6 +11,8 @@ public class SubscriptionOptions
     /// </summary>
     public string GroupName { get; set; } = "default";
 
+    internal int GroupId { get; set; }
+
     /// <summary>
     /// Configure whether subscriptions are enabled for this host. Enabling subscriptions will register all the
     /// necessary dependencies and host services that allows Beckett to process them. Defaults to false.

@@ -2,9 +2,10 @@ using System.Collections.Concurrent;
 
 namespace Beckett.Subscriptions;
 
-public class SubscriptionRegistry
+public static class SubscriptionRegistry
 {
     private static readonly ConcurrentDictionary<string, Subscription> Subscriptions = new();
+    private static readonly Lazy<HashSet<string>> SubscriptionKeys = new(() => Subscriptions.Values.Select(x => x.Id.ToString()).ToHashSet());
 
     public static bool TryAdd(string name, out Subscription subscription)
     {
@@ -17,5 +18,8 @@ public class SubscriptionRegistry
 
     public static IEnumerable<Subscription> All() => Subscriptions.Values;
 
-    public static Subscription? GetSubscription(string name) => Subscriptions.GetValueOrDefault(name);
+    public static bool HasSubscription(string key) => SubscriptionKeys.Value.Contains(key);
+
+    public static Subscription? GetSubscription(int subscriptionId) =>
+        Subscriptions.Values.FirstOrDefault(x => x.Id == subscriptionId);
 }

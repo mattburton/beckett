@@ -57,11 +57,9 @@ public class GlobalStreamConsumer(
 
                 await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
-                var checkpoint = await database.Execute(
-                    new LockCheckpoint(
-                        options.Subscriptions.GroupName,
-                        GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName,
+                var group = await database.Execute(
+                    new LockGroup(
+                        options.Subscriptions.GroupId,
                         options.Postgres
                     ),
                     connection,
@@ -69,7 +67,7 @@ public class GlobalStreamConsumer(
                     stoppingToken
                 );
 
-                if (checkpoint == null)
+                if (group == null)
                 {
                     if (_continue)
                     {
@@ -88,19 +86,19 @@ public class GlobalStreamConsumer(
                 stoppingToken.ThrowIfCancellationRequested();
 
                 var globalStream = await messageStorage.ReadGlobalStream(
-                    checkpoint.StreamPosition,
+                    group.GlobalPosition,
                     options.Subscriptions.GlobalStreamBatchSize,
                     stoppingToken
                 );
 
                 if (globalStream.Items.Count == 0)
                 {
-                    logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
+                    logger.NoNewGlobalStreamMessagesFoundAfterPosition(group.GlobalPosition);
 
                     break;
                 }
 
-                logger.NewGlobalStreamMessagesToProcess(globalStream.Items.Count, checkpoint.StreamPosition);
+                logger.NewGlobalStreamMessagesToProcess(globalStream.Items.Count, group.GlobalPosition);
 
                 var checkpoints = new List<CheckpointType>();
 
@@ -117,8 +115,7 @@ public class GlobalStreamConsumer(
                         checkpoints.Add(
                             new CheckpointType
                             {
-                                GroupName = options.Subscriptions.GroupName,
-                                Name = subscription.Name,
+                                SubscriptionId = subscription.Id,
                                 StreamName = stream.Key,
                                 StreamVersion = stream.Max(x => x.StreamPosition)
                             }
@@ -147,8 +144,8 @@ public class GlobalStreamConsumer(
                 var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
 
                 await database.Execute(
-                    new UpdateSystemCheckpointPosition(
-                        checkpoint.Id,
+                    new UpdateGroupGlobalPosition(
+                        group.Id,
                         newGlobalPosition,
                         options.Postgres
                     ),

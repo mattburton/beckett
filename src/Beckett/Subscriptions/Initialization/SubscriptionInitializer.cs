@@ -19,26 +19,25 @@ public class SubscriptionInitializer(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            var subscriptionName = await database.Execute(
-                new GetNextUninitializedSubscription(options.Subscriptions.GroupName, options.Postgres),
+            var subscriptionId = await database.Execute(
+                new GetNextUninitializedSubscription(options.Subscriptions.GroupId, options.Postgres),
                 cancellationToken
             );
 
-            if (subscriptionName == null)
+            if (subscriptionId == null)
             {
                 break;
             }
 
-            var subscription = SubscriptionRegistry.GetSubscription(subscriptionName);
+            var subscription = SubscriptionRegistry.GetSubscription(subscriptionId.Value);
 
             if (subscription == null)
             {
-                logger.LogWarning("Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'", subscriptionName);
+                logger.LogWarning("Uninitialized subscription {SubscriptionId} is not registered - setting status to 'unknown'", subscriptionId);
 
                 await database.Execute(
                     new SetSubscriptionStatus(
-                        options.Subscriptions.GroupName,
-                        subscriptionName,
+                        subscriptionId.Value,
                         SubscriptionStatus.Unknown,
                         options.Postgres
                     ),
@@ -83,8 +82,7 @@ public class SubscriptionInitializer(
 
             var checkpoint = await database.Execute(
                 new LockCheckpoint(
-                    options.Subscriptions.GroupName,
-                    subscription.Name,
+                    subscription.Id,
                     InitializationConstants.StreamName,
                     options.Postgres
                 ),
@@ -108,11 +106,9 @@ public class SubscriptionInitializer(
 
             if (globalStream.Items.Count == 0)
             {
-                var globalStreamCheck = await database.Execute(
-                    new LockCheckpoint(
-                        options.Subscriptions.GroupName,
-                        GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName,
+                var group = await database.Execute(
+                    new LockGroup(
+                        options.Subscriptions.GroupId,
                         options.Postgres
                     ),
                     connection,
@@ -120,13 +116,13 @@ public class SubscriptionInitializer(
                     cancellationToken
                 );
 
-                if (globalStreamCheck == null)
+                if (group == null)
                 {
                     continue;
                 }
 
                 var globalStreamUpdates = await messageStorage.ReadGlobalStream(
-                    checkpoint.StreamPosition,
+                    group.GlobalPosition,
                     1,
                     cancellationToken
                 );
@@ -137,7 +133,7 @@ public class SubscriptionInitializer(
                 }
 
                 await database.Execute(
-                    new SetSubscriptionToActive(options.Subscriptions.GroupName, subscription.Name, options.Postgres),
+                    new SetSubscriptionToActive(subscription.Id, options.Postgres),
                     connection,
                     transaction,
                     cancellationToken
@@ -162,8 +158,7 @@ public class SubscriptionInitializer(
                 checkpoints.Add(
                     new CheckpointType
                     {
-                        GroupName = options.Subscriptions.GroupName,
-                        Name = subscription.Name,
+                        SubscriptionId = subscription.Id,
                         StreamName = stream.Key,
                         StreamVersion = stream.Max(x => x.StreamPosition)
                     }

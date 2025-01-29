@@ -3,13 +3,12 @@ namespace Beckett.Dashboard.Subscriptions.Subscription;
 public static class SubscriptionEndpoint
 {
     public static async Task<IResult> Handle(
-        string groupName,
-        string name,
+        int id,
         IDashboard dashboard,
         CancellationToken cancellationToken
     )
     {
-        var result = await dashboard.Subscriptions.GetSubscription(groupName, name, cancellationToken);
+        var result = await dashboard.Subscriptions.GetSubscription(id, cancellationToken);
 
         return result == null
             ? Results.NotFound()

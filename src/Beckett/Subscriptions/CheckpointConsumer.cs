@@ -30,7 +30,7 @@ public class CheckpointConsumer(
 
                     var checkpoint = await database.Execute(
                         new ReserveNextAvailableCheckpoint(
-                            options.Subscriptions.GroupName,
+                            options.Subscriptions.GroupId,
                             options.Subscriptions.ReservationTimeout,
                             options.Postgres
                         ),
@@ -56,12 +56,12 @@ public class CheckpointConsumer(
                         continue;
                     }
 
-                    var subscription = SubscriptionRegistry.GetSubscription(checkpoint.Name);
+                    var subscription = SubscriptionRegistry.GetSubscription(checkpoint.SubscriptionId);
 
                     if (subscription == null)
                     {
                         logger.SubscriptionNotRegistered(
-                            checkpoint.Name,
+                            checkpoint.SubscriptionId,
                             options.Subscriptions.GroupName,
                             checkpoint.Id,
                             consumer
@@ -120,11 +120,11 @@ public static partial class Log
     [LoggerMessage(
         0,
         LogLevel.Trace,
-        "Subscription {SubscriptionName} not registered for group {GroupName} - skipping checkpoint {CheckpointId} in consumer {Consumer}"
+        "Subscription {SubscriptionId} not registered for group {GroupName} - skipping checkpoint {CheckpointId} in consumer {Consumer}"
     )]
     public static partial void SubscriptionNotRegistered(
         this ILogger logger,
-        string subscriptionName,
+        int subscriptionId,
         string groupName,
         long checkpointId,
         int consumer

@@ -14,11 +14,20 @@ public class GetRetries(
     public async Task<GetRetriesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
-            FROM {options.Schema}.checkpoints
-            WHERE status = 'retry'
-            AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
-            ORDER BY updated_at desc, group_name, name, stream_name, stream_position
+            SELECT c.id,
+                   g.name,
+                   s.name,
+                   st.name,
+                   c.stream_position,
+                   c.updated_at,
+                   count(*) over() as total_results
+            FROM {options.Schema}.checkpoints c
+            INNER JOIN {options.Schema}.subscriptions s ON c.subscription_id = s.id
+            INNER JOIN {options.Schema}.streams st ON c.stream_id = st.id
+            INNER JOIN {options.Schema}.groups g ON s.group_id = g.id
+            WHERE c.status = 'retry'
+            AND ($1 is null or (g.name ILIKE '%' || $1 || '%' OR s.name ILIKE '%' || $1 || '%' OR st.name ILIKE '%' || $1 || '%'))
+            ORDER BY c.updated_at desc, g.name, s.name, st.name, c.stream_position
             OFFSET $2
             LIMIT $3;
         ";

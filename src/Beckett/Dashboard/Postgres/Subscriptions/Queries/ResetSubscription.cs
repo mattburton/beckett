@@ -5,8 +5,7 @@ using NpgsqlTypes;
 namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
 
 public class ResetSubscription(
-    string groupName,
-    string name,
+    int id,
     PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
@@ -15,20 +14,17 @@ public class ResetSubscription(
         command.CommandText = @$"
             update {options.Schema}.checkpoints
             set stream_position = 0
-            where group_name = $1
-            and name = $2;
+            where subscription_id = $1;
         ";
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
         if (options.PrepareStatements)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
+        command.Parameters[0].Value = id;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

@@ -414,8 +414,7 @@ public class CheckpointProcessor(
     private IDisposable? CheckpointLoggingScope(int instance, Checkpoint checkpoint)
     {
         const string id = "beckett.checkpoint.id";
-        const string groupName = "beckett.checkpoint.group_name";
-        const string name = "beckett.checkpoint.name";
+        const string subscriptionId = "beckett.checkpoint.subscription_id";
         const string streamName = "beckett.checkpoint.stream_name";
         const string streamPosition = "beckett.checkpoint.stream_position";
         const string streamVersion = "beckett.checkpoint.stream_version";
@@ -436,8 +435,7 @@ public class CheckpointProcessor(
             return logger.BeginScope(state);
         }
 
-        state.Add(groupName, checkpoint.GroupName);
-        state.Add(name, checkpoint.Name);
+        state.Add(subscriptionId, checkpoint.SubscriptionId);
         state.Add(streamName, checkpoint.StreamName);
         state.Add(streamPosition, checkpoint.StreamPosition);
         state.Add(streamVersion, checkpoint.StreamVersion);

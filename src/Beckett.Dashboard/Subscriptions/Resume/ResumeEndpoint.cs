@@ -6,14 +6,16 @@ public static class ResumeEndpoint
 {
     public static async Task<IResult> Handle(
         HttpContext context,
-        string groupName,
-        string name,
+        int id,
         IPostgresDatabase database,
         PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new Beckett.Subscriptions.Queries.ResumeSubscription(groupName, name, options), cancellationToken);
+        await database.Execute(
+            new Beckett.Subscriptions.Queries.ResumeSubscription(id, options),
+            cancellationToken
+        );
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
 

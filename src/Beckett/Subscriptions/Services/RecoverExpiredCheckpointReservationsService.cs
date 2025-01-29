@@ -21,7 +21,7 @@ public class RecoverExpiredCheckpointReservationsService(
 
                 var recovered = await database.Execute(
                     new RecoverExpiredCheckpointReservations(
-                        options.Subscriptions.GroupName,
+                        options.Subscriptions.GroupId,
                         options.Subscriptions.ReservationRecoveryBatchSize,
                         options.Postgres
                     ),

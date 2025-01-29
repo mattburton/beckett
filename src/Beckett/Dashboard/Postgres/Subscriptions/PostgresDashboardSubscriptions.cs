@@ -16,13 +16,9 @@ public class PostgresDashboardSubscriptions(
         return database.Execute(new GetSubscriptions(query, offset, pageSize, options), cancellationToken);
     }
 
-    public Task<GetSubscriptionResult?> GetSubscription(
-        string groupName,
-        string name,
-        CancellationToken cancellationToken
-    )
+    public Task<GetSubscriptionResult?> GetSubscription(int id, CancellationToken cancellationToken)
     {
-        return database.Execute(new GetSubscription(groupName, name, options), cancellationToken);
+        return database.Execute(new GetSubscription(id, options), cancellationToken);
     }
 
     public Task<GetLaggingSubscriptionsResult> GetLaggingSubscriptions(
@@ -72,8 +68,8 @@ public class PostgresDashboardSubscriptions(
         return database.Execute(new ReleaseCheckpointReservation(id, options), cancellationToken);
     }
 
-    public Task ResetSubscription(string groupName, string name, CancellationToken cancellationToken)
+    public Task ResetSubscription(int id, CancellationToken cancellationToken)
     {
-        return database.Execute(new ResetSubscription(groupName, name, options), cancellationToken);
+        return database.Execute(new ResetSubscription(id, options), cancellationToken);
     }
 }

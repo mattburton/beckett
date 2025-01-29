@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS __schema__.messages_archived PARTITION OF __schema__.
 
 CREATE INDEX IF NOT EXISTS ix_messages_active_global_read_stream ON __schema__.messages_active (transaction_id, global_position, archived);
 
-CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema__.messages_active ((metadata ->> '$tenant'), beckett.stream_category(stream_name))
+CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema__.messages_active ((metadata ->> '$tenant'), __schema__.stream_category(stream_name))
   WHERE metadata ->> '$tenant' IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id ON __schema__.messages_active ((metadata ->> '$correlation_id'))
@@ -227,7 +227,7 @@ BEGIN
   RETURN QUERY
     SELECT m.id,
            m.stream_name,
-           _stream_version as stream_version,
+           _stream_version AS stream_version,
            m.stream_position,
            m.global_position,
            m.type,
@@ -377,8 +377,7 @@ $$;
 
 CREATE TYPE __schema__.checkpoint AS
 (
-  group_name text,
-  name text,
+  subscription_id int,
   stream_name text,
   stream_version bigint
 );
@@ -403,43 +402,64 @@ CREATE TYPE __schema__.checkpoint_status AS ENUM (
   'failed'
 );
 
-CREATE TABLE IF NOT EXISTS __schema__.subscriptions
+CREATE TABLE IF NOT EXISTS __schema__.groups
 (
-  group_name text NOT NULL,
-  name text NOT NULL,
-  status __schema__.subscription_status DEFAULT 'uninitialized' NOT NULL,
-  PRIMARY KEY (group_name, name)
+  id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL UNIQUE,
+  global_position bigint NOT NULL DEFAULT 0
 );
 
-CREATE INDEX ix_subscriptions_active ON beckett.subscriptions (group_name, name, status) WHERE status = 'active';
+GRANT UPDATE, DELETE ON __schema__.groups TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.subscriptions
+(
+  id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  group_id int NOT NULL REFERENCES __schema__.groups(id),
+  name text NOT NULL,
+  status __schema__.subscription_status DEFAULT 'uninitialized' NOT NULL,
+  UNIQUE (group_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS ix_subscriptions_status ON __schema__.subscriptions (id, status);
+
+CREATE INDEX IF NOT EXISTS ix_subscriptions_active ON __schema__.subscriptions (id, group_id, status) WHERE status = 'active';
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.streams
+(
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL
+);
+
+CREATE UNIQUE INDEX uix_streams_name ON __schema__.streams (name) INCLUDE (id);
+
+GRANT UPDATE, DELETE ON __schema__.streams TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 (
   id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  stream_id bigint NOT NULL REFERENCES __schema__.streams (id),
   stream_version bigint NOT NULL DEFAULT 0,
   stream_position bigint NOT NULL DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   process_at timestamp with time zone NULL,
   reserved_until timestamp with time zone NULL,
+  subscription_id int NOT NULL REFERENCES __schema__.subscriptions(id),
   lagging boolean GENERATED ALWAYS AS (stream_version > stream_position) STORED,
   status __schema__.checkpoint_status NOT NULL DEFAULT 'active',
-  group_name text NOT NULL,
-  name text NOT NULL,
-  stream_name text NOT NULL,
   retries __schema__.retry[] NULL,
-  UNIQUE (group_name, name, stream_name)
+  UNIQUE (subscription_id, stream_id)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON beckett.checkpoints (group_name, process_at, reserved_until)
+CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (subscription_id, process_at, reserved_until)
   WHERE process_at IS NOT NULL AND reserved_until IS NULL;
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (group_name, reserved_until)
+CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (subscription_id, reserved_until)
   WHERE reserved_until IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON beckett.checkpoints (status, lagging, group_name, name);
+CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (subscription_id, status, lagging);
 
 CREATE FUNCTION __schema__.checkpoint_preprocessor()
   RETURNS trigger
@@ -455,8 +475,8 @@ BEGIN
     NEW.process_at = now();
   END IF;
 
-  IF (NEW.name != '$global' AND NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
-    PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
+  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+    PERFORM pg_notify('beckett:checkpoints', NEW.subscription_id::text);
   END IF;
 
   RETURN NEW;
@@ -469,48 +489,120 @@ CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON __schema__.che
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
 -------------------------------------------------
--- SUBSCRIPTIONS
+-- GROUPS
 -------------------------------------------------
 
-CREATE OR REPLACE FUNCTION __schema__.add_or_update_subscription(
-  _group_name text,
+CREATE OR REPLACE FUNCTION __schema__.get_or_add_group(
   _name text
 )
   RETURNS TABLE (
+    id int
+  )
+  LANGUAGE sql
+AS
+$$
+WITH existing_group_id AS (
+  SELECT id
+  FROM __schema__.groups
+  where name = _name
+),
+new_group_id AS (
+  INSERT INTO __schema__.groups (name)
+  SELECT _name
+  WHERE NOT EXISTS (SELECT id FROM existing_group_id)
+  ON CONFLICT (name) DO NOTHING
+  RETURNING id
+)
+SELECT id
+FROM existing_group_id
+UNION ALL
+SELECT id
+FROM new_group_id
+LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.lock_group(
+  _id int
+)
+  RETURNS TABLE (
+    id int,
+    global_position bigint
+  )
+  LANGUAGE sql
+AS
+$$
+SELECT id, global_position
+FROM __schema__.groups
+WHERE id = _id
+FOR UPDATE
+SKIP LOCKED;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.update_group_global_position(
+  _id bigint,
+  _global_position bigint
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.groups
+  SET global_position = _global_position
+  WHERE id = _id;
+END;
+$$;
+
+-------------------------------------------------
+-- SUBSCRIPTIONS
+-------------------------------------------------
+
+CREATE OR REPLACE FUNCTION __schema__.get_or_add_subscription(
+  _group_id int,
+  _name text
+)
+  RETURNS TABLE (
+    id int,
     status __schema__.subscription_status
   )
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.subscriptions (group_name, name)
-VALUES (_group_name, _name)
-ON CONFLICT (group_name, name) DO NOTHING;
+WITH existing_subscription_id AS (
+  SELECT id
+  FROM __schema__.subscriptions
+  WHERE group_id = _group_id
+  AND name = _name
+)
+INSERT INTO __schema__.subscriptions (group_id, name)
+SELECT _group_id, _name
+WHERE NOT EXISTS (SELECT id FROM existing_subscription_id)
+ON CONFLICT (group_id, name) DO NOTHING;
 
-SELECT status
+SELECT id, status
 FROM __schema__.subscriptions
-WHERE group_name = _group_name
+WHERE group_id = _group_id
 AND name = _name;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_next_uninitialized_subscription(
-  _group_name text
+  _group_id int
 )
   RETURNS TABLE (
-    name text
+    id int
   )
   LANGUAGE sql
 AS
 $$
-SELECT name
+SELECT id
 FROM __schema__.subscriptions
-WHERE group_name = _group_name
+WHERE group_id = _group_id
 AND status = 'uninitialized'
 LIMIT 1;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.pause_subscription(
-  _group_name text,
-  _name text
+  _id int
 )
   RETURNS void
   LANGUAGE sql
@@ -518,13 +610,11 @@ AS
 $$
 UPDATE __schema__.subscriptions
 SET status = 'paused'
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.resume_subscription(
-  _group_name text,
-  _name text
+  _id int
 )
   RETURNS void
   LANGUAGE sql
@@ -532,34 +622,29 @@ AS
 $$
 UPDATE __schema__.subscriptions
 SET status = 'active'
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 
-SELECT pg_notify('beckett:checkpoints', _group_name);
+SELECT pg_notify('beckett:checkpoints', _id::text);
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_active(
-  _group_name text,
-  _name text
+  _id int
 )
   RETURNS void
   LANGUAGE sql
 AS
 $$
 DELETE FROM __schema__.checkpoints
-WHERE group_name = _group_name
-AND name = _name
-AND stream_name = '$initializing';
+WHERE subscription_id = _id
+AND stream_id = (SELECT id FROM __schema__.streams WHERE name = '$initializing');
 
 UPDATE __schema__.subscriptions
 SET status = 'active'
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.set_subscription_status(
-  _group_name text,
-  _name text,
+  _id int,
   _status __schema__.subscription_status
 )
   RETURNS void
@@ -568,31 +653,15 @@ AS
 $$
 UPDATE __schema__.subscriptions
 SET status = _status
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 $$;
 
 -------------------------------------------------
 -- CHECKPOINTS
 -------------------------------------------------
 
-CREATE OR REPLACE FUNCTION __schema__.ensure_checkpoint_exists(
-  _group_name text,
-  _name text,
-  _stream_name text
-)
-  RETURNS void
-  LANGUAGE sql
-AS
-$$
-INSERT INTO __schema__.checkpoints (group_name, name, stream_name)
-VALUES (_group_name, _name, _stream_name)
-ON CONFLICT (group_name, name, stream_name) DO NOTHING;
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
-  _group_name text,
-  _name text,
+  _subscription_id int,
   _stream_name text
 )
   RETURNS TABLE (
@@ -602,11 +671,11 @@ CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
   LANGUAGE sql
 AS
 $$
-SELECT id, stream_position
-FROM __schema__.checkpoints
-WHERE group_name = _group_name
-AND name = _name
-AND stream_name = _stream_name
+SELECT c.id, c.stream_position
+FROM __schema__.checkpoints c
+INNER JOIN __schema__.streams s ON c.stream_id = s.id
+WHERE c.subscription_id = _subscription_id
+AND s.name = _stream_name
 FOR UPDATE
 SKIP LOCKED;
 $$;
@@ -644,15 +713,40 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
-SELECT c.stream_version, c.group_name, c.name, c.stream_name
-FROM unnest(_checkpoints) c
-ON CONFLICT (group_name, name, stream_name) DO UPDATE
+WITH checkpoints_to_record AS (
+  SELECT c.subscription_id, c.stream_name, c.stream_version
+  FROM unnest(_checkpoints) c
+),
+existing_streams AS (
+  SELECT s.id, s.name
+  FROM __schema__.streams s
+  INNER JOIN checkpoints_to_record c ON s.name = c.stream_name
+),
+new_streams AS (
+  INSERT INTO __schema__.streams (name)
+  SELECT c.stream_name
+  FROM checkpoints_to_record c
+  WHERE NOT EXISTS (select from existing_streams where name = c.stream_name)
+  ON CONFLICT (name) DO NOTHING
+  RETURNING id, name
+),
+streams AS (
+  SELECT id, name
+  FROM existing_streams
+  UNION
+  SELECT id, name
+  FROM new_streams
+)
+INSERT INTO __schema__.checkpoints (stream_id, stream_version, subscription_id)
+SELECT s.id, c.stream_version, c.subscription_id
+FROM checkpoints_to_record c
+INNER JOIN streams s on c.stream_name = s.name
+ON CONFLICT (subscription_id, stream_id) DO UPDATE
   SET stream_version = excluded.stream_version;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.recover_expired_checkpoint_reservations(
-  _group_name text,
+  _group_id int,
   _batch_size int
 )
   RETURNS void
@@ -662,13 +756,14 @@ $$
 UPDATE __schema__.checkpoints c
 SET reserved_until = NULL
 FROM (
-    SELECT id
-    FROM __schema__.checkpoints
-    WHERE group_name = _group_name
-    AND reserved_until <= now()
+    SELECT c.id
+    FROM __schema__.checkpoints c
+    INNER JOIN __schema__.subscriptions s on c.subscription_id = s.id
+    WHERE s.group_id = _group_id
+    AND c.reserved_until <= now()
     FOR UPDATE SKIP LOCKED
     LIMIT _batch_size
-) as d
+) d
 WHERE c.id = d.id;
 $$;
 
@@ -688,13 +783,12 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.reserve_next_available_checkpoint(
-  _group_name text,
+  _group_id int,
   _reservation_timeout interval
 )
   RETURNS TABLE (
     id bigint,
-    group_name text,
-    name text,
+    subscription_id int,
     stream_name text,
     stream_position bigint,
     stream_version bigint,
@@ -707,27 +801,27 @@ $$
 UPDATE __schema__.checkpoints c
 SET reserved_until = now() + _reservation_timeout
 FROM (
-  SELECT c.id
+  SELECT c.id, st.name AS stream_name
   FROM __schema__.checkpoints c
-  INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-  WHERE c.group_name = _group_name
+  INNER JOIN __schema__.subscriptions s ON c.subscription_id = s.id
+  INNER JOIN __schema__.streams st ON c.stream_id = st.id
+  WHERE s.group_id = _group_id
+  AND s.status = 'active'
   AND c.process_at <= now()
   AND c.reserved_until IS NULL
-  AND s.status = 'active'
   ORDER BY c.process_at
   LIMIT 1
   FOR UPDATE
   SKIP LOCKED
-) as d
+) d
 WHERE c.id = d.id
 RETURNING
   c.id,
-  c.group_name,
-  c.name,
-  c.stream_name,
+  c.subscription_id,
+  d.stream_name,
   c.stream_position,
   c.stream_version,
-  coalesce(array_length(c.retries, 1), 0) as retry_attempts,
+  coalesce(array_length(c.retries, 1), 0) AS retry_attempts,
   c.status;
 $$;
 
@@ -807,11 +901,11 @@ $$
 WITH metric AS (
     SELECT
     FROM __schema__.subscriptions s
-    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    INNER JOIN __schema__.checkpoints c ON s.id = c.subscription_id
     WHERE s.status = 'active'
     AND c.status = 'active'
     AND c.lagging = true
-    GROUP BY c.group_name, c.name
+    GROUP BY c.subscription_id
 )
 SELECT count(*)
 FROM metric;
@@ -822,18 +916,11 @@ CREATE OR REPLACE FUNCTION __schema__.get_subscription_retry_count()
   LANGUAGE sql
 AS
 $$
-WITH metric AS (
-    SELECT count(*) as value
-    FROM __schema__.subscriptions s
-    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'retry'
-    UNION ALL
-    SELECT 0
-)
-SELECT value
-FROM metric
-LIMIT 1;
+SELECT count(*)
+FROM __schema__.subscriptions s
+INNER JOIN __schema__.checkpoints c ON s.id = c.subscription_id
+WHERE s.status != 'uninitialized'
+AND c.status = 'retry';
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_failed_count()
@@ -841,18 +928,11 @@ CREATE OR REPLACE FUNCTION __schema__.get_subscription_failed_count()
   LANGUAGE sql
 AS
 $$
-WITH metric AS (
-    SELECT count(*) as value
-    FROM __schema__.subscriptions s
-    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'failed'
-    UNION ALL
-    SELECT 0
-)
-SELECT value
-FROM metric
-LIMIT 1;
+SELECT count(*)
+FROM __schema__.subscriptions s
+INNER JOIN __schema__.checkpoints c ON s.id = c.subscription_id
+WHERE s.status != 'uninitialized'
+AND c.status = 'failed';;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.get_subscription_metrics()
@@ -866,30 +946,28 @@ AS
 $$
 WITH lagging AS (
     WITH lagging_subscriptions AS (
-        SELECT COUNT(*) AS lagging
+        SELECT
         FROM __schema__.subscriptions s
-        INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+        INNER JOIN __schema__.checkpoints c ON s.id = c.subscription_id
         WHERE s.status = 'active'
         AND c.status = 'active'
-        AND c.lagging = TRUE
-        GROUP BY c.group_name, c.name
+        AND c.lagging = true
+        GROUP BY c.subscription_id
     )
-    SELECT count(*) as lagging FROM lagging_subscriptions
-    UNION ALL
-    SELECT 0
-    LIMIT 1
+    SELECT count(*) AS lagging
+    FROM lagging_subscriptions
 ),
 retries AS (
-    SELECT count(*) as retries
+    SELECT count(*) AS retries
     FROM __schema__.subscriptions s
-    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    INNER JOIN __schema__.checkpoints c ON s.id = c.subscription_id
     WHERE s.status != 'uninitialized'
     AND c.status = 'retry'
- ),
+),
 failed AS (
-    SELECT count(*) as failed
+    SELECT count(*) AS failed
     FROM __schema__.subscriptions s
-    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    INNER JOIN __schema__.checkpoints c ON s.id = c.subscription_id
     WHERE s.status != 'uninitialized'
     AND c.status = 'failed'
 )

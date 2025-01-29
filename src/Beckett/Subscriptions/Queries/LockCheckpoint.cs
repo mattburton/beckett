@@ -5,18 +5,16 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class LockCheckpoint(
-    string groupName,
-    string name,
+    int subscriptionId,
     string streamName,
     PostgresOptions options
 ) : IPostgresDatabaseQuery<LockCheckpoint.Result?>
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select id, stream_position from {options.Schema}.lock_checkpoint($1, $2, $3);";
+        command.CommandText = $"select id, stream_position from {options.Schema}.lock_checkpoint($1, $2);";
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
         if (options.PrepareStatements)
@@ -24,9 +22,8 @@ public class LockCheckpoint(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
-        command.Parameters[2].Value = streamName;
+        command.Parameters[0].Value = subscriptionId;
+        command.Parameters[1].Value = streamName;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

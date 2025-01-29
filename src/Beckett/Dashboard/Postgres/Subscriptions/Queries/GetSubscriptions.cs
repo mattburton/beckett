@@ -15,10 +15,15 @@ public class GetSubscriptions(
     public async Task<GetSubscriptionsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT group_name, name, status, count(*) over() as total_results
-            FROM {options.Schema}.subscriptions
-            WHERE ($1 is null or name ILIKE '%' || $1 || '%')
-            ORDER BY group_name, name
+            SELECT s.id,
+                   g.name,
+                   s.name,
+                   s.status,
+                   count(*) over() as total_results
+            FROM {options.Schema}.subscriptions s
+            INNER JOIN {options.Schema}.groups g ON s.group_id = g.id
+            WHERE ($1 is null or s.name ILIKE '%' || $1 || '%')
+            ORDER BY g.name, s.name
             OFFSET $2
             LIMIT $3;
         ";
@@ -44,13 +49,14 @@ public class GetSubscriptions(
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            totalResults ??= reader.GetFieldValue<int>(3);
+            totalResults ??= reader.GetFieldValue<int>(4);
 
             results.Add(
                 new GetSubscriptionsResult.Subscription(
-                    reader.GetFieldValue<string>(0),
+                    reader.GetFieldValue<int>(0),
                     reader.GetFieldValue<string>(1),
-                    reader.GetFieldValue<SubscriptionStatus>(2)
+                    reader.GetFieldValue<string>(2),
+                    reader.GetFieldValue<SubscriptionStatus>(3)
                 )
             );
         }

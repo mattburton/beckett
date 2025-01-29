@@ -28,8 +28,7 @@ CREATE SCHEMA beckett;
 --
 
 CREATE TYPE beckett.checkpoint AS (
-	group_name text,
-	name text,
+	subscription_id integer,
 	stream_name text,
 	stream_version bigint
 );
@@ -94,24 +93,6 @@ CREATE TYPE beckett.subscription_status AS ENUM (
     'paused',
     'unknown'
 );
-
-
---
--- Name: add_or_update_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.add_or_update_subscription(_group_name text, _name text) RETURNS TABLE(status beckett.subscription_status)
-    LANGUAGE sql
-    AS $$
-INSERT INTO beckett.subscriptions (group_name, name)
-VALUES (_group_name, _name)
-ON CONFLICT (group_name, name) DO NOTHING;
-
-SELECT status
-FROM beckett.subscriptions
-WHERE group_name = _group_name
-AND name = _name;
-$$;
 
 
 --
@@ -210,7 +191,7 @@ $$;
 
 CREATE FUNCTION beckett.checkpoint_preprocessor() RETURNS trigger
     LANGUAGE plpgsql
-    AS $_$
+    AS $$
 BEGIN
   IF (TG_OP = 'UPDATE') THEN
     NEW.updated_at = now();
@@ -220,40 +201,80 @@ BEGIN
     NEW.process_at = now();
   END IF;
 
-  IF (NEW.name != '$global' AND NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
-    PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
+  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+    PERFORM pg_notify('beckett:checkpoints', NEW.subscription_id::text);
   END IF;
 
   RETURN NEW;
 END;
-$_$;
-
-
---
--- Name: ensure_checkpoint_exists(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.ensure_checkpoint_exists(_group_name text, _name text, _stream_name text) RETURNS void
-    LANGUAGE sql
-    AS $$
-INSERT INTO beckett.checkpoints (group_name, name, stream_name)
-VALUES (_group_name, _name, _stream_name)
-ON CONFLICT (group_name, name, stream_name) DO NOTHING;
 $$;
 
 
 --
--- Name: get_next_uninitialized_subscription(text); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: get_next_uninitialized_subscription(integer); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.get_next_uninitialized_subscription(_group_name text) RETURNS TABLE(name text)
+CREATE FUNCTION beckett.get_next_uninitialized_subscription(_group_id integer) RETURNS TABLE(id integer)
     LANGUAGE sql
     AS $$
-SELECT name
+SELECT id
 FROM beckett.subscriptions
-WHERE group_name = _group_name
+WHERE group_id = _group_id
 AND status = 'uninitialized'
 LIMIT 1;
+$$;
+
+
+--
+-- Name: get_or_add_group(text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.get_or_add_group(_name text) RETURNS TABLE(id integer)
+    LANGUAGE sql
+    AS $$
+WITH existing_group_id AS (
+  SELECT id
+  FROM beckett.groups
+  where name = _name
+),
+new_group_id AS (
+  INSERT INTO beckett.groups (name)
+  SELECT _name
+  WHERE NOT EXISTS (SELECT id FROM existing_group_id)
+  ON CONFLICT (name) DO NOTHING
+  RETURNING id
+)
+SELECT id
+FROM existing_group_id
+UNION ALL
+SELECT id
+FROM new_group_id
+LIMIT 1;
+$$;
+
+
+--
+-- Name: get_or_add_subscription(integer, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.get_or_add_subscription(_group_id integer, _name text) RETURNS TABLE(id integer, status beckett.subscription_status)
+    LANGUAGE sql
+    AS $$
+WITH existing_subscription_id AS (
+  SELECT id
+  FROM beckett.subscriptions
+  WHERE group_id = _group_id
+  AND name = _name
+)
+INSERT INTO beckett.subscriptions (group_id, name)
+SELECT _group_id, _name
+WHERE NOT EXISTS (SELECT id FROM existing_subscription_id)
+ON CONFLICT (group_id, name) DO NOTHING;
+
+SELECT id, status
+FROM beckett.subscriptions
+WHERE group_id = _group_id
+AND name = _name;
 $$;
 
 
@@ -303,18 +324,11 @@ $$;
 CREATE FUNCTION beckett.get_subscription_failed_count() RETURNS bigint
     LANGUAGE sql
     AS $$
-WITH metric AS (
-    SELECT count(*) as value
-    FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'failed'
-    UNION ALL
-    SELECT 0
-)
-SELECT value
-FROM metric
-LIMIT 1;
+SELECT count(*)
+FROM beckett.subscriptions s
+INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
+WHERE s.status != 'uninitialized'
+AND c.status = 'failed';;
 $$;
 
 
@@ -328,11 +342,11 @@ CREATE FUNCTION beckett.get_subscription_lag_count() RETURNS bigint
 WITH metric AS (
     SELECT
     FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
     WHERE s.status = 'active'
     AND c.status = 'active'
     AND c.lagging = true
-    GROUP BY c.group_name, c.name
+    GROUP BY c.subscription_id
 )
 SELECT count(*)
 FROM metric;
@@ -348,30 +362,28 @@ CREATE FUNCTION beckett.get_subscription_metrics() RETURNS TABLE(lagging bigint,
     AS $$
 WITH lagging AS (
     WITH lagging_subscriptions AS (
-        SELECT COUNT(*) AS lagging
+        SELECT
         FROM beckett.subscriptions s
-        INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+        INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
         WHERE s.status = 'active'
         AND c.status = 'active'
-        AND c.lagging = TRUE
-        GROUP BY c.group_name, c.name
+        AND c.lagging = true
+        GROUP BY c.subscription_id
     )
-    SELECT count(*) as lagging FROM lagging_subscriptions
-    UNION ALL
-    SELECT 0
-    LIMIT 1
+    SELECT count(*) AS lagging
+    FROM lagging_subscriptions
 ),
 retries AS (
-    SELECT count(*) as retries
+    SELECT count(*) AS retries
     FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
     WHERE s.status != 'uninitialized'
     AND c.status = 'retry'
- ),
+),
 failed AS (
-    SELECT count(*) as failed
+    SELECT count(*) AS failed
     FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+    INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
     WHERE s.status != 'uninitialized'
     AND c.status = 'failed'
 )
@@ -387,49 +399,56 @@ $$;
 CREATE FUNCTION beckett.get_subscription_retry_count() RETURNS bigint
     LANGUAGE sql
     AS $$
-WITH metric AS (
-    SELECT count(*) as value
-    FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'retry'
-    UNION ALL
-    SELECT 0
-)
-SELECT value
-FROM metric
-LIMIT 1;
+SELECT count(*)
+FROM beckett.subscriptions s
+INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
+WHERE s.status != 'uninitialized'
+AND c.status = 'retry';
 $$;
 
 
 --
--- Name: lock_checkpoint(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: lock_checkpoint(integer, text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.lock_checkpoint(_group_name text, _name text, _stream_name text) RETURNS TABLE(id bigint, stream_position bigint)
+CREATE FUNCTION beckett.lock_checkpoint(_subscription_id integer, _stream_name text) RETURNS TABLE(id bigint, stream_position bigint)
     LANGUAGE sql
     AS $$
-SELECT id, stream_position
-FROM beckett.checkpoints
-WHERE group_name = _group_name
-AND name = _name
-AND stream_name = _stream_name
+SELECT c.id, c.stream_position
+FROM beckett.checkpoints c
+INNER JOIN beckett.streams s ON c.stream_id = s.id
+WHERE c.subscription_id = _subscription_id
+AND s.name = _stream_name
 FOR UPDATE
 SKIP LOCKED;
 $$;
 
 
 --
--- Name: pause_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: lock_group(integer); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.pause_subscription(_group_name text, _name text) RETURNS void
+CREATE FUNCTION beckett.lock_group(_id integer) RETURNS TABLE(id integer, global_position bigint)
+    LANGUAGE sql
+    AS $$
+SELECT id, global_position
+FROM beckett.groups
+WHERE id = _id
+FOR UPDATE
+SKIP LOCKED;
+$$;
+
+
+--
+-- Name: pause_subscription(integer); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.pause_subscription(_id integer) RETURNS void
     LANGUAGE sql
     AS $$
 UPDATE beckett.subscriptions
 SET status = 'paused'
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 $$;
 
 
@@ -491,7 +510,7 @@ BEGIN
   RETURN QUERY
     SELECT m.id,
            m.stream_name,
-           _stream_version as stream_version,
+           _stream_version AS stream_version,
            m.stream_position,
            m.global_position,
            m.type,
@@ -541,31 +560,57 @@ $$;
 CREATE FUNCTION beckett.record_checkpoints(_checkpoints beckett.checkpoint[]) RETURNS void
     LANGUAGE sql
     AS $$
-INSERT INTO beckett.checkpoints (stream_version, group_name, name, stream_name)
-SELECT c.stream_version, c.group_name, c.name, c.stream_name
-FROM unnest(_checkpoints) c
-ON CONFLICT (group_name, name, stream_name) DO UPDATE
+WITH checkpoints_to_record AS (
+  SELECT c.subscription_id, c.stream_name, c.stream_version
+  FROM unnest(_checkpoints) c
+),
+existing_streams AS (
+  SELECT s.id, s.name
+  FROM beckett.streams s
+  INNER JOIN checkpoints_to_record c ON s.name = c.stream_name
+),
+new_streams AS (
+  INSERT INTO beckett.streams (name)
+  SELECT c.stream_name
+  FROM checkpoints_to_record c
+  WHERE NOT EXISTS (select from existing_streams where name = c.stream_name)
+  ON CONFLICT (name) DO NOTHING
+  RETURNING id, name
+),
+streams AS (
+  SELECT id, name
+  FROM existing_streams
+  UNION
+  SELECT id, name
+  FROM new_streams
+)
+INSERT INTO beckett.checkpoints (stream_id, stream_version, subscription_id)
+SELECT s.id, c.stream_version, c.subscription_id
+FROM checkpoints_to_record c
+INNER JOIN streams s on c.stream_name = s.name
+ON CONFLICT (subscription_id, stream_id) DO UPDATE
   SET stream_version = excluded.stream_version;
 $$;
 
 
 --
--- Name: recover_expired_checkpoint_reservations(text, integer); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: recover_expired_checkpoint_reservations(integer, integer); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.recover_expired_checkpoint_reservations(_group_name text, _batch_size integer) RETURNS void
+CREATE FUNCTION beckett.recover_expired_checkpoint_reservations(_group_id integer, _batch_size integer) RETURNS void
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
 SET reserved_until = NULL
 FROM (
-    SELECT id
-    FROM beckett.checkpoints
-    WHERE group_name = _group_name
-    AND reserved_until <= now()
+    SELECT c.id
+    FROM beckett.checkpoints c
+    INNER JOIN beckett.subscriptions s on c.subscription_id = s.id
+    WHERE s.group_id = _group_id
+    AND c.reserved_until <= now()
     FOR UPDATE SKIP LOCKED
     LIMIT _batch_size
-) as d
+) d
 WHERE c.id = d.id;
 $$;
 
@@ -587,53 +632,52 @@ $$;
 
 
 --
--- Name: reserve_next_available_checkpoint(text, interval); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: reserve_next_available_checkpoint(integer, interval); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_name text, _reservation_timeout interval) RETURNS TABLE(id bigint, group_name text, name text, stream_name text, stream_position bigint, stream_version bigint, retry_attempts integer, status beckett.checkpoint_status)
+CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_id integer, _reservation_timeout interval) RETURNS TABLE(id bigint, subscription_id integer, stream_name text, stream_position bigint, stream_version bigint, retry_attempts integer, status beckett.checkpoint_status)
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
 SET reserved_until = now() + _reservation_timeout
 FROM (
-  SELECT c.id
+  SELECT c.id, st.name AS stream_name
   FROM beckett.checkpoints c
-  INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-  WHERE c.group_name = _group_name
+  INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
+  INNER JOIN beckett.streams st ON c.stream_id = st.id
+  WHERE s.group_id = _group_id
+  AND s.status = 'active'
   AND c.process_at <= now()
   AND c.reserved_until IS NULL
-  AND s.status = 'active'
   ORDER BY c.process_at
   LIMIT 1
   FOR UPDATE
   SKIP LOCKED
-) as d
+) d
 WHERE c.id = d.id
 RETURNING
   c.id,
-  c.group_name,
-  c.name,
-  c.stream_name,
+  c.subscription_id,
+  d.stream_name,
   c.stream_position,
   c.stream_version,
-  coalesce(array_length(c.retries, 1), 0) as retry_attempts,
+  coalesce(array_length(c.retries, 1), 0) AS retry_attempts,
   c.status;
 $$;
 
 
 --
--- Name: resume_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: resume_subscription(integer); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.resume_subscription(_group_name text, _name text) RETURNS void
+CREATE FUNCTION beckett.resume_subscription(_id integer) RETURNS void
     LANGUAGE sql
     AS $$
 UPDATE beckett.subscriptions
 SET status = 'active'
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 
-SELECT pg_notify('beckett:checkpoints', _group_name);
+SELECT pg_notify('beckett:checkpoints', _id::text);
 $$;
 
 
@@ -678,35 +722,32 @@ $$;
 
 
 --
--- Name: set_subscription_status(text, text, beckett.subscription_status); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: set_subscription_status(integer, beckett.subscription_status); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.set_subscription_status(_group_name text, _name text, _status beckett.subscription_status) RETURNS void
+CREATE FUNCTION beckett.set_subscription_status(_id integer, _status beckett.subscription_status) RETURNS void
     LANGUAGE sql
     AS $$
 UPDATE beckett.subscriptions
 SET status = _status
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 $$;
 
 
 --
--- Name: set_subscription_to_active(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: set_subscription_to_active(integer); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.set_subscription_to_active(_group_name text, _name text) RETURNS void
+CREATE FUNCTION beckett.set_subscription_to_active(_id integer) RETURNS void
     LANGUAGE sql
     AS $_$
 DELETE FROM beckett.checkpoints
-WHERE group_name = _group_name
-AND name = _name
-AND stream_name = '$initializing';
+WHERE subscription_id = _id
+AND stream_id = (SELECT id FROM beckett.streams WHERE name = '$initializing');
 
 UPDATE beckett.subscriptions
 SET status = 'active'
-WHERE group_name = _group_name
-AND name = _name;
+WHERE id = _id;
 $_$;
 
 
@@ -750,35 +791,6 @@ $$;
 
 
 --
--- Name: stream_operations(); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.stream_operations() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $_$
-BEGIN
-  IF NEW.type = '$stream_truncated' THEN
-    UPDATE beckett.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  IF NEW.type = '$stream_archived' THEN
-    UPDATE beckett.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  RETURN NEW;
-END;
-$_$;
-
-
---
 -- Name: try_advisory_lock(text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -809,6 +821,21 @@ $$;
 
 
 --
+-- Name: update_group_global_position(bigint, bigint); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.update_group_global_position(_id bigint, _global_position bigint) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  UPDATE beckett.groups
+  SET global_position = _global_position
+  WHERE id = _id;
+END;
+$$;
+
+
+--
 -- Name: update_system_checkpoint_position(bigint, bigint); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -830,17 +857,16 @@ $$;
 
 CREATE TABLE beckett.checkpoints (
     id bigint NOT NULL,
+    stream_id bigint NOT NULL,
     stream_version bigint DEFAULT 0 NOT NULL,
     stream_position bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     process_at timestamp with time zone,
     reserved_until timestamp with time zone,
+    subscription_id integer NOT NULL,
     lagging boolean GENERATED ALWAYS AS ((stream_version > stream_position)) STORED,
     status beckett.checkpoint_status DEFAULT 'active'::beckett.checkpoint_status NOT NULL,
-    group_name text NOT NULL,
-    name text NOT NULL,
-    stream_name text NOT NULL,
     retries beckett.retry[]
 );
 
@@ -851,6 +877,31 @@ CREATE TABLE beckett.checkpoints (
 
 ALTER TABLE beckett.checkpoints ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME beckett.checkpoints_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: groups; Type: TABLE; Schema: beckett; Owner: -
+--
+
+CREATE TABLE beckett.groups (
+    id integer NOT NULL,
+    name text NOT NULL,
+    global_position bigint DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: groups_id_seq; Type: SEQUENCE; Schema: beckett; Owner: -
+--
+
+ALTER TABLE beckett.groups ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME beckett.groups_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -939,13 +990,52 @@ CREATE TABLE beckett.migrations (
 
 
 --
+-- Name: streams; Type: TABLE; Schema: beckett; Owner: -
+--
+
+CREATE TABLE beckett.streams (
+    id bigint NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: streams_id_seq; Type: SEQUENCE; Schema: beckett; Owner: -
+--
+
+ALTER TABLE beckett.streams ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME beckett.streams_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: subscriptions; Type: TABLE; Schema: beckett; Owner: -
 --
 
 CREATE TABLE beckett.subscriptions (
-    group_name text NOT NULL,
+    id integer NOT NULL,
+    group_id integer NOT NULL,
     name text NOT NULL,
     status beckett.subscription_status DEFAULT 'uninitialized'::beckett.subscription_status NOT NULL
+);
+
+
+--
+-- Name: subscriptions_id_seq; Type: SEQUENCE; Schema: beckett; Owner: -
+--
+
+ALTER TABLE beckett.subscriptions ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME beckett.subscriptions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
 );
 
 
@@ -976,19 +1066,35 @@ ALTER TABLE ONLY beckett.messages ATTACH PARTITION beckett.messages_archived FOR
 
 
 --
--- Name: checkpoints checkpoints_group_name_name_stream_name_key; Type: CONSTRAINT; Schema: beckett; Owner: -
---
-
-ALTER TABLE ONLY beckett.checkpoints
-    ADD CONSTRAINT checkpoints_group_name_name_stream_name_key UNIQUE (group_name, name, stream_name);
-
-
---
 -- Name: checkpoints checkpoints_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
 ALTER TABLE ONLY beckett.checkpoints
     ADD CONSTRAINT checkpoints_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: checkpoints checkpoints_subscription_id_stream_id_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.checkpoints
+    ADD CONSTRAINT checkpoints_subscription_id_stream_id_key UNIQUE (subscription_id, stream_id);
+
+
+--
+-- Name: groups groups_name_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.groups
+    ADD CONSTRAINT groups_name_key UNIQUE (name);
+
+
+--
+-- Name: groups groups_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.groups
+    ADD CONSTRAINT groups_pkey PRIMARY KEY (id);
 
 
 --
@@ -1080,32 +1186,48 @@ ALTER TABLE ONLY beckett.scheduled_messages
 
 
 --
+-- Name: streams streams_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.streams
+    ADD CONSTRAINT streams_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subscriptions subscriptions_group_id_name_key; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.subscriptions
+    ADD CONSTRAINT subscriptions_group_id_name_key UNIQUE (group_id, name);
+
+
+--
 -- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
 ALTER TABLE ONLY beckett.subscriptions
-    ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (group_name, name);
+    ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
 
 
 --
 -- Name: ix_checkpoints_metrics; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints USING btree (status, lagging, group_name, name);
+CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints USING btree (subscription_id, status, lagging);
 
 
 --
 -- Name: ix_checkpoints_reserved; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_checkpoints_reserved ON beckett.checkpoints USING btree (group_name, reserved_until) WHERE (reserved_until IS NOT NULL);
+CREATE INDEX ix_checkpoints_reserved ON beckett.checkpoints USING btree (subscription_id, reserved_until) WHERE (reserved_until IS NOT NULL);
 
 
 --
 -- Name: ix_checkpoints_to_process; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints USING btree (group_name, process_at, reserved_until) WHERE ((process_at IS NOT NULL) AND (reserved_until IS NULL));
+CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints USING btree (subscription_id, process_at, reserved_until) WHERE ((process_at IS NOT NULL) AND (reserved_until IS NULL));
 
 
 --
@@ -1140,7 +1262,14 @@ CREATE INDEX ix_scheduled_messages_deliver_at ON beckett.scheduled_messages USIN
 -- Name: ix_subscriptions_active; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_subscriptions_active ON beckett.subscriptions USING btree (group_name, name, status) WHERE (status = 'active'::beckett.subscription_status);
+CREATE INDEX ix_subscriptions_active ON beckett.subscriptions USING btree (id, group_id, status) WHERE (status = 'active'::beckett.subscription_status);
+
+
+--
+-- Name: ix_subscriptions_status; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE INDEX ix_subscriptions_status ON beckett.subscriptions USING btree (id, status);
 
 
 --
@@ -1148,6 +1277,13 @@ CREATE INDEX ix_subscriptions_active ON beckett.subscriptions USING btree (group
 --
 
 CREATE UNIQUE INDEX tenants_tenant_idx ON beckett.tenants USING btree (tenant);
+
+
+--
+-- Name: uix_streams_name; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE UNIQUE INDEX uix_streams_name ON beckett.streams USING btree (name) INCLUDE (id);
 
 
 --
@@ -1200,10 +1336,27 @@ CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkp
 
 
 --
--- Name: messages stream_operations; Type: TRIGGER; Schema: beckett; Owner: -
+-- Name: checkpoints checkpoints_stream_id_fkey; Type: FK CONSTRAINT; Schema: beckett; Owner: -
 --
 
-CREATE TRIGGER stream_operations BEFORE INSERT ON beckett.messages FOR EACH ROW EXECUTE FUNCTION beckett.stream_operations();
+ALTER TABLE ONLY beckett.checkpoints
+    ADD CONSTRAINT checkpoints_stream_id_fkey FOREIGN KEY (stream_id) REFERENCES beckett.streams(id);
+
+
+--
+-- Name: checkpoints checkpoints_subscription_id_fkey; Type: FK CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.checkpoints
+    ADD CONSTRAINT checkpoints_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES beckett.subscriptions(id);
+
+
+--
+-- Name: subscriptions subscriptions_group_id_fkey; Type: FK CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.subscriptions
+    ADD CONSTRAINT subscriptions_group_id_fkey FOREIGN KEY (group_id) REFERENCES beckett.groups(id);
 
 
 --

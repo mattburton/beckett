@@ -11,18 +11,22 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
     public async Task<GetCheckpointResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT id,
-                   group_name,
-                   name,
-                   stream_name,
-                   stream_version,
-                   stream_position,
-                   status,
-                   process_at,
-                   reserved_until,
-                   retries
-            FROM {options.Schema}.checkpoints
-            WHERE id = $1;
+            SELECT c.id,
+                   s.id,
+                   g.name,
+                   s.name,
+                   st.name,
+                   c.stream_version,
+                   c.stream_position,
+                   c.status,
+                   c.process_at,
+                   c.reserved_until,
+                   c.retries
+            FROM {options.Schema}.checkpoints c
+            INNER JOIN {options.Schema}.subscriptions s ON c.subscription_id = s.id
+            INNER JOIN {options.Schema}.streams st ON c.stream_id = st.id
+            INNER JOIN {options.Schema}.groups g ON s.group_id = g.id
+            WHERE c.id = $1;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
@@ -45,15 +49,16 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
 
         return new GetCheckpointResult{
             Id = reader.GetFieldValue<long>(0),
-            GroupName = reader.GetFieldValue<string>(1),
-            Name = reader.GetFieldValue<string>(2),
-            StreamName = reader.GetFieldValue<string>(3),
-            StreamVersion = reader.GetFieldValue<long>(4),
-            StreamPosition = reader.GetFieldValue<long>(5),
-            Status = reader.GetFieldValue<CheckpointStatus>(6),
-            ProcessAt = reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
-            ReservedUntil = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
-            Retries = reader.IsDBNull(9) ? [] : reader.GetFieldValue<RetryType[]>(9)
+            SubscriptionId = reader.GetFieldValue<int>(1),
+            GroupName = reader.GetFieldValue<string>(2),
+            SubscriptionName = reader.GetFieldValue<string>(3),
+            StreamName = reader.GetFieldValue<string>(4),
+            StreamVersion = reader.GetFieldValue<long>(5),
+            StreamPosition = reader.GetFieldValue<long>(6),
+            Status = reader.GetFieldValue<CheckpointStatus>(7),
+            ProcessAt = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
+            ReservedUntil = reader.IsDBNull(9) ? null : reader.GetFieldValue<DateTimeOffset>(9),
+            Retries = reader.IsDBNull(10) ? [] : reader.GetFieldValue<RetryType[]>(10)
         };
     }
 }

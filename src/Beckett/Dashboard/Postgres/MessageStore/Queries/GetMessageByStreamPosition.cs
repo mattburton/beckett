@@ -27,7 +27,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
                    m.timestamp,
                    m.data,
                    m.metadata
-            FROM {options.Schema}.messages AS m
+            FROM {options.Schema}.messages m
             WHERE m.stream_name = $1
             AND m.stream_position = $2
             AND m.archived = false;
