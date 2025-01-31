@@ -148,6 +148,21 @@ public class SubscriptionHandlerTests : IDisposable
     }
 
     [Fact]
+    public void handlers_can_return_void()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+
+        try
+        {
+            _ = new SubscriptionHandler(_subscription, HandlerThatReturnsVoid.Handle);
+        }
+        catch
+        {
+            Assert.Fail("Handlers should be able to return void");
+        }
+    }
+
+    [Fact]
     public void handlers_must_subscribe_to_at_least_one_message_type_if_category_not_specified()
     {
         Assert.Throws<InvalidOperationException>(
@@ -193,10 +208,10 @@ public class SubscriptionHandlerTests : IDisposable
     }
 
     [Fact]
-    public void handlers_must_return_task()
+    public void handlers_must_return_task_or_void_only()
     {
         Assert.Throws<InvalidOperationException>(
-            () => new SubscriptionHandler(_subscription, InvalidHandlerThatReturnsVoid.Handle)
+            () => new SubscriptionHandler(_subscription, InvalidHandlerThatReturnsNonTaskOrVoid.Handle)
         );
     }
 
@@ -327,6 +342,13 @@ public class SubscriptionHandlerTests : IDisposable
         }
     }
 
+    private static class HandlerThatReturnsVoid
+    {
+        public static void Handle(IMessageContext context)
+        {
+        }
+    }
+
     private static class InvalidHandlerWithContextAndBatch
     {
         public static Task Handle(IMessageContext context, IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
@@ -351,11 +373,9 @@ public class SubscriptionHandlerTests : IDisposable
         }
     }
 
-    private static class InvalidHandlerThatReturnsVoid
+    private static class InvalidHandlerThatReturnsNonTaskOrVoid
     {
-        public static void Handle(IMessageContext context)
-        {
-        }
+        public static int Handle(IMessageContext context) => 1;
     }
 
     private interface ITestService

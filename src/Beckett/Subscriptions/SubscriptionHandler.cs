@@ -61,7 +61,11 @@ public class SubscriptionHandler
         return _invoker(arguments);
     }
 
-    public Task Invoke(IReadOnlyList<IMessageContext> batch, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task Invoke(
+        IReadOnlyList<IMessageContext> batch,
+        IServiceProvider serviceProvider,
+        CancellationToken cancellationToken
+    )
     {
         var arguments = new object[_parameters.Length];
 
@@ -190,13 +194,26 @@ public class SubscriptionHandler
         var instance = method.IsStatic ? null : Expression.Constant(handler.Target);
         var call = Expression.Call(instance, method, arguments);
 
-        if (returnType != typeof(Task))
+        if (returnType == typeof(Task))
         {
-            throw new InvalidOperationException("Subscription handlers must return a Task.");
+            return Expression.Lambda<Func<object[], Task>>(call, argumentsParameter).Compile();
         }
 
-        var handlerExpression = Expression.Lambda<Func<object[], Task>>(call, argumentsParameter);
+        if (returnType != typeof(void))
+        {
+            throw new InvalidOperationException("Subscription handlers must have a return type of Task or void.");
+        }
 
-        return handlerExpression.Compile();
+        var voidHandlerDelegate = Expression.Lambda<Action<object[]>>(
+            Expression.Block(call, Expression.Default(typeof(void))),
+            argumentsParameter
+        ).Compile();
+
+        return parameters =>
+        {
+            voidHandlerDelegate(parameters);
+
+            return Task.CompletedTask;
+        };
     }
 }
