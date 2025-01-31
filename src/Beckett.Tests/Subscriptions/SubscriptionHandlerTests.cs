@@ -5,8 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Tests.Subscriptions;
 
-[Collection("MessageTypeMap")]
-public class SubscriptionHandlerTests : IDisposable
+public class SubscriptionHandlerTests
 {
     private readonly Subscription _subscription = new("test");
     private readonly IServiceProvider _serviceProvider;
@@ -14,9 +13,6 @@ public class SubscriptionHandlerTests : IDisposable
 
     public SubscriptionHandlerTests()
     {
-        MessageTypeMap.Map<TestMessage>("test-message");
-        MessageTypeMap.Map<AnotherTestMessage>("another-test-message");
-
         _serviceProvider = new ServiceCollection()
             .AddSingleton(_testService)
             .BuildServiceProvider();
@@ -395,14 +391,5 @@ public class SubscriptionHandlerTests : IDisposable
 
             return Task.CompletedTask;
         }
-    }
-
-    private record TestMessage(Guid Id);
-
-    private record AnotherTestMessage(Guid Id);
-
-    public void Dispose()
-    {
-        MessageTypeMap.Clear();
     }
 }

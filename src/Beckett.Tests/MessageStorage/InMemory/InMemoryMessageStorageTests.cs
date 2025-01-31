@@ -4,14 +4,8 @@ using Beckett.MessageStorage.InMemory;
 
 namespace Beckett.Tests.MessageStorage.InMemory;
 
-[Collection("MessageTypeMap")]
-public class InMemoryMessageStorageTests : IDisposable
+public class InMemoryMessageStorageTests
 {
-    public InMemoryMessageStorageTests()
-    {
-        MessageTypeMap.Map<TestEvent>("test_event");
-    }
-
     [Fact]
     public async Task appends_to_and_reads_stream()
     {
@@ -49,13 +43,6 @@ public class InMemoryMessageStorageTests : IDisposable
         Assert.Equal(1, item.GlobalPosition);
         Assert.Equal(1, item.StreamPosition);
         Assert.Equal(streamName, item.StreamName);
-        Assert.Equal("test_event", item.MessageType);
-    }
-
-    public record TestEvent(int Number);
-
-    public void Dispose()
-    {
-        MessageTypeMap.Clear();
+        Assert.Equal("test-event", item.MessageType);
     }
 }
