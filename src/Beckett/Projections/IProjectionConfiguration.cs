@@ -85,7 +85,7 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
     public IReadOnlyList<IMessageContext> Filter(IReadOnlyList<IMessageContext> batch)
     {
         return batch.Where(x => x.MessageType != null && _map.ContainsKey(x.MessageType))
-            .Where(x => !_map[x.MessageType!].IgnoreFilter(x.Message!)).ToList();
+            .Where(x => _map[x.MessageType!].WherePredicate(x.Message!)).ToList();
     }
 
     public TKey GetKey(IMessageContext context) =>
