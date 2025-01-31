@@ -1,33 +1,28 @@
 using TaskHub.Infrastructure.Email;
 using TaskHub.TaskLists.Events;
+using TaskHub.TaskLists.Slices.UserLookup;
 using TaskHub.TaskLists.Slices.UserNotificationsToSend;
-using TaskHub.Users.Contracts.Queries;
 
-namespace TaskHub.TaskLists.Slices.UserNotificationV1;
+namespace TaskHub.TaskLists.Slices.SendUserNotification;
 
-public static class UserMentionedInTaskHandlerV1
+public static class SendUserNotificationHandler
 {
     public static async Task Handle(
         UserMentionedInTask message,
-        IQueryDispatcher queryDispatcher,
+        IQueryBus queryBus,
         IEmailService emailService,
-        ICommandExecutor commandExecutor,
+        ICommandBus commandBus,
         CancellationToken cancellationToken
     )
     {
-        if (!message.Task.Contains("V1"))
-        {
-            return;
-        }
-
-        var user = await queryDispatcher.Dispatch(new UserQuery(message.Username), cancellationToken);
+        var user = await queryBus.Send(new UserLookupQuery(message.Username), cancellationToken);
 
         if (user == null)
         {
             return;
         }
 
-        var notificationsToSend = await queryDispatcher.Dispatch(
+        var notificationsToSend = await queryBus.Send(
             new UserNotificationsToSendQuery(message.TaskListId),
             cancellationToken
         );
@@ -41,15 +36,14 @@ public static class UserMentionedInTaskHandlerV1
             new EmailMessage(
                 "notifications@taskhub.com",
                 user.Email,
-                "User Mention Notification - V1",
+                "User Notification",
                 $"You were mentioned in a task: {message.Task}"
             ),
             cancellationToken
         );
 
-        await commandExecutor.Execute(
-            TaskListModule.StreamName(message.TaskListId),
-            new SendUserMentionNotificationCommand(message.TaskListId, message.Task, message.Username),
+        await commandBus.Send(
+            new SendUserNotificationCommand(message.TaskListId, message.Task, message.Username),
             cancellationToken
         );
     }

@@ -1,4 +1,4 @@
-using TaskHub.Users.Contracts.Notifications;
+using TaskHub.Users.Notifications;
 
 namespace TaskHub.TaskLists.Slices.UserLookup.Tests;
 
@@ -43,6 +43,6 @@ public class UserLookupIntegrationTests(DatabaseFixture database) : IClassFixtur
     }
 
     private static UserLookupReadModel GenerateReadModel() => StateBuilder.Build<UserLookupReadModel>(
-        new UserAddedNotification(Generate.String(), Generate.String())
+        new UserChanged(Generate.String(), Generate.String())
     );
 }

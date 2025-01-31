@@ -4,5 +4,5 @@ namespace TaskHub.Infrastructure.Commands;
 
 public class Configuration : IConfigureServices
 {
-    public void Services(IServiceCollection services) => services.AddSingleton<ICommandExecutor, CommandExecutor>();
+    public void Services(IServiceCollection services) => services.AddSingleton<ICommandBus, CommandBus>();
 }

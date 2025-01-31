@@ -1,26 +1,25 @@
 using Beckett.Messages;
-using TaskHub.Users.Contracts.Notifications;
 using TaskHub.Users.Events;
+using TaskHub.Users.Notifications;
 
-namespace TaskHub.Users.Slices.NotifyUserAdded.Tests;
+namespace TaskHub.Users.Slices.UserChanged.Tests;
 
-public class UserAddedNotificationPublisherTests
+public class UserChangedPublisherTests
 {
     public class when_user_registered
     {
         [Fact]
-        public async Task publishes_user_added_notification()
+        public async Task publishes_notification()
         {
             var username = Generate.String();
             var email = Generate.String();
             var notificationPublisher = new FakeNotificationPublisher();
             var expectedChannel = UserModule.StreamName(username);
-            var expectedNotification = new UserAddedNotification(username, email);
+            var expectedNotification = new Notifications.UserChanged(username, email);
             var userRegistered = new UserRegistered(username, email);
             var context = MessageContext.From(userRegistered) with { StreamName = expectedChannel};
 
-            await UserAddedNotificationPublisher.UserRegistered(
-                userRegistered,
+            await UserChangedPublisher.Handle(
                 context,
                 notificationPublisher,
                 CancellationToken.None

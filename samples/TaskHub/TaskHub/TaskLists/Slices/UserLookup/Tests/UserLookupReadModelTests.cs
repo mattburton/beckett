@@ -1,18 +1,18 @@
-using TaskHub.Users.Contracts.Notifications;
+using TaskHub.Users.Notifications;
 
 namespace TaskHub.TaskLists.Slices.UserLookup.Tests;
 
 public class UserLookupReadModelTests : StateSpecificationFixture<UserLookupReadModel>
 {
     [Fact]
-    public void user_added_notification()
+    public void user_notification()
     {
         var username = Generate.String();
         var email = Generate.String();
 
         Specification
             .Given(
-                new UserAddedNotification(username, email)
+                new UserChanged(username, email)
             )
             .Then(
                 new UserLookupReadModel

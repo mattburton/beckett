@@ -6,11 +6,10 @@ using TaskHub.TaskLists.Slices.AddTaskList;
 using TaskHub.TaskLists.Slices.ChangeTaskListName;
 using TaskHub.TaskLists.Slices.CompleteTask;
 using TaskHub.TaskLists.Slices.DeleteTaskList;
+using TaskHub.TaskLists.Slices.SendUserNotification;
 using TaskHub.TaskLists.Slices.TaskList;
 using TaskHub.TaskLists.Slices.TaskLists;
 using TaskHub.TaskLists.Slices.UserLookup;
-using TaskHub.TaskLists.Slices.UserNotificationV1;
-using TaskHub.TaskLists.Slices.UserNotificationV2;
 
 namespace TaskHub.TaskLists;
 
@@ -28,7 +27,7 @@ public class TaskListModule : IModule, IConfigureRoutes
         builder.Map<TaskListNameChanged>("task_list_name_changed");
         builder.Map<TaskListDeleted>("task_list_deleted");
         builder.Map<UserMentionedInTask>("user_mentioned_in_task");
-        builder.Map<UserMentionNotificationSent>("user_mention_notification_sent");
+        builder.Map<UserNotificationSent>("user_notification_sent");
     }
 
     public void Subscriptions(ISubscriptionBuilder builder)
@@ -39,13 +38,9 @@ public class TaskListModule : IModule, IConfigureRoutes
         builder.AddSubscription("task_lists:user_lookup_projection")
             .Projection<UserLookupProjection, UserLookupReadModel, string>();
 
-        builder.AddSubscription("task_lists:user_notification:v1")
+        builder.AddSubscription("task_lists:send_user_notification")
             .Message<UserMentionedInTask>()
-            .Handler(UserMentionedInTaskHandlerV1.Handle);
-
-        builder.AddSubscription("task_lists:user_notification:v2")
-            .Message<UserMentionedInTask>()
-            .Handler(UserMentionedInTaskHandlerV2.Handle);
+            .Handler(SendUserNotificationHandler.Handle);
 
         builder.AddSubscription("task_lists:wire_tap")
             .Category(Category)

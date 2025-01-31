@@ -4,6 +4,8 @@ namespace TaskHub.TaskLists.Slices.AddTask;
 
 public partial record AddTaskCommand(Guid TaskListId, string Task) : ICommand<AddTaskCommand.State>
 {
+    public string StreamName() => TaskListModule.StreamName(TaskListId);
+
     public IEnumerable<object> Execute(State state)
     {
         if (state.Items.Contains(Task))
@@ -32,10 +34,10 @@ public partial record AddTaskCommand(Guid TaskListId, string Task) : ICommand<Ad
 
         private void Apply(TaskAdded e) => Items.Add(e.Task);
     }
-}
 
-internal static partial class Matcher
-{
-    [GeneratedRegex(@"@(\w+)\b", RegexOptions.Compiled)]
-    public static partial Regex Username();
+    internal static partial class Matcher
+    {
+        [GeneratedRegex(@"@(\w+)\b", RegexOptions.Compiled)]
+        public static partial Regex Username();
+    }
 }

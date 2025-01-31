@@ -69,25 +69,13 @@ Content-Type: application/json
   client.global.set("task", response.body.task)
 %}
 
-### Add Task / Notify User - V1 (cross-module query)
+### Add Task & Send User Notification
 
 POST {{base_url}}/task-lists/{{id}}
 Content-Type: application/json
 
 {
-  "task": "task_{{$random.uuid}} cc:@bob [V1]"
-}
-> {%
-  client.global.set("task", response.body.task)
-%}
-
-### Add Task / Notify User - V2 (local lookup populated by notifications)
-
-POST {{base_url}}/task-lists/{{id}}
-Content-Type: application/json
-
-{
-  "task": "task_{{$random.uuid}} cc:@bob [V2]"
+  "task": "task_{{$random.uuid}} cc:@bob"
 }
 > {%
   client.global.set("task", response.body.task)

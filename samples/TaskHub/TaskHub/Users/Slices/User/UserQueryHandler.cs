@@ -1,4 +1,4 @@
-using TaskHub.Users.Contracts.Queries;
+using TaskHub.Users.Queries;
 
 namespace TaskHub.Users.Slices.User;
 

@@ -1,4 +1,4 @@
-using TaskHub.Users.Contracts.Notifications;
+using TaskHub.Users.Notifications;
 
 namespace TaskHub.TaskLists.Slices.UserLookup;
 
@@ -8,7 +8,7 @@ public partial class UserLookupReadModel
     public string Username { get; set; } = null!;
     public string Email { get; set; } = null!;
 
-    private void Apply(UserAddedNotification message)
+    private void Apply(UserChanged message)
     {
         Username = message.Username;
         Email = message.Email;

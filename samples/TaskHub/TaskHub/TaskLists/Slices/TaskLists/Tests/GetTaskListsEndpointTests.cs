@@ -9,15 +9,15 @@ public class GetTaskListsEndpointTests
         [Fact]
         public async Task returns_ok_with_result()
         {
-            var queryDispatcher = new FakeQueryDispatcher();
-            var expectedQuery = new TaskListsQuery();
+            var queryBus = new FakeQueryBus();
+            var query = new TaskListsQuery();
             var expectedResults = new List<TaskListsReadModel>
             {
                 StateBuilder.Build<TaskListsReadModel>(new TaskListAdded(Guid.NewGuid(), "name"))
             };
-            queryDispatcher.Returns(expectedQuery, expectedResults);
+            queryBus.Returns(query, expectedResults);
 
-            var result = await GetTaskListsEndpoint.Handle(queryDispatcher, CancellationToken.None);
+            var result = await GetTaskListsEndpoint.Handle(queryBus, CancellationToken.None);
 
             var actualResult = Assert.IsType<Ok<IReadOnlyList<TaskListsReadModel>>>(result);
             Assert.Equal(expectedResults, actualResult.Value);

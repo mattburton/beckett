@@ -35,7 +35,7 @@ public class UserNotificationsToSendReadModelTests : StateSpecificationFixture<U
         Specification
             .Given(
                 new UserMentionedInTask(taskListId, task, username),
-                new UserMentionNotificationSent(taskListId, task, username)
+                new UserNotificationSent(taskListId, task, username)
             ).Then(
                 new UserNotificationsToSendReadModel
                 {

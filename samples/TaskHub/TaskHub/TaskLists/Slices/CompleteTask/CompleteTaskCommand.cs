@@ -4,6 +4,8 @@ namespace TaskHub.TaskLists.Slices.CompleteTask;
 
 public partial record CompleteTaskCommand(Guid TaskListId, string Task) : ICommand<CompleteTaskCommand.State>
 {
+    public string StreamName() => TaskListModule.StreamName(TaskListId);
+
     public IEnumerable<object> Execute(State state)
     {
         if (state.CompletedItems.Contains(Task))

@@ -1,11 +1,10 @@
 using TaskHub.TaskLists.Events;
 using TaskHub.TaskLists.Slices.UserLookup;
 using TaskHub.TaskLists.Slices.UserNotificationsToSend;
-using TaskHub.Users.Contracts.Notifications;
 
-namespace TaskHub.TaskLists.Slices.UserNotificationV2.Tests;
+namespace TaskHub.TaskLists.Slices.SendUserNotification.Tests;
 
-public class UserMentionedInTaskHandlerV2Tests
+public class SendUserNotificationHandlerTests
 {
     public class when_user_exists
     {
@@ -17,25 +16,27 @@ public class UserMentionedInTaskHandlerV2Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.Extensions.Task();
+                var task = Generate.String();
                 var emailService = new FakeEmailService();
-                var queryDispatcher = new FakeQueryDispatcher();
-                var commandExecutor = new FakeCommandExecutor();
+                var queryBus = new FakeQueryBus();
+                var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(new UserAddedNotification(username, email));
+                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                    new Users.Notifications.UserChanged(username, email)
+                );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username)
                 );
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryDispatcher.Returns(userLookupQuery, userReadModel);
-                queryDispatcher.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
+                queryBus.Returns(userLookupQuery, userReadModel);
+                queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await UserMentionedInTaskHandlerV2.Handle(
+                await SendUserNotificationHandler.Handle(
                     message,
-                    queryDispatcher,
+                    queryBus,
                     emailService,
-                    commandExecutor,
+                    commandBus,
                     CancellationToken.None
                 );
 
@@ -50,33 +51,35 @@ public class UserMentionedInTaskHandlerV2Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.Extensions.Task();
+                var task = Generate.String();
                 var emailService = new FakeEmailService();
-                var queryDispatcher = new FakeQueryDispatcher();
-                var commandExecutor = new FakeCommandExecutor();
+                var queryBus = new FakeQueryBus();
+                var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(new UserAddedNotification(username, email));
+                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                    new Users.Notifications.UserChanged(username, email)
+                );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username)
                 );
                 var expectedStreamName = TaskListModule.StreamName(taskListId);
-                var expectedCommand = new SendUserMentionNotificationCommand(taskListId, task, username);
+                var expectedCommand = new SendUserNotificationCommand(taskListId, task, username);
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryDispatcher.Returns(userLookupQuery, userReadModel);
-                queryDispatcher.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
+                queryBus.Returns(userLookupQuery, userReadModel);
+                queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await UserMentionedInTaskHandlerV2.Handle(
+                await SendUserNotificationHandler.Handle(
                     message,
-                    queryDispatcher,
+                    queryBus,
                     emailService,
-                    commandExecutor,
+                    commandBus,
                     CancellationToken.None
                 );
 
-                Assert.NotNull(commandExecutor.Received);
-                Assert.Equal(expectedStreamName, commandExecutor.Received.StreamName);
-                Assert.Equal(expectedCommand, commandExecutor.Received.Command);
+                var actualCommand = Assert.IsType<SendUserNotificationCommand>(commandBus.Received);
+                Assert.Equal(expectedStreamName, actualCommand.StreamName());
+                Assert.Equal(expectedCommand, actualCommand);
             }
         }
 
@@ -88,26 +91,28 @@ public class UserMentionedInTaskHandlerV2Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.Extensions.Task();
+                var task = Generate.String();
                 var emailService = new FakeEmailService();
-                var queryDispatcher = new FakeQueryDispatcher();
-                var commandExecutor = new FakeCommandExecutor();
+                var queryBus = new FakeQueryBus();
+                var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(new UserAddedNotification(username, email));
+                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                    new Users.Notifications.UserChanged(username, email)
+                );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username),
-                    new UserMentionNotificationSent(taskListId, task, username)
+                    new UserNotificationSent(taskListId, task, username)
                 );
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryDispatcher.Returns(userLookupQuery, userReadModel);
-                queryDispatcher.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
+                queryBus.Returns(userLookupQuery, userReadModel);
+                queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await UserMentionedInTaskHandlerV2.Handle(
+                await SendUserNotificationHandler.Handle(
                     message,
-                    queryDispatcher,
+                    queryBus,
                     emailService,
-                    commandExecutor,
+                    commandBus,
                     CancellationToken.None
                 );
 
@@ -120,30 +125,32 @@ public class UserMentionedInTaskHandlerV2Tests
                 var taskListId = Generate.Guid();
                 var username = Generate.String();
                 var email = Generate.String();
-                var task = Generate.Extensions.Task();
+                var task = Generate.String();
                 var emailService = new FakeEmailService();
-                var queryDispatcher = new FakeQueryDispatcher();
-                var commandExecutor = new FakeCommandExecutor();
+                var queryBus = new FakeQueryBus();
+                var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(new UserAddedNotification(username, email));
+                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                    new Users.Notifications.UserChanged(username, email)
+                );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username),
-                    new UserMentionNotificationSent(taskListId, task, username)
+                    new UserNotificationSent(taskListId, task, username)
                 );
                 var message = new UserMentionedInTask(taskListId, task, username);
-                queryDispatcher.Returns(userLookupQuery, userReadModel);
-                queryDispatcher.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
+                queryBus.Returns(userLookupQuery, userReadModel);
+                queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await UserMentionedInTaskHandlerV2.Handle(
+                await SendUserNotificationHandler.Handle(
                     message,
-                    queryDispatcher,
+                    queryBus,
                     emailService,
-                    commandExecutor,
+                    commandBus,
                     CancellationToken.None
                 );
 
-                Assert.Null(commandExecutor.Received);
+                Assert.Null(commandBus.Received);
             }
         }
     }
@@ -154,15 +161,15 @@ public class UserMentionedInTaskHandlerV2Tests
         public async Task does_not_send_email()
         {
             var emailService = new FakeEmailService();
-            var queryDispatcher = new FakeQueryDispatcher();
-            var commandExecutor = new FakeCommandExecutor();
+            var queryBus = new FakeQueryBus();
+            var commandBus = new FakeCommandBus();
             var message = new UserMentionedInTask(Generate.Guid(), Generate.String(), Generate.String());
 
-            await UserMentionedInTaskHandlerV2.Handle(
+            await SendUserNotificationHandler.Handle(
                 message,
-                queryDispatcher,
+                queryBus,
                 emailService,
-                commandExecutor,
+                commandBus,
                 CancellationToken.None
             );
 
@@ -173,24 +180,19 @@ public class UserMentionedInTaskHandlerV2Tests
         public async Task does_not_execute_command()
         {
             var emailService = new FakeEmailService();
-            var queryExecutor = new FakeQueryDispatcher();
-            var commandExecutor = new FakeCommandExecutor();
+            var queryExecutor = new FakeQueryBus();
+            var commandBus = new FakeCommandBus();
             var message = new UserMentionedInTask(Generate.Guid(), Generate.String(), Generate.String());
 
-            await UserMentionedInTaskHandlerV2.Handle(
+            await SendUserNotificationHandler.Handle(
                 message,
                 queryExecutor,
                 emailService,
-                commandExecutor,
+                commandBus,
                 CancellationToken.None
             );
 
-            Assert.Null(commandExecutor.Received);
+            Assert.Null(commandBus.Received);
         }
     }
-}
-
-public static class GenerateMethods
-{
-    public static string Task(this Generate _) => Generate.String() + " [V2]";
 }

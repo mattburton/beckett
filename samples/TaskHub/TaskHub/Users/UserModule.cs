@@ -1,11 +1,11 @@
 using TaskHub.Infrastructure.Modules;
 using TaskHub.Infrastructure.Routing;
-using TaskHub.Users.Contracts.Notifications;
 using TaskHub.Users.Events;
+using TaskHub.Users.Notifications;
 using TaskHub.Users.Slices.DeleteUser;
-using TaskHub.Users.Slices.NotifyUserAdded;
 using TaskHub.Users.Slices.RegisterUser;
 using TaskHub.Users.Slices.User;
+using TaskHub.Users.Slices.UserChanged;
 using TaskHub.Users.Slices.Users;
 
 namespace TaskHub.Users;
@@ -18,12 +18,10 @@ public class UserModule : IModule, IConfigureRoutes
 
     public void MessageTypes(IMessageTypeBuilder builder)
     {
-        // events
         builder.Map<UserRegistered>("user_registered");
         builder.Map<UserDeleted>("user_deleted");
 
-        // notifications
-        builder.Map<UserAddedNotification>("user_added_notification");
+        builder.MapNotification<UserChanged>("user_changed");
     }
 
     public void Subscriptions(ISubscriptionBuilder builder)
@@ -31,9 +29,9 @@ public class UserModule : IModule, IConfigureRoutes
         builder.AddSubscription("users:users_projection")
             .Projection<UsersProjection, UsersReadModel, string>();
 
-        builder.AddSubscription("users:notifications:user_added:user_registered")
-            .Message<UserRegistered>()
-            .Handler(UserAddedNotificationPublisher.UserRegistered);
+        builder.AddSubscription("users:notifications:user_changed")
+            .Category(Category)
+            .Handler(UserChangedPublisher.Handle);
 
         builder.AddSubscription("users:wire_tap")
             .Category(Category)

@@ -4,21 +4,13 @@ public static class AddTaskListEndpoint
 {
     public static async Task<IResult> Handle(
         Request request,
-        ICommandExecutor commandExecutor,
+        ICommandBus commandBus,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandExecutor.Execute(
-                TaskListModule.StreamName(request.Id),
-                new AddTaskListCommand(request.Id, request.Name),
-                new CommandOptions
-                {
-                    ExpectedVersion = ExpectedVersion.StreamDoesNotExist
-                },
-                cancellationToken
-            );
+            await commandBus.Send(new AddTaskListCommand(request.Id, request.Name), cancellationToken);
 
             return Results.Ok(new Response(request.Id, request.Name));
         }

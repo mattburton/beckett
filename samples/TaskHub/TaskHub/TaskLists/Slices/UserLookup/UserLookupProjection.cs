@@ -1,4 +1,4 @@
-using TaskHub.Users.Contracts.Notifications;
+using TaskHub.Users.Notifications;
 
 namespace TaskHub.TaskLists.Slices.UserLookup;
 
@@ -6,7 +6,7 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
 {
     public void Configure(IProjectionConfiguration<string> configuration)
     {
-        configuration.CreatedBy<UserAddedNotification>(x => x.Username);
+        configuration.CreatedOrUpdatedBy<UserChanged>(x => x.Username);
     }
 
     public async Task Create(UserLookupReadModel state, CancellationToken cancellationToken)

@@ -4,21 +4,13 @@ public static class DeleteUserEndpoint
 {
     public static async Task<IResult> Handle(
         string username,
-        ICommandExecutor commandExecutor,
+        ICommandBus commandBus,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandExecutor.Execute(
-                UserModule.StreamName(username),
-                new DeleteUserCommand(username),
-                new CommandOptions
-                {
-                    ExpectedVersion = ExpectedVersion.StreamExists
-                },
-                cancellationToken
-            );
+            await commandBus.Send(new DeleteUserCommand(username), cancellationToken);
 
             return Results.Ok();
         }

@@ -1,5 +1,5 @@
 using TaskHub.Users.Slices.User;
 
-namespace TaskHub.Users.Contracts.Queries;
+namespace TaskHub.Users.Queries;
 
 public record UserQuery(string Username) : IQuery<UserReadModel>;

@@ -9,14 +9,14 @@ public class ChangeTaskListNameEndpointTests
         var name = Generate.String();
         var expectedStreamName = TaskListModule.StreamName(taskListId);
         var expectedCommand = new ChangeTaskListNameCommand(taskListId, name);
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
         var request = new ChangeTaskListNameEndpoint.Request(name);
 
-        await ChangeTaskListNameEndpoint.Handle(taskListId, request, commandExecutor, CancellationToken.None);
+        await ChangeTaskListNameEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
 
-        Assert.NotNull(commandExecutor.Received);
-        Assert.Equal(expectedStreamName, commandExecutor.Received.StreamName);
-        Assert.Equal(expectedCommand, commandExecutor.Received.Command);
+        var actualCommand = Assert.IsType<ChangeTaskListNameCommand>(commandBus.Received);
+        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
@@ -24,10 +24,10 @@ public class ChangeTaskListNameEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
         var request = new ChangeTaskListNameEndpoint.Request(name);
 
-        var result = await ChangeTaskListNameEndpoint.Handle(taskListId, request, commandExecutor, CancellationToken.None);
+        var result = await ChangeTaskListNameEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
 
         var response = Assert.IsType<Ok<ChangeTaskListNameEndpoint.Response>>(result);
         Assert.NotNull(response.Value);

@@ -14,7 +14,7 @@ public partial class UserNotificationsToSendReadModel
         Notifications[e.Task] = false;
     }
 
-    private void Apply(UserMentionNotificationSent e)
+    private void Apply(UserNotificationSent e)
     {
         Notifications[e.Task] = true;
     }

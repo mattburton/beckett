@@ -9,14 +9,14 @@ public class AddTaskEndpointTests
         var name = Generate.String();
         var expectedStreamName = TaskListModule.StreamName(taskListId);
         var expectedCommand = new AddTaskCommand(taskListId, name);
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
         var request = new AddTaskEndpoint.Request(name);
 
-        await AddTaskEndpoint.Handle(taskListId, request, commandExecutor, CancellationToken.None);
+        await AddTaskEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
 
-        Assert.NotNull(commandExecutor.Received);
-        Assert.Equal(expectedStreamName, commandExecutor.Received.StreamName);
-        Assert.Equal(expectedCommand, commandExecutor.Received.Command);
+        var actualCommand = Assert.IsType<AddTaskCommand>(commandBus.Received);
+        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
@@ -24,10 +24,10 @@ public class AddTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
         var request = new AddTaskEndpoint.Request(name);
 
-        var result = await AddTaskEndpoint.Handle(taskListId, request, commandExecutor, CancellationToken.None);
+        var result = await AddTaskEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
 
         var response = Assert.IsType<Ok<AddTaskEndpoint.Response>>(result);
         Assert.NotNull(response.Value);
@@ -40,11 +40,11 @@ public class AddTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
         var request = new AddTaskEndpoint.Request(name);
-        commandExecutor.Throws(new TaskAlreadyAddedException());
+        commandBus.Throws(new TaskAlreadyAddedException());
 
-        var result = await AddTaskEndpoint.Handle(taskListId, request, commandExecutor, CancellationToken.None);
+        var result = await AddTaskEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

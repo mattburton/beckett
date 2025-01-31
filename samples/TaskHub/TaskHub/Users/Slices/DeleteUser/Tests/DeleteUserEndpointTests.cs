@@ -9,24 +9,23 @@ public class DeleteUserEndpointTests
         var expectedStreamName = UserModule.StreamName(username);
         var expectedCommand = new DeleteUserCommand(username);
         var expectedVersion = ExpectedVersion.StreamExists;
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
 
-        await DeleteUserEndpoint.Handle(username, commandExecutor, CancellationToken.None);
+        await DeleteUserEndpoint.Handle(username, commandBus, CancellationToken.None);
 
-        Assert.NotNull(commandExecutor.Received);
-        Assert.Equal(expectedStreamName, commandExecutor.Received.StreamName);
-        Assert.Equal(expectedCommand, commandExecutor.Received.Command);
-        Assert.NotNull(commandExecutor.Received.Options);
-        Assert.Equal(expectedVersion, commandExecutor.Received.Options.ExpectedVersion);
+        var actualCommand = Assert.IsType<DeleteUserCommand>(commandBus.Received);
+        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        Assert.Equal(expectedCommand, actualCommand);
+        Assert.Equal(expectedVersion, actualCommand.ExpectedVersion);
     }
 
     [Fact]
     public async Task returns_ok_when_successful()
     {
         var username = Generate.String();
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
 
-        var result = await DeleteUserEndpoint.Handle(username, commandExecutor, CancellationToken.None);
+        var result = await DeleteUserEndpoint.Handle(username, commandBus, CancellationToken.None);
 
         Assert.IsType<Ok>(result);
     }
@@ -35,10 +34,10 @@ public class DeleteUserEndpointTests
     public async Task returns_conflict_when_stream_does_not_exist()
     {
         var username = Generate.String();
-        var commandExecutor = new FakeCommandExecutor();
-        commandExecutor.Throws(new StreamDoesNotExistException());
+        var commandBus = new FakeCommandBus();
+        commandBus.Throws(new StreamDoesNotExistException());
 
-        var result = await DeleteUserEndpoint.Handle(username, commandExecutor, CancellationToken.None);
+        var result = await DeleteUserEndpoint.Handle(username, commandBus, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

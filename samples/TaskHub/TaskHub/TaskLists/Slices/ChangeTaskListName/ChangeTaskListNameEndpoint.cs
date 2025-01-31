@@ -5,15 +5,11 @@ public static class ChangeTaskListNameEndpoint
     public static async Task<IResult> Handle(
         Guid id,
         Request request,
-        ICommandExecutor commandExecutor,
+        ICommandBus commandBus,
         CancellationToken cancellationToken
     )
     {
-        await commandExecutor.Execute(
-            TaskListModule.StreamName(id),
-            new ChangeTaskListNameCommand(id, request.Name),
-            cancellationToken
-        );
+        await commandBus.Send(new ChangeTaskListNameCommand(id, request.Name), cancellationToken);
 
         return Results.Ok(new Response(id, request.Name));
     }

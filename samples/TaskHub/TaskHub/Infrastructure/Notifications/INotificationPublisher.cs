@@ -2,5 +2,5 @@ namespace TaskHub.Infrastructure.Notifications;
 
 public interface INotificationPublisher
 {
-    Task Publish(string channel, object notification, CancellationToken cancellationToken);
+    Task Publish<T>(string streamName, T notification, CancellationToken cancellationToken) where T : INotification;
 }

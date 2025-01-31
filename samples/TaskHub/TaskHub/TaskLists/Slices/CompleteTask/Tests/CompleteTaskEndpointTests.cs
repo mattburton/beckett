@@ -9,13 +9,13 @@ public class CompleteTaskEndpointTests
         var task = Generate.String();
         var expectedStreamName = TaskListModule.StreamName(taskListId);
         var expectedCommand = new CompleteTaskCommand(taskListId, task);
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
 
-        await CompleteTaskEndpoint.Handle(taskListId, task, commandExecutor, CancellationToken.None);
+        await CompleteTaskEndpoint.Handle(taskListId, task, commandBus, CancellationToken.None);
 
-        Assert.NotNull(commandExecutor.Received);
-        Assert.Equal(expectedStreamName, commandExecutor.Received.StreamName);
-        Assert.Equal(expectedCommand, commandExecutor.Received.Command);
+        var actualCommand = Assert.IsType<CompleteTaskCommand>(commandBus.Received);
+        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
@@ -23,9 +23,9 @@ public class CompleteTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var task = Generate.String();
-        var commandExecutor = new FakeCommandExecutor();
+        var commandBus = new FakeCommandBus();
 
-        var result = await CompleteTaskEndpoint.Handle(taskListId, task, commandExecutor, CancellationToken.None);
+        var result = await CompleteTaskEndpoint.Handle(taskListId, task, commandBus, CancellationToken.None);
 
         var response = Assert.IsType<Ok<CompleteTaskEndpoint.Response>>(result);
         Assert.NotNull(response.Value);
@@ -38,10 +38,10 @@ public class CompleteTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var task = Generate.String();
-        var commandExecutor = new FakeCommandExecutor();
-        commandExecutor.Throws(new TaskAlreadyCompletedException());
+        var commandBus = new FakeCommandBus();
+        commandBus.Throws(new TaskAlreadyCompletedException());
 
-        var result = await CompleteTaskEndpoint.Handle(taskListId, task, commandExecutor, CancellationToken.None);
+        var result = await CompleteTaskEndpoint.Handle(taskListId, task, commandBus, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

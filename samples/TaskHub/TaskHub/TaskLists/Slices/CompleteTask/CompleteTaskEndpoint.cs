@@ -5,17 +5,13 @@ public static class CompleteTaskEndpoint
     public static async Task<IResult> Handle(
         Guid taskListId,
         string task,
-        ICommandExecutor commandExecutor,
+        ICommandBus commandBus,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandExecutor.Execute(
-                TaskListModule.StreamName(taskListId),
-                new CompleteTaskCommand(taskListId, task),
-                cancellationToken
-            );
+            await commandBus.Send(new CompleteTaskCommand(taskListId, task), cancellationToken);
 
             return Results.Ok(new Response(taskListId, task));
         }

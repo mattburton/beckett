@@ -4,21 +4,13 @@ public static class RegisterUserEndpoint
 {
     public static async Task<IResult> Handle(
         Request request,
-        ICommandExecutor commandExecutor,
+        ICommandBus commandBus,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandExecutor.Execute(
-                UserModule.StreamName(request.Username),
-                new RegisterUserCommand(request.Username, request.Email),
-                new CommandOptions
-                {
-                    ExpectedVersion = ExpectedVersion.StreamDoesNotExist
-                },
-                cancellationToken
-            );
+            await commandBus.Send(new RegisterUserCommand(request.Username, request.Email), cancellationToken);
 
             return Results.Ok();
         }

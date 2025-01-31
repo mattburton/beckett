@@ -5,17 +5,13 @@ public static class AddTaskEndpoint
     public static async Task<IResult> Handle(
         Guid taskListId,
         Request request,
-        ICommandExecutor commandExecutor,
+        ICommandBus commandBus,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandExecutor.Execute(
-                TaskListModule.StreamName(taskListId),
-                new AddTaskCommand(taskListId, request.Task),
-                cancellationToken
-            );
+            await commandBus.Send(new AddTaskCommand(taskListId, request.Task), cancellationToken);
 
             return Results.Ok(new Response(taskListId, request.Task));
         }
