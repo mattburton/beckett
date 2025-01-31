@@ -27,25 +27,10 @@ public class CheckpointProcessor(
 
         logger.ProcessingCheckpoint(checkpoint.Id, checkpoint.StreamPosition, checkpoint.StreamVersion);
 
-        var startingStreamPosition = checkpoint.StreamPosition + 1;
-        var batchSize = options.Subscriptions.SubscriptionStreamBatchSize;
-
-        if (checkpoint.IsRetryOrFailure)
-        {
-            startingStreamPosition = checkpoint.StreamPosition;
-
-            if (!subscription.Handler.IsBatchHandler)
-            {
-                batchSize = 1;
-            }
-        }
-
         var result = await HandleMessageBatch(
             checkpoint,
             subscription,
-            checkpoint.StreamName,
-            startingStreamPosition,
-            batchSize,
+            options.Subscriptions.SubscriptionStreamBatchSize,
             cancellationToken
         );
 
@@ -110,8 +95,6 @@ public class CheckpointProcessor(
     private async Task<IMessageBatchResult> HandleMessageBatch(
         Checkpoint checkpoint,
         Subscription subscription,
-        string streamName,
-        long startingStreamPosition,
         int batchSize,
         CancellationToken cancellationToken
     )
@@ -122,8 +105,7 @@ public class CheckpointProcessor(
         {
             messageBatch = await ReadMessageBatch(
                 checkpoint,
-                streamName,
-                startingStreamPosition,
+                subscription,
                 batchSize,
                 cancellationToken
             );
@@ -138,12 +120,12 @@ public class CheckpointProcessor(
                 e,
                 "Error reading message batch for subscription {SubscriptionType} for stream {StreamName} at {StreamPosition} [Checkpoint: {CheckpointId}]",
                 subscription.Name,
-                streamName,
-                startingStreamPosition,
+                checkpoint.StreamName,
+                checkpoint.StartingStreamPosition,
                 checkpoint.Id
             );
 
-            return new Error(startingStreamPosition, e);
+            return new Error(checkpoint.StartingStreamPosition, e);
         }
 
         try
@@ -158,7 +140,6 @@ public class CheckpointProcessor(
                 return await DispatchMessageBatchToHandler(
                     checkpoint,
                     subscription,
-                    streamName,
                     messageBatch,
                     cancellationToken
                 );
@@ -191,7 +172,7 @@ public class CheckpointProcessor(
                         "Error dispatching message {MessageType} to subscription {SubscriptionType} for stream {StreamName} [Message ID: {MessageId}, Checkpoint: {CheckpointId}]",
                         streamMessage.Type,
                         subscription.Name,
-                        streamName,
+                        checkpoint.StreamName,
                         streamMessage.Id,
                         checkpoint.Id
                     );
@@ -239,7 +220,6 @@ public class CheckpointProcessor(
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        string streamName,
         IReadOnlyList<IMessageContext> messages,
         CancellationToken cancellationToken
     )
@@ -264,7 +244,7 @@ public class CheckpointProcessor(
                 e,
                 "Error dispatching message batch to subscription {SubscriptionName} for stream {StreamName} [Checkpoint: {CheckpointId}]",
                 subscription.Name,
-                streamName,
+                checkpoint.StreamName,
                 checkpoint.Id
             );
 
@@ -274,20 +254,45 @@ public class CheckpointProcessor(
 
     private async Task<IReadOnlyList<IMessageContext>> ReadMessageBatch(
         Checkpoint checkpoint,
-        string streamName,
-        long startingStreamPosition,
+        Subscription subscription,
         int batchSize,
         CancellationToken cancellationToken
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var startingStreamPosition = checkpoint.StartingStreamPosition;
+        var endingStreamPosition = checkpoint.StreamVersion;
+        var skipBatchSizeCheck = false;
+
+        if (checkpoint.IsRetryOrFailure)
+        {
+            startingStreamPosition = checkpoint.StreamPosition;
+
+            if (!subscription.Handler.IsBatchHandler)
+            {
+                endingStreamPosition = startingStreamPosition + 1;
+
+                skipBatchSizeCheck = true;
+            }
+        }
+
+        if (!skipBatchSizeCheck)
+        {
+            var count = endingStreamPosition - checkpoint.StreamPosition;
+
+            if (count > batchSize)
+            {
+                endingStreamPosition = checkpoint.StreamPosition + batchSize;
+            }
+        }
+
         var stream = await messageStore.ReadStream(
-            streamName,
+            checkpoint.StreamName,
             new ReadOptions
             {
                 StartingStreamPosition = startingStreamPosition,
-                Count = batchSize
+                EndingStreamPosition = endingStreamPosition
             },
             cancellationToken
         );

@@ -15,6 +15,8 @@ public record Checkpoint(
 {
     public bool IsRetryOrFailure => Status is CheckpointStatus.Retry or CheckpointStatus.Failed;
 
+    public long StartingStreamPosition => StreamPosition + 1;
+
     public static Checkpoint? From(NpgsqlDataReader reader)
     {
         return !reader.HasRows
