@@ -3,9 +3,8 @@ using Beckett.Messages;
 
 namespace Beckett.Tests.Messages;
 
-[Collection("MessageTypeMap")]
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Local")]
-public sealed class MessageTypeMapTests : IDisposable
+public class MessageTypeMapTests
 {
     [Fact]
     public void maps_type_name()
@@ -36,11 +35,6 @@ public sealed class MessageTypeMapTests : IDisposable
         Assert.Throws<MessageTypeAlreadyMappedException>(
             () => MessageTypeMap.Map<TestMessage2>("type-map-test")
         );
-    }
-
-    public void Dispose()
-    {
-        MessageTypeMap.Clear();
     }
 
     private record TestMessage;

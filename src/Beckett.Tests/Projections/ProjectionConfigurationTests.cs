@@ -58,26 +58,10 @@ public partial class ProjectionConfigurationTests
         }
     }
 
-    public class when_ignore_filter_is_configured
+    public class when_where_predicate_is_configured
     {
         [Fact]
-        public void excludes_messages_matching_filter()
-        {
-            var projection = new TestReadModelProjection();
-            var configuration = new ProjectionConfiguration<Guid>();
-            projection.Configure(configuration);
-            var batch = new List<IMessageContext>
-            {
-                MessageContext.From(new TestCreateMessage(Guid.Empty))
-            };
-
-            var filteredBatch = configuration.Filter(batch);
-
-            Assert.Empty(filteredBatch);
-        }
-
-        [Fact]
-        public void includes_messages_that_do_not_match_filter()
+        public void includes_messages_matching_predicate()
         {
             var projection = new TestReadModelProjection();
             var configuration = new ProjectionConfiguration<Guid>();
@@ -90,6 +74,22 @@ public partial class ProjectionConfigurationTests
             var filteredBatch = configuration.Filter(batch);
 
             Assert.Single(filteredBatch);
+        }
+
+        [Fact]
+        public void excludes_messages_that_do_not_match_predicate()
+        {
+            var projection = new TestReadModelProjection();
+            var configuration = new ProjectionConfiguration<Guid>();
+            projection.Configure(configuration);
+            var batch = new List<IMessageContext>
+            {
+                MessageContext.From(new TestCreateMessage(Guid.Empty))
+            };
+
+            var filteredBatch = configuration.Filter(batch);
+
+            Assert.Empty(filteredBatch);
         }
     }
 
@@ -109,7 +109,7 @@ public partial class ProjectionConfigurationTests
     {
         public void Configure(IProjectionConfiguration<Guid> configuration)
         {
-            configuration.CreatedBy<TestCreateMessage>(x => x.Id).IgnoreWhen(x => x.Id == Guid.Empty);
+            configuration.CreatedBy<TestCreateMessage>(x => x.Id).Where(x => x.Id != Guid.Empty);
             configuration.UpdatedBy<TestUpdateMessage>(x => x.Id);
         }
 

@@ -1,16 +1,9 @@
 using System.Text.Json;
-using Beckett.Messages;
 
 namespace Beckett.Tests;
 
-[Collection("MessageTypeMap")]
-public sealed class MessageTests : IDisposable
+public class MessageTests
 {
-    public MessageTests()
-    {
-        MessageTypeMap.Map<TestMessage>("test-message");
-    }
-
     [Fact]
     public void maps_type_and_serializes_data_in_constructor()
     {
@@ -71,12 +64,5 @@ public sealed class MessageTests : IDisposable
         message.WithTenant(expectedTenant);
 
         Assert.Single(message.Metadata, new KeyValuePair<string, string>("$tenant", expectedTenant));
-    }
-
-    private record TestMessage(Guid Id);
-
-    public void Dispose()
-    {
-        MessageTypeMap.Clear();
     }
 }
