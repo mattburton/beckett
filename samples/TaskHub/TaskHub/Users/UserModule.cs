@@ -38,9 +38,9 @@ public class UserModule : IModule, IConfigureRoutes
             .Handler(
                 (IMessageContext context) =>
                 {
-                    Console.WriteLine($"[MESSAGE] category: {Category}, stream: {context.StreamName}, type: {context.Type}, id: {context.Id} [lag: {DateTimeOffset.UtcNow.Subtract(context.Timestamp).TotalMilliseconds} ms]");
-
-                    return Task.CompletedTask;
+                    Console.WriteLine(
+                        $"[MESSAGE] category: {Category}, stream: {context.StreamName}, type: {context.Type}, id: {context.Id} [lag: {DateTimeOffset.UtcNow.Subtract(context.Timestamp).TotalMilliseconds} ms]"
+                    );
                 }
             );
     }
