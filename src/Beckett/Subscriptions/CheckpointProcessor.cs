@@ -137,12 +137,31 @@ public class CheckpointProcessor(
 
             if (subscription.Handler.IsBatchHandler)
             {
-                return await DispatchMessageBatchToHandler(
-                    checkpoint,
-                    subscription,
-                    messageBatch,
-                    cancellationToken
-                );
+                try
+                {
+                    return await DispatchMessageBatchToHandler(
+                        checkpoint,
+                        subscription,
+                        messageBatch,
+                        cancellationToken
+                    );
+                }
+                catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(
+                        e,
+                        "Error dispatching message batch to subscription {SubscriptionName} for stream {StreamName} [Checkpoint: {CheckpointId}]",
+                        subscription.Name,
+                        checkpoint.StreamName,
+                        checkpoint.Id
+                    );
+
+                    return new Error(messageBatch[0].StreamPosition, e);
+                }
             }
 
             var lastProcessedStreamPosition = checkpoint.StreamPosition;
@@ -214,7 +233,33 @@ public class CheckpointProcessor(
 
         using var scope = serviceProvider.CreateScope();
 
-        await subscription.Handler.Invoke(messageContext, scope.ServiceProvider, cancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        cts.CancelAfter(options.Subscriptions.ReservationTimeout);
+
+        try
+        {
+            await subscription.Handler.Invoke(messageContext, scope.ServiceProvider, cts.Token);
+        }
+        //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
+        catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
+        {
+            throw timeoutException;
+        }
+        catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Shutdown signal received while processing message");
+
+                throw new OperationCanceledException(e.Message, e, cancellationToken);
+            }
+
+            throw new TimeoutException(
+                $"Handler exceeded the reservation timeout of {options.Subscriptions.ReservationTimeout.TotalSeconds} seconds while handling message {messageContext.Id} for checkpoint {checkpoint.Id}",
+                e
+            );
+        }
     }
 
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
@@ -224,31 +269,38 @@ public class CheckpointProcessor(
         CancellationToken cancellationToken
     )
     {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        cts.CancelAfter(options.Subscriptions.ReservationTimeout);
+
         try
         {
             var messageBatch = messages.ToList();
 
             using var scope = serviceProvider.CreateScope();
 
-            await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, cancellationToken);
+            await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, cts.Token);
 
             return new Success(messages[^1].StreamPosition);
         }
-        catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+        //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
+        catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
         {
-            throw;
+            throw timeoutException;
         }
-        catch (Exception e)
+        catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
         {
-            logger.LogError(
-                e,
-                "Error dispatching message batch to subscription {SubscriptionName} for stream {StreamName} [Checkpoint: {CheckpointId}]",
-                subscription.Name,
-                checkpoint.StreamName,
-                checkpoint.Id
-            );
+            if (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Shutdown signal received while processing message");
 
-            return new Error(messages[0].StreamPosition, e);
+                throw new OperationCanceledException(e.Message, e, cancellationToken);
+            }
+
+            throw new TimeoutException(
+                $"Handler exceeded the reservation timeout of {options.Subscriptions.ReservationTimeout.TotalSeconds} seconds while handling message batch starting with {messages[0].Id} for checkpoint {checkpoint.Id}",
+                e
+            );
         }
     }
 
