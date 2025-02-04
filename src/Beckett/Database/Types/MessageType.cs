@@ -8,8 +8,8 @@ public class MessageType
     public required Guid Id { get; init; }
     public required string StreamName { get; init; }
     public required string Type { get; init; }
-    public required JsonDocument Data { get; init; }
-    public required JsonDocument Metadata { get; init; }
+    public required JsonElement Data { get; init; }
+    public required JsonElement Metadata { get; init; }
     public long? ExpectedVersion { get; init; }
 
     public static MessageType From(

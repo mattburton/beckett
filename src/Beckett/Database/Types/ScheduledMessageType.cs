@@ -6,8 +6,8 @@ public class ScheduledMessageType
 {
     public Guid Id { get; init; }
     public string Type { get; init; } = null!;
-    public JsonDocument Data { get; init; } = null!;
-    public JsonDocument Metadata { get; init; } = null!;
+    public JsonElement Data { get; init; }
+    public JsonElement Metadata { get; init; }
     public DateTimeOffset DeliverAt { get; init; } = DateTimeOffset.UtcNow;
 
     public static ScheduledMessageType From(

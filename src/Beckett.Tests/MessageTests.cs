@@ -9,7 +9,7 @@ public class MessageTests
     {
         var expectedId = Guid.NewGuid();
         var input = new TestMessage(expectedId);
-        var expectedData = JsonDocument.Parse(JsonSerializer.Serialize(input));
+        var expectedData = JsonDocument.Parse(JsonSerializer.Serialize(input)).RootElement;
 
         var message = new Message(input);
 

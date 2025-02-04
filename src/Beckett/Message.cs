@@ -8,7 +8,6 @@ namespace Beckett;
 /// </summary>
 public class Message
 {
-    private static readonly JsonDocument EmptyJsonDocument = JsonDocument.Parse("{}");
     private static readonly Type MetadataDictionaryType = typeof(Dictionary<string, string>);
 
     /// <summary>
@@ -46,10 +45,9 @@ public class Message
     /// <param name="type">Message type</param>
     /// <param name="data">Message data</param>
     /// <param name="metadata">Message metadata</param>
-    public Message(string type, JsonDocument data, Dictionary<string, string>? metadata = null)
+    public Message(string type, JsonElement data, Dictionary<string, string>? metadata = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(type);
-        ArgumentNullException.ThrowIfNull(data);
 
         Type = type;
         Data = data;
@@ -57,7 +55,7 @@ public class Message
     }
 
     public string Type { get; }
-    public JsonDocument Data { get; }
+    public JsonElement Data { get; }
     public Dictionary<string, string> Metadata { get; }
 
     public Message WithMetadata(string key, string? value)
@@ -80,6 +78,6 @@ public class Message
         tenant
     );
 
-    internal JsonDocument SerializedMetadata =>
-        Metadata.Count > 0 ? MessageSerializer.Serialize(MetadataDictionaryType, Metadata) : EmptyJsonDocument;
+    internal JsonElement SerializedMetadata =>
+        Metadata.Count > 0 ? MessageSerializer.Serialize(MetadataDictionaryType, Metadata) : EmptyJsonElement.Instance;
 }

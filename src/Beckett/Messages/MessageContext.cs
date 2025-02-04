@@ -9,16 +9,14 @@ public record MessageContext(
     long StreamPosition,
     long GlobalPosition,
     string Type,
-    JsonDocument Data,
-    JsonDocument Metadata,
+    JsonElement Data,
+    JsonElement Metadata,
     DateTimeOffset Timestamp,
     Type? MessageType = null,
     object? Message = null,
     Dictionary<string, string>? MessageMetadata = null
 ) : IMessageContext
 {
-    private static readonly JsonDocument EmptyJsonDocument = JsonDocument.Parse("{}");
-
     private readonly Lazy<Type?> _messageType = new(() => MessageType ?? (MessageTypeMap.TryGetType(Type, out var type) ? type : null));
     private readonly Lazy<object?> _message = new(() => Message ?? MessageSerializer.Deserialize(Type, Data));
     private readonly Lazy<Dictionary<string, string>> _messageMetadata = new(MessageMetadata ?? Metadata.ToMetadataDictionary());
@@ -46,8 +44,8 @@ public record MessageContext(
         0,
         0,
         string.Empty,
-        EmptyJsonDocument,
-        EmptyJsonDocument,
+        EmptyJsonElement.Instance,
+        EmptyJsonElement.Instance,
         DateTimeOffset.UtcNow,
         message.GetType(),
         message

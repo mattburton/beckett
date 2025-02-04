@@ -11,12 +11,16 @@ public class PostgresMessage
     public required long StreamPosition { get; init; }
     public required long GlobalPosition { get; init; }
     public required string Type { get; init; }
-    public required JsonDocument Data { get; init; }
-    public required JsonDocument Metadata { get; init; }
+    public required JsonElement Data { get; init; }
+    public required JsonElement Metadata { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 
-    public static PostgresMessage From(NpgsqlDataReader reader) =>
-        new()
+    public static PostgresMessage From(NpgsqlDataReader reader)
+    {
+        using var data = reader.GetFieldValue<JsonDocument>(6);
+        using var metadata = reader.GetFieldValue<JsonDocument>(7);
+
+        return new PostgresMessage
         {
             Id = reader.GetFieldValue<Guid>(0),
             StreamName = reader.GetFieldValue<string>(1),
@@ -24,8 +28,9 @@ public class PostgresMessage
             StreamPosition = reader.GetFieldValue<long>(3),
             GlobalPosition = reader.GetFieldValue<long>(4),
             Type = reader.GetFieldValue<string>(5),
-            Data = reader.GetFieldValue<JsonDocument>(6),
-            Metadata = reader.GetFieldValue<JsonDocument>(7),
+            Data = data.RootElement.Clone(),
+            Metadata = metadata.RootElement.Clone(),
             Timestamp = reader.GetFieldValue<DateTimeOffset>(8)
         };
+    }
 }

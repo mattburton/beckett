@@ -30,7 +30,7 @@ public record ExceptionData(string Type, string Message, List<string>? StackTrac
         );
     }
 
-    public static ExceptionData? FromJson(JsonDocument document) => document.Deserialize<ExceptionData>();
+    public static ExceptionData? FromJson(JsonElement element) => element.Deserialize<ExceptionData>();
 
     public JsonDocument ToJson() => JsonSerializer.SerializeToDocument(this);
 }
