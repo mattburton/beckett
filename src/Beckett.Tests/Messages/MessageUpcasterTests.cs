@@ -20,7 +20,7 @@ public sealed class MessageUpcasterTests : IDisposable
     [Fact]
     public void returns_original_data_if_no_upcaster_is_registered_for_type_name()
     {
-        var expected = JsonDocument.Parse(@"{""Name"":""Value""}");
+        var expected = JsonDocument.Parse(@"{""Name"":""Value""}").RootElement;
 
         var result = MessageUpcaster.Upcast("message-type", expected);
 
@@ -32,7 +32,7 @@ public sealed class MessageUpcasterTests : IDisposable
     {
         MessageUpcaster.Register("old-type", "new-type", x => x);
 
-        var result = MessageUpcaster.Upcast("old-type", JsonDocument.Parse("{}"));
+        var result = MessageUpcaster.Upcast("old-type", EmptyJsonElement.Instance);
 
         Assert.Equal("new-type", result.TypeName);
     }
@@ -61,7 +61,7 @@ public sealed class MessageUpcasterTests : IDisposable
             }
         );
 
-        var dataV1 = JsonDocument.Parse($@"{{""PropertyV1"":""{expectedValue}""}}");
+        var dataV1 = JsonDocument.Parse($@"{{""PropertyV1"":""{expectedValue}""}}").RootElement;
 
         var result = MessageUpcaster.Upcast("type-v1", dataV1);
 
@@ -132,7 +132,7 @@ public sealed class MessageUpcasterTests : IDisposable
             }
         );
 
-        var dataV1 = JsonDocument.Parse($@"{{""PropertyV1"":""{expectedValue}""}}");
+        var dataV1 = JsonDocument.Parse($@"{{""PropertyV1"":""{expectedValue}""}}").RootElement;
 
         var result = MessageUpcaster.Upcast("type-v1", dataV1);
 

@@ -18,7 +18,7 @@ public static class MessageUpcaster
         Upcasters.Add(new MappedType(oldTypeName, newTypeName), transformation);
     }
 
-    public static (string TypeName, JsonDocument Data) Upcast(string typeName, JsonDocument data)
+    public static (string TypeName, JsonElement Data) Upcast(string typeName, JsonElement data)
     {
         var mappedTypes = FindAllMappedTypes(typeName).ToArray();
 
@@ -27,7 +27,7 @@ public static class MessageUpcaster
             return (typeName, data);
         }
 
-        var result = JsonObject.Create(data.RootElement) ??
+        var result = JsonObject.Create(data) ??
                      throw new InvalidOperationException("Unable to create JsonObject from message data");
 
         var newTypeName = typeName;
@@ -43,7 +43,9 @@ public static class MessageUpcaster
             result = upcaster(result);
         }
 
-        return (newTypeName, JsonDocument.Parse(result.ToJsonString()));
+        using var document = JsonDocument.Parse(result.ToJsonString());
+
+        return (newTypeName, document.RootElement.Clone());
     }
 
     public static void Clear()

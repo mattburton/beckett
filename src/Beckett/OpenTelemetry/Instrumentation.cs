@@ -169,7 +169,7 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         activity.AddTag(TelemetryConstants.Message.Id, messageContext.Id);
 
-        if (messageContext.Metadata.RootElement.TryGetProperty(
+        if (messageContext.Metadata.TryGetProperty(
                 MessageConstants.Metadata.CorrelationId,
                 out var correlationIdProperty
             ))
@@ -180,7 +180,7 @@ public class Instrumentation : IInstrumentation, IDisposable
             activity.AddBaggage(TelemetryConstants.Message.CorrelationId, correlationId);
         }
 
-        if (messageContext.Metadata.RootElement.TryGetProperty(
+        if (messageContext.Metadata.TryGetProperty(
                 MessageConstants.Metadata.CausationId,
                 out var causationIdProperty
             ))
@@ -190,7 +190,7 @@ public class Instrumentation : IInstrumentation, IDisposable
             activity.AddTag(TelemetryConstants.Message.CausationId, causationId);
         }
 
-        if (messageContext.Metadata.RootElement.TryGetProperty(
+        if (messageContext.Metadata.TryGetProperty(
                 MessageConstants.Metadata.Tenant,
                 out var tenantProperty
             ))
@@ -256,11 +256,11 @@ public class Instrumentation : IInstrumentation, IDisposable
         return (long)command.ExecuteScalar()!;
     }
 
-    private IEnumerable<string> ExtractTraceContextFromMetadata(JsonDocument metadata, string key)
+    private IEnumerable<string> ExtractTraceContextFromMetadata(JsonElement metadata, string key)
     {
         try
         {
-            if (metadata.RootElement.TryGetProperty(key, out var value))
+            if (metadata.TryGetProperty(key, out var value))
             {
                 if (value.ValueKind == JsonValueKind.Null)
                 {

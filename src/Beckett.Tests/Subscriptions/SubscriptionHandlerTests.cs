@@ -249,8 +249,8 @@ public class SubscriptionHandlerTests
         1,
         1,
         "test-message",
-        message != null ? MessageSerializer.Serialize(typeof(TestMessage), message) : JsonDocument.Parse("{}"),
-        JsonDocument.Parse("{}"),
+        message != null ? MessageSerializer.Serialize(typeof(TestMessage), message) : EmptyJsonElement.Instance,
+        EmptyJsonElement.Instance,
         DateTimeOffset.UtcNow
     );
 
@@ -262,8 +262,8 @@ public class SubscriptionHandlerTests
             1,
             1,
             "test-message",
-            JsonDocument.Parse("{}"),
-            JsonDocument.Parse("{}"),
+            EmptyJsonElement.Instance,
+            EmptyJsonElement.Instance,
             DateTimeOffset.UtcNow
         )
     ];

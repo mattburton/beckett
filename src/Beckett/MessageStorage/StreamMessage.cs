@@ -8,7 +8,7 @@ public record StreamMessage(
     long StreamPosition,
     long GlobalPosition,
     string Type,
-    JsonDocument Data,
-    JsonDocument Metadata,
+    JsonElement Data,
+    JsonElement Metadata,
     DateTimeOffset Timestamp
 );

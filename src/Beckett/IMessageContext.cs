@@ -32,12 +32,12 @@ public interface IMessageContext
     /// <summary>
     /// Message data
     /// </summary>
-    JsonDocument Data { get; }
+    JsonElement Data { get; }
 
     /// <summary>
     /// Message metadata
     /// </summary>
-    JsonDocument Metadata { get; }
+    JsonElement Metadata { get; }
 
     /// <summary>
     /// The timestamp of when the message was written to the message store

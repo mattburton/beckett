@@ -408,8 +408,8 @@ public class CheckpointProcessorTests
         1,
         1,
         "test-message",
-        JsonDocument.Parse("{}"),
-        JsonDocument.Parse("{}"),
+        EmptyJsonElement.Instance,
+        EmptyJsonElement.Instance,
         DateTimeOffset.UtcNow
     );
 

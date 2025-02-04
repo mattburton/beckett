@@ -11,12 +11,14 @@ public static class MessageSerializer
         Options = options;
     }
 
-    public static JsonDocument Serialize(Type messageType, object message)
+    public static JsonElement Serialize(Type messageType, object message)
     {
-        return JsonSerializer.SerializeToDocument(message, messageType, Options);
+        using var document = JsonSerializer.SerializeToDocument(message, messageType, Options);
+
+        return document.RootElement.Clone();
     }
 
-    public static object? Deserialize(string type, JsonDocument data)
+    public static object? Deserialize(string type, JsonElement data)
     {
         var result = MessageUpcaster.Upcast(type, data);
 
