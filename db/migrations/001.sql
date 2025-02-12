@@ -86,25 +86,19 @@ BEGIN
     UPDATE __schema__.messages
     SET archived = TRUE
     WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position;
-
-    IF FOUND IS FALSE THEN
-      RETURN NULL;
-    END IF;
+    AND stream_position < NEW.stream_position
+    AND archived = FALSE;
   END IF;
 
   IF NEW.type = '$stream_archived' THEN
     UPDATE __schema__.messages
     SET archived = TRUE
     WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position;
-
-    IF FOUND IS FALSE THEN
-      RETURN NULL;
-    END IF;
+    AND stream_position < NEW.stream_position
+    AND archived = FALSE;
   END IF;
 
-  RETURN new;
+  RETURN NEW;
 END;
 $$;
 
