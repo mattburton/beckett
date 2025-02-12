@@ -10,6 +10,11 @@ public static class MessageTypeMap
     private static GetNameFallback? _getNameFallback;
     private static TryGetTypeFallback? _tryGetTypeFallback;
 
+    static MessageTypeMap()
+    {
+        MapSystemTypes();
+    }
+
     public static void Configure(GetNameFallback getNameFallback)
     {
         _getNameFallback = getNameFallback;
@@ -94,6 +99,12 @@ public static class MessageTypeMap
         NameToTypeMap.Clear();
         TypeToNameMap.Clear();
     }
+
+    private static void MapSystemTypes()
+    {
+        Map<StreamArchived>("$stream_archived");
+        Map<StreamTruncated>("$stream_truncated");
+    }
 }
 
 public delegate string GetNameFallback(Type type);
@@ -101,9 +112,6 @@ public delegate string GetNameFallback(Type type);
 public delegate Type? TryGetTypeFallback(string name);
 
 public class UnknownTypeException(string name) : Exception($"Unknown type name: {name}");
-
-public class MessageTypesCannotBeMappedToThemselvesException(string name)
-    : Exception($"Message types cannot be mapped to themselves: {name}.");
 
 public class MessageTypeAlreadyMappedException(string name, string existingName)
     : Exception($"Message type name '{name}' is already mapped to {existingName}.");

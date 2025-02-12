@@ -750,6 +750,41 @@ $$;
 
 
 --
+-- Name: stream_operations(); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.stream_operations() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+  IF NEW.type = '$stream_truncated' THEN
+    UPDATE beckett.messages
+    SET archived = TRUE
+    WHERE stream_name = NEW.stream_name
+    AND stream_position < NEW.stream_position;
+
+    IF FOUND IS FALSE THEN
+      RETURN NULL;
+    END IF;
+  END IF;
+
+  IF NEW.type = '$stream_archived' THEN
+    UPDATE beckett.messages
+    SET archived = TRUE
+    WHERE stream_name = NEW.stream_name
+    AND stream_position < NEW.stream_position;
+
+    IF FOUND IS FALSE THEN
+      RETURN NULL;
+    END IF;
+  END IF;
+
+  RETURN new;
+END;
+$_$;
+
+
+--
 -- Name: try_advisory_lock(text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -1168,6 +1203,13 @@ ALTER INDEX beckett.messages_stream_name_stream_position_archived_key ATTACH PAR
 --
 
 CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkpoints FOR EACH ROW EXECUTE FUNCTION beckett.checkpoint_preprocessor();
+
+
+--
+-- Name: messages stream_operations; Type: TRIGGER; Schema: beckett; Owner: -
+--
+
+CREATE TRIGGER stream_operations BEFORE INSERT ON beckett.messages FOR EACH ROW EXECUTE FUNCTION beckett.stream_operations();
 
 
 --
