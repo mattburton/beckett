@@ -1,6 +1,6 @@
-namespace Beckett.Dashboard.MessageStore.GetCorrelatedBy;
+namespace Beckett.Dashboard.MessageStore.CorrelatedBy;
 
-public static class GetCorrelatedByEndpoint
+public static class CorrelatedByEndpoint
 {
     public static async Task<IResult> Handle(
         string correlationId,

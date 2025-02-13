@@ -1,6 +1,6 @@
-namespace Beckett.Dashboard.MessageStore.GetMessage;
+namespace Beckett.Dashboard.MessageStore.Message;
 
-public static class GetMessageByStreamPositionEndpoint
+public static class MessageByStreamPositionEndpoint
 {
     public static async Task<IResult> Handle(
         string streamName,

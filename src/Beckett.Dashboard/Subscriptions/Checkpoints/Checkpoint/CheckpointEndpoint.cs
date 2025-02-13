@@ -1,6 +1,6 @@
-namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetCheckpoint;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Checkpoint;
 
-public static class GetCheckpointEndpoint
+public static class CheckpointEndpoint
 {
     public static async Task<IResult> Handle(long id, IDashboard dashboard, CancellationToken cancellationToken)
     {

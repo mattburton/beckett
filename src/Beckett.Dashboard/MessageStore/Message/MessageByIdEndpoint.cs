@@ -1,6 +1,6 @@
-namespace Beckett.Dashboard.MessageStore.GetMessage;
+namespace Beckett.Dashboard.MessageStore.Message;
 
-public static class GetMessageByIdEndpoint
+public static class MessageByIdEndpoint
 {
     public static async Task<IResult> Handle(
         string id,

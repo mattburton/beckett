@@ -1,6 +1,6 @@
-namespace Beckett.Dashboard.Metrics.GetMetrics;
+namespace Beckett.Dashboard.Metrics;
 
-public static class GetMetricsEndpoint
+public static class MetricsEndpoint
 {
     public static async Task<IResult> Handle(IDashboard dashboard, CancellationToken cancellationToken)
     {

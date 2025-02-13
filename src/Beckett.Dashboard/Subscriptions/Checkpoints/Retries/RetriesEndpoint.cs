@@ -1,6 +1,6 @@
-namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetFailed;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Retries;
 
-public static class GetFailedEndpoint
+public static class RetriesEndpoint
 {
     public static async Task<IResult> Handle(
         string? query,
@@ -13,16 +13,16 @@ public static class GetFailedEndpoint
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.Subscriptions.GetFailed(
+        var result = await dashboard.Subscriptions.GetRetries(
             query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
         );
 
-        return Results.Extensions.Render<Failed>(
-            new Failed.ViewModel(
-                result.Failures,
+        return Results.Extensions.Render<Retries>(
+            new Retries.ViewModel(
+                result.Retries,
                 query,
                 pageParameter,
                 pageSizeParameter,

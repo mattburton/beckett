@@ -1,4 +1,4 @@
-namespace Beckett.Dashboard.Subscriptions.Checkpoints.GetReservations;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Reservations;
 
 public static class DateTimeOffsetExtensions
 {

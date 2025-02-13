@@ -1,10 +1,8 @@
-namespace Beckett.Dashboard.MessageStore.GetMessages;
+namespace Beckett.Dashboard.Subscriptions.Subscriptions;
 
-public static class GetMessagesEndpoint
+public static class SubscriptionsEndpoint
 {
     public static async Task<IResult> Handle(
-        string category,
-        string streamName,
         string? query,
         int? page,
         int? pageSize,
@@ -12,24 +10,20 @@ public static class GetMessagesEndpoint
         CancellationToken cancellationToken
     )
     {
-        var decodedStreamName = HttpUtility.UrlDecode(streamName);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.MessageStore.GetStreamMessages(
-            decodedStreamName,
+        var result = await dashboard.Subscriptions.GetSubscriptions(
             query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
         );
 
-        return Results.Extensions.Render<Messages>(
-            new Messages.ViewModel(
-                category,
-                decodedStreamName,
+        return Results.Extensions.Render<Subscriptions>(
+            new Subscriptions.ViewModel(
+                result.Subscriptions,
                 query,
-                result.Messages,
                 pageParameter,
                 pageSizeParameter,
                 result.TotalResults

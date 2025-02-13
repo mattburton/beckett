@@ -1,6 +1,6 @@
-namespace Beckett.Dashboard.Subscriptions.GetSubscription;
+namespace Beckett.Dashboard.Subscriptions.Subscription;
 
-public static class GetSubscriptionEndpoint
+public static class SubscriptionEndpoint
 {
     public static async Task<IResult> Handle(
         string groupName,

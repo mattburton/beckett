@@ -1,8 +1,8 @@
 using Beckett.Dashboard.MessageStore.Shared.Components;
 
-namespace Beckett.Dashboard.MessageStore.GetStreams;
+namespace Beckett.Dashboard.MessageStore.Streams;
 
-public static class GetStreamsEndpoint
+public static class StreamsEndpoint
 {
     public static async Task<IResult> Handle(
         HttpContext context,

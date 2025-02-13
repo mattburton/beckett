@@ -1,8 +1,8 @@
-using Beckett.Dashboard.MessageStore.GetCategories;
-using Beckett.Dashboard.MessageStore.GetCorrelatedBy;
-using Beckett.Dashboard.MessageStore.GetMessage;
-using Beckett.Dashboard.MessageStore.GetMessages;
-using Beckett.Dashboard.MessageStore.GetStreams;
+using Beckett.Dashboard.MessageStore.Categories;
+using Beckett.Dashboard.MessageStore.CorrelatedBy;
+using Beckett.Dashboard.MessageStore.Message;
+using Beckett.Dashboard.MessageStore.Messages;
+using Beckett.Dashboard.MessageStore.Streams;
 
 namespace Beckett.Dashboard.MessageStore;
 
@@ -17,11 +17,11 @@ public class Routes : IConfigureRoutes
 
         var routes = builder.MapGroup("/message-store");
 
-        routes.MapGet("/", GetCategoriesEndpoint.Handle);
-        routes.MapGet("/categories/{category}", GetStreamsEndpoint.Handle);
-        routes.MapGet("/categories/{category}/{streamName}", GetMessagesEndpoint.Handle);
-        routes.MapGet("/correlated-by/{correlationId}", GetCorrelatedByEndpoint.Handle);
-        routes.MapGet("/messages/{id}", GetMessageByIdEndpoint.Handle);
-        routes.MapGet("/streams/{streamName}/{streamPosition:long}", GetMessageByStreamPositionEndpoint.Handle);
+        routes.MapGet("/", CategoriesEndpoint.Handle);
+        routes.MapGet("/categories/{category}", StreamsEndpoint.Handle);
+        routes.MapGet("/categories/{category}/{streamName}", MessagesEndpoint.Handle);
+        routes.MapGet("/correlated-by/{correlationId}", CorrelatedByEndpoint.Handle);
+        routes.MapGet("/messages/{id}", MessageByIdEndpoint.Handle);
+        routes.MapGet("/streams/{streamName}/{streamPosition:long}", MessageByStreamPositionEndpoint.Handle);
     }
 }

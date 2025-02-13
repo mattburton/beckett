@@ -1,11 +1,8 @@
-using Beckett.Dashboard.MessageStore.Shared.Components;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Failed;
 
-namespace Beckett.Dashboard.MessageStore.GetCategories;
-
-public static class GetCategoriesEndpoint
+public static class FailedEndpoint
 {
     public static async Task<IResult> Handle(
-        HttpContext context,
         string? query,
         int? page,
         int? pageSize,
@@ -13,21 +10,19 @@ public static class GetCategoriesEndpoint
         CancellationToken cancellationToken
     )
     {
-        var tenant = TenantFilter.GetCurrentTenant(context);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
-        var result = await dashboard.MessageStore.GetCategories(
-            tenant,
+        var result = await dashboard.Subscriptions.GetFailed(
             query,
             pageParameter,
             pageSizeParameter,
             cancellationToken
         );
 
-        return Results.Extensions.Render<Categories>(
-            new Categories.ViewModel(
-                result.Categories,
+        return Results.Extensions.Render<Failed>(
+            new Failed.ViewModel(
+                result.Failures,
                 query,
                 pageParameter,
                 pageSizeParameter,
