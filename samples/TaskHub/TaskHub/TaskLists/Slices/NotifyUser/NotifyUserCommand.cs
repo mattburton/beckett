@@ -1,8 +1,8 @@
 using TaskHub.TaskLists.Events;
 
-namespace TaskHub.TaskLists.Slices.SendUserNotification;
+namespace TaskHub.TaskLists.Slices.NotifyUser;
 
-public record SendUserNotificationCommand(Guid TaskListId, string Task, string Username) : ICommand
+public record NotifyUserCommand(Guid TaskListId, string Task, string Username) : ICommand
 {
     public string StreamName() => TaskListModule.StreamName(TaskListId);
 

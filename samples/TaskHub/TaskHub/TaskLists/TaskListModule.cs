@@ -6,7 +6,7 @@ using TaskHub.TaskLists.Slices.AddTaskList;
 using TaskHub.TaskLists.Slices.ChangeTaskListName;
 using TaskHub.TaskLists.Slices.CompleteTask;
 using TaskHub.TaskLists.Slices.DeleteTaskList;
-using TaskHub.TaskLists.Slices.SendUserNotification;
+using TaskHub.TaskLists.Slices.NotifyUser;
 using TaskHub.TaskLists.Slices.TaskList;
 using TaskHub.TaskLists.Slices.TaskLists;
 using TaskHub.TaskLists.Slices.UserLookup;
@@ -38,9 +38,9 @@ public class TaskListModule : IModule, IConfigureRoutes
         builder.AddSubscription("task_lists:user_lookup_projection")
             .Projection<UserLookupProjection, UserLookupReadModel, string>();
 
-        builder.AddSubscription("task_lists:send_user_notification")
+        builder.AddSubscription("task_lists:notify_user")
             .Message<UserMentionedInTask>()
-            .Handler(SendUserNotificationHandler.Handle);
+            .Handler(UserMentionedInTaskHandler.Handle);
 
         builder.AddSubscription("task_lists:wire_tap")
             .Category(Category)
@@ -59,11 +59,11 @@ public class TaskListModule : IModule, IConfigureRoutes
         var routes = builder.MapGroup("task-lists");
 
         routes.MapPost("/", AddTaskListEndpoint.Handle);
-        routes.MapGet("/", GetTaskListsEndpoint.Handle);
+        routes.MapGet("/", TaskListsEndpoint.Handle);
         routes.MapPost("/{taskListId:guid}", AddTaskEndpoint.Handle);
         routes.MapPut("/{id:guid}/name", ChangeTaskListNameEndpoint.Handle);
         routes.MapPost("/{taskListId:guid}/complete/{task}", CompleteTaskEndpoint.Handle);
         routes.MapDelete("/{id:guid}", DeleteTaskListEndpoint.Handle);
-        routes.MapGet("/{id:guid}", GetTaskListEndpoint.Handle);
+        routes.MapGet("/{id:guid}", TaskListEndpoint.Handle);
     }
 }

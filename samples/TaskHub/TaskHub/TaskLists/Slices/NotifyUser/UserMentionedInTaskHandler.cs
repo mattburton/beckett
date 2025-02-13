@@ -3,9 +3,9 @@ using TaskHub.TaskLists.Events;
 using TaskHub.TaskLists.Slices.UserLookup;
 using TaskHub.TaskLists.Slices.UserNotificationsToSend;
 
-namespace TaskHub.TaskLists.Slices.SendUserNotification;
+namespace TaskHub.TaskLists.Slices.NotifyUser;
 
-public static class SendUserNotificationHandler
+public static class UserMentionedInTaskHandler
 {
     public static async Task Handle(
         UserMentionedInTask message,
@@ -43,7 +43,7 @@ public static class SendUserNotificationHandler
         );
 
         await commandBus.Send(
-            new SendUserNotificationCommand(message.TaskListId, message.Task, message.Username),
+            new NotifyUserCommand(message.TaskListId, message.Task, message.Username),
             cancellationToken
         );
     }

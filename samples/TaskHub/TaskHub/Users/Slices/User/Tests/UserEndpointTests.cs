@@ -3,7 +3,7 @@ using TaskHub.Users.Queries;
 
 namespace TaskHub.Users.Slices.User.Tests;
 
-public class GetUserEndpointTests
+public class UserEndpointTests
 {
     public class when_query_returns_result
     {
@@ -19,7 +19,7 @@ public class GetUserEndpointTests
             var queryBus = new FakeQueryBus();
             queryBus.Returns(query, expectedResult);
 
-            var result = await GetUserEndpoint.Handle(username, queryBus, CancellationToken.None);
+            var result = await UserEndpoint.Handle(username, queryBus, CancellationToken.None);
 
             var actualResult = Assert.IsType<Ok<UserReadModel>>(result);
             Assert.Equal(expectedResult, actualResult.Value);
@@ -34,7 +34,7 @@ public class GetUserEndpointTests
             var username = Generate.String();
             var queryBus = new FakeQueryBus();
 
-            var result = await GetUserEndpoint.Handle(username, queryBus, CancellationToken.None);
+            var result = await UserEndpoint.Handle(username, queryBus, CancellationToken.None);
 
             Assert.IsType<NotFound>(result);
         }

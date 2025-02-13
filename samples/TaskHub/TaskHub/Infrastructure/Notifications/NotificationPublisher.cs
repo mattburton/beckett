@@ -2,12 +2,16 @@ namespace TaskHub.Infrastructure.Notifications;
 
 public class NotificationPublisher(IMessageStore messageStore) : INotificationPublisher
 {
-    public Task Publish<T>(string streamName, T notification, CancellationToken cancellationToken) where T : INotification
+    public Task Publish<T>(
+        string streamName,
+        T notification,
+        CancellationToken cancellationToken
+    ) where T : INotification
     {
         return messageStore.AppendToStream(
-            $"Notifications-{streamName}",
+            $"notifications-{streamName}",
             ExpectedVersion.Any,
-            notification,
+            [new StreamTruncated(), notification],
             cancellationToken
         );
     }

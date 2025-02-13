@@ -1,8 +1,8 @@
 using TaskHub.TaskLists.Events;
 
-namespace TaskHub.TaskLists.Slices.SendUserNotification.Tests;
+namespace TaskHub.TaskLists.Slices.NotifyUser.Tests;
 
-public class SendUserNotificationCommandTests : CommandSpecificationFixture<SendUserNotificationCommand>
+public class NotifyUserCommandTests : CommandSpecificationFixture<NotifyUserCommand>
 {
     [Fact]
     public void user_notification_sent()
@@ -13,7 +13,7 @@ public class SendUserNotificationCommandTests : CommandSpecificationFixture<Send
 
         Specification
             .When(
-                new SendUserNotificationCommand(taskListId, task, username)
+                new NotifyUserCommand(taskListId, task, username)
             )
             .Then(
                 new UserNotificationSent(taskListId, task, username)

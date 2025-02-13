@@ -20,6 +20,11 @@ Content-Type: application/json
 GET {{base_url}}/users/bob
 Content-Type: application/json
 
+### Delete User
+
+DELETE {{base_url}}/users/bob
+Content-Type: application/json
+
 ### Add List
 
 POST {{base_url}}/task-lists

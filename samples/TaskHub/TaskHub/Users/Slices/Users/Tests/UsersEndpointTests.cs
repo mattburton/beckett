@@ -2,7 +2,7 @@ using TaskHub.Users.Events;
 
 namespace TaskHub.Users.Slices.Users.Tests;
 
-public class GetUsersEndpointTests
+public class UsersEndpointTests
 {
     public class when_query_returns_result
     {
@@ -17,7 +17,7 @@ public class GetUsersEndpointTests
             };
             queryBus.Returns(query, expectedResults);
 
-            var result = await GetUsersEndpoint.Handle(queryBus, CancellationToken.None);
+            var result = await UsersEndpoint.Handle(queryBus, CancellationToken.None);
 
             var actualResults = Assert.IsType<Ok<IReadOnlyList<UsersReadModel>>>(result);
             Assert.Equal(expectedResults, actualResults.Value);

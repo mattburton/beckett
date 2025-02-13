@@ -2,7 +2,7 @@ using TaskHub.Users.Queries;
 
 namespace TaskHub.Users.Slices.User;
 
-public static class GetUserEndpoint
+public static class UserEndpoint
 {
     public static async Task<IResult> Handle(
         string username,

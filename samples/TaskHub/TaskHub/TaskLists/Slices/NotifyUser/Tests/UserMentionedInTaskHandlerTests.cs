@@ -2,9 +2,9 @@ using TaskHub.TaskLists.Events;
 using TaskHub.TaskLists.Slices.UserLookup;
 using TaskHub.TaskLists.Slices.UserNotificationsToSend;
 
-namespace TaskHub.TaskLists.Slices.SendUserNotification.Tests;
+namespace TaskHub.TaskLists.Slices.NotifyUser.Tests;
 
-public class SendUserNotificationHandlerTests
+public class UserMentionedInTaskHandlerTests
 {
     public class when_user_exists
     {
@@ -22,7 +22,7 @@ public class SendUserNotificationHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.UserChanged(username, email)
+                    new Users.Notifications.User(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
@@ -32,7 +32,7 @@ public class SendUserNotificationHandlerTests
                 queryBus.Returns(userLookupQuery, userReadModel);
                 queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await SendUserNotificationHandler.Handle(
+                await UserMentionedInTaskHandler.Handle(
                     message,
                     queryBus,
                     emailService,
@@ -57,19 +57,19 @@ public class SendUserNotificationHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.UserChanged(username, email)
+                    new Users.Notifications.User(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username)
                 );
                 var expectedStreamName = TaskListModule.StreamName(taskListId);
-                var expectedCommand = new SendUserNotificationCommand(taskListId, task, username);
+                var expectedCommand = new NotifyUserCommand(taskListId, task, username);
                 var message = new UserMentionedInTask(taskListId, task, username);
                 queryBus.Returns(userLookupQuery, userReadModel);
                 queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await SendUserNotificationHandler.Handle(
+                await UserMentionedInTaskHandler.Handle(
                     message,
                     queryBus,
                     emailService,
@@ -77,7 +77,7 @@ public class SendUserNotificationHandlerTests
                     CancellationToken.None
                 );
 
-                var actualCommand = Assert.IsType<SendUserNotificationCommand>(commandBus.Received);
+                var actualCommand = Assert.IsType<NotifyUserCommand>(commandBus.Received);
                 Assert.Equal(expectedStreamName, actualCommand.StreamName());
                 Assert.Equal(expectedCommand, actualCommand);
             }
@@ -97,7 +97,7 @@ public class SendUserNotificationHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.UserChanged(username, email)
+                    new Users.Notifications.User(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
@@ -108,7 +108,7 @@ public class SendUserNotificationHandlerTests
                 queryBus.Returns(userLookupQuery, userReadModel);
                 queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await SendUserNotificationHandler.Handle(
+                await UserMentionedInTaskHandler.Handle(
                     message,
                     queryBus,
                     emailService,
@@ -131,7 +131,7 @@ public class SendUserNotificationHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.UserChanged(username, email)
+                    new Users.Notifications.User(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
@@ -142,7 +142,7 @@ public class SendUserNotificationHandlerTests
                 queryBus.Returns(userLookupQuery, userReadModel);
                 queryBus.Returns(userNotificationsToSendQuery, userNotificationsToSendReadModel);
 
-                await SendUserNotificationHandler.Handle(
+                await UserMentionedInTaskHandler.Handle(
                     message,
                     queryBus,
                     emailService,
@@ -165,7 +165,7 @@ public class SendUserNotificationHandlerTests
             var commandBus = new FakeCommandBus();
             var message = new UserMentionedInTask(Generate.Guid(), Generate.String(), Generate.String());
 
-            await SendUserNotificationHandler.Handle(
+            await UserMentionedInTaskHandler.Handle(
                 message,
                 queryBus,
                 emailService,
@@ -184,7 +184,7 @@ public class SendUserNotificationHandlerTests
             var commandBus = new FakeCommandBus();
             var message = new UserMentionedInTask(Generate.Guid(), Generate.String(), Generate.String());
 
-            await SendUserNotificationHandler.Handle(
+            await UserMentionedInTaskHandler.Handle(
                 message,
                 queryExecutor,
                 emailService,

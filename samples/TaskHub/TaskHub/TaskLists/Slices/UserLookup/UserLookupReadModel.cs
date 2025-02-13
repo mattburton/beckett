@@ -8,7 +8,7 @@ public partial class UserLookupReadModel
     public string Username { get; set; } = null!;
     public string Email { get; set; } = null!;
 
-    private void Apply(UserChanged message)
+    private void Apply(User message)
     {
         Username = message.Username;
         Email = message.Email;

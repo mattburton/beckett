@@ -3,9 +3,9 @@ using TaskHub.Infrastructure.Routing;
 using TaskHub.Users.Events;
 using TaskHub.Users.Notifications;
 using TaskHub.Users.Slices.DeleteUser;
+using TaskHub.Users.Slices.PublishNotification;
 using TaskHub.Users.Slices.RegisterUser;
 using TaskHub.Users.Slices.User;
-using TaskHub.Users.Slices.UserChanged;
 using TaskHub.Users.Slices.Users;
 
 namespace TaskHub.Users;
@@ -21,7 +21,7 @@ public class UserModule : IModule, IConfigureRoutes
         builder.Map<UserRegistered>("user_registered");
         builder.Map<UserDeleted>("user_deleted");
 
-        builder.MapNotification<UserChanged>("user_changed");
+        builder.MapNotification<User>("user");
     }
 
     public void Subscriptions(ISubscriptionBuilder builder)
@@ -29,9 +29,9 @@ public class UserModule : IModule, IConfigureRoutes
         builder.AddSubscription("users:users_projection")
             .Projection<UsersProjection, UsersReadModel, string>();
 
-        builder.AddSubscription("users:notifications:user_changed")
+        builder.AddSubscription("users:notification_publisher")
             .Category(Category)
-            .Handler(UserChangedPublisher.Handle);
+            .Handler(UserNotificationPublisher.Handle);
 
         builder.AddSubscription("users:wire_tap")
             .Category(Category)
@@ -49,9 +49,9 @@ public class UserModule : IModule, IConfigureRoutes
     {
         var routes = builder.MapGroup("users");
 
-        routes.MapGet("/", GetUsersEndpoint.Handle);
+        routes.MapGet("/", UsersEndpoint.Handle);
         routes.MapPost("/", RegisterUserEndpoint.Handle);
-        routes.MapGet("/{username}", GetUserEndpoint.Handle);
+        routes.MapGet("/{username}", UserEndpoint.Handle);
         routes.MapDelete("/{username}", DeleteUserEndpoint.Handle);
     }
 }

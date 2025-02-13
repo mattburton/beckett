@@ -1,6 +1,6 @@
 namespace TaskHub.Users.Slices.Users;
 
-public static class GetUsersEndpoint
+public static class UsersEndpoint
 {
     public static async Task<IResult> Handle(IQueryBus queryBus, CancellationToken cancellationToken)
     {

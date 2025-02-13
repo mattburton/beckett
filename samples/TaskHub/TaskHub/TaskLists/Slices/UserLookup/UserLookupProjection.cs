@@ -6,7 +6,8 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
 {
     public void Configure(IProjectionConfiguration<string> configuration)
     {
-        configuration.CreatedOrUpdatedBy<UserChanged>(x => x.Username);
+        configuration.CreatedBy<User>(x => x.Username).Where(x => x.Operation == Operation.Create);
+        configuration.DeletedBy<User>(x => x.Username).Where(x => x.Operation == Operation.Delete);
     }
 
     public async Task Create(UserLookupReadModel state, CancellationToken cancellationToken)
@@ -48,6 +49,14 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
     public Task Update(UserLookupReadModel state, CancellationToken cancellationToken) =>
         throw new NotImplementedException();
 
-    public Task Delete(string key, CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
+    public async Task Delete(string key, CancellationToken cancellationToken)
+    {
+        const string sql = "DELETE FROM task_lists.user_lookup WHERE username = $1;";
+
+        var command = dataSource.CreateCommand(sql);
+
+        command.Parameters.AddWithValue(key);
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 }

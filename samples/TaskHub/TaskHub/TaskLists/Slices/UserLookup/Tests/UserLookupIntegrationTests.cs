@@ -19,6 +19,19 @@ public class UserLookupIntegrationTests(DatabaseFixture database) : IClassFixtur
     }
 
     [Fact]
+    public async Task deletes_read_model()
+    {
+        var state = GenerateReadModel();
+        var projection = new UserLookupProjection(database.DataSource);
+        await projection.Create(state, CancellationToken.None);
+
+        await projection.Delete(state.Username, CancellationToken.None);
+
+        var readModel = await projection.Read(state.Username, CancellationToken.None);
+        Assert.Null(readModel);
+    }
+
+    [Fact]
     public async Task query_returns_matching_row()
     {
         var expectedResult = GenerateReadModel();
@@ -43,6 +56,6 @@ public class UserLookupIntegrationTests(DatabaseFixture database) : IClassFixtur
     }
 
     private static UserLookupReadModel GenerateReadModel() => StateBuilder.Build<UserLookupReadModel>(
-        new UserChanged(Generate.String(), Generate.String())
+        new User(Operation.Create, Generate.String(), Generate.String())
     );
 }

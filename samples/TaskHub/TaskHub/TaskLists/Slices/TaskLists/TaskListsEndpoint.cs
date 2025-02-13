@@ -1,6 +1,6 @@
 namespace TaskHub.TaskLists.Slices.TaskLists;
 
-public static class GetTaskListsEndpoint
+public static class TaskListsEndpoint
 {
     public static async Task<IResult> Handle(IQueryBus queryBus, CancellationToken cancellationToken)
     {
