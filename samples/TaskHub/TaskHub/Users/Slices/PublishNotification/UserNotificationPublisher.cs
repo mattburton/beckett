@@ -1,4 +1,5 @@
 using TaskHub.Users.Events;
+using TaskHub.Users.Notifications;
 
 namespace TaskHub.Users.Slices.PublishNotification;
 
@@ -41,9 +42,9 @@ public static partial class UserNotificationPublisher
             Operation = Operation.Delete;
         }
 
-        public Notifications.User ToNotification()
+        public UserNotification ToNotification()
         {
-            return new Notifications.User(Operation, UserName, Email);
+            return new UserNotification(Operation, UserName, Email);
         }
     }
 }

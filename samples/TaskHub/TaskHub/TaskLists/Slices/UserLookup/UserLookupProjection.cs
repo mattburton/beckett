@@ -6,8 +6,8 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
 {
     public void Configure(IProjectionConfiguration<string> configuration)
     {
-        configuration.CreatedBy<User>(x => x.Username).Where(x => x.Operation == Operation.Create);
-        configuration.DeletedBy<User>(x => x.Username).Where(x => x.Operation == Operation.Delete);
+        configuration.CreatedBy<UserNotification>(x => x.Username).Where(x => x.Operation == Operation.Create);
+        configuration.DeletedBy<UserNotification>(x => x.Username).Where(x => x.Operation == Operation.Delete);
     }
 
     public async Task Create(UserLookupReadModel state, CancellationToken cancellationToken)

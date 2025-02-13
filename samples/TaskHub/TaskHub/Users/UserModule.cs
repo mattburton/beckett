@@ -21,7 +21,7 @@ public class UserModule : IModule, IConfigureRoutes
         builder.Map<UserRegistered>("user_registered");
         builder.Map<UserDeleted>("user_deleted");
 
-        builder.MapNotification<User>("user");
+        builder.Map<UserNotification>("user_notification");
     }
 
     public void Subscriptions(ISubscriptionBuilder builder)
@@ -29,7 +29,7 @@ public class UserModule : IModule, IConfigureRoutes
         builder.AddSubscription("users:users_projection")
             .Projection<UsersProjection, UsersReadModel, string>();
 
-        builder.AddSubscription("users:notification_publisher")
+        builder.AddSubscription("users:user_notification_publisher")
             .Category(Category)
             .Handler(UserNotificationPublisher.Handle);
 

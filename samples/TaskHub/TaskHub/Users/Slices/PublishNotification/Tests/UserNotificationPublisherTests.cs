@@ -1,5 +1,6 @@
 using Beckett.Messages;
 using TaskHub.Users.Events;
+using TaskHub.Users.Notifications;
 
 namespace TaskHub.Users.Slices.PublishNotification.Tests;
 
@@ -15,7 +16,7 @@ public class UserNotificationPublisherTests
             var notificationPublisher = new FakeNotificationPublisher();
             var messageStore = new FakeMessageStore();
             var expectedChannel = UserModule.StreamName(username);
-            var expectedNotification = new Notifications.User(Operation.Create, username, email);
+            var expectedNotification = new UserNotification(Operation.Create, username, email);
             var userRegistered = new UserRegistered(username, email);
             var context = MessageContext.From(userRegistered) with { StreamName = expectedChannel};
             messageStore.HasExistingMessages(expectedChannel, userRegistered);
@@ -43,7 +44,7 @@ public class UserNotificationPublisherTests
             var notificationPublisher = new FakeNotificationPublisher();
             var messageStore = new FakeMessageStore();
             var expectedChannel = UserModule.StreamName(username);
-            var expectedNotification = new Notifications.User(Operation.Delete, username, email);
+            var expectedNotification = new UserNotification(Operation.Delete, username, email);
             var userRegistered = new UserRegistered(username, email);
             var userDeleted = new UserDeleted(username);
             var context = MessageContext.From(userRegistered) with { StreamName = expectedChannel};

@@ -12,7 +12,7 @@ public class UserLookupReadModelTests : StateSpecificationFixture<UserLookupRead
 
         Specification
             .Given(
-                new User(Operation.Create, username, email)
+                new UserNotification(Operation.Create, username, email)
             )
             .Then(
                 new UserLookupReadModel

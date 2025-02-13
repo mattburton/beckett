@@ -22,7 +22,7 @@ public class UserMentionedInTaskHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.User(Operation.Create, username, email)
+                    new Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
@@ -57,7 +57,7 @@ public class UserMentionedInTaskHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.User(Operation.Create, username, email)
+                    new Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
@@ -97,7 +97,7 @@ public class UserMentionedInTaskHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.User(Operation.Create, username, email)
+                    new Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
@@ -131,7 +131,7 @@ public class UserMentionedInTaskHandlerTests
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
                 var userReadModel = StateBuilder.Build<UserLookupReadModel>(
-                    new Users.Notifications.User(Operation.Create, username, email)
+                    new Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
                 var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
