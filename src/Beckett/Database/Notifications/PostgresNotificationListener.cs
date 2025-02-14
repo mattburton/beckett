@@ -1,8 +1,5 @@
-using System.Data;
-using System.Timers;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using Timer = System.Timers.Timer;
 
 namespace Beckett.Database.Notifications;
 
@@ -34,21 +31,15 @@ public class PostgresNotificationListener(
 
                 connection.Notification += NotificationEventHandler;
 
-                using var keepAlive = new Timer(TimeSpan.FromSeconds(10).TotalMilliseconds);
-
                 try
                 {
                     await connection.OpenAsync(cancellationToken);
-
-                    keepAlive.Elapsed += KeepAlive(connection);
 
                     var sql = string.Join(';', _notificationHandlers.Keys.Select(x => $"LISTEN \"{x}\""));
 
                     await using var command = new NpgsqlCommand(sql, connection);
 
                     await command.ExecuteNonQueryAsync(cancellationToken);
-
-                    keepAlive.Enabled = true;
 
                     while (true)
                     {
@@ -95,19 +86,4 @@ public class PostgresNotificationListener(
 
         handler.Handle(e.Payload, _cancellationToken.GetValueOrDefault());
     }
-
-    private static ElapsedEventHandler KeepAlive(NpgsqlConnection connection) =>
-        (_, _) =>
-        {
-            if (connection.FullState == (ConnectionState.Open | ConnectionState.Fetching))
-            {
-                return;
-            }
-
-            using var command = connection.CreateCommand();
-
-            command.CommandText = "select true;";
-
-            command.ExecuteNonQuery();
-        };
 }
