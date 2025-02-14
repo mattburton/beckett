@@ -12,13 +12,6 @@ public class PostgresOptions
     public string Schema { get; private set; } = DefaultSchema;
 
     /// <summary>
-    /// Configure whether to use Postgres notifications (via NOTIFY / LISTEN) to trigger Beckett to look for work to do
-    /// in various situations (new messages available, new retries, etc...) This can be far more efficient than polling
-    /// but may not be supported in all database deployment scenarios. Enabled by default.
-    /// </summary>
-    public bool Notifications { get; set; } = true;
-
-    /// <summary>
     /// Prepare statements prior to their execution. When using client-side connection pooling this is recommended as
     /// it will increase performance, however if you are using an external connection pool such as pgbouncer then this
     /// should be disabled. Enabled by default.
@@ -56,13 +49,13 @@ public class PostgresOptions
     public void UseDataSource(NpgsqlDataSource dataSource) => DataSource = dataSource;
 
     /// <summary>
-    /// Configure the <see cref="NpgsqlDataSource"/> that is used when reading from Beckett's built-in message store.
+    /// Configure the <see cref="NpgsqlDataSource"/> that is used when reading from Beckett's Postgres message store.
     /// </summary>
     /// <param name="dataSource"></param>
     public void UseMessageStoreReadDataSource(NpgsqlDataSource dataSource) => MessageStoreReadDataSource = dataSource;
 
     /// <summary>
-    /// Configure the <see cref="NpgsqlDataSource"/> that is used when writing to Beckett's built-in message store. This
+    /// Configure the <see cref="NpgsqlDataSource"/> that is used when writing to Beckett's Postgres message store. This
     /// data source must have had the Beckett types configured while building it - this can be done using the
     /// <c>AddBeckett()</c> extension method on <see cref="NpgsqlDataSourceBuilder"/>.
     /// </summary>
@@ -92,7 +85,7 @@ public class PostgresOptions
     }
 
     /// <summary>
-    /// Configure a specific database connection string for Beckett to use when reading from the built-in message store.
+    /// Configure a specific database connection string for Beckett to use when reading from the Postgres message store.
     /// This allows you to configure Beckett to use a separate connection for reading from follower instance(s) when
     /// replicas are in use.
     /// </summary>
@@ -110,7 +103,7 @@ public class PostgresOptions
     }
 
     /// <summary>
-    /// Configure a specific database connection string for Beckett to use when writing to the built-in message store.
+    /// Configure a specific database connection string for Beckett to use when writing to the Postgres message store.
     /// This is the primary / leader instance when replicas are in use.
     /// </summary>
     /// <param name="connectionString"></param>
@@ -127,9 +120,14 @@ public class PostgresOptions
     }
 
     /// <summary>
-    /// Configure a specific database connection string for Beckett to use for notifications. This is useful when using
-    /// a database proxy such as pgbouncer or RDS Proxy where a direct connection to the database is required for
-    /// LISTEN / NOTIFY to work. Beckett creates a single connection and keeps it open to receive all notifications.
+    /// Enable Beckett to listen to Postgres notifications as an efficient alternative to polling. When using
+    /// notifications it is recommended to reduce the global and checkpoint polling intervals so they occur less
+    /// frequently, primarily serving as a fallback in case there is a problem receiving them. Beckett creates a single
+    /// connection to receive all notifications, so pooling can be disabled for this connection. It is also recommended
+    /// to enable keepalives - example for Npgsql with pooling disabled and a 10 second keepalive:
+    /// <code>
+    /// Server=localhost;Database=postgres;User Id=postgres;Password=password;Pooling=false;Keepalive=10;
+    /// </code>
     /// </summary>
     /// <param name="connectionString"></param>
     public void UseNotificationsConnectionString(string connectionString)
@@ -141,6 +139,6 @@ public class PostgresOptions
             SearchPath = Schema
         };
 
-        NotificationsDataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).AddBeckett().Build();
+        NotificationsDataSource = new NpgsqlDataSourceBuilder(builder.ConnectionString).Build();
     }
 }

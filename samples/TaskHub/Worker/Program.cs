@@ -24,7 +24,15 @@ try
     builder.Services.ConfigureServices();
 
     builder.Services.AddBeckett(
-        options => { options.WithSubscriptionGroup("TaskHub"); }
+        options =>
+        {
+            options.WithSubscriptionGroup("TaskHub");
+
+            options.Postgres.UseNotificationsConnectionString(
+                builder.Configuration.GetConnectionString("Notifications") ??
+                throw new Exception("Missing Notifications connection string")
+            );
+        }
     ).WithSubscriptionsFrom(TaskHubAssembly.Instance);
 
     builder.Services.AddOpenTelemetry()
