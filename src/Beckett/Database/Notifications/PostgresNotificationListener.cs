@@ -43,23 +43,8 @@ public class PostgresNotificationListener(
 
                     while (true)
                     {
-                        try
-                        {
-                            await connection.WaitAsync(cancellationToken);
-                        }
-                        catch (NpgsqlException e)
-                        {
-                            logger.LogError(e, "Database error - will retry in 10 seconds");
-
-                            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-                        }
+                        await connection.WaitAsync(cancellationToken);
                     }
-                }
-                catch (NpgsqlException e)
-                {
-                    logger.LogError(e, "Database error - will retry in 10 seconds");
-
-                    await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
                 }
                 finally
                 {
@@ -72,7 +57,9 @@ public class PostgresNotificationListener(
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Error listening for notifications");
+                logger.LogError(e, "Error listening for notifications - will retry in 10 seconds");
+
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             }
         }
     }
