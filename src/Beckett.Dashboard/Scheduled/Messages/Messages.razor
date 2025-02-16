@@ -1,0 +1,53 @@
+@inherits Component<ViewModel>
+@layout Layout
+
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item active" aria-current="page">
+        Stream Categories
+      </li>
+    </ol>
+    <Paging ViewModel="Model"></Paging>
+  </div>
+</nav>
+
+<div class="p-2"
+     hx-get="@Model.CurrentLink()"
+     hx-trigger="every 10s"
+     hx-select="#list-view"
+     hx-swap="innerHTML">
+  <table id="list-view" class="table table-striped">
+    <thead>
+    <tr>
+      <th style="width: 22em;">Message ID</th>
+      <th>Stream Name</th>
+      <th>Type</th>
+      <th style="width: 16em;">Deliver At</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var message in Model.Messages)
+    {
+      <tr>
+        <td>
+          <a href="@Dashboard.Prefix/scheduled/@message.Id">@message.Id</a>
+        </td>
+        <td>@message.StreamName</td>
+        <td>@message.Type</td>
+        <td>
+          <div class="timestamp">@message.DeliverAt.ToString("O")</div>
+        </td>
+      </tr>
+    }
+    @if (Model.Messages.Count == 0)
+    {
+      <tr>
+        <td colspan="4">
+          No scheduled messages found.
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>

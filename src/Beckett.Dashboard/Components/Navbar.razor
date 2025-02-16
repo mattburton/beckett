@@ -16,6 +16,12 @@
     </li>
   }
   <li class="nav-item">
+    <a class="nav-link @(Area == Area.Scheduled ? "active" : "")"
+       href="@Dashboard.Prefix/scheduled">
+      Scheduled
+    </a>
+  </li>
+  <li class="nav-item">
     <a class="nav-link @(Area == Area.Subscriptions ? "active" : "")"
        href="@Dashboard.Prefix/subscriptions">
       Subscriptions

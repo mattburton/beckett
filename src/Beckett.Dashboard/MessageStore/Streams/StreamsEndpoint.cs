@@ -1,4 +1,4 @@
-using Beckett.Dashboard.MessageStore.Shared.Components;
+using Beckett.Dashboard.MessageStore.Components;
 
 namespace Beckett.Dashboard.MessageStore.Streams;
 
