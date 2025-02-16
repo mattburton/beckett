@@ -91,7 +91,7 @@
   <div class="col-sm-4">
     <div class="card me-2 mb-4" style="max-height: 75vh">
       <div class="card-header">
-        Details
+        <div class="my-1">Details</div>
       </div>
       <ul class="list-group list-group-flush">
         <li class="list-group-item">Global Position: @Model.Message.GlobalPosition</li>
@@ -103,7 +103,7 @@
     </div>
     <div class="card me-2" style="max-height: 75vh">
       <div class="card-header">
-        Metadata
+        <div class="my-1">Metadata</div>
       </div>
       <ul class="list-group list-group-flush">
         @foreach (var item in Model.Message.Metadata.OrderBy(x => x.Key))
