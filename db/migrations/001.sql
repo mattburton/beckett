@@ -426,15 +426,68 @@ CREATE INDEX IF NOT EXISTS ix_subscriptions_active ON __schema__.subscriptions (
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
+CREATE TABLE IF NOT EXISTS __schema__.categories
+(
+  id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL,
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX uix_categories_name ON __schema__.categories (name) INCLUDE (id);
+
+GRANT UPDATE, DELETE ON __schema__.streams TO beckett;
+
 CREATE TABLE IF NOT EXISTS __schema__.streams
 (
   id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  name text NOT NULL
+  name text NOT NULL,
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX uix_streams_name ON __schema__.streams (name) INCLUDE (id);
 
 GRANT UPDATE, DELETE ON __schema__.streams TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.tenants
+(
+  id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL
+);
+
+CREATE UNIQUE INDEX uix_tenants_name ON __schema__.tenants (name) INCLUDE (id);
+
+GRANT UPDATE, DELETE ON __schema__.tenants TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.types
+(
+  id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL
+);
+
+CREATE UNIQUE INDEX uix_types_name ON __schema__.types (name) INCLUDE (id);
+
+GRANT UPDATE, DELETE ON __schema__.types TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.message_index
+(
+  stream_id bigint NOT NULL,
+  global_position bigint NOT NULL PRIMARY KEY,
+  stream_position bigint NOT NULL,
+  timestamp timestamp with time zone DEFAULT now() NOT NULL,
+  type_id int NOT NULL,
+  tenant_id int NOT NULL,
+  message_id text NOT NULL,
+  correlation_id text NOT NULL,
+  causation_id text NOT NULL,
+  metadata jsonb NOT NULL,
+  UNIQUE (message_id),
+  UNIQUE (stream_name, stream_position),
+  FOREIGN KEY (stream_id) REFERENCES __schema__.streams (id),
+  FOREIGN KEY (type_id) REFERENCES __schema__.types (id),
+  FOREIGN KEY (tenant_id) REFERENCES __schema__.tenants (id)
+);
+
+GRANT UPDATE, DELETE ON __schema__.types TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 (
