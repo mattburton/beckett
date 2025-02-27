@@ -88,23 +88,26 @@ public class GlobalStreamConsumer(
                 stoppingToken.ThrowIfCancellationRequested();
 
                 var globalStream = await messageStorage.ReadGlobalStream(
-                    checkpoint.StreamPosition,
-                    options.Subscriptions.GlobalStreamBatchSize,
+                    new ReadGlobalStreamOptions
+                    {
+                        StartingGlobalPosition = checkpoint.StreamPosition,
+                        Count = options.Subscriptions.GlobalStreamBatchSize
+                    },
                     stoppingToken
                 );
 
-                if (globalStream.Items.Count == 0)
+                if (globalStream.StreamMessages.Count == 0)
                 {
                     logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
 
                     break;
                 }
 
-                logger.NewGlobalStreamMessagesToProcess(globalStream.Items.Count, checkpoint.StreamPosition);
+                logger.NewGlobalStreamMessagesToProcess(globalStream.StreamMessages.Count, checkpoint.StreamPosition);
 
                 var checkpoints = new List<CheckpointType>();
 
-                foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
+                foreach (var stream in globalStream.StreamMessages.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
                         .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
@@ -144,7 +147,7 @@ public class GlobalStreamConsumer(
                     logger.NoNewCheckpointsToRecord();
                 }
 
-                var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
+                var newGlobalPosition = globalStream.StreamMessages.Max(x => x.GlobalPosition);
 
                 await database.Execute(
                     new UpdateSystemCheckpointPosition(

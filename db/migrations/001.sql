@@ -195,7 +195,8 @@ CREATE OR REPLACE FUNCTION __schema__.read_stream(
   _starting_global_position bigint DEFAULT NULL,
   _ending_global_position bigint DEFAULT NULL,
   _count integer DEFAULT NULL,
-  _read_forwards boolean DEFAULT true
+  _read_forwards boolean DEFAULT true,
+  _types text[] DEFAULT NULL
 )
   RETURNS TABLE (
     id uuid,
@@ -240,6 +241,7 @@ BEGIN
     AND (_ending_stream_position IS NULL OR m.stream_position <= _ending_stream_position)
     AND (_starting_global_position IS NULL OR m.global_position >= _starting_global_position)
     AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
+    AND (_types IS NULL OR m.type = ANY(_types))
     AND m.archived = false
     ORDER BY CASE WHEN _read_forwards = true THEN m.stream_position END,
              CASE WHEN _read_forwards = false THEN m.stream_position END DESC
@@ -249,13 +251,19 @@ $$;
 
 CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
   _starting_global_position bigint,
-  _batch_size int
+  _ending_global_position bigint DEFAULT NULL,
+  _count int DEFAULT 500,
+  _types text[] DEFAULT NULL
 )
   RETURNS TABLE (
+    id uuid,
     stream_name text,
     stream_position bigint,
     global_position bigint,
-    type text
+    type text,
+    data jsonb,
+    metadata jsonb,
+    "timestamp" timestamp with time zone
   )
   LANGUAGE plpgsql
 AS
@@ -274,16 +282,22 @@ BEGIN
   END IF;
 
   RETURN QUERY
-    SELECT m.stream_name,
+    SELECT m.id,
+           m.stream_name,
            m.stream_position,
            m.global_position,
-           m.type
+           m.type,
+           m.data,
+           m.metadata,
+           m.timestamp
     FROM __schema__.messages m
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
+    AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
+    AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY m.transaction_id, m.global_position
-    LIMIT _batch_size;
+    LIMIT _count;
 END;
 $$;
 

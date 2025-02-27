@@ -32,8 +32,7 @@ public class PostgresMessageStorage(
     }
 
     public async Task<ReadGlobalStreamResult> ReadGlobalStream(
-        long lastGlobalPosition,
-        int batchSize,
+        ReadGlobalStreamOptions readOptions,
         CancellationToken cancellationToken
     )
     {
@@ -41,31 +40,31 @@ public class PostgresMessageStorage(
 
         await connection.OpenAsync(cancellationToken);
 
-        var results = await database.Execute(
-            new ReadGlobalStream(lastGlobalPosition, batchSize, options),
+        var streamMessages = await database.Execute(
+            new ReadGlobalStream(readOptions, options),
             connection,
             cancellationToken
         );
 
-        var items = new List<GlobalStreamItem>();
+        var messages = new List<StreamMessage>();
 
-        if (results.Count <= 0)
+        foreach (var streamMessage in streamMessages)
         {
-            return new ReadGlobalStreamResult(items);
+            messages.Add(
+                new StreamMessage(
+                    streamMessage.Id.ToString(),
+                    streamMessage.StreamName,
+                    streamMessage.StreamPosition,
+                    streamMessage.GlobalPosition,
+                    streamMessage.Type,
+                    streamMessage.Data,
+                    streamMessage.Metadata,
+                    streamMessage.Timestamp
+                )
+            );
         }
 
-        items.AddRange(
-            results.Select(
-                result => new GlobalStreamItem(
-                    result.StreamName,
-                    result.StreamPosition,
-                    result.GlobalPosition,
-                    result.MessageType
-                )
-            )
-        );
-
-        return new ReadGlobalStreamResult(items);
+        return new ReadGlobalStreamResult(messages);
     }
 
     public async Task<ReadStreamResult> ReadStream(
