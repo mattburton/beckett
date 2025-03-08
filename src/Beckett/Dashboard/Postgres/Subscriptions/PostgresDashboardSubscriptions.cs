@@ -1,6 +1,7 @@
 using Beckett.Dashboard.Postgres.Subscriptions.Queries;
 using Beckett.Database;
 using Beckett.Subscriptions.Queries;
+using GetCheckpoint = Beckett.Dashboard.Postgres.Subscriptions.Queries.GetCheckpoint;
 
 namespace Beckett.Dashboard.Postgres.Subscriptions;
 

@@ -12,6 +12,7 @@ public class Subscription(string name)
     internal SubscriptionHandler Handler { get; private set; } = null!;
     internal string? HandlerName { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
+    internal StreamScope StreamScope { get; set; } = StreamScope.PerStream;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
     internal int Priority { get; set; } = int.MaxValue;
 

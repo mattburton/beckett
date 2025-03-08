@@ -36,6 +36,9 @@ public class ReadStream(
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
+        command.Parameters.Add(
+            new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text, IsNullable = true }
+        );
 
         if (postgresOptions.PrepareStatements)
         {
@@ -57,6 +60,7 @@ public class ReadStream(
             : DBNull.Value;
         command.Parameters[5].Value = readOptions.Count.HasValue ? readOptions.Count.Value : DBNull.Value;
         command.Parameters[6].Value = readOptions.ReadForwards.GetValueOrDefault(true);
+        command.Parameters[7].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

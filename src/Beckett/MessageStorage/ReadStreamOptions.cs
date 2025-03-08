@@ -9,6 +9,7 @@ public class ReadStreamOptions
     public int? Count { get; init; }
     public bool? ReadForwards { get; init; }
     public bool? RequirePrimary { get; init; }
+    public string[]? Types { get; init; }
 
     public static ReadStreamOptions From(ReadOptions options)
     {

@@ -9,7 +9,7 @@ public class Configuration : IConfigureServices
         services.AddSingleton<IQueryBus, QueryBus>();
 
         services.Scan(
-            x => x.FromCallingAssembly().AddClasses(classes => classes.AssignableTo(typeof(IQueryHandler<,>)))
+            x => x.FromAssemblyOf<Configuration>().AddClasses(classes => classes.AssignableTo(typeof(IQueryHandler<,>)))
                 .AsImplementedInterfaces().WithTransientLifetime()
         );
     }

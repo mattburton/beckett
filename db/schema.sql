@@ -233,12 +233,23 @@ $_$;
 -- Name: ensure_checkpoint_exists(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.ensure_checkpoint_exists(_group_name text, _name text, _stream_name text) RETURNS void
+CREATE FUNCTION beckett.ensure_checkpoint_exists(_group_name text, _name text, _stream_name text) RETURNS bigint
     LANGUAGE sql
     AS $$
-INSERT INTO beckett.checkpoints (group_name, name, stream_name)
-VALUES (_group_name, _name, _stream_name)
-ON CONFLICT (group_name, name, stream_name) DO NOTHING;
+WITH new_checkpoint AS (
+  INSERT INTO beckett.checkpoints (group_name, name, stream_name)
+  VALUES (_group_name, _name, _stream_name)
+  ON CONFLICT (group_name, name, stream_name) DO NOTHING
+  RETURNING 0 as stream_version
+)
+SELECT stream_version
+FROM beckett.checkpoints
+WHERE group_name = _group_name
+AND name = _name
+AND stream_name = _stream_name
+UNION ALL
+SELECT stream_version
+FROM new_checkpoint;
 $$;
 
 
@@ -434,10 +445,10 @@ $$;
 
 
 --
--- Name: read_global_stream(bigint, integer); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: read_global_stream(bigint, integer, text[]); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.read_global_stream(_starting_global_position bigint, _batch_size integer) RETURNS TABLE(stream_name text, stream_position bigint, global_position bigint, type text)
+CREATE FUNCTION beckett.read_global_stream(_starting_global_position bigint, _count integer, _types text[] DEFAULT NULL::text[]) RETURNS TABLE(id uuid, stream_name text, stream_position bigint, global_position bigint, type text, data jsonb, metadata jsonb, "timestamp" timestamp with time zone)
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -454,25 +465,30 @@ BEGIN
   END IF;
 
   RETURN QUERY
-    SELECT m.stream_name,
+    SELECT m.id,
+           m.stream_name,
            m.stream_position,
            m.global_position,
-           m.type
+           m.type,
+           m.data,
+           m.metadata,
+           m.timestamp
     FROM beckett.messages m
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
+    AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY m.transaction_id, m.global_position
-    LIMIT _batch_size;
+    LIMIT _count;
 END;
 $$;
 
 
 --
--- Name: read_stream(text, bigint, bigint, bigint, bigint, integer, boolean); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: read_stream(text, bigint, bigint, bigint, bigint, integer, boolean, text[]); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.read_stream(_stream_name text, _starting_stream_position bigint DEFAULT NULL::bigint, _ending_stream_position bigint DEFAULT NULL::bigint, _starting_global_position bigint DEFAULT NULL::bigint, _ending_global_position bigint DEFAULT NULL::bigint, _count integer DEFAULT NULL::integer, _read_forwards boolean DEFAULT true) RETURNS TABLE(id uuid, stream_name text, stream_version bigint, stream_position bigint, global_position bigint, type text, data jsonb, metadata jsonb, "timestamp" timestamp with time zone)
+CREATE FUNCTION beckett.read_stream(_stream_name text, _starting_stream_position bigint DEFAULT NULL::bigint, _ending_stream_position bigint DEFAULT NULL::bigint, _starting_global_position bigint DEFAULT NULL::bigint, _ending_global_position bigint DEFAULT NULL::bigint, _count integer DEFAULT NULL::integer, _read_forwards boolean DEFAULT true, _types text[] DEFAULT NULL::text[]) RETURNS TABLE(id uuid, stream_name text, stream_version bigint, stream_position bigint, global_position bigint, type text, data jsonb, metadata jsonb, "timestamp" timestamp with time zone)
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -502,9 +518,10 @@ BEGIN
     WHERE m.stream_name = _stream_name
     AND (_starting_stream_position IS NULL OR m.stream_position >= _starting_stream_position)
     AND (_ending_stream_position IS NULL OR m.stream_position <= _ending_stream_position)
+    AND m.archived = false
     AND (_starting_global_position IS NULL OR m.global_position >= _starting_global_position)
     AND (_ending_global_position IS NULL OR m.global_position <= _ending_global_position)
-    AND m.archived = false
+    AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY CASE WHEN _read_forwards = true THEN m.stream_position END,
              CASE WHEN _read_forwards = false THEN m.stream_position END DESC
     LIMIT _count;

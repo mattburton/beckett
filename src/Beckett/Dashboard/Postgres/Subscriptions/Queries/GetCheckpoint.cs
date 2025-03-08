@@ -11,18 +11,21 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
     public async Task<GetCheckpointResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT id,
-                   group_name,
-                   name,
-                   stream_name,
-                   stream_version,
-                   stream_position,
-                   status,
-                   process_at,
-                   reserved_until,
-                   retries
-            FROM {options.Schema}.checkpoints
-            WHERE id = $1;
+            SELECT c.id,
+                   c.group_name,
+                   c.name,
+                   c.stream_name,
+                   c.stream_version,
+                   c.stream_position,
+                   c.status,
+                   c.process_at,
+                   c.reserved_until,
+                   c.retries,
+                   m.stream_name as actual_stream_name,
+                   m.stream_position as actual_stream_position
+            FROM {options.Schema}.checkpoints c
+            LEFT JOIN {options.Schema}.messages m on c.stream_name = '$global' and c.stream_position = m.global_position
+            WHERE c.id = $1;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
@@ -53,7 +56,9 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
             Status = reader.GetFieldValue<CheckpointStatus>(6),
             ProcessAt = reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
             ReservedUntil = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
-            Retries = reader.IsDBNull(9) ? [] : reader.GetFieldValue<RetryType[]>(9)
+            Retries = reader.IsDBNull(9) ? [] : reader.GetFieldValue<RetryType[]>(9),
+            ActualStreamName = reader.IsDBNull(10) ? null : reader.GetFieldValue<string>(10),
+            ActualStreamPosition = reader.IsDBNull(11) ? null : reader.GetFieldValue<long>(11)
         };
     }
 }

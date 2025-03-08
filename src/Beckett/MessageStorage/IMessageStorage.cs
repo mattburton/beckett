@@ -10,8 +10,7 @@ public interface IMessageStorage
     );
 
     Task<ReadGlobalStreamResult> ReadGlobalStream(
-        long lastGlobalPosition,
-        int batchSize,
+        ReadGlobalStreamOptions options,
         CancellationToken cancellationToken
     );
 

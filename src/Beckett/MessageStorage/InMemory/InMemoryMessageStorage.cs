@@ -51,17 +51,19 @@ public class InMemoryMessageStorage : IMessageStorage
     }
 
     public Task<ReadGlobalStreamResult> ReadGlobalStream(
-        long lastGlobalPosition,
-        int batchSize,
+        ReadGlobalStreamOptions options,
         CancellationToken cancellationToken
     )
     {
-        var messages = _store.Where(x => x.GlobalPosition > lastGlobalPosition).Take(batchSize).ToList();
-        var globalStreamItems = messages.Select(
-            x => new GlobalStreamItem(x.StreamName, x.StreamPosition, x.GlobalPosition, x.Type)
-        ).ToList();
+        var messages = _store.Where(x => x.GlobalPosition > options.StartingGlobalPosition).Take(options.Count)
+            .ToList();
 
-        return Task.FromResult(new ReadGlobalStreamResult(globalStreamItems));
+        if (options.Types is { Length: > 0 })
+        {
+            messages = messages.Where(x => options.Types.Contains(x.Type)).ToList();
+        }
+
+        return Task.FromResult(new ReadGlobalStreamResult(messages));
     }
 
     public Task<ReadStreamResult> ReadStream(
@@ -91,6 +93,11 @@ public class InMemoryMessageStorage : IMessageStorage
         if (options.EndingStreamPosition.HasValue)
         {
             stream = stream.Where(x => x.StreamPosition <= options.EndingStreamPosition.Value).ToList();
+        }
+
+        if (options.Types is { Length: > 0 })
+        {
+            stream = stream.Where(x => options.Types.Contains(x.Type)).ToList();
         }
 
         if (options.ReadForwards.HasValue && !options.ReadForwards.Value)

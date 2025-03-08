@@ -84,6 +84,8 @@ public class GetCheckpointResult
     public DateTimeOffset? ProcessAt { get; init; }
     public DateTimeOffset? ReservedUntil { get; init; }
     public required RetryType[] Retries { get; init; }
+    public required string? ActualStreamName { get; init; }
+    public required long? ActualStreamPosition { get; init; }
 
     public int TotalAttempts => Retries?.Length > 0 ? Retries.Length - 1 : 0;
 
@@ -91,9 +93,9 @@ public class GetCheckpointResult
     {
         get
         {
-            var firstHyphen = StreamName.IndexOf('-');
+            var firstHyphen = StreamNameForLink.IndexOf('-');
 
-            return StreamName[..firstHyphen];
+            return firstHyphen < 0 ? StreamNameForLink : StreamNameForLink[..firstHyphen];
         }
     }
 
@@ -102,6 +104,10 @@ public class GetCheckpointResult
         CheckpointStatus.Active => false,
         _ => true
     };
+
+    public string StreamNameForLink => ActualStreamName ?? StreamName;
+
+    public long StreamPositionForLink => ActualStreamPosition ?? StreamPosition;
 }
 
 public record GetFailedResult(List<GetFailedResult.Failure> Failures, int TotalResults)

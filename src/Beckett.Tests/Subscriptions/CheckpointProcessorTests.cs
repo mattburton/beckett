@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Beckett.Database;
 using Beckett.Messages;
+using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Queries;
@@ -33,14 +34,14 @@ public class CheckpointProcessorTests
                         SubscriptionStreamBatchSize = 10
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore);
+                var messageStorage = Substitute.For<IMessageStorage>();
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
                 await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
 
-                await messageStore.Received().ReadStream(
+                await messageStorage.Received().ReadStream(
                     "test",
-                    Arg.Is<ReadOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
+                    Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
                     CancellationToken.None
                 );
             }
@@ -65,14 +66,14 @@ public class CheckpointProcessorTests
                         SubscriptionStreamBatchSize = 10
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore);
+                var messageStorage = Substitute.For<IMessageStorage>();
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
                 await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
 
-                await messageStore.Received().ReadStream(
+                await messageStorage.Received().ReadStream(
                     "test",
-                    Arg.Is<ReadOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
+                    Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
                     CancellationToken.None
                 );
             }
@@ -91,7 +92,7 @@ public class CheckpointProcessorTests
                 {
                     HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
                     {
-                        await Task.Delay(TimeSpan.FromMilliseconds(2), ct);
+                        await Task.Delay(TimeSpan.FromMilliseconds(5), ct);
                     }
                 };
                 subscription.RegisterMessageType<TestMessage>();
@@ -103,11 +104,11 @@ public class CheckpointProcessorTests
                         ReservationTimeout = TimeSpan.FromMilliseconds(1)
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
+                var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore, database);
-                messageStore.ReadStream("test", Arg.Any<ReadOptions>(), CancellationToken.None)
-                    .Returns(new MessageStream("test", 2, [BuildMessageContext()], messageStore.AppendToStream));
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
+                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
                 RecordCheckpointError? error = null;
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
@@ -141,11 +142,11 @@ public class CheckpointProcessorTests
                         ReservationTimeout = TimeSpan.FromMilliseconds(1)
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
+                var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore, database);
-                messageStore.ReadStream("test", Arg.Any<ReadOptions>(), CancellationToken.None)
-                    .Returns(new MessageStream("test", 2, [BuildMessageContext()], messageStore.AppendToStream));
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
+                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
                 RecordCheckpointError? error = null;
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
@@ -165,8 +166,10 @@ public class CheckpointProcessorTests
                 var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
-                    HandlerDelegate = (IMessageContext _, CancellationToken ct) =>
-                        Task.Delay(TimeSpan.FromMilliseconds(2), ct)
+                    HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(5), ct);
+                    }
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
@@ -177,16 +180,18 @@ public class CheckpointProcessorTests
                         ReservationTimeout = TimeSpan.FromMilliseconds(1)
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore);
+                var messageStorage = Substitute.For<IMessageStorage>();
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
                 var parentCts = new CancellationTokenSource();
                 var innerCts = CancellationTokenSource.CreateLinkedTokenSource(parentCts.Token);
 
-                messageStore.ReadStream("test", Arg.Any<ReadOptions>(), Arg.Any<CancellationToken>())
-                    .Returns(new MessageStream("test", 2, [BuildMessageContext()], messageStore.AppendToStream));
+                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), Arg.Any<CancellationToken>())
+                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
                 await parentCts.CancelAsync();
 
-                await Assert.ThrowsAsync<OperationCanceledException>(() => checkpointProcessor.Process(1, checkpoint, subscription, innerCts.Token));
+                await Assert.ThrowsAsync<OperationCanceledException>(
+                    () => checkpointProcessor.Process(1, checkpoint, subscription, innerCts.Token)
+                );
             }
         }
 
@@ -209,14 +214,14 @@ public class CheckpointProcessorTests
                         SubscriptionStreamBatchSize = 10
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore);
+                var messageStorage = Substitute.For<IMessageStorage>();
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
                 await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
 
-                await messageStore.Received().ReadStream(
+                await messageStorage.Received().ReadStream(
                     "test",
-                    Arg.Is<ReadOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 2),
+                    Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 2),
                     CancellationToken.None
                 );
             }
@@ -235,7 +240,7 @@ public class CheckpointProcessorTests
                 {
                     HandlerDelegate = async (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
                     {
-                        await Task.Delay(TimeSpan.FromMilliseconds(2), ct);
+                        await Task.Delay(TimeSpan.FromMilliseconds(5), ct);
                     }
                 };
                 subscription.RegisterMessageType<TestMessage>();
@@ -247,11 +252,11 @@ public class CheckpointProcessorTests
                         ReservationTimeout = TimeSpan.FromMilliseconds(1)
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
+                var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore, database);
-                messageStore.ReadStream("test", Arg.Any<ReadOptions>(), CancellationToken.None)
-                    .Returns(new MessageStream("test", 2, [BuildMessageContext()], messageStore.AppendToStream));
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
+                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
                 RecordCheckpointError? error = null;
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
@@ -285,11 +290,11 @@ public class CheckpointProcessorTests
                         ReservationTimeout = TimeSpan.FromMilliseconds(1)
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
+                var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore, database);
-                messageStore.ReadStream("test", Arg.Any<ReadOptions>(), CancellationToken.None)
-                    .Returns(new MessageStream("test", 2, [BuildMessageContext()], messageStore.AppendToStream));
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
+                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
                 RecordCheckpointError? error = null;
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
@@ -321,16 +326,18 @@ public class CheckpointProcessorTests
                         ReservationTimeout = TimeSpan.FromMilliseconds(1)
                     }
                 };
-                var messageStore = Substitute.For<IMessageStore>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStore);
+                var messageStorage = Substitute.For<IMessageStorage>();
+                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
                 var parentCts = new CancellationTokenSource();
                 var innerCts = CancellationTokenSource.CreateLinkedTokenSource(parentCts.Token);
 
-                messageStore.ReadStream("test", Arg.Any<ReadOptions>(), Arg.Any<CancellationToken>())
-                    .Returns(new MessageStream("test", 2, [BuildMessageContext()], messageStore.AppendToStream));
+                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), Arg.Any<CancellationToken>())
+                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
                 await parentCts.CancelAsync();
 
-                await Assert.ThrowsAsync<OperationCanceledException>(() => checkpointProcessor.Process(1, checkpoint, subscription, innerCts.Token));
+                await Assert.ThrowsAsync<OperationCanceledException>(
+                    () => checkpointProcessor.Process(1, checkpoint, subscription, innerCts.Token)
+                );
             }
         }
 
@@ -355,14 +362,14 @@ public class CheckpointProcessorTests
                             SubscriptionStreamBatchSize = 10
                         }
                     };
-                    var messageStore = Substitute.For<IMessageStore>();
-                    var checkpointProcessor = BuildCheckpointProcessor(options, messageStore);
+                    var messageStorage = Substitute.For<IMessageStorage>();
+                    var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
                     await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
 
-                    await messageStore.Received().ReadStream(
+                    await messageStorage.Received().ReadStream(
                         "test",
-                        Arg.Is<ReadOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
+                        Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
                         CancellationToken.None
                     );
                 }
@@ -387,14 +394,14 @@ public class CheckpointProcessorTests
                             SubscriptionStreamBatchSize = 10
                         }
                     };
-                    var messageStore = Substitute.For<IMessageStore>();
-                    var checkpointProcessor = BuildCheckpointProcessor(options, messageStore);
+                    var messageStorage = Substitute.For<IMessageStorage>();
+                    var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
                     await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
 
-                    await messageStore.Received().ReadStream(
+                    await messageStorage.Received().ReadStream(
                         "test",
-                        Arg.Is<ReadOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 11),
+                        Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 11),
                         CancellationToken.None
                     );
                 }
@@ -402,7 +409,7 @@ public class CheckpointProcessorTests
         }
     }
 
-    private static MessageContext BuildMessageContext() => new(
+    private static StreamMessage BuildStreamMessage() => new(
         Guid.NewGuid().ToString(),
         "test",
         1,
@@ -425,7 +432,7 @@ public class CheckpointProcessorTests
 
     private static CheckpointProcessor BuildCheckpointProcessor(
         BeckettOptions options,
-        IMessageStore messageStore,
+        IMessageStorage messageStorage,
         IPostgresDatabase? database = null
     )
     {
@@ -434,6 +441,6 @@ public class CheckpointProcessorTests
         var instrumentation = Substitute.For<IInstrumentation>();
         var logger = Substitute.For<ILogger<CheckpointProcessor>>();
 
-        return new CheckpointProcessor(messageStore, database, serviceProvider, options, instrumentation, logger);
+        return new CheckpointProcessor(messageStorage, database, serviceProvider, options, instrumentation, logger);
     }
 }

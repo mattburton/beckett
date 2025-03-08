@@ -1,4 +1,6 @@
 using Beckett.Database;
+using Beckett.Messages;
+using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries;
@@ -8,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class CheckpointProcessor(
-    IMessageStore messageStore,
+    IMessageStorage messageStorage,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
     BeckettOptions options,
@@ -45,12 +47,7 @@ public class CheckpointProcessor(
                 }
 
                 await database.Execute(
-                    new UpdateCheckpointPosition(
-                        checkpoint.Id,
-                        success.StreamPosition,
-                        null,
-                        options.Postgres
-                    ),
+                    new UpdateCheckpointPosition(checkpoint.Id, success.StreamPosition, null, options.Postgres),
                     cancellationToken
                 );
 
@@ -103,12 +100,7 @@ public class CheckpointProcessor(
 
         try
         {
-            messageBatch = await ReadMessageBatch(
-                checkpoint,
-                subscription,
-                batchSize,
-                cancellationToken
-            );
+            messageBatch = await ReadMessageBatch(checkpoint, subscription, batchSize, cancellationToken);
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -121,17 +113,23 @@ public class CheckpointProcessor(
                 "Error reading message batch for subscription {SubscriptionType} for stream {StreamName} at {StreamPosition} [Checkpoint: {CheckpointId}]",
                 subscription.Name,
                 checkpoint.StreamName,
-                checkpoint.StartingStreamPosition,
+                checkpoint.StartingPositionFor(subscription),
                 checkpoint.Id
             );
 
-            return new Error(checkpoint.StartingStreamPosition, e);
+            return new Error(checkpoint.StartingPositionFor(subscription), e);
         }
 
         try
         {
             if (messageBatch.Count == 0)
             {
+                if (checkpoint.StreamPosition < checkpoint.StreamVersion &&
+                    subscription.StreamScope == StreamScope.GlobalStream)
+                {
+                    return new Success(checkpoint.StreamVersion);
+                }
+
                 return NoMessages.Instance;
             }
 
@@ -160,7 +158,7 @@ public class CheckpointProcessor(
                         checkpoint.Id
                     );
 
-                    return new Error(messageBatch[0].StreamPosition, e);
+                    return new Error(messageBatch[0].PositionFor(subscription), e);
                 }
             }
 
@@ -178,7 +176,7 @@ public class CheckpointProcessor(
 
                     await DispatchMessageToHandler(checkpoint, subscription, streamMessage, cancellationToken);
 
-                    lastProcessedStreamPosition = streamMessage.StreamPosition;
+                    lastProcessedStreamPosition = streamMessage.PositionFor(subscription);
                 }
                 catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
                 {
@@ -196,11 +194,11 @@ public class CheckpointProcessor(
                         checkpoint.Id
                     );
 
-                    return new Error(streamMessage.StreamPosition, e);
+                    return new Error(streamMessage.PositionFor(subscription), e);
                 }
             }
 
-            return new Success(messageBatch[^1].StreamPosition);
+            return new Success(messageBatch[^1].PositionFor(subscription));
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -208,11 +206,7 @@ public class CheckpointProcessor(
         }
         catch (Exception e)
         {
-            logger.LogError(
-                e,
-                "Unhandled exception processing checkpoint {CheckpointId}",
-                checkpoint.Id
-            );
+            logger.LogError(e, "Unhandled exception processing checkpoint {CheckpointId}", checkpoint.Id);
 
             throw;
         }
@@ -281,7 +275,7 @@ public class CheckpointProcessor(
 
             await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, cts.Token);
 
-            return new Success(messages[^1].StreamPosition);
+            return new Success(messageBatch[^1].PositionFor(subscription));
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -313,13 +307,13 @@ public class CheckpointProcessor(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var startingStreamPosition = checkpoint.StartingStreamPosition;
+        var startingStreamPosition = checkpoint.StartingPositionFor(subscription);
         var endingStreamPosition = checkpoint.StreamVersion;
         var skipBatchSizeCheck = false;
 
         if (checkpoint.IsRetryOrFailure)
         {
-            startingStreamPosition = checkpoint.StreamPosition;
+            startingStreamPosition = checkpoint.RetryStartingPositionFor(subscription);
 
             if (!subscription.Handler.IsBatchHandler)
             {
@@ -339,9 +333,26 @@ public class CheckpointProcessor(
             }
         }
 
-        var stream = await messageStore.ReadStream(
+        if (subscription.StreamScope == StreamScope.GlobalStream)
+        {
+            var globalStream = await messageStorage.ReadGlobalStream(
+                new ReadGlobalStreamOptions
+                {
+                    StartingGlobalPosition = startingStreamPosition,
+                    Count = batchSize,
+                    Types = subscription.MessageTypeNames.ToArray()
+                },
+                cancellationToken
+            );
+
+            logger.FoundMessagesToProcessForCheckpoint(globalStream.StreamMessages.Count, checkpoint.Id);
+
+            return globalStream.StreamMessages.Select(MessageContext.From).ToList();
+        }
+
+        var stream = await messageStorage.ReadStream(
             checkpoint.StreamName,
-            new ReadOptions
+            new ReadStreamOptions
             {
                 StartingStreamPosition = startingStreamPosition,
                 EndingStreamPosition = endingStreamPosition
@@ -351,7 +362,7 @@ public class CheckpointProcessor(
 
         logger.FoundMessagesToProcessForCheckpoint(stream.StreamMessages.Count, checkpoint.Id);
 
-        return stream.StreamMessages;
+        return stream.StreamMessages.Select(MessageContext.From).ToList();
     }
 
     private void SuccessTraceLogging(Checkpoint checkpoint, Success success)
@@ -590,4 +601,14 @@ public static partial class Log
         int attempt,
         int maxRetryCount
     );
+}
+
+public static class MessageContextExtensions
+{
+    public static long PositionFor(this IMessageContext context, Subscription subscription)
+    {
+        return subscription.StreamScope == StreamScope.PerStream
+            ? context.StreamPosition
+            : context.GlobalPosition;
+    }
 }

@@ -15,7 +15,15 @@ public record Checkpoint(
 {
     public bool IsRetryOrFailure => Status is CheckpointStatus.Retry or CheckpointStatus.Failed;
 
-    public long StartingStreamPosition => StreamPosition + 1;
+    public long StartingPositionFor(Subscription subscription)
+    {
+        return subscription.StreamScope == StreamScope.PerStream ? StreamPosition + 1 : StreamPosition;
+    }
+
+    public long RetryStartingPositionFor(Subscription subscription)
+    {
+        return subscription.StreamScope == StreamScope.PerStream ? StreamPosition : StreamPosition - 1;
+    }
 
     public static Checkpoint? From(NpgsqlDataReader reader)
     {
