@@ -40,6 +40,11 @@ public class ReadOptions
     public bool? RequirePrimary { get; init; }
 
     /// <summary>
+    /// Filter the messages returned by the stream to only those of a given type
+    /// </summary>
+    public string[]? Types { get; init; }
+
+    /// <summary>
     /// Read only the last message appended to a given stream. This is a convenience method for setting the
     /// <see cref="Count"/> to 1 and <see cref="ReadForwards"/> to false. Useful for streams used for lookup data or
     /// snapshots of aggregated state to retrieve the latest entry quickly without reading the entire stream.

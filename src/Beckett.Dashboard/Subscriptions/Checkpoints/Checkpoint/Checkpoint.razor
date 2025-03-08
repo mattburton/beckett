@@ -89,7 +89,7 @@
         @if (Dashboard.Options.MessageStoreEnabled)
         {
           <a
-            href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamName)">
+            href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamNameForLink)">
             @Model.Details.StreamName
           </a>
         }
@@ -103,7 +103,7 @@
         @if (Dashboard.Options.MessageStoreEnabled)
         {
           <a
-            href="@Dashboard.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamName)/@Model.Details.StreamPosition">
+            href="@Dashboard.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamNameForLink)/@Model.Details.StreamPositionForLink">
             @Model.Details.StreamPosition
           </a>
         }

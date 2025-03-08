@@ -9,9 +9,9 @@ public class EnsureCheckpointExists(
     string name,
     string streamName,
     PostgresOptions options
-) : IPostgresDatabaseQuery<int>
+) : IPostgresDatabaseQuery<long>
 {
-    public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $"select {options.Schema}.ensure_checkpoint_exists($1, $2, $3);";
 
@@ -28,6 +28,12 @@ public class EnsureCheckpointExists(
         command.Parameters[1].Value = name;
         command.Parameters[2].Value = streamName;
 
-        return await command.ExecuteNonQueryAsync(cancellationToken);
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+
+        return result switch
+        {
+            long id => id,
+            _ => throw new Exception($"Unexpected result from ensure_checkpoint_exists function: {result}")
+        };
     }
 }

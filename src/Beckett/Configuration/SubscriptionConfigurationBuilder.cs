@@ -95,6 +95,13 @@ public class SubscriptionConfigurationBuilder(
         return this;
     }
 
+    public ISubscriptionConfigurationBuilder StreamScope(StreamScope streamScope)
+    {
+        subscription.StreamScope = streamScope;
+
+        return this;
+    }
+
     public ISubscriptionConfigurationBuilder MaxRetryCount(int maxRetryCount)
     {
         if (maxRetryCount < 0)
