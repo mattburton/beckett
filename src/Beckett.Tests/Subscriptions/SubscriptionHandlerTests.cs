@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Beckett.Messages;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +24,7 @@ public class SubscriptionHandlerTests
         var handler = new SubscriptionHandler(_subscription, MessageContextHandler.Handle);
         var context = BuildMessageContext();
 
-        handler.Invoke(context, _serviceProvider, CancellationToken.None);
+        handler.Invoke(context, CheckpointContext.Empty, _serviceProvider, CancellationToken.None);
 
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(MessageContextHandler.ReceivedContext);
@@ -40,7 +39,7 @@ public class SubscriptionHandlerTests
         var message = new TestMessage(Guid.NewGuid());
         var context = BuildMessageContext(message);
 
-        handler.Invoke(context, _serviceProvider, CancellationToken.None);
+        handler.Invoke(context, CheckpointContext.Empty, _serviceProvider, CancellationToken.None);
 
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(MessageHandler.ReceivedMessage);
@@ -55,7 +54,7 @@ public class SubscriptionHandlerTests
         var message = new TestMessage(Guid.NewGuid());
         var context = BuildMessageContext(message);
 
-        handler.Invoke(context, _serviceProvider, CancellationToken.None);
+        handler.Invoke(context, CheckpointContext.Empty, _serviceProvider, CancellationToken.None);
 
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(MessageAndContextHandler.ReceivedMessage);
@@ -65,13 +64,28 @@ public class SubscriptionHandlerTests
     }
 
     [Fact]
+    public void supports_checkpoint_context_as_parameter()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        var handler = new SubscriptionHandler(_subscription, CheckpointContextHandler.Handle);
+        var message = new TestMessage(Guid.NewGuid());
+        var messageContext = BuildMessageContext(message);
+        var checkpointContext = new CheckpointContext(1, null, "test", "test", "test", 0, 0);
+
+        handler.Invoke(messageContext, checkpointContext, _serviceProvider, CancellationToken.None);
+
+        Assert.False(handler.IsBatchHandler);
+        Assert.Equal(checkpointContext, CheckpointContextHandler.ReceivedContext);
+    }
+
+    [Fact]
     public void supports_batch_handler()
     {
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, BatchHandler.Handle);
         var batch = BuildMessageBatch();
 
-        handler.Invoke(batch, _serviceProvider, CancellationToken.None);
+        handler.Invoke(batch, CheckpointContext.Empty, _serviceProvider, CancellationToken.None);
 
         Assert.True(handler.IsBatchHandler);
         Assert.NotNull(BatchHandler.ReceivedBatch);
@@ -86,11 +100,25 @@ public class SubscriptionHandlerTests
         var batch = BuildMessageBatch();
         var expectedBatch = batch.Select(x => x.Message!).ToList();
 
-        handler.Invoke(batch, _serviceProvider, CancellationToken.None);
+        handler.Invoke(batch, CheckpointContext.Empty, _serviceProvider, CancellationToken.None);
 
         Assert.True(handler.IsBatchHandler);
         Assert.NotNull(UnwrappedBatchHandler.ReceivedBatch);
         Assert.Equal(expectedBatch, UnwrappedBatchHandler.ReceivedBatch);
+    }
+
+    [Fact]
+    public void supports_batch_handler_with_checkpoint_context_parameter()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        var handler = new SubscriptionHandler(_subscription, BatchCheckpointContextHandler.Handle);
+        var batch = BuildMessageBatch();
+        var checkpointContext = new CheckpointContext(1, null, "test", "test", "test", 0, 0);
+
+        handler.Invoke(batch, checkpointContext, _serviceProvider, CancellationToken.None);
+
+        Assert.True(handler.IsBatchHandler);
+        Assert.Equal(checkpointContext, BatchCheckpointContextHandler.ReceivedContext);
     }
 
     [Fact]
@@ -100,7 +128,7 @@ public class SubscriptionHandlerTests
         var handler = new SubscriptionHandler(_subscription, HandlerWithDependencies.Handle);
         var context = BuildMessageContext();
 
-        handler.Invoke(context, _serviceProvider, CancellationToken.None);
+        handler.Invoke(context, CheckpointContext.Empty, _serviceProvider, CancellationToken.None);
 
         Assert.True(_testService.ExecuteCalled);
     }
@@ -122,7 +150,7 @@ public class SubscriptionHandlerTests
         var message = new TestMessage(Guid.NewGuid());
         var context = BuildMessageContext(message);
 
-        handler.Invoke(context, _serviceProvider, CancellationToken.None);
+        handler.Invoke(context, CheckpointContext.Empty, _serviceProvider, CancellationToken.None);
 
         Assert.Equal(message, receivedMessage);
     }
@@ -306,6 +334,18 @@ public class SubscriptionHandlerTests
         }
     }
 
+    private static class CheckpointContextHandler
+    {
+        public static ICheckpointContext? ReceivedContext { get; private set; }
+
+        public static Task Handle(TestMessage message, ICheckpointContext context, CancellationToken cancellationToken)
+        {
+            ReceivedContext = context;
+
+            return Task.CompletedTask;
+        }
+    }
+
     private static class BatchHandler
     {
         public static IReadOnlyList<IMessageContext>? ReceivedBatch { get; private set; }
@@ -313,6 +353,18 @@ public class SubscriptionHandlerTests
         public static Task Handle(IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
         {
             ReceivedBatch = batch;
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private static class BatchCheckpointContextHandler
+    {
+        public static ICheckpointContext? ReceivedContext { get; private set; }
+
+        public static Task Handle(IReadOnlyList<IMessageContext> batch, ICheckpointContext context, CancellationToken cancellationToken)
+        {
+            ReceivedContext = context;
 
             return Task.CompletedTask;
         }

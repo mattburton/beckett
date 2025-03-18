@@ -8,6 +8,10 @@ public static class DataTypeNames
 
     public static string CheckpointArray(string schema) => $"{schema}.checkpoint[]";
 
+    public static string CheckpointStreamRetry(string schema) => $"{schema}.checkpoint_stream_retry";
+
+    public static string CheckpointStreamRetryArray(string schema) => $"{schema}.checkpoint_stream_retry[]";
+
     public static string Message(string schema) => $"{schema}.message";
 
     public static string MessageArray(string schema) => $"{schema}.message[]";
