@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Beckett.Database;
 using Beckett.Messages;
 using Beckett.MessageStorage;
@@ -20,7 +19,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task only_reads_messages_up_to_stream_version()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 0, 10, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 0, 10, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
@@ -52,7 +51,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task only_reads_messages_up_to_batch_size()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 0, 20, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 0, 20, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
@@ -87,7 +86,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
@@ -125,7 +124,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = (IMessageContext _, CancellationToken ct) =>
@@ -163,7 +162,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_operation_canceled_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
@@ -200,7 +199,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task only_reads_one_message_to_retry()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 20, 0, CheckpointStatus.Retry);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 20, 0, CheckpointStatus.Retry);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
@@ -235,7 +234,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = async (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
@@ -273,7 +272,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
@@ -311,7 +310,7 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_operation_canceled_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
                 var subscription = new Subscription("test")
                 {
                     HandlerDelegate = (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
@@ -348,7 +347,7 @@ public class CheckpointProcessorTests
                 [Fact]
                 public async Task only_reads_messages_up_to_stream_version()
                 {
-                    var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 10, 0, CheckpointStatus.Retry);
+                    var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 10, 0, CheckpointStatus.Retry);
                     var subscription = new Subscription("test")
                     {
                         HandlerDelegate = (IReadOnlyList<IMessageContext> _) => { }
@@ -380,7 +379,7 @@ public class CheckpointProcessorTests
                 [Fact]
                 public async Task only_reads_messages_up_to_batch_size()
                 {
-                    var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 20, 0, CheckpointStatus.Retry);
+                    var checkpoint = new Checkpoint(1, null, "test", "test", "test", 1, 20, 0, CheckpointStatus.Retry);
                     var subscription = new Subscription("test")
                     {
                         HandlerDelegate = (IReadOnlyList<IMessageContext> _) => { }
@@ -437,10 +436,19 @@ public class CheckpointProcessorTests
     )
     {
         database ??= Substitute.For<IPostgresDatabase>();
+        var dataSource = Substitute.For<IPostgresDataSource>();
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
         var instrumentation = Substitute.For<IInstrumentation>();
         var logger = Substitute.For<ILogger<CheckpointProcessor>>();
 
-        return new CheckpointProcessor(messageStorage, database, serviceProvider, options, instrumentation, logger);
+        return new CheckpointProcessor(
+            messageStorage,
+            dataSource,
+            database,
+            serviceProvider,
+            options,
+            instrumentation,
+            logger
+        );
     }
 }
