@@ -26,7 +26,7 @@ public class ReadStream(
                    data,
                    metadata,
                    timestamp
-            from {postgresOptions.Schema}.read_stream($1, $2, $3, $4, $5, $6, $7, $8);
+            from {postgresOptions.Schema}.read_stream($1, $2, $3, $4, $5, $6, $7);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

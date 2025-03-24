@@ -9,7 +9,6 @@ public class SubscriptionHandler
     private static readonly Type MessageContextType = typeof(IMessageContext);
     private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
     private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
-    private static readonly Type CheckpointContextType = typeof(ICheckpointContext);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
 
     private readonly Subscription _subscription;
@@ -32,8 +31,7 @@ public class SubscriptionHandler
     public bool IsBatchHandler { get; private set; }
 
     public Task Invoke(
-        IMessageContext messageContext,
-        ICheckpointContext checkpointContext,
+        IMessageContext context,
         IServiceProvider serviceProvider,
         CancellationToken cancellationToken
     )
@@ -44,15 +42,11 @@ public class SubscriptionHandler
         {
             if (_parameters[i].ParameterType == MessageContextType)
             {
-                arguments[i] = messageContext;
+                arguments[i] = context;
             }
-            else if (_parameters[i].ParameterType == messageContext.MessageType)
+            else if (_parameters[i].ParameterType == context.MessageType)
             {
-                arguments[i] = messageContext.Message!;
-            }
-            else if (_parameters[i].ParameterType == CheckpointContextType)
-            {
-                arguments[i] = checkpointContext;
+                arguments[i] = context.Message!;
             }
             else if (_parameters[i].ParameterType == CancellationTokenType)
             {
@@ -69,7 +63,6 @@ public class SubscriptionHandler
 
     public Task Invoke(
         IReadOnlyList<IMessageContext> batch,
-        ICheckpointContext checkpointContext,
         IServiceProvider serviceProvider,
         CancellationToken cancellationToken
     )
@@ -85,10 +78,6 @@ public class SubscriptionHandler
             else if (_parameters[i].ParameterType == UnwrappedBatchType)
             {
                 arguments[i] = batch.Where(x => x.Message != null).Select(x => x.Message!).ToList();
-            }
-            else if (_parameters[i].ParameterType == CheckpointContextType)
-            {
-                arguments[i] = checkpointContext;
             }
             else if (_parameters[i].ParameterType == CancellationTokenType)
             {
@@ -189,7 +178,6 @@ public class SubscriptionHandler
 
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == typeof(IMessageContext) ||
                                                             x.ParameterType == typeof(IReadOnlyList<IMessageContext>) ||
-                                                            x.ParameterType == typeof(ICheckpointContext) ||
                                                             x.ParameterType == typeof(CancellationToken);
 
     private static Func<object[], Task> BuildInvoker(Delegate handler)
