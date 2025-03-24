@@ -12,7 +12,6 @@ public static class NpgsqlDataSourceBuilderExtensions
     )
     {
         builder.MapComposite<CheckpointType>(DataTypeNames.Checkpoint(schema));
-        builder.MapComposite<CheckpointStreamRetryType>(DataTypeNames.CheckpointStreamRetry(schema));
         builder.MapComposite<MessageType>(DataTypeNames.Message(schema));
         builder.MapComposite<RetryType>(DataTypeNames.Retry(schema));
         builder.MapComposite<ScheduledMessageType>(DataTypeNames.ScheduledMessage(schema));

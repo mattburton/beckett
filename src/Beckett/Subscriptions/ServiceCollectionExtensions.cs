@@ -23,8 +23,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ICheckpointConsumerGroup, CheckpointConsumerGroup>();
 
-        services.AddSingleton<ICheckpointStreamManager, CheckpointStreamManager>();
-
         services.AddSingleton<IPostgresNotificationHandler, CheckpointNotificationHandler>();
 
         services.AddSingleton<IPostgresNotificationHandler, MessageNotificationHandler>();

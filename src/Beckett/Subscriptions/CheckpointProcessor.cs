@@ -11,7 +11,6 @@ namespace Beckett.Subscriptions;
 
 public class CheckpointProcessor(
     IMessageStorage messageStorage,
-    IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
     BeckettOptions options,
@@ -44,90 +43,6 @@ public class CheckpointProcessor(
                 if (cancellationToken.IsCancellationRequested && !checkpoint.IsRetryOrFailure &&
                     success.StreamPosition == checkpoint.StreamPosition)
                 {
-                    break;
-                }
-
-                if (checkpoint.ParentId.HasValue)
-                {
-                    await using var connection = dataSource.CreateConnection();
-
-                    await connection.OpenAsync(cancellationToken);
-
-                    await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-
-                    var parentStreamVersion = await database.Execute(
-                        new ReserveCheckpoint(
-                            checkpoint.ParentId.Value,
-                            options.Subscriptions.ReservationTimeout,
-                            options.Postgres
-                        ),
-                        connection,
-                        transaction,
-                        cancellationToken
-                    );
-
-                    if (parentStreamVersion == null)
-                    {
-                        await database.Execute(
-                            new UpdateChildCheckpointPosition(
-                                checkpoint.Id,
-                                success.StreamPosition,
-                                null,
-                                DateTimeOffset.UtcNow,
-                                options.Postgres
-                            ),
-                            connection,
-                            transaction,
-                            cancellationToken
-                        );
-
-                        await transaction.CommitAsync(cancellationToken);
-
-                        throw new Exception(
-                            "Unable to reserve parent checkpoint after processing child checkpoint successfully - will try again later"
-                        );
-                    }
-
-                    //check if there are any new messages to process in the stream
-                    var stream = await messageStorage.ReadStream(
-                        checkpoint.StreamName,
-                        new ReadStreamOptions
-                        {
-                            StartingStreamPosition = success.StreamPosition + 1,
-                            EndingGlobalPosition = parentStreamVersion.Value,
-                            Types = subscription.MessageTypeNames.ToArray(),
-                            Count = 1
-                        },
-                        cancellationToken
-                    );
-
-                    long? streamVersion = stream.StreamMessages.Count > 0
-                        ? stream.StreamMessages[^1].StreamPosition
-                        : null;
-
-                    await database.Execute(
-                        new UpdateChildCheckpointPosition(
-                            checkpoint.Id,
-                            success.StreamPosition,
-                            streamVersion,
-                            //if there are new messages to process we set the processAt to now so we can process them immediately
-                            streamVersion.HasValue ? DateTimeOffset.UtcNow : null,
-                            options.Postgres
-                        ),
-                        connection,
-                        transaction,
-                        cancellationToken
-                    );
-
-                    await database.Execute(
-                        new ReleaseCheckpointReservation(checkpoint.ParentId.Value, options.Postgres),
-                        connection,
-                        transaction,
-                        cancellationToken
-                    );
-
-                    await transaction.CommitAsync(cancellationToken);
-
                     break;
                 }
 
@@ -181,11 +96,6 @@ public class CheckpointProcessor(
         CancellationToken cancellationToken
     )
     {
-        if (ChildCheckpointCanBeClearedWithoutProcessing(checkpoint))
-        {
-            return new Success(checkpoint.StreamPosition);
-        }
-
         IReadOnlyList<IMessageContext> messageBatch;
 
         try
@@ -214,7 +124,8 @@ public class CheckpointProcessor(
         {
             if (messageBatch.Count == 0)
             {
-                if (checkpoint.IsGlobalScoped(subscription) && checkpoint.StreamPosition < checkpoint.StreamVersion)
+                if (checkpoint.StreamPosition < checkpoint.StreamVersion &&
+                    subscription.StreamScope == StreamScope.GlobalStream)
                 {
                     return new Success(checkpoint.StreamVersion);
                 }
@@ -247,7 +158,7 @@ public class CheckpointProcessor(
                         checkpoint.Id
                     );
 
-                    return new Error(messageBatch[0].PositionFor(subscription, checkpoint), e);
+                    return new Error(messageBatch[0].PositionFor(subscription), e);
                 }
             }
 
@@ -265,7 +176,7 @@ public class CheckpointProcessor(
 
                     await DispatchMessageToHandler(checkpoint, subscription, streamMessage, cancellationToken);
 
-                    lastProcessedStreamPosition = streamMessage.PositionFor(subscription, checkpoint);
+                    lastProcessedStreamPosition = streamMessage.PositionFor(subscription);
                 }
                 catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
                 {
@@ -283,11 +194,11 @@ public class CheckpointProcessor(
                         checkpoint.Id
                     );
 
-                    return new Error(streamMessage.PositionFor(subscription, checkpoint), e);
+                    return new Error(streamMessage.PositionFor(subscription), e);
                 }
             }
 
-            return new Success(messageBatch[^1].PositionFor(subscription, checkpoint));
+            return new Success(messageBatch[^1].PositionFor(subscription));
         }
         catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
         {
@@ -299,19 +210,6 @@ public class CheckpointProcessor(
 
             throw;
         }
-    }
-
-    private bool ChildCheckpointCanBeClearedWithoutProcessing(Checkpoint checkpoint)
-    {
-        var result = checkpoint is { ParentId: not null, IsRetryOrFailure: true } &&
-               checkpoint.StreamPosition == checkpoint.StreamVersion;
-
-        if (result)
-        {
-            logger.LogInformation("Child checkpoint can be cleared without processing [Checkpoint ID: {CheckpointId}, Parent ID: {ParentId}]", checkpoint.Id, checkpoint.ParentId);
-        }
-
-        return result;
     }
 
     private async Task DispatchMessageToHandler(
@@ -335,7 +233,7 @@ public class CheckpointProcessor(
 
         try
         {
-            await subscription.Handler.Invoke(messageContext, checkpoint.ToContext(), scope.ServiceProvider, cts.Token);
+            await subscription.Handler.Invoke(messageContext, scope.ServiceProvider, cts.Token);
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -375,9 +273,9 @@ public class CheckpointProcessor(
 
             using var scope = serviceProvider.CreateScope();
 
-            await subscription.Handler.Invoke(messageBatch, checkpoint.ToContext(), scope.ServiceProvider, cts.Token);
+            await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, cts.Token);
 
-            return new Success(messageBatch[^1].PositionFor(subscription, checkpoint));
+            return new Success(messageBatch[^1].PositionFor(subscription));
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -435,7 +333,7 @@ public class CheckpointProcessor(
             }
         }
 
-        if (checkpoint.IsGlobalScoped(subscription))
+        if (subscription.StreamScope == StreamScope.GlobalStream)
         {
             var globalStream = await messageStorage.ReadGlobalStream(
                 new ReadGlobalStreamOptions
@@ -707,9 +605,9 @@ public static partial class Log
 
 public static class MessageContextExtensions
 {
-    public static long PositionFor(this IMessageContext context, Subscription subscription, Checkpoint checkpoint)
+    public static long PositionFor(this IMessageContext context, Subscription subscription)
     {
-        return subscription.StreamScope == StreamScope.PerStream || checkpoint.ParentId.HasValue
+        return subscription.StreamScope == StreamScope.PerStream
             ? context.StreamPosition
             : context.GlobalPosition;
     }

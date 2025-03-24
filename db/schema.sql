@@ -47,18 +47,6 @@ CREATE TYPE beckett.checkpoint_status AS ENUM (
 
 
 --
--- Name: checkpoint_stream_retry; Type: TYPE; Schema: beckett; Owner: -
---
-
-CREATE TYPE beckett.checkpoint_stream_retry AS (
-	stream_name text,
-	stream_version bigint,
-	stream_position bigint,
-	error jsonb
-);
-
-
---
 -- Name: message; Type: TYPE; Schema: beckett; Owner: -
 --
 
@@ -262,21 +250,6 @@ AND stream_name = _stream_name
 UNION ALL
 SELECT stream_version
 FROM new_checkpoint;
-$$;
-
-
---
--- Name: get_checkpoint_blocked_streams(bigint, text[]); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.get_checkpoint_blocked_streams(_parent_id bigint, _stream_names text[]) RETURNS TABLE(stream_name text)
-    LANGUAGE sql
-    AS $$
-SELECT stream_name
-FROM beckett.checkpoints
-WHERE parent_id = _parent_id
-AND status IN ('retry', 'failed')
-AND stream_name = ANY(_stream_names);
 $$;
 
 
@@ -579,38 +552,6 @@ $$;
 
 
 --
--- Name: record_checkpoint_stream_retries(bigint, beckett.checkpoint_stream_retry[]); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.record_checkpoint_stream_retries(_checkpoint_id bigint, _retries beckett.checkpoint_stream_retry[]) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-  _parent_id bigint;
-  _parent_group_name text;
-  _parent_name text;
-BEGIN
-SELECT id, group_name, name
-INTO _parent_id, _parent_group_name, _parent_name
-FROM beckett.checkpoints
-WHERE id = _checkpoint_id;
-
-INSERT INTO beckett.checkpoints (parent_id, group_name, name, stream_name, stream_version, stream_position, status, process_at, retries)
-SELECT _parent_id,
-       _parent_group_name,
-       _parent_name,
-       r.stream_name,
-       r.stream_version,
-       r.stream_position,
-       'retry',
-       now(),
-       array[row(0, r.error, now())::beckett.retry]
-FROM unnest(_retries) AS r;
-END;
-$$;
-
-
---
 -- Name: record_checkpoints(beckett.checkpoint[]); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -663,32 +604,10 @@ $$;
 
 
 --
--- Name: reserve_checkpoint(bigint, interval); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.reserve_checkpoint(_id bigint, _reservation_timeout interval) RETURNS bigint
-    LANGUAGE sql
-    AS $$
-UPDATE beckett.checkpoints c
-SET reserved_until = now() + _reservation_timeout
-FROM (
-  SELECT c.id
-  FROM beckett.checkpoints c
-  WHERE c.id = _id
-  AND c.reserved_until IS NULL
-  FOR UPDATE
-  SKIP LOCKED
-) as d
-WHERE c.id = d.id
-RETURNING c.stream_version;
-$$;
-
-
---
 -- Name: reserve_next_available_checkpoint(text, interval); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_name text, _reservation_timeout interval) RETURNS TABLE(id bigint, parent_id bigint, group_name text, name text, stream_name text, stream_position bigint, stream_version bigint, retry_attempts integer, status beckett.checkpoint_status)
+CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_name text, _reservation_timeout interval) RETURNS TABLE(id bigint, group_name text, name text, stream_name text, stream_position bigint, stream_version bigint, retry_attempts integer, status beckett.checkpoint_status)
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
@@ -709,7 +628,6 @@ FROM (
 WHERE c.id = d.id
 RETURNING
   c.id,
-  c.parent_id,
   c.group_name,
   c.name,
   c.stream_name,
@@ -908,29 +826,6 @@ $$;
 
 
 --
--- Name: update_child_checkpoint_position(bigint, bigint, bigint, timestamp with time zone); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.update_child_checkpoint_position(_id bigint, _stream_position bigint, _stream_version bigint, _process_at timestamp with time zone) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  IF (_process_at IS NOT NULL) THEN
-    UPDATE beckett.checkpoints
-    SET stream_position = _stream_position,
-        stream_version = coalesce(_stream_version, stream_version),
-        process_at = _process_at,
-        reserved_until = NULL
-    WHERE id = _id;
-  ELSE
-    DELETE FROM beckett.checkpoints
-    WHERE id = _id;
-  END IF;
-END;
-$$;
-
-
---
 -- Name: update_system_checkpoint_position(bigint, bigint); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -952,7 +847,6 @@ $$;
 
 CREATE TABLE beckett.checkpoints (
     id bigint NOT NULL,
-    parent_id bigint,
     stream_version bigint DEFAULT 0 NOT NULL,
     stream_position bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
@@ -1218,13 +1112,6 @@ CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints USING btree (status, 
 
 
 --
--- Name: ix_checkpoints_parent_id; Type: INDEX; Schema: beckett; Owner: -
---
-
-CREATE INDEX ix_checkpoints_parent_id ON beckett.checkpoints USING btree (parent_id, status, stream_name) WHERE (parent_id IS NOT NULL);
-
-
---
 -- Name: ix_checkpoints_reserved; Type: INDEX; Schema: beckett; Owner: -
 --
 
@@ -1334,14 +1221,6 @@ CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkp
 --
 
 CREATE TRIGGER stream_operations BEFORE INSERT ON beckett.messages FOR EACH ROW EXECUTE FUNCTION beckett.stream_operations();
-
-
---
--- Name: checkpoints checkpoints_parent_id_fkey; Type: FK CONSTRAINT; Schema: beckett; Owner: -
---
-
-ALTER TABLE ONLY beckett.checkpoints
-    ADD CONSTRAINT checkpoints_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES beckett.checkpoints(id) ON DELETE CASCADE;
 
 
 --
