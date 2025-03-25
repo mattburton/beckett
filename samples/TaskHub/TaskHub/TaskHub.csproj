@@ -12,34 +12,17 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Beckett\Beckett.csproj"/>
+    <ProjectReference Include="..\..\Core.SourceGenerators\Core.SourceGenerators.csproj"
+                      ReferenceOutputAssembly="false"
+                      OutputItemType="Analyzer"
+                      PrivateAssets="all"/>
+    <ProjectReference Include="..\..\Core\Core.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
     <PackageReference Include="Npgsql.DependencyInjection"/>
-    <PackageReference Include="Scrutor" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <PackageReference Include="coverlet.collector"/>
-    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <PackageReference Include="Testcontainers.PostgreSql"/>
-    <PackageReference Include="Testcontainers.Xunit"/>
-    <PackageReference Include="xunit"/>
-    <PackageReference Include="xunit.runner.visualstudio"/>
-
-    <Using Include="Xunit"/>
-    <Using Include="TaskHub.Infrastructure.Tests"/>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <Compile Remove="**/Tests/*.cs"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Beckett.SourceGenerators\Beckett.SourceGenerators.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false"/>
+    <PackageReference Include="Scrutor"/>
   </ItemGroup>
 
 </Project>
