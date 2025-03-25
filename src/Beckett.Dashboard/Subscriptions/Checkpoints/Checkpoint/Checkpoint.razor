@@ -38,9 +38,9 @@
           </span>
           Checkpoint
         </div>
-        @if (Model.Details.ShowControls)
-        {
-          <div>
+        <div>
+          @if (Model.Details.ShowControls)
+          {
             <button href="#"
                     class="btn btn-primary"
                     title="Request retry"
@@ -56,19 +56,19 @@
                     hx-on::response-error="alert('Unable to skip checkpoint forward at this time - please try again later')">
               Skip
             </button>
-            @if (Model.Details.ReservedUntil.HasValue)
-            {
-              <button href="#"
-                      class="btn btn-danger ms-2"
-                      title="Release checkpoint reservation"
-                      hx-post="@Dashboard.Prefix/subscriptions/checkpoints/@Model.Details.Id/release-reservation"
-                      hx-confirm="Are you sure you want to release the reservation? This is typically used to clear out orphaned checkpoint reservations after restarting the host, otherwise multiple workers trying to process the same checkpoint could lead to unintended consequences."
-                      hx-on::response-error="alert('Unable to skip checkpoint forward at this time - please try again later')">
-                Release
-              </button>
-            }
-          </div>
-        }
+          }
+          @if (Model.Details.ReservedUntil.HasValue)
+          {
+            <button href="#"
+                    class="btn btn-danger ms-2"
+                    title="Release checkpoint reservation"
+                    hx-post="@Dashboard.Prefix/subscriptions/checkpoints/@Model.Details.Id/release-reservation"
+                    hx-confirm="Are you sure you want to release the reservation? This is typically used to clear out orphaned checkpoint reservations after restarting the host, otherwise multiple workers trying to process the same checkpoint could lead to unintended consequences."
+                    hx-on::response-error="alert('Unable to skip checkpoint forward at this time - please try again later')">
+              Release
+            </button>
+          }
+        </div>
       </div>
     </div>
     <ul class="list-group list-group-flush">
