@@ -15,10 +15,14 @@ public class ScheduledMessageService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        var timer = new PeriodicTimer(options.Scheduling.PollingInterval);
+
+        while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
             {
+                stoppingToken.ThrowIfCancellationRequested();
+
                 await using var connection = dataSource.CreateConnection();
 
                 await connection.OpenAsync(stoppingToken);
@@ -55,10 +59,8 @@ public class ScheduledMessageService(
                 }
 
                 await transaction.CommitAsync(stoppingToken);
-
-                await Task.Delay(options.Scheduling.PollingInterval, stoppingToken);
             }
-            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 throw;
             }

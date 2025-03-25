@@ -2,5 +2,6 @@ namespace Beckett.Subscriptions;
 
 public interface IGlobalStreamConsumer
 {
-    void StartPolling(CancellationToken stoppingToken);
+    void Notify();
+    Task Poll(CancellationToken stoppingToken);
 }

@@ -18,19 +18,17 @@ public class GlobalStreamPollingService(
             return;
         }
 
-        while (true)
+        var timer = new PeriodicTimer(options.GlobalStreamPollingInterval);
+
+        while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
             {
-                stoppingToken.ThrowIfCancellationRequested();
-
                 logger.StartingGlobalStreamIntervalPolling();
 
-                globalStreamConsumer.StartPolling(stoppingToken);
-
-                await Task.Delay(options.GlobalStreamPollingInterval, stoppingToken);
+                globalStreamConsumer.Notify();
             }
-            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 throw;
             }

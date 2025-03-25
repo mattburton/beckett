@@ -6,89 +6,79 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class CheckpointConsumer(
-    Channel<CheckpointAvailable> channel,
-    int consumer,
     IPostgresDatabase database,
     ICheckpointProcessor checkpointProcessor,
     BeckettOptions options,
     ILogger<CheckpointConsumer> logger
-) : ICheckpointConsumer
+)
 {
-    public async Task StartPolling(CancellationToken cancellationToken)
+    public async Task Poll(int instance, Channel<CheckpointAvailable> channel, CancellationToken stoppingToken)
     {
-        logger.StartingCheckpointPolling(consumer);
+        logger.StartingCheckpointPolling(instance);
 
-        while (await channel.Reader.WaitToReadAsync(cancellationToken))
+        await foreach (var _ in channel.Reader.ReadAllAsync(stoppingToken))
         {
-            while (channel.Reader.TryRead(out _))
+            try
             {
-                try
+                stoppingToken.ThrowIfCancellationRequested();
+
+                logger.AttemptingToReserveCheckpoint(instance);
+
+                //once we reserve a checkpoint the stopping token is ignored so the checkpoint can be processed prior
+                //to shutting down the host - reservation timeout applies
+                var checkpoint = await database.Execute(
+                    new ReserveNextAvailableCheckpoint(
+                        options.Subscriptions.GroupName,
+                        options.Subscriptions.ReservationTimeout,
+                        options.Postgres
+                    ),
+                    stoppingToken
+                );
+
+                if (checkpoint == null)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    logger.NoAvailableCheckpoints(instance);
 
-                    logger.AttemptingToReserveCheckpoint(consumer);
+                    continue;
+                }
 
-                    var checkpoint = await database.Execute(
-                        new ReserveNextAvailableCheckpoint(
-                            options.Subscriptions.GroupName,
-                            options.Subscriptions.ReservationTimeout,
-                            options.Postgres
-                        ),
-                        cancellationToken
+                if (!checkpoint.IsRetryOrFailure && checkpoint.StreamPosition >= checkpoint.StreamVersion)
+                {
+                    logger.CheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance);
+
+                    await database.Execute(
+                        new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
+                        CancellationToken.None
                     );
 
-                    if (checkpoint == null)
-                    {
-                        logger.NoAvailableCheckpoints(consumer);
+                    continue;
+                }
 
-                        continue;
-                    }
+                var subscription = SubscriptionRegistry.GetSubscription(checkpoint.Name);
 
-                    if (!checkpoint.IsRetryOrFailure && checkpoint.StreamPosition >= checkpoint.StreamVersion)
-                    {
-                        logger.CheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, consumer);
-
-                        await database.Execute(
-                            new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
-                            cancellationToken
-                        );
-
-                        continue;
-                    }
-
-                    var subscription = SubscriptionRegistry.GetSubscription(checkpoint.Name);
-
-                    if (subscription == null)
-                    {
-                        logger.SubscriptionNotRegistered(
-                            checkpoint.Name,
-                            options.Subscriptions.GroupName,
-                            checkpoint.Id,
-                            consumer
-                        );
-
-                        continue;
-                    }
-
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    await checkpointProcessor.Process(
-                        consumer,
-                        checkpoint,
-                        subscription,
-                        cancellationToken
+                if (subscription == null)
+                {
+                    logger.SubscriptionNotRegistered(
+                        checkpoint.Name,
+                        options.Subscriptions.GroupName,
+                        checkpoint.Id,
+                        instance
                     );
 
-                    channel.Writer.TryWrite(CheckpointAvailable.Instance);
+                    continue;
                 }
-                catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    logger.LogError(e, "Error processing checkpoint [Consumer: {Consumer}]", consumer);
-                }
+
+                await checkpointProcessor.Process(instance, checkpoint, subscription);
+
+                channel.Writer.TryWrite(CheckpointAvailable.Instance);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Error processing checkpoint [Consumer: {Consumer}]", instance);
             }
         }
     }

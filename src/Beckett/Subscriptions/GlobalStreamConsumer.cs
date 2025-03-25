@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.MessageStorage;
@@ -14,41 +15,23 @@ public class GlobalStreamConsumer(
     ILogger<GlobalStreamConsumer> logger
 ) : IGlobalStreamConsumer
 {
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
-    private Task _task = Task.CompletedTask;
-    private bool _continue;
+    private readonly Channel<MessagesAvailable> _channel = Channel.CreateBounded<MessagesAvailable>(
+        options.Subscriptions.GetConcurrency() * 2
+    );
 
-    public void StartPolling(CancellationToken stoppingToken)
+    public void Notify()
     {
-        lock (_lock)
-        {
-            if (_task is { IsCompleted: false })
-            {
-                logger.NewGlobalStreamMessagesAvailableWhileConsumerIsActive();
-
-                _continue = true;
-
-                return;
-            }
-
-            _task = Poll(stoppingToken);
-        }
+        _channel.Writer.TryWrite(MessagesAvailable.Instance);
     }
 
-    private async Task Poll(CancellationToken stoppingToken)
+    public async Task Poll(CancellationToken stoppingToken)
     {
         var registeredSubscriptions = SubscriptionRegistry.All().ToArray();
 
-        while (true)
+        await foreach (var _ in _channel.Reader.ReadAllAsync(stoppingToken))
         {
             try
             {
-                stoppingToken.ThrowIfCancellationRequested();
-
                 logger.StartingGlobalStreamPolling();
 
                 await using var connection = dataSource.CreateConnection();
@@ -71,18 +54,9 @@ public class GlobalStreamConsumer(
 
                 if (checkpoint == null)
                 {
-                    if (_continue)
-                    {
-                        logger.WillContinuePollingGlobalStream();
+                    logger.NoNewGlobalStreamMessagesFound();
 
-                        _continue = false;
-
-                        continue;
-                    }
-
-                    logger.NoNewGlobalStreamMessagesFoundExiting();
-
-                    break;
+                    continue;
                 }
 
                 stoppingToken.ThrowIfCancellationRequested();
@@ -100,7 +74,7 @@ public class GlobalStreamConsumer(
                 {
                     logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
 
-                    break;
+                    continue;
                 }
 
                 logger.NewGlobalStreamMessagesToProcess(globalStream.StreamMessages.Count, checkpoint.StreamPosition);
@@ -191,8 +165,10 @@ public class GlobalStreamConsumer(
                 await transaction.CommitAsync(stoppingToken);
 
                 logger.UpdatedGlobalStreamPosition(newGlobalPosition);
+
+                _channel.Writer.TryWrite(MessagesAvailable.Instance);
             }
-            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 throw;
             }
@@ -218,17 +194,10 @@ public static partial class Log
     [LoggerMessage(0, LogLevel.Trace, "Starting global stream polling")]
     public static partial void StartingGlobalStreamPolling(this ILogger logger);
 
-    [LoggerMessage(
-        0,
-        LogLevel.Trace,
-        "No new messages found for global stream but will continue polling since the continue flag has been set to true"
-    )]
-    public static partial void WillContinuePollingGlobalStream(this ILogger logger);
+    [LoggerMessage(0, LogLevel.Trace, "No new messages found for global stream")]
+    public static partial void NoNewGlobalStreamMessagesFound(this ILogger logger);
 
-    [LoggerMessage(0, LogLevel.Trace, "No new messages found for global stream - exiting")]
-    public static partial void NoNewGlobalStreamMessagesFoundExiting(this ILogger logger);
-
-    [LoggerMessage(0, LogLevel.Trace, "No new messages found for global stream after position {Position} - exiting")]
+    [LoggerMessage(0, LogLevel.Trace, "No new messages found for global stream after position {Position}")]
     public static partial void NoNewGlobalStreamMessagesFoundAfterPosition(this ILogger logger, long position);
 
     [LoggerMessage(
@@ -258,4 +227,9 @@ public static partial class Log
 
     [LoggerMessage(0, LogLevel.Trace, "Updated global stream to position {Position}")]
     public static partial void UpdatedGlobalStreamPosition(this ILogger logger, long position);
+}
+
+public readonly struct MessagesAvailable
+{
+    public static MessagesAvailable Instance { get; } = new();
 }

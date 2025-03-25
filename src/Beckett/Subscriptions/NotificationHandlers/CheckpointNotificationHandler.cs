@@ -16,7 +16,7 @@ public class CheckpointNotificationHandler(
         {
             logger.StartingCheckpointNotificationPolling();
 
-            checkpointConsumerGroup.StartPolling(payload);
+            checkpointConsumerGroup.Notify(payload);
         }
         catch (Exception e)
         {

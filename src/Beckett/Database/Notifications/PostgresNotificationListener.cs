@@ -17,16 +17,16 @@ public class PostgresNotificationListener(
 
     private CancellationToken? _cancellationToken;
 
-    public async Task Listen(CancellationToken cancellationToken)
+    public async Task Listen(CancellationToken stoppingToken)
     {
         if (_notificationHandlers.Count == 0)
         {
             return;
         }
 
-        _cancellationToken = cancellationToken;
+        _cancellationToken = stoppingToken;
 
-        while (!cancellationToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
@@ -38,7 +38,7 @@ public class PostgresNotificationListener(
 
                 try
                 {
-                    await connection.OpenAsync(cancellationToken);
+                    await connection.OpenAsync(stoppingToken);
 
                     keepAlive.Elapsed += KeepAlive(connection);
 
@@ -46,7 +46,7 @@ public class PostgresNotificationListener(
 
                     await using var command = new NpgsqlCommand(sql, connection);
 
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    await command.ExecuteNonQueryAsync(stoppingToken);
 
                     keepAlive.Enabled = true;
 
@@ -54,13 +54,13 @@ public class PostgresNotificationListener(
                     {
                         try
                         {
-                            await connection.WaitAsync(cancellationToken);
+                            await connection.WaitAsync(stoppingToken);
                         }
                         catch (NpgsqlException e)
                         {
                             logger.LogError(e, "Database error - will retry in 10 seconds");
 
-                            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                         }
                     }
                 }
@@ -68,14 +68,14 @@ public class PostgresNotificationListener(
                 {
                     logger.LogError(e, "Database error - will retry in 10 seconds");
 
-                    await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                 }
                 finally
                 {
                     connection.Notification -= NotificationEventHandler;
                 }
             }
-            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 throw;
             }
