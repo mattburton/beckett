@@ -1,7 +1,6 @@
 using Beckett.Database.Notifications;
 using Beckett.Subscriptions.Initialization;
 using Beckett.Subscriptions.NotificationHandlers;
-using Beckett.Subscriptions.Retries;
 using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,8 +11,6 @@ public static class ServiceCollectionExtensions
     internal static void AddSubscriptionSupport(this IServiceCollection services, BeckettOptions options)
     {
         services.AddSingleton(options.Subscriptions);
-
-        services.AddSingleton<IRetryClient, RetryClient>();
 
         services.AddSingleton<ISubscriptionInitializer, SubscriptionInitializer>();
 
