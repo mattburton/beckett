@@ -1,0 +1,9 @@
+global using Microsoft.AspNetCore.Http.HttpResults;
+global using Microsoft.Extensions.DependencyInjection;
+global using Beckett;
+global using Beckett.Messages;
+global using Npgsql;
+global using TaskHub.Infrastructure.Commands;
+global using TaskHub.Infrastructure.Notifications;
+global using TaskHub.Infrastructure.Queries;
+global using Tests.Infrastructure.Tests;

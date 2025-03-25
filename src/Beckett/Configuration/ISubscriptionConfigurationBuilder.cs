@@ -1,10 +1,14 @@
-using Beckett.Projections;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Configuration;
 
 public interface ISubscriptionConfigurationBuilder
 {
+    /// <summary>
+    /// Application service collection exposed for use by subscription builder extension methods
+    /// </summary>
+    IServiceCollection Services { get; }
+
     /// <summary>
     /// <para>
     /// Optional - only subscribe to messages appended to streams in a given category. Example:
@@ -83,20 +87,6 @@ public interface ISubscriptionConfigurationBuilder
     /// <param name="handlerName">The subscription handler name</param>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder HandlerName(string handlerName);
-
-    /// <summary>
-    /// Configure a projection for this subscription which will be registered in the container using the specified
-    /// service lifetime unless it has already been registered. Any exceptions thrown by the handler will result in
-    /// Beckett retrying the subscription based on its configuration.
-    /// </summary>
-    /// <param name="lifetime">Service lifetime to use when registering the handler in the container</param>
-    /// <typeparam name="TProjection">Projection handler</typeparam>
-    /// <typeparam name="TReadModel">Read model</typeparam>
-    /// <typeparam name="TKey">Read model key</typeparam>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder Projection<TProjection, TReadModel, TKey>(
-        ServiceLifetime lifetime = ServiceLifetime.Transient
-    ) where TProjection : IProjection<TReadModel, TKey> where TReadModel : class, IApply, new();
 
     /// <summary>
     /// Configure the starting position of the subscription. When adding a new subscription to an existing system this

@@ -4,7 +4,9 @@ using Beckett.Database;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("HelloWorld")!;
+var connectionString = builder.Configuration.GetConnectionString("HelloWorld");
+
+ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
 await BeckettDatabase.Migrate(connectionString);
 

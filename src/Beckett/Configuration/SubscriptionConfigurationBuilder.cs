@@ -1,8 +1,5 @@
-using System.Runtime.CompilerServices;
-using Beckett.Projections;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Beckett.Configuration;
 
@@ -11,6 +8,10 @@ public class SubscriptionConfigurationBuilder(
     IServiceCollection services
 ) : ISubscriptionConfigurationBuilder
 {
+    public IServiceCollection Services => services;
+
+    public Subscription Subscription => subscription;
+
     public ISubscriptionConfigurationBuilder Category(string category)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(category);
@@ -60,30 +61,6 @@ public class SubscriptionConfigurationBuilder(
     public ISubscriptionConfigurationBuilder HandlerName(string handlerName)
     {
         subscription.HandlerName = handlerName;
-
-        return this;
-    }
-
-    public ISubscriptionConfigurationBuilder Projection<TProjection, TState, TKey>(
-        ServiceLifetime lifetime = ServiceLifetime.Transient
-    )
-        where TProjection : IProjection<TState, TKey> where TState : class, IApply, new()
-    {
-        var handlerType = typeof(TProjection);
-
-        services.TryAdd(new ServiceDescriptor(handlerType, handlerType, lifetime));
-
-        var projection = (IProjection<TState, TKey>)RuntimeHelpers.GetUninitializedObject(typeof(TProjection));
-
-        var configuration = new ProjectionConfiguration<TKey>();
-
-        projection.Configure(configuration);
-
-        configuration.Validate(new TState());
-
-        Messages(configuration.GetMessageTypes());
-
-        subscription.HandlerDelegate = ProjectionHandler<TProjection, TState, TKey>.Handle;
 
         return this;
     }
