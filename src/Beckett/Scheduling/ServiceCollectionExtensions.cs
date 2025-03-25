@@ -11,8 +11,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IMessageScheduler, MessageScheduler>();
 
-        services.AddSingleton<ITransactionalMessageScheduler, MessageScheduler>();
-
         if (!options.Subscriptions.Enabled)
         {
             return;
