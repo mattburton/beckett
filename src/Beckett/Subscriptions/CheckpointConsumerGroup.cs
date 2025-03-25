@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Beckett.Database;
 using Microsoft.Extensions.Logging;
@@ -16,35 +15,7 @@ public class CheckpointConsumerGroup(
         options.Subscriptions.GetConcurrency() * 2
     );
 
-    private readonly int[] _instances = Instances(options);
-
-    // ReSharper disable once CollectionNeverQueried.Local
-    private readonly ConcurrentDictionary<int, Task> _consumers = new();
-
-    public void Initialize(CancellationToken stoppingToken)
-    {
-        foreach (var instance in _instances)
-        {
-            _consumers.GetOrAdd(
-                instance,
-                Task.Run(
-                    () => new CheckpointConsumer(
-                        _channel,
-                        instance,
-                        database,
-                        checkpointProcessor,
-                        options,
-                        logger
-                    ).StartPolling(stoppingToken),
-                    stoppingToken
-                )
-            );
-        }
-
-        stoppingToken.Register(() => _channel.Writer.Complete());
-    }
-
-    public void StartPolling(string groupName)
+    public void Notify(string groupName)
     {
         if (options.Subscriptions.GroupName != groupName)
         {
@@ -54,9 +25,20 @@ public class CheckpointConsumerGroup(
         _channel.Writer.TryWrite(CheckpointAvailable.Instance);
     }
 
-    private static int[] Instances(BeckettOptions options)
+    public async Task Poll(CancellationToken stoppingToken)
     {
-        return Enumerable.Range(1, options.Subscriptions.GetConcurrency()).ToArray();
+        var tasks = Enumerable.Range(1, options.Subscriptions.GetConcurrency()).Select(
+            x => new CheckpointConsumer(
+                database,
+                checkpointProcessor,
+                options,
+                logger
+            ).Poll(x, _channel, stoppingToken)
+        ).ToArray();
+
+        stoppingToken.Register(() => _channel.Writer.Complete());
+
+        await Task.WhenAll(tasks);
     }
 }
 

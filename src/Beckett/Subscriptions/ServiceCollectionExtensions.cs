@@ -34,7 +34,11 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<BootstrapSubscriptions>();
 
+        services.AddHostedService<GlobalStreamConsumerHost>();
+
         services.AddHostedService<GlobalStreamPollingService>();
+
+        services.AddHostedService<CheckpointConsumerGroupHost>();
 
         services.AddHostedService<CheckpointPollingService>();
 

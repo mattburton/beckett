@@ -18,12 +18,7 @@ public class CheckpointProcessor(
     ILogger<CheckpointProcessor> logger
 ) : ICheckpointProcessor
 {
-    public async Task Process(
-        int instance,
-        Checkpoint checkpoint,
-        Subscription subscription,
-        CancellationToken cancellationToken
-    )
+    public async Task Process(int instance, Checkpoint checkpoint, Subscription subscription)
     {
         using var checkpointLoggingScope = CheckpointLoggingScope(instance, checkpoint);
 
@@ -32,23 +27,15 @@ public class CheckpointProcessor(
         var result = await HandleMessageBatch(
             checkpoint,
             subscription,
-            options.Subscriptions.SubscriptionStreamBatchSize,
-            cancellationToken
+            options.Subscriptions.SubscriptionStreamBatchSize
         );
 
         switch (result)
         {
             case Success success:
-                //if host is stopping we might not have processed anything yet for the current batch so exit early
-                if (cancellationToken.IsCancellationRequested && !checkpoint.IsRetryOrFailure &&
-                    success.StreamPosition == checkpoint.StreamPosition)
-                {
-                    break;
-                }
-
                 await database.Execute(
                     new UpdateCheckpointPosition(checkpoint.Id, success.StreamPosition, null, options.Postgres),
-                    cancellationToken
+                    CancellationToken.None
                 );
 
                 SuccessTraceLogging(checkpoint, success);
@@ -82,7 +69,7 @@ public class CheckpointProcessor(
                         processAt,
                         options.Postgres
                     ),
-                    cancellationToken
+                    CancellationToken.None
                 );
 
                 break;
@@ -92,19 +79,14 @@ public class CheckpointProcessor(
     private async Task<IMessageBatchResult> HandleMessageBatch(
         Checkpoint checkpoint,
         Subscription subscription,
-        int batchSize,
-        CancellationToken cancellationToken
+        int batchSize
     )
     {
         IReadOnlyList<IMessageContext> messageBatch;
 
         try
         {
-            messageBatch = await ReadMessageBatch(checkpoint, subscription, batchSize, cancellationToken);
-        }
-        catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
-        {
-            throw;
+            messageBatch = await ReadMessageBatch(checkpoint, subscription, batchSize);
         }
         catch (Exception e)
         {
@@ -137,16 +119,7 @@ public class CheckpointProcessor(
             {
                 try
                 {
-                    return await DispatchMessageBatchToHandler(
-                        checkpoint,
-                        subscription,
-                        messageBatch,
-                        cancellationToken
-                    );
-                }
-                catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
-                {
-                    throw;
+                    return await DispatchMessageBatchToHandler(checkpoint, subscription, messageBatch);
                 }
                 catch (Exception e)
                 {
@@ -162,25 +135,11 @@ public class CheckpointProcessor(
                 }
             }
 
-            var lastProcessedStreamPosition = checkpoint.StreamPosition;
-
             foreach (var streamMessage in messageBatch.Where(x => subscription.SubscribedToMessage(x.Type)))
             {
                 try
                 {
-                    //if host is stopping attempt to record where we left off
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        return new Success(lastProcessedStreamPosition);
-                    }
-
-                    await DispatchMessageToHandler(checkpoint, subscription, streamMessage, cancellationToken);
-
-                    lastProcessedStreamPosition = streamMessage.PositionFor(subscription);
-                }
-                catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
-                {
-                    throw;
+                    await DispatchMessageToHandler(checkpoint, subscription, streamMessage);
                 }
                 catch (Exception e)
                 {
@@ -200,10 +159,6 @@ public class CheckpointProcessor(
 
             return new Success(messageBatch[^1].PositionFor(subscription));
         }
-        catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
         catch (Exception e)
         {
             logger.LogError(e, "Unhandled exception processing checkpoint {CheckpointId}", checkpoint.Id);
@@ -215,8 +170,7 @@ public class CheckpointProcessor(
     private async Task DispatchMessageToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        IMessageContext messageContext,
-        CancellationToken cancellationToken
+        IMessageContext messageContext
     )
     {
         using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
@@ -227,7 +181,7 @@ public class CheckpointProcessor(
 
         using var scope = serviceProvider.CreateScope();
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var cts = new CancellationTokenSource();
 
         cts.CancelAfter(options.Subscriptions.ReservationTimeout);
 
@@ -240,15 +194,8 @@ public class CheckpointProcessor(
         {
             throw timeoutException;
         }
-        catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
+        catch (OperationCanceledException e) when (cts.IsCancellationRequested)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                logger.LogInformation("Shutdown signal received while processing message");
-
-                throw new OperationCanceledException(e.Message, e, cancellationToken);
-            }
-
             throw new TimeoutException(
                 $"Handler exceeded the reservation timeout of {options.Subscriptions.ReservationTimeout.TotalSeconds} seconds while handling message {messageContext.Id} for checkpoint {checkpoint.Id}",
                 e
@@ -259,11 +206,10 @@ public class CheckpointProcessor(
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        IReadOnlyList<IMessageContext> messages,
-        CancellationToken cancellationToken
+        IReadOnlyList<IMessageContext> messages
     )
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var cts = new CancellationTokenSource();
 
         cts.CancelAfter(options.Subscriptions.ReservationTimeout);
 
@@ -282,15 +228,8 @@ public class CheckpointProcessor(
         {
             throw timeoutException;
         }
-        catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
+        catch (OperationCanceledException e) when (cts.IsCancellationRequested)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                logger.LogInformation("Shutdown signal received while processing message");
-
-                throw new OperationCanceledException(e.Message, e, cancellationToken);
-            }
-
             throw new TimeoutException(
                 $"Handler exceeded the reservation timeout of {options.Subscriptions.ReservationTimeout.TotalSeconds} seconds while handling message batch starting with {messages[0].Id} for checkpoint {checkpoint.Id}",
                 e
@@ -301,12 +240,9 @@ public class CheckpointProcessor(
     private async Task<IReadOnlyList<IMessageContext>> ReadMessageBatch(
         Checkpoint checkpoint,
         Subscription subscription,
-        int batchSize,
-        CancellationToken cancellationToken
+        int batchSize
     )
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var startingStreamPosition = checkpoint.StartingPositionFor(subscription);
         var endingStreamPosition = checkpoint.StreamVersion;
         var skipBatchSizeCheck = false;
@@ -342,7 +278,7 @@ public class CheckpointProcessor(
                     Count = batchSize,
                     Types = subscription.MessageTypeNames.ToArray()
                 },
-                cancellationToken
+                CancellationToken.None
             );
 
             logger.FoundMessagesToProcessForCheckpoint(globalStream.StreamMessages.Count, checkpoint.Id);
@@ -357,7 +293,7 @@ public class CheckpointProcessor(
                 StartingStreamPosition = startingStreamPosition,
                 EndingStreamPosition = endingStreamPosition
             },
-            cancellationToken
+            CancellationToken.None
         );
 
         logger.FoundMessagesToProcessForCheckpoint(stream.StreamMessages.Count, checkpoint.Id);

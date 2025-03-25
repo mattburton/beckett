@@ -16,7 +16,7 @@ public class MessageNotificationHandler(
         {
             logger.StartingGlobalStreamNotificationPolling();
 
-            globalStreamConsumer.StartPolling(cancellationToken);
+            globalStreamConsumer.Notify();
         }
         catch (Exception e)
         {

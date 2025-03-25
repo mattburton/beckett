@@ -11,21 +11,17 @@ public class CheckpointPollingService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        consumerGroup.Initialize(stoppingToken);
+        var timer = new PeriodicTimer(options.CheckpointPollingInterval);
 
-        while (true)
+        while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
             {
-                stoppingToken.ThrowIfCancellationRequested();
-
                 logger.StartingCheckpointIntervalPolling();
 
-                consumerGroup.StartPolling(options.GroupName);
-
-                await Task.Delay(options.CheckpointPollingInterval, stoppingToken);
+                consumerGroup.Notify(options.GroupName);
             }
-            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 throw;
             }

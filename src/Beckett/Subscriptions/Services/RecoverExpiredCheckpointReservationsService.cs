@@ -37,7 +37,7 @@ public class RecoverExpiredCheckpointReservationsService(
                     logger.RecoveredExpiredCheckpointReservations(recovered);
                 }
             }
-            catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 throw;
             }

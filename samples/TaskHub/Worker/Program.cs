@@ -19,12 +19,21 @@ try
 
     builder.Services.AddSerilog((_, configuration) => configuration.ReadFrom.Configuration(builder.Configuration));
 
+    //default host shutdown timeout is 30 seconds - make sure that it's set higher than your reservation timeout
+    builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(90));
+
     await builder.AddTaskHubDatabase();
 
     builder.Services.ConfigureServices();
 
     builder.Services.AddBeckett(
-        options => { options.WithSubscriptionGroup("TaskHub"); }
+        options =>
+        {
+            options.WithSubscriptionGroup("TaskHub");
+
+            //default reservation timeout is 5 minutes - we can lower that for the purposes of this demo
+            options.Subscriptions.ReservationTimeout = TimeSpan.FromSeconds(60);
+        }
     ).WithSubscriptionsFrom(TaskHubAssembly.Instance);
 
     builder.Services.AddOpenTelemetry()

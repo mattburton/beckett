@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Beckett.Database;
 using Beckett.Messages;
 using Beckett.MessageStorage;
@@ -37,7 +36,7 @@ public class CheckpointProcessorTests
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
-                await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                await checkpointProcessor.Process(1, checkpoint, subscription);
 
                 await messageStorage.Received().ReadStream(
                     "test",
@@ -69,7 +68,7 @@ public class CheckpointProcessorTests
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
-                await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                await checkpointProcessor.Process(1, checkpoint, subscription);
 
                 await messageStorage.Received().ReadStream(
                     "test",
@@ -113,7 +112,7 @@ public class CheckpointProcessorTests
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
 
-                await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                await checkpointProcessor.Process(1, checkpoint, subscription);
 
                 Assert.NotNull(error);
                 Assert.True(IsTimeoutException(error));
@@ -151,47 +150,10 @@ public class CheckpointProcessorTests
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
 
-                await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                await checkpointProcessor.Process(1, checkpoint, subscription);
 
                 Assert.NotNull(error);
                 Assert.True(IsTimeoutException(error));
-            }
-        }
-
-        public class when_the_stopping_token_is_cancelled
-        {
-            [Fact]
-            public async Task throws_operation_canceled_exception()
-            {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
-                {
-                    HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(5), ct);
-                    }
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                    }
-                };
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
-                var parentCts = new CancellationTokenSource();
-                var innerCts = CancellationTokenSource.CreateLinkedTokenSource(parentCts.Token);
-
-                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), Arg.Any<CancellationToken>())
-                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
-                await parentCts.CancelAsync();
-
-                await Assert.ThrowsAsync<OperationCanceledException>(
-                    () => checkpointProcessor.Process(1, checkpoint, subscription, innerCts.Token)
-                );
             }
         }
 
@@ -217,7 +179,7 @@ public class CheckpointProcessorTests
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
-                await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                await checkpointProcessor.Process(1, checkpoint, subscription);
 
                 await messageStorage.Received().ReadStream(
                     "test",
@@ -261,7 +223,7 @@ public class CheckpointProcessorTests
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
 
-                await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                await checkpointProcessor.Process(1, checkpoint, subscription);
 
                 Assert.NotNull(error);
                 Assert.True(IsTimeoutException(error));
@@ -299,45 +261,10 @@ public class CheckpointProcessorTests
                 database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
                     .Do(x => error = x.Arg<RecordCheckpointError>());
 
-                await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                await checkpointProcessor.Process(1, checkpoint, subscription);
 
                 Assert.NotNull(error);
                 Assert.True(IsTimeoutException(error));
-            }
-        }
-
-        public class when_the_stopping_token_is_cancelled
-        {
-            [Fact]
-            public async Task throws_operation_canceled_exception()
-            {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
-                {
-                    HandlerDelegate = (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
-                        Task.Delay(TimeSpan.FromMilliseconds(2), ct)
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                    }
-                };
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
-                var parentCts = new CancellationTokenSource();
-                var innerCts = CancellationTokenSource.CreateLinkedTokenSource(parentCts.Token);
-
-                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), Arg.Any<CancellationToken>())
-                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
-                await parentCts.CancelAsync();
-
-                await Assert.ThrowsAsync<OperationCanceledException>(
-                    () => checkpointProcessor.Process(1, checkpoint, subscription, innerCts.Token)
-                );
             }
         }
 
@@ -365,7 +292,7 @@ public class CheckpointProcessorTests
                     var messageStorage = Substitute.For<IMessageStorage>();
                     var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
-                    await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                    await checkpointProcessor.Process(1, checkpoint, subscription);
 
                     await messageStorage.Received().ReadStream(
                         "test",
@@ -397,7 +324,7 @@ public class CheckpointProcessorTests
                     var messageStorage = Substitute.For<IMessageStorage>();
                     var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
-                    await checkpointProcessor.Process(1, checkpoint, subscription, CancellationToken.None);
+                    await checkpointProcessor.Process(1, checkpoint, subscription);
 
                     await messageStorage.Received().ReadStream(
                         "test",

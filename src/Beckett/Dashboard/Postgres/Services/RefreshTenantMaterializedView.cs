@@ -14,17 +14,15 @@ public class RefreshTenantMaterializedView(
     {
         await Task.Yield();
 
-        while (true)
+        var timer = new PeriodicTimer(options.TenantRefreshInterval);
+
+        while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
             {
-                stoppingToken.ThrowIfCancellationRequested();
-
                 await dashboard.MessageStore.RefreshTenants(stoppingToken);
-
-                await Task.Delay(options.TenantRefreshInterval, stoppingToken);
             }
-            catch (OperationCanceledException e) when (e.CancellationToken == stoppingToken)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 throw;
             }
