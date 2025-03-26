@@ -1,13 +1,13 @@
 using Beckett;
 using Beckett.OpenTelemetry;
+using Core.DependencyInjection;
+using Core.Modules;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using TaskHub;
 using TaskHub.Infrastructure.Database;
-using TaskHub.Infrastructure.DependencyInjection;
-using TaskHub.Infrastructure.Modules;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()

@@ -1,4 +1,3 @@
-using Beckett.Messages;
 using TaskHub.Users;
 using TaskHub.Users.Events;
 using TaskHub.Users.Notifications;

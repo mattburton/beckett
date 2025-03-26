@@ -3,7 +3,7 @@ using TaskHub.TaskLists.Slices.AddTask;
 
 namespace Tests.TaskLists.Slices.AddTask;
 
-public class AddTaskCommandTests : CommandSpecificationFixture<AddTaskCommand, AddTaskCommand.State>
+public class AddTaskCommandTests : CommandFixture<AddTaskCommand, AddTaskCommand.State>
 {
     [Fact]
     public void task_added()

@@ -56,7 +56,7 @@ public class UserLookupIntegrationTests(DatabaseFixture database) : IClassFixtur
         }
     }
 
-    private static UserLookupReadModel GenerateReadModel() => StateBuilder.Build<UserLookupReadModel>(
+    private static UserLookupReadModel GenerateReadModel() => ReadModelBuilder.Build<UserLookupReadModel>(
         new UserNotification(Operation.Create, Generate.String(), Generate.String())
     );
 }

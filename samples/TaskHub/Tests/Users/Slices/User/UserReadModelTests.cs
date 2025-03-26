@@ -3,7 +3,7 @@ using TaskHub.Users.Slices.User;
 
 namespace Tests.Users.Slices.User;
 
-public class UserReadModelTests : StateSpecificationFixture<UserReadModel>
+public class UserReadModelTests : ReadModelFixture<UserReadModel>
 {
     [Fact]
     public void user_registered()

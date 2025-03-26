@@ -1,4 +1,5 @@
-using TaskHub.Infrastructure.DependencyInjection;
+using Core.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TaskHub.Infrastructure.Email;
 

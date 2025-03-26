@@ -14,17 +14,17 @@ public static partial class UserNotificationPublisher
     {
         var stream = await messageStore.ReadStream(context.StreamName, cancellationToken);
 
-        var state = stream.ProjectTo<UserState>();
+        var model = stream.ProjectTo<Model>();
 
         await notificationPublisher.Publish(
             context.StreamName,
-            state.ToNotification(),
+            model.ToNotification(),
             cancellationToken
         );
     }
 
-    [State]
-    public partial class UserState
+    [ReadModel]
+    public partial class Model
     {
         private Operation Operation { get; set; }
         private string UserName { get; set; } = null!;

@@ -64,7 +64,7 @@ public class UsersIntegrationTests(DatabaseFixture database) : IClassFixture<Dat
         }
     }
 
-    private static UsersReadModel GenerateReadModel() => StateBuilder.Build<UsersReadModel>(
+    private static UsersReadModel GenerateReadModel() => ReadModelBuilder.Build<UsersReadModel>(
         new UserRegistered(Generate.String(), Generate.String())
     );
 }

@@ -3,7 +3,7 @@ using TaskHub.TaskLists.Slices.TaskList;
 
 namespace Tests.TaskLists.Slices.TaskList;
 
-public class TaskListReadModelTests : StateSpecificationFixture<TaskListReadModel>
+public class TaskListReadModelTests : ReadModelFixture<TaskListReadModel>
 {
     [Fact]
     public void task_list_added()

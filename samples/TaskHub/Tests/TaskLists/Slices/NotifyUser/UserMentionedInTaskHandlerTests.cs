@@ -1,3 +1,4 @@
+using TaskHub.Infrastructure.Email;
 using TaskHub.TaskLists;
 using TaskHub.TaskLists.Events;
 using TaskHub.TaskLists.Slices.NotifyUser;
@@ -23,11 +24,11 @@ public class UserMentionedInTaskHandlerTests
                 var queryBus = new FakeQueryBus();
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                var userReadModel = ReadModelBuilder.Build<UserLookupReadModel>(
                     new TaskHub.Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
-                var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
+                var userNotificationsToSendReadModel = ReadModelBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username)
                 );
                 var message = new UserMentionedInTask(taskListId, task, username);
@@ -58,11 +59,11 @@ public class UserMentionedInTaskHandlerTests
                 var queryBus = new FakeQueryBus();
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                var userReadModel = ReadModelBuilder.Build<UserLookupReadModel>(
                     new TaskHub.Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
-                var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
+                var userNotificationsToSendReadModel = ReadModelBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username)
                 );
                 var expectedStreamName = TaskListModule.StreamName(taskListId);
@@ -98,11 +99,11 @@ public class UserMentionedInTaskHandlerTests
                 var queryBus = new FakeQueryBus();
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                var userReadModel = ReadModelBuilder.Build<UserLookupReadModel>(
                     new TaskHub.Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
-                var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
+                var userNotificationsToSendReadModel = ReadModelBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username),
                     new UserNotificationSent(taskListId, task, username)
                 );
@@ -132,11 +133,11 @@ public class UserMentionedInTaskHandlerTests
                 var queryBus = new FakeQueryBus();
                 var commandBus = new FakeCommandBus();
                 var userLookupQuery = new UserLookupQuery(username);
-                var userReadModel = StateBuilder.Build<UserLookupReadModel>(
+                var userReadModel = ReadModelBuilder.Build<UserLookupReadModel>(
                     new TaskHub.Users.Notifications.UserNotification(Operation.Create, username, email)
                 );
                 var userNotificationsToSendQuery = new UserNotificationsToSendQuery(taskListId);
-                var userNotificationsToSendReadModel = StateBuilder.Build<UserNotificationsToSendReadModel>(
+                var userNotificationsToSendReadModel = ReadModelBuilder.Build<UserNotificationsToSendReadModel>(
                     new UserMentionedInTask(taskListId, task, username),
                     new UserNotificationSent(taskListId, task, username)
                 );

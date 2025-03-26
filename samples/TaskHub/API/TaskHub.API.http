@@ -1,4 +1,4 @@
-@base_url = http://localhost:5222/taskhub
+@base_url = http://localhost:5222/v1
 
 ### Add User
 

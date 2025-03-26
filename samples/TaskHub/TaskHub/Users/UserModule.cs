@@ -1,16 +1,11 @@
-using TaskHub.Infrastructure.Modules;
-using TaskHub.Infrastructure.Routing;
 using TaskHub.Users.Events;
 using TaskHub.Users.Notifications;
-using TaskHub.Users.Slices.DeleteUser;
 using TaskHub.Users.Slices.PublishNotification;
-using TaskHub.Users.Slices.RegisterUser;
-using TaskHub.Users.Slices.User;
 using TaskHub.Users.Slices.Users;
 
 namespace TaskHub.Users;
 
-public class UserModule : IModule, IConfigureRoutes
+public class UserModule : IModule
 {
     private const string Category = "user";
 
@@ -43,15 +38,5 @@ public class UserModule : IModule, IConfigureRoutes
                     );
                 }
             );
-    }
-
-    public void Routes(IEndpointRouteBuilder builder)
-    {
-        var routes = builder.MapGroup("users");
-
-        routes.MapGet("/", UsersEndpoint.Handle);
-        routes.MapPost("/", RegisterUserEndpoint.Handle);
-        routes.MapGet("/{username}", UserEndpoint.Handle);
-        routes.MapDelete("/{username}", DeleteUserEndpoint.Handle);
     }
 }

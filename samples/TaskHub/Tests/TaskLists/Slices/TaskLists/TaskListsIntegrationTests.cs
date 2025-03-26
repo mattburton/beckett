@@ -94,7 +94,7 @@ public class TaskListsIntegrationTests(DatabaseFixture database) : IClassFixture
         }
     }
 
-    private static TaskListsReadModel GenerateReadModel() => StateBuilder.Build<TaskListsReadModel>(
+    private static TaskListsReadModel GenerateReadModel() => ReadModelBuilder.Build<TaskListsReadModel>(
         new TaskListAdded(Generate.Guid(), Generate.String())
     );
 }

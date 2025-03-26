@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.Slices.TaskLists;
 
-[State]
+[ReadModel]
 public partial class TaskListsReadModel
 {
     public Guid Id { get; set; }

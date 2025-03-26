@@ -1,5 +1,6 @@
 using System.Text;
 using Beckett;
+using Core.ReadModels;
 
 namespace Core.Projections;
 
@@ -37,9 +38,9 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
 
     public IReadOnlyList<Type> GetMessageTypes() => _map.Keys.ToArray();
 
-    public void Validate<TState>(TState state)
+    public void Validate<TReadModel>(TReadModel readModel)
     {
-        if (state is not IApplyDiagnostics diagnostics)
+        if (readModel is not IApplyDiagnostics diagnostics)
         {
             return;
         }
@@ -78,7 +79,7 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
             }
         }
 
-        var message = $"{typeof(TState).Name} projection is not configured correctly:\n\n{errorMessage}";
+        var message = $"{typeof(TReadModel).Name} projection is not configured correctly:\n\n{errorMessage}";
 
         throw new Exception(message);
     }

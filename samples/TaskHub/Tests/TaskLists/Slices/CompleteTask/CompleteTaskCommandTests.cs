@@ -3,7 +3,7 @@ using TaskHub.TaskLists.Slices.CompleteTask;
 
 namespace Tests.TaskLists.Slices.CompleteTask;
 
-public class CompleteTaskCommandTests : CommandSpecificationFixture<CompleteTaskCommand, CompleteTaskCommand.State>
+public class CompleteTaskCommandTests : CommandFixture<CompleteTaskCommand, CompleteTaskCommand.State>
 {
     [Fact]
     public void task_completed()

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace TaskHub.Infrastructure.Email;
 
 public class LoggingEmailService(ILogger<LoggingEmailService> logger) : IEmailService

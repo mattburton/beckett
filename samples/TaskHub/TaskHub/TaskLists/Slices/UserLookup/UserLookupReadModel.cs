@@ -2,7 +2,7 @@ using TaskHub.Users.Notifications;
 
 namespace TaskHub.TaskLists.Slices.UserLookup;
 
-[State]
+[ReadModel]
 public partial class UserLookupReadModel
 {
     public string Username { get; set; } = null!;

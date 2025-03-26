@@ -3,7 +3,7 @@ using TaskHub.TaskLists.Slices.NotifyUser;
 
 namespace Tests.TaskLists.Slices.NotifyUser;
 
-public class NotifyUserCommandTests : CommandSpecificationFixture<NotifyUserCommand>
+public class NotifyUserCommandTests : CommandFixture<NotifyUserCommand>
 {
     [Fact]
     public void user_notification_sent()

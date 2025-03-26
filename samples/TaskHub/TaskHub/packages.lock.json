@@ -181,11 +181,10 @@
       "core": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )"
+          "Beckett": "[0.17.1, )",
+          "Npgsql.DependencyInjection": "[9.0.3, )",
+          "Scrutor": "[6.0.1, )"
         }
-      },
-      "core.sourcegenerators": {
-        "type": "Project"
       },
       "Microsoft.Extensions.Hosting.Abstractions": {
         "type": "CentralTransitive",

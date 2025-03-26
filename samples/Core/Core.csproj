@@ -10,4 +10,9 @@
     <ProjectReference Include="..\..\src\Beckett\Beckett.csproj"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Npgsql.DependencyInjection"/>
+    <PackageReference Include="Scrutor"/>
+  </ItemGroup>
+
 </Project>

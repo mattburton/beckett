@@ -11,14 +11,14 @@ public class TaskListsProjection(NpgsqlDataSource dataSource) : IProjection<Task
         configuration.DeletedBy<TaskListDeleted>(x => x.Id);
     }
 
-    public async Task Create(TaskListsReadModel state, CancellationToken cancellationToken)
+    public async Task Create(TaskListsReadModel readModel, CancellationToken cancellationToken)
     {
         const string sql = "INSERT INTO task_lists.task_lists (id, name) VALUES ($1, $2);";
 
         var command = dataSource.CreateCommand(sql);
 
-        command.Parameters.AddWithValue(state.Id);
-        command.Parameters.AddWithValue(state.Name);
+        command.Parameters.AddWithValue(readModel.Id);
+        command.Parameters.AddWithValue(readModel.Name);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -47,14 +47,14 @@ public class TaskListsProjection(NpgsqlDataSource dataSource) : IProjection<Task
         };
     }
 
-    public async Task Update(TaskListsReadModel state, CancellationToken cancellationToken)
+    public async Task Update(TaskListsReadModel readModel, CancellationToken cancellationToken)
     {
         const string sql = "UPDATE task_lists.task_lists SET name = $2 WHERE id = $1;";
 
         var command = dataSource.CreateCommand(sql);
 
-        command.Parameters.AddWithValue(state.Id);
-        command.Parameters.AddWithValue(state.Name);
+        command.Parameters.AddWithValue(readModel.Id);
+        command.Parameters.AddWithValue(readModel.Name);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

@@ -3,7 +3,7 @@ using TaskHub.Users.Slices.DeleteUser;
 
 namespace Tests.Users.Slices.DeleteUser;
 
-public class DeleteUserCommandTests : CommandSpecificationFixture<DeleteUserCommand>
+public class DeleteUserCommandTests : CommandFixture<DeleteUserCommand>
 {
     [Fact]
     public void user_deleted()

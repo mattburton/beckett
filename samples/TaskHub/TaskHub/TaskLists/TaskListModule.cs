@@ -1,19 +1,11 @@
-using TaskHub.Infrastructure.Modules;
-using TaskHub.Infrastructure.Routing;
 using TaskHub.TaskLists.Events;
-using TaskHub.TaskLists.Slices.AddTask;
-using TaskHub.TaskLists.Slices.AddTaskList;
-using TaskHub.TaskLists.Slices.ChangeTaskListName;
-using TaskHub.TaskLists.Slices.CompleteTask;
-using TaskHub.TaskLists.Slices.DeleteTaskList;
 using TaskHub.TaskLists.Slices.NotifyUser;
-using TaskHub.TaskLists.Slices.TaskList;
 using TaskHub.TaskLists.Slices.TaskLists;
 using TaskHub.TaskLists.Slices.UserLookup;
 
 namespace TaskHub.TaskLists;
 
-public class TaskListModule : IModule, IConfigureRoutes
+public class TaskListModule : IModule
 {
     private const string Category = "task_list";
 
@@ -52,18 +44,5 @@ public class TaskListModule : IModule, IConfigureRoutes
                     );
                 }
             );
-    }
-
-    public void Routes(IEndpointRouteBuilder builder)
-    {
-        var routes = builder.MapGroup("task-lists");
-
-        routes.MapPost("/", AddTaskListEndpoint.Handle);
-        routes.MapGet("/", TaskListsEndpoint.Handle);
-        routes.MapPost("/{taskListId:guid}", AddTaskEndpoint.Handle);
-        routes.MapPut("/{id:guid}/name", ChangeTaskListNameEndpoint.Handle);
-        routes.MapPost("/{taskListId:guid}/complete/{task}", CompleteTaskEndpoint.Handle);
-        routes.MapDelete("/{id:guid}", DeleteTaskListEndpoint.Handle);
-        routes.MapGet("/{id:guid}", TaskListEndpoint.Handle);
     }
 }

@@ -3,7 +3,7 @@ using TaskHub.TaskLists.Slices.UserNotificationsToSend;
 
 namespace Tests.TaskLists.Slices.UserNotificationsToSend;
 
-public class UserNotificationsToSendReadModelTests : StateSpecificationFixture<UserNotificationsToSendReadModel>
+public class UserNotificationsToSendReadModelTests : ReadModelFixture<UserNotificationsToSendReadModel>
 {
     [Fact]
     public void user_mentioned_in_task()

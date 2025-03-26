@@ -3,7 +3,7 @@ using TaskHub.TaskLists.Slices.DeleteTaskList;
 
 namespace Tests.TaskLists.Slices.DeleteTaskList;
 
-public class DeleteTaskListCommandTests : CommandSpecificationFixture<DeleteTaskListCommand>
+public class DeleteTaskListCommandTests : CommandFixture<DeleteTaskListCommand>
 {
     [Fact]
     public void task_list_deleted()

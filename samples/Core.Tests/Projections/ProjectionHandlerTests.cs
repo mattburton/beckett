@@ -1,6 +1,7 @@
 using Beckett;
 using Beckett.Messages;
 using Core.Projections;
+using Core.ReadModels;
 
 namespace Core.Tests.Projections;
 
@@ -200,7 +201,7 @@ public partial class ProjectionHandlerTests
         }
     }
 
-    [State]
+    [ReadModel]
     public partial class TestReadModel
     {
         public Guid Id { get; set; }
@@ -242,9 +243,9 @@ public partial class ProjectionHandlerTests
                 configuration.DeletedBy<TestDeleteMessage>(x => x.Id);
             }
 
-            public Task Create(TestReadModel state, CancellationToken cancellationToken)
+            public Task Create(TestReadModel readModel, CancellationToken cancellationToken)
             {
-                Results.Add(state.Id, state);
+                Results.Add(readModel.Id, readModel);
 
                 return Task.CompletedTask;
             }
@@ -254,9 +255,9 @@ public partial class ProjectionHandlerTests
                 return Task.FromResult(Results.GetValueOrDefault(key));
             }
 
-            public Task Update(TestReadModel state, CancellationToken cancellationToken)
+            public Task Update(TestReadModel readModel, CancellationToken cancellationToken)
             {
-                Results[state.Id] = state;
+                Results[readModel.Id] = readModel;
 
                 return Task.CompletedTask;
             }
@@ -270,7 +271,7 @@ public partial class ProjectionHandlerTests
         }
     }
 
-    [State]
+    [ReadModel]
     public partial class ReadModelWithCompositeKey
     {
         private string CompositeKey => IdFor(Id, Date);
@@ -294,9 +295,9 @@ public partial class ProjectionHandlerTests
                 configuration.CreatedBy<TestMessageWithCompositeKey>(x => IdFor(x.Id, x.Date));
             }
 
-            public Task Create(ReadModelWithCompositeKey state, CancellationToken cancellationToken)
+            public Task Create(ReadModelWithCompositeKey readModel, CancellationToken cancellationToken)
             {
-                Results.Add(state.CompositeKey, state);
+                Results.Add(readModel.CompositeKey, readModel);
 
                 return Task.CompletedTask;
             }
@@ -306,9 +307,9 @@ public partial class ProjectionHandlerTests
                 return Task.FromResult(Results.GetValueOrDefault(key));
             }
 
-            public Task Update(ReadModelWithCompositeKey state, CancellationToken cancellationToken)
+            public Task Update(ReadModelWithCompositeKey readModel, CancellationToken cancellationToken)
             {
-                Results[state.CompositeKey] = state;
+                Results[readModel.CompositeKey] = readModel;
 
                 return Task.CompletedTask;
             }

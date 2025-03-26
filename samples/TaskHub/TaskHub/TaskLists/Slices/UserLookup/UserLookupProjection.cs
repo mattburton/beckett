@@ -10,14 +10,14 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
         configuration.DeletedBy<UserNotification>(x => x.Username).Where(x => x.Operation == Operation.Delete);
     }
 
-    public async Task Create(UserLookupReadModel state, CancellationToken cancellationToken)
+    public async Task Create(UserLookupReadModel readModel, CancellationToken cancellationToken)
     {
         const string sql = "INSERT INTO task_lists.user_lookup (username, email) VALUES ($1, $2);";
 
         var command = dataSource.CreateCommand(sql);
 
-        command.Parameters.AddWithValue(state.Username);
-        command.Parameters.AddWithValue(state.Email);
+        command.Parameters.AddWithValue(readModel.Username);
+        command.Parameters.AddWithValue(readModel.Email);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -46,7 +46,7 @@ public class UserLookupProjection(NpgsqlDataSource dataSource) : IProjection<Use
         };
     }
 
-    public Task Update(UserLookupReadModel state, CancellationToken cancellationToken) =>
+    public Task Update(UserLookupReadModel readModel, CancellationToken cancellationToken) =>
         throw new NotImplementedException();
 
     public async Task Delete(string key, CancellationToken cancellationToken)

@@ -3,7 +3,7 @@ using TaskHub.Users.Notifications;
 
 namespace Tests.TaskLists.Slices.UserLookup;
 
-public class UserLookupReadModelTests : StateSpecificationFixture<UserLookupReadModel>
+public class UserLookupReadModelTests : ReadModelFixture<UserLookupReadModel>
 {
     [Fact]
     public void user_notification()

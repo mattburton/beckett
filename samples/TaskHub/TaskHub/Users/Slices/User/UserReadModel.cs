@@ -2,7 +2,7 @@ using TaskHub.Users.Events;
 
 namespace TaskHub.Users.Slices.User;
 
-[State]
+[ReadModel]
 public partial class UserReadModel
 {
     public string Email { get; set; } = null!;

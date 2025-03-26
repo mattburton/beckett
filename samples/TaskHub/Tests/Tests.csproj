@@ -22,6 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core.Testing\Core.Testing.csproj" />
+    <ProjectReference Include="..\API\API.csproj" />
     <ProjectReference Include="..\TaskHub\TaskHub.csproj"/>
   </ItemGroup>
 

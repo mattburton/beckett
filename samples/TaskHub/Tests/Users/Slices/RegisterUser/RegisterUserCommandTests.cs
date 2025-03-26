@@ -3,7 +3,7 @@ using TaskHub.Users.Slices.RegisterUser;
 
 namespace Tests.Users.Slices.RegisterUser;
 
-public class RegisterUserCommandTests : CommandSpecificationFixture<RegisterUserCommand>
+public class RegisterUserCommandTests : CommandFixture<RegisterUserCommand>
 {
     [Fact]
     public void user_registered()

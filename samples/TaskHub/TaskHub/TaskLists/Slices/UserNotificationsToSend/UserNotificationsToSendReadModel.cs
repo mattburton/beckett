@@ -2,7 +2,7 @@ using TaskHub.TaskLists.Events;
 
 namespace TaskHub.TaskLists.Slices.UserNotificationsToSend;
 
-[State]
+[ReadModel]
 public partial class UserNotificationsToSendReadModel
 {
     public Dictionary<string, bool> Notifications { get; init; } = [];
