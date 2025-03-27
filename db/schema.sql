@@ -567,6 +567,26 @@ $$;
 
 
 --
+-- Name: record_stream_data(text[], timestamp with time zone[], text[]); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.record_stream_data(_category_names text[], _category_timestamps timestamp with time zone[], _tenants text[]) RETURNS void
+    LANGUAGE sql
+    AS $$
+INSERT INTO beckett.categories (name, updated_at)
+SELECT d.name, d.timestamp
+FROM unnest(_category_names, _category_timestamps) AS d (name, timestamp)
+ON CONFLICT (name) DO UPDATE
+  SET updated_at = excluded.updated_at;
+
+INSERT INTO beckett.tenants (tenant)
+SELECT d.tenant
+FROM unnest(_tenants) AS d (tenant)
+ON CONFLICT (tenant) DO NOTHING;
+$$;
+
+
+--
 -- Name: recover_expired_checkpoint_reservations(text, integer); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -842,6 +862,16 @@ $$;
 
 
 --
+-- Name: categories; Type: TABLE; Schema: beckett; Owner: -
+--
+
+CREATE TABLE beckett.categories (
+    name text NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: checkpoints; Type: TABLE; Schema: beckett; Owner: -
 --
 
@@ -967,15 +997,12 @@ CREATE TABLE beckett.subscriptions (
 
 
 --
--- Name: tenants; Type: MATERIALIZED VIEW; Schema: beckett; Owner: -
+-- Name: tenants; Type: TABLE; Schema: beckett; Owner: -
 --
 
-CREATE MATERIALIZED VIEW beckett.tenants AS
- SELECT (metadata ->> '$tenant'::text) AS tenant
-   FROM beckett.messages_active
-  WHERE ((metadata ->> '$tenant'::text) IS NOT NULL)
-  GROUP BY (metadata ->> '$tenant'::text)
-  WITH NO DATA;
+CREATE TABLE beckett.tenants (
+    tenant text NOT NULL
+);
 
 
 --
@@ -990,6 +1017,14 @@ ALTER TABLE ONLY beckett.messages ATTACH PARTITION beckett.messages_active FOR V
 --
 
 ALTER TABLE ONLY beckett.messages ATTACH PARTITION beckett.messages_archived FOR VALUES IN (true);
+
+
+--
+-- Name: categories categories_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.categories
+    ADD CONSTRAINT categories_pkey PRIMARY KEY (name);
 
 
 --
@@ -1105,6 +1140,14 @@ ALTER TABLE ONLY beckett.subscriptions
 
 
 --
+-- Name: tenants tenants_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.tenants
+    ADD CONSTRAINT tenants_pkey PRIMARY KEY (tenant);
+
+
+--
 -- Name: ix_checkpoints_metrics; Type: INDEX; Schema: beckett; Owner: -
 --
 
@@ -1158,13 +1201,6 @@ CREATE INDEX ix_scheduled_messages_deliver_at ON beckett.scheduled_messages USIN
 --
 
 CREATE INDEX ix_subscriptions_active ON beckett.subscriptions USING btree (group_name, name, status) WHERE (status = 'active'::beckett.subscription_status);
-
-
---
--- Name: tenants_tenant_idx; Type: INDEX; Schema: beckett; Owner: -
---
-
-CREATE UNIQUE INDEX tenants_tenant_idx ON beckett.tenants USING btree (tenant);
 
 
 --

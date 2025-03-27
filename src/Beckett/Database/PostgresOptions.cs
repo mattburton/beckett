@@ -25,11 +25,6 @@ public class PostgresOptions
     /// </summary>
     public bool PrepareStatements { get; set; } = true;
 
-    /// <summary>
-    /// Refresh interval for tenant materialized view used by the dashboard. Runs every hour by default.
-    /// </summary>
-    public TimeSpan TenantRefreshInterval { get; set; } = TimeSpan.FromHours(1);
-
     internal NpgsqlDataSource? DataSource { get; private set; }
     internal NpgsqlDataSource? MessageStoreReadDataSource { get; private set; }
     internal NpgsqlDataSource? MessageStoreWriteDataSource { get; private set; }

@@ -4,10 +4,7 @@ public interface IDashboardMessageStore
 {
     Task<GetTenantsResult> GetTenants(CancellationToken cancellationToken);
 
-    Task RefreshTenants(CancellationToken cancellationToken);
-
     Task<GetCategoriesResult> GetCategories(
-        string tenant,
         string? query,
         int page,
         int pageSize,

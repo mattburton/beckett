@@ -1,5 +1,3 @@
-using Beckett.Dashboard.MessageStore.Components;
-
 namespace Beckett.Dashboard.MessageStore.Categories;
 
 public static class CategoriesEndpoint
@@ -13,12 +11,10 @@ public static class CategoriesEndpoint
         CancellationToken cancellationToken
     )
     {
-        var tenant = TenantFilter.GetCurrentTenant(context);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
 
         var result = await dashboard.MessageStore.GetCategories(
-            tenant,
             query,
             pageParameter,
             pageSizeParameter,

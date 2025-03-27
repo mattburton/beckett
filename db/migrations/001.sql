@@ -923,15 +923,44 @@ $$;
 -------------------------------------------------
 -- DASHBOARD SUPPORT
 -------------------------------------------------
-CREATE MATERIALIZED VIEW __schema__.tenants AS
-SELECT metadata ->> '$tenant' AS tenant
-FROM __schema__.messages_active
-WHERE metadata ->> '$tenant' IS NOT NULL
-GROUP BY tenant;
+CREATE TABLE IF NOT EXISTS __schema__.categories
+(
+  name text NOT NULL PRIMARY KEY,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
 
-ALTER MATERIALIZED VIEW __schema__.tenants OWNER TO beckett;
+GRANT UPDATE, DELETE ON __schema__.categories TO beckett;
 
-CREATE UNIQUE INDEX on __schema__.tenants (tenant);
+CREATE TABLE IF NOT EXISTS __schema__.tenants
+(
+  tenant text NOT NULL PRIMARY KEY
+);
+
+GRANT UPDATE, DELETE ON __schema__.tenants TO beckett;
+
+-- insert default record
+INSERT INTO __schema__.tenants (tenant) VALUES ('default');
+
+CREATE OR REPLACE FUNCTION __schema__.record_stream_data(
+  _category_names text[],
+  _category_timestamps timestamp with time zone[],
+  _tenants text[]
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+INSERT INTO __schema__.categories (name, updated_at)
+SELECT d.name, d.timestamp
+FROM unnest(_category_names, _category_timestamps) AS d (name, timestamp)
+ON CONFLICT (name) DO UPDATE
+  SET updated_at = excluded.updated_at;
+
+INSERT INTO __schema__.tenants (tenant)
+SELECT d.tenant
+FROM unnest(_tenants) AS d (tenant)
+ON CONFLICT (tenant) DO NOTHING;
+$$;
 
 -------------------------------------------------
 -- UTILITIES
