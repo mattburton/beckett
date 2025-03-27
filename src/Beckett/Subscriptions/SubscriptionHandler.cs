@@ -7,6 +7,8 @@ namespace Beckett.Subscriptions;
 public class SubscriptionHandler
 {
     private static readonly Type MessageContextType = typeof(IMessageContext);
+    private static readonly Type TypedMessageContextType = typeof(IMessageContext<>);
+    private static readonly Type ConcreteTypedMessageContextType = typeof(MessageContext<>);
     private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
     private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
@@ -43,6 +45,14 @@ public class SubscriptionHandler
             if (_parameters[i].ParameterType == MessageContextType)
             {
                 arguments[i] = context;
+            }
+            else if (_parameters[i].ParameterType.IsGenericType &&
+                     _parameters[i].ParameterType.GetGenericTypeDefinition() == TypedMessageContextType)
+            {
+                var messageType = _parameters[i].ParameterType.GetGenericArguments()[0];
+                var contextType = ConcreteTypedMessageContextType.MakeGenericType(messageType);
+
+                arguments[i] = Activator.CreateInstance(contextType, context)!;
             }
             else if (_parameters[i].ParameterType == context.MessageType)
             {
@@ -125,6 +135,12 @@ public class SubscriptionHandler
                 batchHandler = true;
             }
 
+            if (parameter.ParameterType.IsGenericType &&
+                parameter.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType)
+            {
+                typedMessageHandler = true;
+            }
+
             if (_subscription.MessageTypes.Contains(parameter.ParameterType))
             {
                 typedMessageHandler = true;
@@ -176,9 +192,10 @@ public class SubscriptionHandler
         );
     }
 
-    private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == typeof(IMessageContext) ||
-                                                            x.ParameterType == typeof(IReadOnlyList<IMessageContext>) ||
-                                                            x.ParameterType == typeof(CancellationToken);
+    private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == MessageContextType ||
+                                                            x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType ||
+                                                            x.ParameterType == BatchType ||
+                                                            x.ParameterType == CancellationTokenType;
 
     private static Func<object[], Task> BuildInvoker(Delegate handler)
     {

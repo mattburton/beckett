@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.Messages;
 using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
 using Beckett.Subscriptions.Queries;

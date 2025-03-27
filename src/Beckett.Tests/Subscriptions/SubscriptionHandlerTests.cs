@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Beckett.Messages;
 using Beckett.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +44,22 @@ public class SubscriptionHandlerTests
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(MessageHandler.ReceivedMessage);
         Assert.Equal(message, MessageHandler.ReceivedMessage);
+    }
+
+    [Fact]
+    public void supports_typed_message_context_handler()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        var handler = new SubscriptionHandler(_subscription, TypedMessageContextHandler.Handle);
+        var message = new TestMessage(Guid.NewGuid());
+        var context = BuildMessageContext(message);
+        var typedContext = new MessageContext<TestMessage>(context);
+
+        handler.Invoke(typedContext, _serviceProvider, CancellationToken.None);
+
+        Assert.False(handler.IsBatchHandler);
+        Assert.NotNull(TypedMessageContextHandler.ReceivedMessage);
+        Assert.Equal(message, TypedMessageContextHandler.ReceivedMessage);
     }
 
     [Fact]
@@ -287,6 +302,18 @@ public class SubscriptionHandlerTests
         public static Task Handle(TestMessage message, CancellationToken cancellationToken)
         {
             ReceivedMessage = message;
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private static class TypedMessageContextHandler
+    {
+        public static TestMessage? ReceivedMessage { get; private set; }
+
+        public static Task Handle(IMessageContext<TestMessage> context, CancellationToken cancellationToken)
+        {
+            ReceivedMessage = context.Message;
 
             return Task.CompletedTask;
         }
