@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Database.Types;
+using Beckett.Messages;
 using Beckett.MessageStorage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
@@ -162,6 +163,38 @@ public class GlobalStreamConsumer(
                     stoppingToken
                 );
 
+                var categories = new Dictionary<string, DateTimeOffset>();
+                var tenants = new HashSet<string>();
+
+                foreach (var message in globalStream.StreamMessages)
+                {
+                    categories[StreamCategoryParser.Parse(message.StreamName)] = message.Timestamp;
+
+                    if (!message.Metadata.TryGetProperty(MessageConstants.Metadata.Tenant, out var tenantProperty))
+                    {
+                        continue;
+                    }
+
+                    var tenant = tenantProperty.GetString();
+
+                    if (string.IsNullOrWhiteSpace(tenant))
+                    {
+                        continue;
+                    }
+
+                    tenants.Add(tenant);
+                }
+
+                var categoryNames = categories.Keys.ToArray();
+                var categoryTimestamps = categories.Values.ToArray();
+
+                await database.Execute(
+                    new RecordStreamData(categoryNames, categoryTimestamps, tenants.ToArray(), options.Postgres),
+                    connection,
+                    transaction,
+                    stoppingToken
+                );
+
                 await transaction.CommitAsync(stoppingToken);
 
                 logger.UpdatedGlobalStreamPosition(newGlobalPosition);
@@ -179,6 +212,14 @@ public class GlobalStreamConsumer(
                 throw;
             }
         }
+    }
+}
+
+public static class StreamCategoryParser
+{
+    public static string Parse(string streamName)
+    {
+        return !streamName.Contains('-') ? streamName : streamName[..streamName.IndexOf('-')];
     }
 }
 
