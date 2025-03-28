@@ -1,13 +1,12 @@
-using Core.Queries;
-using TaskHub.Users.Slices.Users;
+using Contracts.Users.Queries;
 
 namespace API.V1.Users;
 
 public static class GetUsersEndpoint
 {
-    public static async Task<IResult> Handle(IQueryBus queryBus, CancellationToken cancellationToken)
+    public static async Task<IResult> Handle(IUserModule module, CancellationToken cancellationToken)
     {
-        var results = await queryBus.Send(new UsersQuery(), cancellationToken);
+        var results = await module.Execute(new GetUsersQuery(), cancellationToken);
 
         return Results.Ok(results);
     }

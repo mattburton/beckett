@@ -1,5 +1,4 @@
 using Beckett;
-using Beckett.Messages;
 using Core.Projections;
 using Core.ReadModels;
 

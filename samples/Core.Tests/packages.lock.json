@@ -256,9 +256,13 @@
         "type": "Project",
         "dependencies": {
           "Beckett": "[0.17.1, )",
+          "Core.Contracts": "[0.17.1, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",
           "Scrutor": "[6.0.1, )"
         }
+      },
+      "core.contracts": {
+        "type": "Project"
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",

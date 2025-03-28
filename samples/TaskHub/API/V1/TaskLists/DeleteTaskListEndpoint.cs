@@ -1,24 +1,22 @@
-using Beckett;
-using Core.Commands;
-using TaskHub.TaskLists.Slices.DeleteTaskList;
+using Contracts.TaskLists.Commands;
 
 namespace API.V1.TaskLists;
 
 public static class DeleteTaskListEndpoint
 {
     public static async Task<IResult> Handle(
-        Guid id,
-        ICommandBus commandBus,
+        Guid taskListId,
+        ITaskListModule module,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandBus.Send(new DeleteTaskListCommand(id), cancellationToken);
+            await module.Execute(new DeleteTaskListCommand(taskListId), cancellationToken);
 
             return Results.Ok();
         }
-        catch (StreamDoesNotExistException)
+        catch (ResourceNotFoundException)
         {
             return Results.Conflict();
         }

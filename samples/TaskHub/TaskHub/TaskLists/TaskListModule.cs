@@ -1,48 +1,32 @@
-using TaskHub.TaskLists.Events;
-using TaskHub.TaskLists.Slices.NotifyUser;
-using TaskHub.TaskLists.Slices.TaskLists;
-using TaskHub.TaskLists.Slices.UserLookup;
+using Contracts.TaskLists;
+using Contracts.TaskLists.Commands;
+using Contracts.TaskLists.Queries;
 
 namespace TaskHub.TaskLists;
 
-public class TaskListModule : IModule
+public class TaskListModule(
+    ICommandDispatcher commandDispatcher,
+    IQueryDispatcher queryDispatcher
+) : ITaskListModule
 {
-    private const string Category = "task_list";
+    public Task Execute(AddTaskListCommand command, CancellationToken cancellationToken) =>
+        commandDispatcher.Dispatch(command, cancellationToken);
 
-    public static string StreamName(Guid id) => $"{Category}-{id}";
+    public Task Execute(AddTaskCommand command, CancellationToken cancellationToken) =>
+        commandDispatcher.Dispatch(command, cancellationToken);
 
-    public void MessageTypes(IMessageTypeBuilder builder)
-    {
-        builder.Map<TaskAdded>("task_added");
-        builder.Map<TaskCompleted>("task_completed");
-        builder.Map<TaskListAdded>("task_list_added");
-        builder.Map<TaskListNameChanged>("task_list_name_changed");
-        builder.Map<TaskListDeleted>("task_list_deleted");
-        builder.Map<UserMentionedInTask>("user_mentioned_in_task");
-        builder.Map<UserNotificationSent>("user_notification_sent");
-    }
+    public Task Execute(ChangeTaskListNameCommand command, CancellationToken cancellationToken) =>
+        commandDispatcher.Dispatch(command, cancellationToken);
 
-    public void Subscriptions(ISubscriptionBuilder builder)
-    {
-        builder.AddSubscription("task_lists:task_lists_projection")
-            .Projection<TaskListsProjection, TaskListsReadModel, Guid>();
+    public Task Execute(CompleteTaskCommand command, CancellationToken cancellationToken) =>
+        commandDispatcher.Dispatch(command, cancellationToken);
 
-        builder.AddSubscription("task_lists:user_lookup_projection")
-            .Projection<UserLookupProjection, UserLookupReadModel, string>();
+    public Task Execute(DeleteTaskListCommand command, CancellationToken cancellationToken) =>
+        commandDispatcher.Dispatch(command, cancellationToken);
 
-        builder.AddSubscription("task_lists:notify_user")
-            .Message<UserMentionedInTask>()
-            .Handler(UserMentionedInTaskHandler.Handle);
+    public Task<GetTaskListQuery.Result?> Execute(GetTaskListQuery query, CancellationToken cancellationToken) =>
+        queryDispatcher.Dispatch(query, cancellationToken);
 
-        builder.AddSubscription("task_lists:wire_tap")
-            .Category(Category)
-            .Handler(
-                (IMessageContext context) =>
-                {
-                    Console.WriteLine(
-                        $"[MESSAGE] category: {Category}, stream: {context.StreamName}, type: {context.Type}, id: {context.Id} [lag: {DateTimeOffset.UtcNow.Subtract(context.Timestamp).TotalMilliseconds} ms]"
-                    );
-                }
-            );
-    }
+    public Task<GetTaskListsQuery.Result> Execute(GetTaskListsQuery query, CancellationToken cancellationToken) =>
+        queryDispatcher.Dispatch(query, cancellationToken);
 }

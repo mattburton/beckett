@@ -395,18 +395,29 @@
           "Polly": "[8.5.2, )"
         }
       },
+      "contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Core.Contracts": "[0.17.1, )"
+        }
+      },
       "core": {
         "type": "Project",
         "dependencies": {
           "Beckett": "[0.17.1, )",
+          "Core.Contracts": "[0.17.1, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",
           "Scrutor": "[6.0.1, )"
         }
+      },
+      "core.contracts": {
+        "type": "Project"
       },
       "taskhub": {
         "type": "Project",
         "dependencies": {
           "Beckett": "[0.17.1, )",
+          "Contracts": "[0.17.1, )",
           "Core": "[0.17.1, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.2, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",

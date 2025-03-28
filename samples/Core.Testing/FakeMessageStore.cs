@@ -1,5 +1,4 @@
 using Beckett;
-using Beckett.Messages;
 using Beckett.MessageStorage;
 using Beckett.MessageStorage.InMemory;
 

@@ -1,5 +1,5 @@
-using Core.Commands;
-using TaskHub.TaskLists.Slices.CompleteTask;
+using Contracts.TaskLists.Commands;
+using Contracts.TaskLists.Exceptions;
 
 namespace API.V1.TaskLists;
 
@@ -8,13 +8,13 @@ public static class CompleteTaskEndpoint
     public static async Task<IResult> Handle(
         Guid taskListId,
         string task,
-        ICommandBus commandBus,
+        ITaskListModule module,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandBus.Send(new CompleteTaskCommand(taskListId, task), cancellationToken);
+            await module.Execute(new CompleteTaskCommand(taskListId, task), cancellationToken);
 
             return Results.Ok(new Response(taskListId, task));
         }

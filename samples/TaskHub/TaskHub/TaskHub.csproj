@@ -17,6 +17,7 @@
                       OutputItemType="Analyzer"
                       PrivateAssets="all"/>
     <ProjectReference Include="..\..\Core\Core.csproj"/>
+    <ProjectReference Include="..\Contracts\Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

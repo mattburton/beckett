@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Beckett\Beckett.csproj"/>
+    <ProjectReference Include="..\Core.Contracts\Core.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

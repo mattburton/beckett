@@ -1,11 +1,14 @@
 using System.Reflection;
 using Beckett;
+using Core.Extensions;
 
 namespace Core.Modules;
 
 public static class BeckettBuilderExtensions
 {
-    public static void WithMessageTypesFrom(
+    private static readonly Type ModuleConfigurationType = typeof(IModuleConfiguration);
+
+    public static void WithModulesFrom(
         this IBeckettBuilder builder,
         params Assembly[] assemblies
     )
@@ -14,45 +17,20 @@ public static class BeckettBuilderExtensions
 
         foreach (var assembly in assembliesToScan)
         {
-            var types = GetTypes(assembly).Where(x => x.IsModule());
+            var moduleConfigurationTypes = assembly.GetLoadableTypes().Where(x => x.IsModuleConfigurationType());
 
-            foreach (var type in types)
+            foreach (var moduleConfigurationType in moduleConfigurationTypes)
             {
-                var instance = Activator.CreateInstance(type);
+                var instance = Activator.CreateInstance(moduleConfigurationType);
 
-                if (instance is not IModule module)
+                if (instance is not IModuleConfiguration configuration)
                 {
                     continue;
                 }
 
-                module.MessageTypes(builder);
-            }
-        }
-    }
+                var moduleBuilder = new ModuleBuilder(builder);
 
-    public static void WithSubscriptionsFrom(
-        this IBeckettBuilder builder,
-        params Assembly[] assemblies
-    )
-    {
-        var assembliesToScan = AssembliesToScan(assemblies);
-
-        foreach (var assembly in assembliesToScan)
-        {
-            var types = GetTypes(assembly).Where(x => x.IsModule());
-
-            foreach (var type in types)
-            {
-                var instance = Activator.CreateInstance(type);
-
-                if (instance is not IModule module)
-                {
-                    continue;
-                }
-
-                module.MessageTypes(builder);
-
-                module.Subscriptions(builder);
+                configuration.Configure(moduleBuilder);
             }
         }
     }
@@ -70,15 +48,6 @@ public static class BeckettBuilderExtensions
         return assemblies;
     }
 
-    private static Type[] GetTypes(Assembly assembly)
-    {
-        try
-        {
-            return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException)
-        {
-            return [];
-        }
-    }
+    private static bool IsModuleConfigurationType(this Type x) =>
+        ModuleConfigurationType.IsAssignableFrom(x) && x is { IsAbstract: false, IsInterface: false };
 }

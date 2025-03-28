@@ -4,13 +4,11 @@ using Beckett;
 using Beckett.Dashboard;
 using Beckett.OpenTelemetry;
 using Core.DependencyInjection;
-using Core.Modules;
 using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using TaskHub;
 using TaskHub.Infrastructure.Database;
 
 Log.Logger = new LoggerConfiguration()
@@ -27,7 +25,7 @@ try
 
     builder.Services.ConfigureServices();
 
-    builder.Services.AddBeckett().WithMessageTypesFrom(TaskHubAssembly.Instance);
+    builder.Services.AddBeckett();
 
     builder.Services.AddBeckettDashboard();
 

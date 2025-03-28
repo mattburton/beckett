@@ -172,6 +172,9 @@
           "Polly": "[8.5.2, )"
         }
       },
+      "core.contracts": {
+        "type": "Project"
+      },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[9.0.2, )",

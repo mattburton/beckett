@@ -1,6 +1,6 @@
 using API.V1.TaskLists;
+using Contracts.TaskLists.Commands;
 using TaskHub.TaskLists;
-using TaskHub.TaskLists.Slices.ChangeTaskListName;
 
 namespace Tests.API.V1.TaskLists;
 
@@ -11,15 +11,15 @@ public class ChangeTaskListNameEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var expectedStreamName = TaskListModule.StreamName(taskListId);
         var expectedCommand = new ChangeTaskListNameCommand(taskListId, name);
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
         var request = new ChangeTaskListNameEndpoint.Request(name);
 
-        await ChangeTaskListNameEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
+        await ChangeTaskListNameEndpoint.Handle(taskListId, request, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<ChangeTaskListNameCommand>(commandBus.Received);
-        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        var actualCommand = Assert.IsType<ChangeTaskListNameCommand>(commandDispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
@@ -28,10 +28,12 @@ public class ChangeTaskListNameEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
         var request = new ChangeTaskListNameEndpoint.Request(name);
 
-        var result = await ChangeTaskListNameEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
+        var result = await ChangeTaskListNameEndpoint.Handle(taskListId, request, module, CancellationToken.None);
 
         var response = Assert.IsType<Ok<ChangeTaskListNameEndpoint.Response>>(result);
         Assert.NotNull(response.Value);

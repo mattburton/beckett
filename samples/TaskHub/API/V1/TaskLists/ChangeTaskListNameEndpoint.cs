@@ -1,5 +1,4 @@
-using Core.Commands;
-using TaskHub.TaskLists.Slices.ChangeTaskListName;
+using Contracts.TaskLists.Commands;
 
 namespace API.V1.TaskLists;
 
@@ -8,11 +7,11 @@ public static class ChangeTaskListNameEndpoint
     public static async Task<IResult> Handle(
         Guid id,
         Request request,
-        ICommandBus commandBus,
+        ITaskListModule module,
         CancellationToken cancellationToken
     )
     {
-        await commandBus.Send(new ChangeTaskListNameCommand(id, request.Name), cancellationToken);
+        await module.Execute(new ChangeTaskListNameCommand(id, request.Name), cancellationToken);
 
         return Results.Ok(new Response(id, request.Name));
     }

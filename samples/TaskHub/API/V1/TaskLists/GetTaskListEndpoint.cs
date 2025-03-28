@@ -1,13 +1,16 @@
-using Core.Queries;
-using TaskHub.TaskLists.Slices.TaskList;
+using Contracts.TaskLists.Queries;
 
 namespace API.V1.TaskLists;
 
 public static class GetTaskListEndpoint
 {
-    public static async Task<IResult> Handle(Guid id, IQueryBus queryBus, CancellationToken cancellationToken)
+    public static async Task<IResult> Handle(
+        Guid taskListId,
+        ITaskListModule module,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await queryBus.Send(new TaskListQuery(id), cancellationToken);
+        var result = await module.Execute(new GetTaskListQuery(taskListId), cancellationToken);
 
         return result == null ? Results.NotFound() : Results.Ok(result);
     }

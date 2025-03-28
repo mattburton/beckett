@@ -1,12 +1,10 @@
 global using System.Text.RegularExpressions;
-global using Microsoft.AspNetCore.Builder;
-global using Microsoft.AspNetCore.Http;
-global using Microsoft.AspNetCore.Routing;
 global using Beckett;
 global using Core.Commands;
+global using Core.Contracts;
 global using Core.Extensions;
 global using Core.Modules;
-global using Core.Notifications;
+global using Core.Processors;
 global using Core.Projections;
 global using Core.Queries;
 global using Core.ReadModels;

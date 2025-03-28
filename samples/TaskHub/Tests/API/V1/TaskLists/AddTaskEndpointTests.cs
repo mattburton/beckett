@@ -1,6 +1,7 @@
 using API.V1.TaskLists;
+using Contracts.TaskLists.Commands;
+using Contracts.TaskLists.Exceptions;
 using TaskHub.TaskLists;
-using TaskHub.TaskLists.Slices.AddTask;
 
 namespace Tests.API.V1.TaskLists;
 
@@ -11,15 +12,15 @@ public class AddTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var expectedStreamName = TaskListModule.StreamName(taskListId);
         var expectedCommand = new AddTaskCommand(taskListId, name);
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
         var request = new AddTaskEndpoint.Request(name);
 
-        await AddTaskEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
+        await AddTaskEndpoint.Handle(taskListId, request, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<AddTaskCommand>(commandBus.Received);
-        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        var actualCommand = Assert.IsType<AddTaskCommand>(commandDispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
@@ -28,10 +29,12 @@ public class AddTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
         var request = new AddTaskEndpoint.Request(name);
 
-        var result = await AddTaskEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
+        var result = await AddTaskEndpoint.Handle(taskListId, request, module, CancellationToken.None);
 
         var response = Assert.IsType<Ok<AddTaskEndpoint.Response>>(result);
         Assert.NotNull(response.Value);
@@ -44,11 +47,13 @@ public class AddTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var name = Generate.String();
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
         var request = new AddTaskEndpoint.Request(name);
-        commandBus.Throws(new TaskAlreadyAddedException());
+        commandDispatcher.Throws(new TaskAlreadyAddedException());
 
-        var result = await AddTaskEndpoint.Handle(taskListId, request, commandBus, CancellationToken.None);
+        var result = await AddTaskEndpoint.Handle(taskListId, request, module, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

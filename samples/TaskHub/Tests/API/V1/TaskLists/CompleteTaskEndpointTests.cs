@@ -1,6 +1,7 @@
 using API.V1.TaskLists;
+using Contracts.TaskLists.Commands;
+using Contracts.TaskLists.Exceptions;
 using TaskHub.TaskLists;
-using TaskHub.TaskLists.Slices.CompleteTask;
 
 namespace Tests.API.V1.TaskLists;
 
@@ -11,14 +12,14 @@ public class CompleteTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var task = Generate.String();
-        var expectedStreamName = TaskListModule.StreamName(taskListId);
         var expectedCommand = new CompleteTaskCommand(taskListId, task);
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
 
-        await CompleteTaskEndpoint.Handle(taskListId, task, commandBus, CancellationToken.None);
+        await CompleteTaskEndpoint.Handle(taskListId, task, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<CompleteTaskCommand>(commandBus.Received);
-        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        var actualCommand = Assert.IsType<CompleteTaskCommand>(commandDispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
@@ -27,9 +28,11 @@ public class CompleteTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var task = Generate.String();
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
 
-        var result = await CompleteTaskEndpoint.Handle(taskListId, task, commandBus, CancellationToken.None);
+        var result = await CompleteTaskEndpoint.Handle(taskListId, task, module, CancellationToken.None);
 
         var response = Assert.IsType<Ok<CompleteTaskEndpoint.Response>>(result);
         Assert.NotNull(response.Value);
@@ -42,10 +45,12 @@ public class CompleteTaskEndpointTests
     {
         var taskListId = Generate.Guid();
         var task = Generate.String();
-        var commandBus = new FakeCommandBus();
-        commandBus.Throws(new TaskAlreadyCompletedException());
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new TaskListModule(commandDispatcher, queryDispatcher);
+        commandDispatcher.Throws(new TaskAlreadyCompletedException());
 
-        var result = await CompleteTaskEndpoint.Handle(taskListId, task, commandBus, CancellationToken.None);
+        var result = await CompleteTaskEndpoint.Handle(taskListId, task, module, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

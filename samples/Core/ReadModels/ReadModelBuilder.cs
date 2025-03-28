@@ -1,5 +1,4 @@
 using Beckett;
-using Beckett.Messages;
 
 namespace Core.ReadModels;
 

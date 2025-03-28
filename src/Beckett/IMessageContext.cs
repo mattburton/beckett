@@ -88,9 +88,13 @@ public record MessageContext(
     Dictionary<string, string>? MessageMetadata = null
 ) : IMessageContext
 {
-    private readonly Lazy<Type?> _messageType = new(() => MessageType ?? (MessageTypeMap.TryGetType(Type, out var type) ? type : null));
+    private readonly Lazy<Type?> _messageType =
+        new(() => MessageType ?? (MessageTypeMap.TryGetType(Type, out var type) ? type : null));
+
     private readonly Lazy<object?> _message = new(() => Message ?? MessageSerializer.Deserialize(Type, Data));
-    private readonly Lazy<Dictionary<string, string>> _messageMetadata = new(MessageMetadata ?? Metadata.ToMetadataDictionary());
+
+    private readonly Lazy<Dictionary<string, string>> _messageMetadata =
+        new(MessageMetadata ?? Metadata.ToMetadataDictionary());
 
     public Type? MessageType => _messageType.Value;
 
@@ -138,4 +142,6 @@ public record MessageContext<T>(IMessageContext context) : IMessageContext<T> wh
     public Dictionary<string, string> MessageMetadata => context.MessageMetadata;
 
     object? IMessageContext.Message => Message;
+
+    public static IMessageContext<T> From(T message) => new MessageContext<T>(MessageContext.From(message));
 }

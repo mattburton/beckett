@@ -1,6 +1,5 @@
 using Beckett;
-using Core.Commands;
-using TaskHub.Users.Slices.RegisterUser;
+using Contracts.Users.Commands;
 
 namespace API.V1.Users;
 
@@ -8,13 +7,13 @@ public static class RegisterUserEndpoint
 {
     public static async Task<IResult> Handle(
         Request request,
-        ICommandBus commandBus,
+        IUserModule module,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandBus.Send(new RegisterUserCommand(request.Username, request.Email), cancellationToken);
+            await module.Execute(new RegisterUserCommand(request.Username, request.Email), cancellationToken);
 
             return Results.Ok();
         }

@@ -1,6 +1,6 @@
 using API.V1.Users;
+using Contracts.Users.Commands;
 using TaskHub.Users;
-using TaskHub.Users.Slices.RegisterUser;
 
 namespace Tests.API.V1.Users;
 
@@ -11,18 +11,16 @@ public class RegisterUserEndpointTests
     {
         var username = Generate.String();
         var email = Generate.String();
-        var expectedStreamName = UserModule.StreamName(username);
         var expectedCommand = new RegisterUserCommand(username, email);
-        var expectedVersion = ExpectedVersion.StreamDoesNotExist;
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new UserModule(commandDispatcher, queryDispatcher);
         var request = new RegisterUserEndpoint.Request(username, email);
 
-        await RegisterUserEndpoint.Handle(request, commandBus, CancellationToken.None);
+        await RegisterUserEndpoint.Handle(request, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<RegisterUserCommand>(commandBus.Received);
-        Assert.Equal(expectedStreamName, actualCommand.StreamName());
+        var actualCommand = Assert.IsType<RegisterUserCommand>(commandDispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
-        Assert.Equal(expectedVersion, actualCommand.ExpectedVersion);
     }
 
     [Fact]
@@ -30,10 +28,12 @@ public class RegisterUserEndpointTests
     {
         var username = Generate.String();
         var email = Generate.String();
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new UserModule(commandDispatcher, queryDispatcher);
         var request = new RegisterUserEndpoint.Request(username, email);
 
-        var result = await RegisterUserEndpoint.Handle(request, commandBus, CancellationToken.None);
+        var result = await RegisterUserEndpoint.Handle(request, module, CancellationToken.None);
 
         Assert.IsType<Ok>(result);
     }
@@ -43,11 +43,13 @@ public class RegisterUserEndpointTests
     {
         var username = Generate.String();
         var email = Generate.String();
-        var commandBus = new FakeCommandBus();
+        var commandDispatcher = new FakeCommandDispatcher();
+        var queryDispatcher = new FakeQueryDispatcher();
+        var module = new UserModule(commandDispatcher, queryDispatcher);
         var request = new RegisterUserEndpoint.Request(username, email);
-        commandBus.Throws(new StreamAlreadyExistsException());
+        commandDispatcher.Throws(new StreamAlreadyExistsException());
 
-        var result = await RegisterUserEndpoint.Handle(request, commandBus, CancellationToken.None);
+        var result = await RegisterUserEndpoint.Handle(request, module, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

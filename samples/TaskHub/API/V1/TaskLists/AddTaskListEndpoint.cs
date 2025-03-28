@@ -1,6 +1,4 @@
-using Beckett;
-using Core.Commands;
-using TaskHub.TaskLists.Slices.AddTaskList;
+using Contracts.TaskLists.Commands;
 
 namespace API.V1.TaskLists;
 
@@ -8,17 +6,17 @@ public static class AddTaskListEndpoint
 {
     public static async Task<IResult> Handle(
         Request request,
-        ICommandBus commandBus,
+        ITaskListModule module,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandBus.Send(new AddTaskListCommand(request.Id, request.Name), cancellationToken);
+            await module.Execute(new AddTaskListCommand(request.Id, request.Name), cancellationToken);
 
             return Results.Ok(new Response(request.Id, request.Name));
         }
-        catch (StreamAlreadyExistsException)
+        catch (ResourceAlreadyExistsException)
         {
             return Results.Conflict();
         }

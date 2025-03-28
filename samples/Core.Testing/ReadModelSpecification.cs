@@ -1,5 +1,4 @@
 using Beckett;
-using Beckett.Messages;
 using Xunit;
 
 namespace Core.Testing;

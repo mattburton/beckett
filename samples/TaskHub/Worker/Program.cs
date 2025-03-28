@@ -34,7 +34,7 @@ try
             //default reservation timeout is 5 minutes - we can lower that for the purposes of this demo
             options.Subscriptions.ReservationTimeout = TimeSpan.FromSeconds(60);
         }
-    ).WithSubscriptionsFrom(TaskHubAssembly.Instance);
+    ).WithModulesFrom(TaskHubAssembly.Instance);
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("taskhub-worker"))

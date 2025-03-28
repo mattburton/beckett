@@ -1,42 +1,20 @@
-using TaskHub.Users.Events;
-using TaskHub.Users.Notifications;
-using TaskHub.Users.Slices.PublishNotification;
-using TaskHub.Users.Slices.Users;
+using Contracts.Users;
+using Contracts.Users.Commands;
+using Contracts.Users.Queries;
 
 namespace TaskHub.Users;
 
-public class UserModule : IModule
+public class UserModule(ICommandDispatcher commandDispatcher, IQueryDispatcher queryDispatcher) : IUserModule, IModule
 {
-    private const string Category = "user";
+    public Task Execute(DeleteUserCommand command, CancellationToken cancellationToken) =>
+        commandDispatcher.Dispatch(command, cancellationToken);
 
-    public static string StreamName(string username) => $"{Category}-{username}";
+    public Task<GetUserQuery.Result?> Execute(GetUserQuery query, CancellationToken cancellationToken) =>
+        queryDispatcher.Dispatch(query, cancellationToken);
 
-    public void MessageTypes(IMessageTypeBuilder builder)
-    {
-        builder.Map<UserRegistered>("user_registered");
-        builder.Map<UserDeleted>("user_deleted");
+    public Task<GetUsersQuery.Result> Execute(GetUsersQuery query, CancellationToken cancellationToken) =>
+        queryDispatcher.Dispatch(query, cancellationToken);
 
-        builder.Map<UserNotification>("user_notification");
-    }
-
-    public void Subscriptions(ISubscriptionBuilder builder)
-    {
-        builder.AddSubscription("users:users_projection")
-            .Projection<UsersProjection, UsersReadModel, string>();
-
-        builder.AddSubscription("users:user_notification_publisher")
-            .Category(Category)
-            .Handler(UserNotificationPublisher.Handle);
-
-        builder.AddSubscription("users:wire_tap")
-            .Category(Category)
-            .Handler(
-                (IMessageContext context) =>
-                {
-                    Console.WriteLine(
-                        $"[MESSAGE] category: {Category}, stream: {context.StreamName}, type: {context.Type}, id: {context.Id} [lag: {DateTimeOffset.UtcNow.Subtract(context.Timestamp).TotalMilliseconds} ms]"
-                    );
-                }
-            );
-    }
+    public Task Execute(RegisterUserCommand command, CancellationToken cancellationToken) =>
+        commandDispatcher.Dispatch(command, cancellationToken);
 }

@@ -1,6 +1,5 @@
 using Beckett;
-using Core.Commands;
-using TaskHub.Users.Slices.DeleteUser;
+using Contracts.Users.Commands;
 
 namespace API.V1.Users;
 
@@ -8,13 +7,13 @@ public static class DeleteUserEndpoint
 {
     public static async Task<IResult> Handle(
         string username,
-        ICommandBus commandBus,
+        IUserModule module,
         CancellationToken cancellationToken
     )
     {
         try
         {
-            await commandBus.Send(new DeleteUserCommand(username), cancellationToken);
+            await module.Execute(new DeleteUserCommand(username), cancellationToken);
 
             return Results.Ok();
         }

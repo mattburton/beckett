@@ -27,4 +27,8 @@
     <ProjectReference Include="..\TaskHub\TaskHub.csproj"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TaskLists\Processors\" />
+  </ItemGroup>
+
 </Project>

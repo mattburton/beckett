@@ -1,6 +1,5 @@
 using System.Reflection;
 using Beckett;
-using Beckett.Messages;
 using Core.ReadModels;
 
 namespace Core.Tests.SourceGenerators;

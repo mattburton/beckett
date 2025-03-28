@@ -1,6 +1,8 @@
+using Core.Contracts;
+
 namespace Core.Queries;
 
-public interface IQueryHandler<in TQuery, TResult> : IQueryHandler where TQuery : IQuery<TResult> where TResult : class
+public interface IQueryHandler<in TQuery, TResult> : IQueryHandler where TQuery : IQuery<TResult>
 {
     async Task<object?> IQueryHandler.Handle(object query, CancellationToken cancellationToken)
     {
@@ -9,7 +11,7 @@ public interface IQueryHandler<in TQuery, TResult> : IQueryHandler where TQuery 
         return result;
     }
 
-    Task<TResult?> Handle(TQuery query, CancellationToken cancellationToken);
+    Task<TResult> Handle(TQuery query, CancellationToken cancellationToken);
 }
 
 public interface IQueryHandler

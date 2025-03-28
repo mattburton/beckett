@@ -1,3 +1,3 @@
 namespace TaskHub.TaskLists.Events;
 
-public record TaskListDeleted(Guid Id);
+public record TaskListDeleted(Guid Id) : IEvent;
