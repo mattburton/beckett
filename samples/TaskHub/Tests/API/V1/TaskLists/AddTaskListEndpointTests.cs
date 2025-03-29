@@ -10,48 +10,39 @@ public class AddTaskListEndpointTests
     [Fact]
     public async Task executes_command()
     {
-        var id = Generate.Guid();
-        var name = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var expectedCommand = new AddTaskListCommand(id, name);
-        var request = new AddTaskListEndpoint.Request(id, name);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var expectedCommand = new AddTaskList(Example.Guid, Example.String);
+        var request = new AddTaskListEndpoint.Request(Example.Guid, Example.String);
 
         await AddTaskListEndpoint.Handle(request, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<AddTaskListCommand>(commandDispatcher.Received);
+        var actualCommand = Assert.IsType<AddTaskList>(dispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
     public async Task returns_ok_with_result_when_successful()
     {
-        var id = Generate.Guid();
-        var name = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var request = new AddTaskListEndpoint.Request(id, name);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var request = new AddTaskListEndpoint.Request(Example.Guid, Example.String);
 
         var result = await AddTaskListEndpoint.Handle(request, module, CancellationToken.None);
 
         var response = Assert.IsType<Ok<AddTaskListEndpoint.Response>>(result);
         Assert.NotNull(response.Value);
-        Assert.Equal(id, response.Value.Id);
-        Assert.Equal(name, response.Value.Name);
+        Assert.Equal(Example.Guid, response.Value.Id);
+        Assert.Equal(Example.String, response.Value.Name);
     }
 
     [Fact]
     public async Task returns_conflict_when_task_list_already_exists()
     {
-        var id = Generate.Guid();
-        var name = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var request = new AddTaskListEndpoint.Request(id, name);
-        commandDispatcher.Throws(new ResourceAlreadyExistsException());
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var request = new AddTaskListEndpoint.Request(Example.Guid, Example.String);
+        dispatcher.Throws(new ResourceAlreadyExistsException());
 
         var result = await AddTaskListEndpoint.Handle(request, module, CancellationToken.None);
 

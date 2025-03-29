@@ -1,45 +1,45 @@
 using Beckett;
 using Core.Contracts;
-using Core.Processors;
+using Core.MessageHandling;
 using Core.Projections;
 
 namespace Core.Modules;
 
 public interface IModuleBuilder
 {
-    void AddProcessor<TProcessor>(string category, string? name = null) where TProcessor : class, IProcessor;
+    void AddProcessor<TProcessor>(string category, string name) where TProcessor : class, IProcessor;
 
-    void AddProcessor<TProcessor, TMessage>(string? name = null) where TProcessor : class, IProcessor<TMessage>
+    void AddProcessor<TProcessor, TMessage>(string name) where TProcessor : class, IProcessor<TMessage>
         where TMessage : class, ISupportSubscriptions;
 
-    void AddProjection<TProjection, TReadModel, TKey>(string? name = null)
-        where TProjection : IProjection<TReadModel, TKey> where TReadModel : class, IApply, new();
+    void AddProjection<TProjection, TState, TKey>(string name)
+        where TProjection : IProjection<TState, TKey> where TState : class, IApply, IHaveScenarios, new();
 }
 
-public class ModuleBuilder(IBeckettBuilder builder) : IModuleBuilder
+public class ModuleBuilder(IModuleConfiguration configuration, IBeckettBuilder builder) : IModuleBuilder
 {
-    public void AddProcessor<TProcessor>(string category, string? name = null) where TProcessor : class, IProcessor
+    public void AddProcessor<TProcessor>(string category, string name) where TProcessor : class, IProcessor
     {
-        builder.AddSubscription(name ?? typeof(TProcessor).Name)
+        builder.AddSubscription($"{configuration.ModuleName}:{name}")
             .Category(category)
             .Handler(ProcessorHandler.For(typeof(TProcessor)))
             .StartingPosition(StartingPosition.Latest);
     }
 
-    public void AddProcessor<TProcessor, TMessage>(string? name = null) where TProcessor : class, IProcessor<TMessage>
+    public void AddProcessor<TProcessor, TMessage>(string name) where TProcessor : class, IProcessor<TMessage>
         where TMessage : class, ISupportSubscriptions
     {
-        builder.AddSubscription(name ?? typeof(TProcessor).Name)
+        builder.AddSubscription($"{configuration.ModuleName}:{name}")
             .Message<TMessage>()
             .Handler(ProcessorHandler.For(typeof(TProcessor)))
             .StartingPosition(StartingPosition.Latest);
     }
 
-    public void AddProjection<TProjection, TReadModel, TKey>(string? name = null)
-        where TProjection : IProjection<TReadModel, TKey> where TReadModel : class, IApply, new()
+    public void AddProjection<TProjection, TState, TKey>(string name)
+        where TProjection : IProjection<TState, TKey> where TState : class, IApply, IHaveScenarios, new()
     {
-        builder.AddSubscription(name ?? typeof(TProjection).Name)
-            .Projection<TProjection, TReadModel, TKey>()
+        builder.AddSubscription($"{configuration.ModuleName}:{name}")
+            .Projection<TProjection, TState, TKey>()
             .StartingPosition(StartingPosition.Earliest);
     }
 }

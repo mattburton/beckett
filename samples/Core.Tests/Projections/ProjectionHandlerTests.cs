@@ -1,6 +1,7 @@
 using Beckett;
+using Core.MessageHandling;
 using Core.Projections;
-using Core.ReadModels;
+using Core.State;
 
 namespace Core.Tests.Projections;
 
@@ -200,8 +201,8 @@ public partial class ProjectionHandlerTests
         }
     }
 
-    [ReadModel]
-    public partial class TestReadModel
+    [State]
+    public partial class TestReadModel : IHaveScenarios
     {
         public Guid Id { get; set; }
         public bool Updated { get; private set; }
@@ -242,9 +243,9 @@ public partial class ProjectionHandlerTests
                 configuration.DeletedBy<TestDeleteMessage>(x => x.Id);
             }
 
-            public Task Create(TestReadModel readModel, CancellationToken cancellationToken)
+            public Task Create(TestReadModel state, CancellationToken cancellationToken)
             {
-                Results.Add(readModel.Id, readModel);
+                Results.Add(state.Id, state);
 
                 return Task.CompletedTask;
             }
@@ -254,9 +255,9 @@ public partial class ProjectionHandlerTests
                 return Task.FromResult(Results.GetValueOrDefault(key));
             }
 
-            public Task Update(TestReadModel readModel, CancellationToken cancellationToken)
+            public Task Update(TestReadModel state, CancellationToken cancellationToken)
             {
-                Results[readModel.Id] = readModel;
+                Results[state.Id] = state;
 
                 return Task.CompletedTask;
             }
@@ -268,10 +269,12 @@ public partial class ProjectionHandlerTests
                 return Task.CompletedTask;
             }
         }
+
+        public IScenario[] Scenarios => [];
     }
 
-    [ReadModel]
-    public partial class ReadModelWithCompositeKey
+    [State]
+    public partial class ReadModelWithCompositeKey : IHaveScenarios
     {
         private string CompositeKey => IdFor(Id, Date);
         private int Id { get; set; }
@@ -294,9 +297,9 @@ public partial class ProjectionHandlerTests
                 configuration.CreatedBy<TestMessageWithCompositeKey>(x => IdFor(x.Id, x.Date));
             }
 
-            public Task Create(ReadModelWithCompositeKey readModel, CancellationToken cancellationToken)
+            public Task Create(ReadModelWithCompositeKey state, CancellationToken cancellationToken)
             {
-                Results.Add(readModel.CompositeKey, readModel);
+                Results.Add(state.CompositeKey, state);
 
                 return Task.CompletedTask;
             }
@@ -306,9 +309,9 @@ public partial class ProjectionHandlerTests
                 return Task.FromResult(Results.GetValueOrDefault(key));
             }
 
-            public Task Update(ReadModelWithCompositeKey readModel, CancellationToken cancellationToken)
+            public Task Update(ReadModelWithCompositeKey state, CancellationToken cancellationToken)
             {
-                Results[readModel.CompositeKey] = readModel;
+                Results[state.CompositeKey] = state;
 
                 return Task.CompletedTask;
             }
@@ -320,6 +323,8 @@ public partial class ProjectionHandlerTests
                 return Task.CompletedTask;
             }
         }
+
+        public IScenario[] Scenarios => [];
     }
 
     public record TestCreateMessage(Guid Id);

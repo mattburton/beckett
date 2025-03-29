@@ -28,7 +28,7 @@ public static class BeckettBuilderExtensions
                     continue;
                 }
 
-                var moduleBuilder = new ModuleBuilder(builder);
+                var moduleBuilder = new ModuleBuilder(configuration, builder);
 
                 configuration.Configure(moduleBuilder);
             }

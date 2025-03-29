@@ -1,9 +1,10 @@
 using Beckett;
+using Core.MessageHandling;
 
 namespace Core.Projections;
 
-public static class ProjectionHandler<TProjection, TReadModel, TKey> where TProjection : IProjection<TReadModel, TKey>
-    where TReadModel : class, IApply, new()
+public static class ProjectionHandler<TProjection, TState, TKey> where TProjection : IProjection<TState, TKey>
+    where TState : class, IApply, IHaveScenarios, new()
 {
     public static async Task Handle(
         TProjection projection,
@@ -57,20 +58,20 @@ public static class ProjectionHandler<TProjection, TReadModel, TKey> where TProj
 
             var result = await LoadState(projection, key, action, ignoreWhenNotFound, cancellationToken);
 
-            var readModel = keyBatch.ApplyTo(result.ReadModel);
+            var state = keyBatch.ApplyTo(result.State);
 
             if (result.Loaded)
             {
-                await projection.Update(readModel, cancellationToken);
+                await projection.Update(state, cancellationToken);
 
                 return;
             }
 
-            await projection.Create(readModel, cancellationToken);
+            await projection.Create(state, cancellationToken);
         }
     }
 
-    private static async Task<(TReadModel ReadModel, bool Loaded)> LoadState(
+    private static async Task<(TState State, bool Loaded)> LoadState(
         TProjection projection,
         TKey key,
         ProjectionAction action,
@@ -78,23 +79,23 @@ public static class ProjectionHandler<TProjection, TReadModel, TKey> where TProj
         CancellationToken cancellationToken
     )
     {
-        TReadModel? readModel;
+        TState? state;
         var loaded = false;
 
         if (action != ProjectionAction.Create)
         {
-            readModel = await projection.Read(key, cancellationToken);
+            state = await projection.Read(key, cancellationToken);
 
-            if (readModel == null)
+            if (state == null)
             {
                 if (!ignoreWhenNotFound && action != ProjectionAction.CreateOrUpdate)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot {action.ToString().ToLowerInvariant()} {typeof(TReadModel).Name} with key {key} - projection not found"
+                        $"Cannot {action.ToString().ToLowerInvariant()} {typeof(TState).Name} with key {key} - projection not found"
                     );
                 }
 
-                readModel = new TReadModel();
+                state = new TState();
             }
             else
             {
@@ -103,10 +104,10 @@ public static class ProjectionHandler<TProjection, TReadModel, TKey> where TProj
         }
         else
         {
-            readModel = new TReadModel();
+            state = new TState();
         }
 
-        return (readModel, loaded);
+        return (state, loaded);
     }
 
     private static async Task HandleDelete(

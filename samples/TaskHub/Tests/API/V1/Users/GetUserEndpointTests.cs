@@ -11,18 +11,15 @@ public class GetUserEndpointTests
         [Fact]
         public async Task returns_ok_with_result()
         {
-            var username = Generate.String();
-            var email = Generate.String();
-            var query = new GetUserQuery(username);
-            var expectedResult = new GetUserQuery.Result(username, email);
-            var commandDispatcher = new FakeCommandDispatcher();
-            var queryDispatcher = new FakeQueryDispatcher();
-            var module = new UserModule(commandDispatcher, queryDispatcher);
-            queryDispatcher.Returns(query, expectedResult);
+            var query = new GetUser(Example.String);
+            var expectedResult = new GetUser.Result(Example.String, Example.String);
+            var dispatcher = new FakeDispatcher();
+            var module = new UserModule(dispatcher);
+            dispatcher.Returns(query, expectedResult);
 
-            var result = await GetUserEndpoint.Handle(username, module, CancellationToken.None);
+            var result = await GetUserEndpoint.Handle(Example.String, module, CancellationToken.None);
 
-            var actualResult = Assert.IsType<Ok<GetUserQuery.Result>>(result);
+            var actualResult = Assert.IsType<Ok<GetUser.Result>>(result);
             Assert.Equal(expectedResult, actualResult.Value);
         }
     }
@@ -32,12 +29,10 @@ public class GetUserEndpointTests
         [Fact]
         public async Task returns_not_found()
         {
-            var username = Generate.String();
-            var commandDispatcher = new FakeCommandDispatcher();
-            var queryDispatcher = new FakeQueryDispatcher();
-            var module = new UserModule(commandDispatcher, queryDispatcher);
+            var dispatcher = new FakeDispatcher();
+            var module = new UserModule(dispatcher);
 
-            var result = await GetUserEndpoint.Handle(username, module, CancellationToken.None);
+            var result = await GetUserEndpoint.Handle(Example.String, module, CancellationToken.None);
 
             Assert.IsType<NotFound>(result);
         }

@@ -11,19 +11,19 @@ public class GetTaskListEndpointTests
         [Fact]
         public async Task returns_ok_with_result()
         {
-            var id = Generate.Guid();
-            var name = Generate.String();
-            var task = Generate.String();
-            var query = new GetTaskListQuery(id);
-            var expectedResult = new GetTaskListQuery.Result(id, name, [new GetTaskListQuery.TaskItem(task, false)]);
-            var commandDispatcher = new FakeCommandDispatcher();
-            var queryDispatcher = new FakeQueryDispatcher();
-            var module = new TaskListModule(commandDispatcher, queryDispatcher);
-            queryDispatcher.Returns(query, expectedResult);
+            var query = new GetTaskList(Example.Guid);
+            var expectedResult = new GetTaskList.Result(
+                Example.Guid,
+                Example.String,
+                [new GetTaskList.TaskItem(Example.String, false)]
+            );
+            var dispatcher = new FakeDispatcher();
+            var module = new TaskListModule(dispatcher);
+            dispatcher.Returns(query, expectedResult);
 
-            var result = await GetTaskListEndpoint.Handle(id, module, CancellationToken.None);
+            var result = await GetTaskListEndpoint.Handle(Example.Guid, module, CancellationToken.None);
 
-            var actualResult = Assert.IsType<Ok<GetTaskListQuery.Result>>(result);
+            var actualResult = Assert.IsType<Ok<GetTaskList.Result>>(result);
             Assert.Equal(expectedResult, actualResult.Value);
         }
     }
@@ -33,12 +33,10 @@ public class GetTaskListEndpointTests
         [Fact]
         public async Task returns_not_found()
         {
-            var id = Generate.Guid();
-            var commandDispatcher = new FakeCommandDispatcher();
-            var queryDispatcher = new FakeQueryDispatcher();
-            var module = new TaskListModule(commandDispatcher, queryDispatcher);
+            var dispatcher = new FakeDispatcher();
+            var module = new TaskListModule(dispatcher);
 
-            var result = await GetTaskListEndpoint.Handle(id, module, CancellationToken.None);
+            var result = await GetTaskListEndpoint.Handle(Example.Guid, module, CancellationToken.None);
 
             Assert.IsType<NotFound>(result);
         }

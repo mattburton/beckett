@@ -14,7 +14,7 @@ public static class CompleteTaskEndpoint
     {
         try
         {
-            await module.Execute(new CompleteTaskCommand(taskListId, task), cancellationToken);
+            await module.Execute(new CompleteTask(taskListId, task), cancellationToken);
 
             return Results.Ok(new Response(taskListId, task));
         }

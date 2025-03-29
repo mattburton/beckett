@@ -1,3 +1,6 @@
 namespace Core.Contracts;
 
-public interface IQuery<TResult>;
+// ReSharper disable once UnusedTypeParameter
+public interface IQuery<TResult> : IQuery;
+
+public interface IQuery;

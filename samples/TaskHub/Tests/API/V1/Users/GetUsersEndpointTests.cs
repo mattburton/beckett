@@ -11,20 +11,19 @@ public class GetUsersEndpointTests
         [Fact]
         public async Task returns_ok_with_result()
         {
-            var commandDispatcher = new FakeCommandDispatcher();
-            var queryDispatcher = new FakeQueryDispatcher();
-            var module = new UserModule(commandDispatcher, queryDispatcher);
-            var query = new GetUsersQuery();
-            var expectedResult = new GetUsersQuery.Result(
+            var dispatcher = new FakeDispatcher();
+            var module = new UserModule(dispatcher);
+            var query = new GetUsers();
+            var expectedResult = new GetUsers.Result(
                 [
-                    new GetUsersQuery.User(Generate.String(), Generate.String())
+                    new GetUsers.User(Example.String, Example.String)
                 ]
             );
-            queryDispatcher.Returns(query, expectedResult);
+            dispatcher.Returns(query, expectedResult);
 
             var result = await GetUsersEndpoint.Handle(module, CancellationToken.None);
 
-            var actualResults = Assert.IsType<Ok<GetUsersQuery.Result>>(result);
+            var actualResults = Assert.IsType<Ok<GetUsers.Result>>(result);
             Assert.Equal(expectedResult, actualResults.Value);
         }
     }

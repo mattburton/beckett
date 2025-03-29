@@ -1,11 +1,10 @@
 global using System.Text.RegularExpressions;
 global using Beckett;
-global using Core.Commands;
 global using Core.Contracts;
 global using Core.Extensions;
+global using Core.MessageHandling;
 global using Core.Modules;
-global using Core.Processors;
 global using Core.Projections;
-global using Core.Queries;
-global using Core.ReadModels;
+global using Core.State;
+global using Core.Streams;
 global using Npgsql;

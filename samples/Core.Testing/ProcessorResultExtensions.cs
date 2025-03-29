@@ -1,6 +1,6 @@
 using Beckett.Messages;
 using Core.Contracts;
-using Core.Processors;
+using Core.MessageHandling;
 using Xunit;
 
 namespace Core.Testing;

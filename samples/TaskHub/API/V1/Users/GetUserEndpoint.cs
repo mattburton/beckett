@@ -10,7 +10,7 @@ public static class GetUserEndpoint
         CancellationToken cancellationToken
     )
     {
-        var result = await module.Execute(new GetUserQuery(username), cancellationToken);
+        var result = await module.Execute(new GetUser(username), cancellationToken);
 
         return result == null ? Results.NotFound() : Results.Ok(result);
     }

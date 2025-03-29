@@ -1,6 +1,7 @@
 using Beckett;
+using Core.MessageHandling;
 using Core.Projections;
-using Core.ReadModels;
+using Core.State;
 
 namespace Core.Tests.Projections;
 
@@ -94,8 +95,8 @@ public partial class ProjectionConfigurationTests
         }
     }
 
-    [ReadModel]
-    public partial class TestReadModel
+    [State]
+    public partial class TestReadModel : IHaveScenarios
     {
         private void Apply(TestCreateMessage _)
         {
@@ -104,6 +105,8 @@ public partial class ProjectionConfigurationTests
         private void Apply(TestUpdateMessage _)
         {
         }
+
+        public IScenario[] Scenarios => [];
     }
 
     public class TestReadModelProjection : IProjection<TestReadModel, Guid>
@@ -114,13 +117,13 @@ public partial class ProjectionConfigurationTests
             configuration.UpdatedBy<TestUpdateMessage>(x => x.Id);
         }
 
-        public Task Create(TestReadModel readModel, CancellationToken cancellationToken) =>
+        public Task Create(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
         public Task<TestReadModel?> Read(Guid key, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task Update(TestReadModel readModel, CancellationToken cancellationToken) =>
+        public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
         public Task Delete(Guid key, CancellationToken cancellationToken) =>
@@ -134,13 +137,13 @@ public partial class ProjectionConfigurationTests
             configuration.CreatedBy<TestCreateMessage>(x => x.Id);
         }
 
-        public Task Create(TestReadModel readModel, CancellationToken cancellationToken) =>
+        public Task Create(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
         public Task<TestReadModel?> Read(Guid key, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task Update(TestReadModel readModel, CancellationToken cancellationToken) =>
+        public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
         public Task Delete(Guid key, CancellationToken cancellationToken) =>
@@ -156,13 +159,13 @@ public partial class ProjectionConfigurationTests
             configuration.UpdatedBy<TestUpdateMessageNotApplied>(x => x.Id);
         }
 
-        public Task Create(TestReadModel readModel, CancellationToken cancellationToken) =>
+        public Task Create(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
         public Task<TestReadModel?> Read(Guid key, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task Update(TestReadModel readModel, CancellationToken cancellationToken) =>
+        public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
         public Task Delete(Guid key, CancellationToken cancellationToken) =>

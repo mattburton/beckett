@@ -14,7 +14,7 @@ public static class AddTaskEndpoint
     {
         try
         {
-            await module.Execute(new AddTaskCommand(taskListId, request.Task), cancellationToken);
+            await module.Execute(new AddTask(taskListId, request.Task), cancellationToken);
 
             return Results.Ok(new Response(taskListId, request.Task));
         }

@@ -13,7 +13,7 @@ public interface ITaskListModule : IModule
     /// <param name="cancellationToken"></param>
     /// <exception cref="TaskListNameInUseException">Another task list with the same name has already been added</exception>
     /// <exception cref="ResourceAlreadyExistsException">Another task list with the same ID has already been added</exception>
-    Task Execute(AddTaskListCommand command, CancellationToken cancellationToken);
+    Task Execute(AddTaskList command, CancellationToken cancellationToken);
 
     /// <summary>
     /// Add task to list
@@ -21,7 +21,7 @@ public interface ITaskListModule : IModule
     /// <param name="command"></param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="TaskAlreadyAddedException">Another task with the same name has already been added to the list</exception>
-    Task Execute(AddTaskCommand command, CancellationToken cancellationToken);
+    Task Execute(AddTask command, CancellationToken cancellationToken);
 
     /// <summary>
     /// Change task list name
@@ -29,7 +29,7 @@ public interface ITaskListModule : IModule
     /// <param name="command"></param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="ResourceNotFoundException">The task list does not exist</exception>
-    Task Execute(ChangeTaskListNameCommand command, CancellationToken cancellationToken);
+    Task Execute(ChangeTaskListName command, CancellationToken cancellationToken);
 
     /// <summary>
     /// Mark task as complete
@@ -37,7 +37,7 @@ public interface ITaskListModule : IModule
     /// <param name="command"></param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="TaskAlreadyCompletedException">The task has already been marked as completed</exception>
-    Task Execute(CompleteTaskCommand command, CancellationToken cancellationToken);
+    Task Execute(CompleteTask command, CancellationToken cancellationToken);
 
     /// <summary>
     /// Delete task list
@@ -45,19 +45,19 @@ public interface ITaskListModule : IModule
     /// <param name="command"></param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="ResourceNotFoundException">The task list does not exist</exception>
-    Task Execute(DeleteTaskListCommand command, CancellationToken cancellationToken);
+    Task Execute(DeleteTaskList command, CancellationToken cancellationToken);
 
     /// <summary>
     /// Get task list by ID
     /// </summary>
     /// <param name="query"></param>
     /// <param name="cancellationToken"></param>
-    Task<GetTaskListQuery.Result?> Execute(GetTaskListQuery query, CancellationToken cancellationToken);
+    Task<GetTaskList.Result?> Execute(GetTaskList query, CancellationToken cancellationToken);
 
     /// <summary>
     /// Get task lists
     /// </summary>
     /// <param name="query"></param>
     /// <param name="cancellationToken"></param>
-    Task<GetTaskListsQuery.Result> Execute(GetTaskListsQuery query, CancellationToken cancellationToken);
+    Task<GetTaskLists.Result> Execute(GetTaskLists query, CancellationToken cancellationToken);
 }

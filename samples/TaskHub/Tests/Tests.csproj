@@ -11,8 +11,6 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector"/>
     <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <PackageReference Include="Testcontainers.PostgreSql"/>
-    <PackageReference Include="Testcontainers.Xunit"/>
     <PackageReference Include="xunit"/>
     <PackageReference Include="xunit.runner.visualstudio"/>
   </ItemGroup>
@@ -25,10 +23,6 @@
     <ProjectReference Include="..\..\Core.Testing\Core.Testing.csproj" />
     <ProjectReference Include="..\API\API.csproj" />
     <ProjectReference Include="..\TaskHub\TaskHub.csproj"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="TaskLists\Processors\" />
   </ItemGroup>
 
 </Project>

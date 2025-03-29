@@ -13,7 +13,7 @@ public static class RegisterUserEndpoint
     {
         try
         {
-            await module.Execute(new RegisterUserCommand(request.Username, request.Email), cancellationToken);
+            await module.Execute(new RegisterUser(request.Username, request.Email), cancellationToken);
 
             return Results.Ok();
         }

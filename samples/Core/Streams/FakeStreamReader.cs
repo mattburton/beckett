@@ -1,6 +1,7 @@
 using Beckett;
 using Beckett.MessageStorage;
 using Beckett.MessageStorage.InMemory;
+using Core.Contracts;
 
 namespace Core.Streams;
 
@@ -31,7 +32,7 @@ public class FakeStreamReader : IStreamReader
         );
     }
 
-    public void HasExistingStream(IStreamName streamName, params object[] messages)
+    public void HasExistingStream(IStreamName streamName, params IEvent[] messages)
     {
         _storage.AppendToStream(
             streamName.StreamName(),

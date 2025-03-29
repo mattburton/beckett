@@ -10,50 +10,41 @@ public class AddTaskEndpointTests
     [Fact]
     public async Task executes_command()
     {
-        var taskListId = Generate.Guid();
-        var name = Generate.String();
-        var expectedCommand = new AddTaskCommand(taskListId, name);
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var request = new AddTaskEndpoint.Request(name);
+        var expectedCommand = new AddTask(Example.Guid, Example.String);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var request = new AddTaskEndpoint.Request(Example.String);
 
-        await AddTaskEndpoint.Handle(taskListId, request, module, CancellationToken.None);
+        await AddTaskEndpoint.Handle(Example.Guid, request, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<AddTaskCommand>(commandDispatcher.Received);
+        var actualCommand = Assert.IsType<AddTask>(dispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
     public async Task returns_ok_with_result_when_successful()
     {
-        var taskListId = Generate.Guid();
-        var name = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var request = new AddTaskEndpoint.Request(name);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var request = new AddTaskEndpoint.Request(Example.String);
 
-        var result = await AddTaskEndpoint.Handle(taskListId, request, module, CancellationToken.None);
+        var result = await AddTaskEndpoint.Handle(Example.Guid, request, module, CancellationToken.None);
 
         var response = Assert.IsType<Ok<AddTaskEndpoint.Response>>(result);
         Assert.NotNull(response.Value);
-        Assert.Equal(taskListId, response.Value.TaskListId);
-        Assert.Equal(name, response.Value.Task);
+        Assert.Equal(Example.Guid, response.Value.TaskListId);
+        Assert.Equal(Example.String, response.Value.Task);
     }
 
     [Fact]
     public async Task returns_conflict_when_task_already_added()
     {
-        var taskListId = Generate.Guid();
-        var name = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var request = new AddTaskEndpoint.Request(name);
-        commandDispatcher.Throws(new TaskAlreadyAddedException());
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var request = new AddTaskEndpoint.Request(Example.String);
+        dispatcher.Throws(new TaskAlreadyAddedException());
 
-        var result = await AddTaskEndpoint.Handle(taskListId, request, module, CancellationToken.None);
+        var result = await AddTaskEndpoint.Handle(Example.Guid, request, module, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

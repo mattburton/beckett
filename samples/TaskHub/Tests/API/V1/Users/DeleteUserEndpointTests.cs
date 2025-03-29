@@ -9,27 +9,23 @@ public class DeleteUserEndpointTests
     [Fact]
     public async Task executes_command()
     {
-        var username = Generate.String();
-        var expectedCommand = new DeleteUserCommand(username);
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new UserModule(commandDispatcher, queryDispatcher);
+        var expectedCommand = new DeleteUser(Example.String);
+        var dispatcher = new FakeDispatcher();
+        var module = new UserModule(dispatcher);
 
-        await DeleteUserEndpoint.Handle(username, module, CancellationToken.None);
+        await DeleteUserEndpoint.Handle(Example.String, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<DeleteUserCommand>(commandDispatcher.Received);
+        var actualCommand = Assert.IsType<DeleteUser>(dispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
     public async Task returns_ok_when_successful()
     {
-        var username = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new UserModule(commandDispatcher, queryDispatcher);
+        var dispatcher = new FakeDispatcher();
+        var module = new UserModule(dispatcher);
 
-        var result = await DeleteUserEndpoint.Handle(username, module, CancellationToken.None);
+        var result = await DeleteUserEndpoint.Handle(Example.String, module, CancellationToken.None);
 
         Assert.IsType<Ok>(result);
     }
@@ -37,13 +33,11 @@ public class DeleteUserEndpointTests
     [Fact]
     public async Task returns_conflict_when_stream_does_not_exist()
     {
-        var username = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new UserModule(commandDispatcher, queryDispatcher);
-        commandDispatcher.Throws(new StreamDoesNotExistException());
+        var dispatcher = new FakeDispatcher();
+        var module = new UserModule(dispatcher);
+        dispatcher.Throws(new StreamDoesNotExistException());
 
-        var result = await DeleteUserEndpoint.Handle(username, module, CancellationToken.None);
+        var result = await DeleteUserEndpoint.Handle(Example.String, module, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

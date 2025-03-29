@@ -10,27 +10,23 @@ public class DeleteTaskListEndpointTests
     [Fact]
     public async Task executes_command()
     {
-        var id = Generate.Guid();
-        var expectedCommand = new DeleteTaskListCommand(id);
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
+        var expectedCommand = new DeleteTaskList(Example.Guid);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
 
-        await DeleteTaskListEndpoint.Handle(id, module, CancellationToken.None);
+        await DeleteTaskListEndpoint.Handle(Example.Guid, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<DeleteTaskListCommand>(commandDispatcher.Received);
+        var actualCommand = Assert.IsType<DeleteTaskList>(dispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
     public async Task returns_ok_when_successful()
     {
-        var id = Generate.Guid();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
 
-        var result = await DeleteTaskListEndpoint.Handle(id, module, CancellationToken.None);
+        var result = await DeleteTaskListEndpoint.Handle(Example.Guid, module, CancellationToken.None);
 
         Assert.IsType<Ok>(result);
     }
@@ -38,13 +34,11 @@ public class DeleteTaskListEndpointTests
     [Fact]
     public async Task returns_conflict_when_task_list_does_not_exist()
     {
-        var id = Generate.Guid();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        commandDispatcher.Throws(new ResourceNotFoundException());
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        dispatcher.Throws(new ResourceNotFoundException());
 
-        var result = await DeleteTaskListEndpoint.Handle(id, module, CancellationToken.None);
+        var result = await DeleteTaskListEndpoint.Handle(Example.Guid, module, CancellationToken.None);
 
         Assert.IsType<Conflict>(result);
     }

@@ -13,21 +13,21 @@ public interface IUserModule : IModule
     /// <param name="cancellationToken"></param>
     /// <exception cref="ResourceNotFoundException"></exception>
     /// <exception cref="UserAlreadyDeletedException">User has already been deleted</exception>
-    Task Execute(DeleteUserCommand command, CancellationToken cancellationToken);
+    Task Execute(DeleteUser command, CancellationToken cancellationToken);
 
     /// <summary>
     /// Get user by username
     /// </summary>
     /// <param name="query"></param>
     /// <param name="cancellationToken"></param>
-    Task<GetUserQuery.Result?> Execute(GetUserQuery query, CancellationToken cancellationToken);
+    Task<GetUser.Result?> Execute(GetUser query, CancellationToken cancellationToken);
 
     /// <summary>
     /// Get users
     /// </summary>
     /// <param name="query"></param>
     /// <param name="cancellationToken"></param>
-    Task<GetUsersQuery.Result> Execute(GetUsersQuery query, CancellationToken cancellationToken);
+    Task<GetUsers.Result> Execute(GetUsers query, CancellationToken cancellationToken);
 
     /// <summary>
     /// Register user
@@ -35,5 +35,5 @@ public interface IUserModule : IModule
     /// <param name="command"></param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="ResourceAlreadyExistsException">Another user with the same username has already been added</exception>
-    Task Execute(RegisterUserCommand command, CancellationToken cancellationToken);
+    Task Execute(RegisterUser command, CancellationToken cancellationToken);
 }

@@ -12,7 +12,7 @@ public static class DeleteTaskListEndpoint
     {
         try
         {
-            await module.Execute(new DeleteTaskListCommand(taskListId), cancellationToken);
+            await module.Execute(new DeleteTaskList(taskListId), cancellationToken);
 
             return Results.Ok();
         }

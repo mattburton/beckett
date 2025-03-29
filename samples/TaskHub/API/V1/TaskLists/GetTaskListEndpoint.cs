@@ -10,7 +10,7 @@ public static class GetTaskListEndpoint
         CancellationToken cancellationToken
     )
     {
-        var result = await module.Execute(new GetTaskListQuery(taskListId), cancellationToken);
+        var result = await module.Execute(new GetTaskList(taskListId), cancellationToken);
 
         return result == null ? Results.NotFound() : Results.Ok(result);
     }

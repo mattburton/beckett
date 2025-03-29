@@ -12,7 +12,7 @@ public static class AddTaskListEndpoint
     {
         try
         {
-            await module.Execute(new AddTaskListCommand(request.Id, request.Name), cancellationToken);
+            await module.Execute(new AddTaskList(request.Id, request.Name), cancellationToken);
 
             return Results.Ok(new Response(request.Id, request.Name));
         }

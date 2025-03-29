@@ -13,7 +13,7 @@ public static class DeleteUserEndpoint
     {
         try
         {
-            await module.Execute(new DeleteUserCommand(username), cancellationToken);
+            await module.Execute(new DeleteUser(username), cancellationToken);
 
             return Results.Ok();
         }

@@ -18,25 +18,6 @@
           "Microsoft.TestPlatform.TestHost": "17.13.0"
         }
       },
-      "Testcontainers.PostgreSql": {
-        "type": "Direct",
-        "requested": "[4.3.0, )",
-        "resolved": "4.3.0",
-        "contentHash": "OWtFKTrVaYrAA+N+tQF3ZC/o21pIPUihRB7NZNYbPWyxIJgSkTRzBdtV/ZNIGmsM+Smg0kqUy9ho2mbfTBt2Xw==",
-        "dependencies": {
-          "Testcontainers": "4.3.0"
-        }
-      },
-      "Testcontainers.Xunit": {
-        "type": "Direct",
-        "requested": "[4.3.0, )",
-        "resolved": "4.3.0",
-        "contentHash": "fJHktnhC/d6BWYZq8ptADGd1nvpAJyIet2ZPrwGOqsvO57gFVKfgr5Lkz1TklYRdGJ/CkhxozVJudFCMRIXt+Q==",
-        "dependencies": {
-          "Testcontainers": "4.3.0",
-          "xunit.extensibility.execution": "2.9.3"
-        }
-      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -53,24 +34,6 @@
         "requested": "[3.0.2, )",
         "resolved": "3.0.2",
         "contentHash": "oXbusR6iPq0xlqoikjdLvzh+wQDkMv9If58myz9MEzldS4nIcp442Btgs2sWbYWV+caEluMe2pQCZ0hUZgPiow=="
-      },
-      "BouncyCastle.Cryptography": {
-        "type": "Transitive",
-        "resolved": "2.4.0",
-        "contentHash": "SwXsAV3sMvAU/Nn31pbjhWurYSjJ+/giI/0n6tCrYoupEK34iIHCuk3STAd9fx8yudM85KkLSVdn951vTng/vQ=="
-      },
-      "Docker.DotNet.Enhanced": {
-        "type": "Transitive",
-        "resolved": "3.126.1",
-        "contentHash": "UPyLBLBaVE3s7OCWM0h5g9w6mUOag5sOIP5CldFQekIWo/gHixgZR+o5fG7eCFH4ZdKlvBGM4ALFuOyPoKoJ3A=="
-      },
-      "Docker.DotNet.Enhanced.X509": {
-        "type": "Transitive",
-        "resolved": "3.126.1",
-        "contentHash": "XFHMC/iWHbloQgg9apZrxu010DmSamaAggu8nomCqTeotGyUGkv2Tt/aqk1ljC/4tjtTrb9LtFQwYpwZbMbiKg==",
-        "dependencies": {
-          "Docker.DotNet.Enhanced": "3.126.1"
-        }
       },
       "Microsoft.AspNetCore.Http.Features": {
         "type": "Transitive",
@@ -273,19 +236,6 @@
           "Serilog": "4.0.0"
         }
       },
-      "SharpZipLib": {
-        "type": "Transitive",
-        "resolved": "1.4.2",
-        "contentHash": "yjj+3zgz8zgXpiiC3ZdF/iyTBbz2fFvMxZFEBPUcwZjIvXOf37Ylm+K58hqMfIBt5JgU/Z2uoUS67JmTLe973A=="
-      },
-      "SSH.NET": {
-        "type": "Transitive",
-        "resolved": "2024.2.0",
-        "contentHash": "9r+4UF2P51lTztpd+H7SJywk7WgmlWB//Cm2o96c6uGVZU5r58ys2/cD9pCgTk0zCdSkfflWL1WtqQ9I4IVO9Q==",
-        "dependencies": {
-          "BouncyCastle.Cryptography": "2.4.0"
-        }
-      },
       "System.Diagnostics.DiagnosticSource": {
         "type": "Transitive",
         "resolved": "9.0.0",
@@ -295,18 +245,6 @@
         "type": "Transitive",
         "resolved": "1.6.0",
         "contentHash": "COC1aiAJjCoA5GBF+QKL2uLqEBew4JsCkQmoHKbN3TlOZKa2fKLz5CpiRQKDz0RsAOEGsVKqOD5bomsXq/4STQ=="
-      },
-      "Testcontainers": {
-        "type": "Transitive",
-        "resolved": "4.3.0",
-        "contentHash": "1cxsjDE2+rdi/ELOel+NbQhQ7tvaqXG2YDN6nmhDzyAu9baGM2FUENG/3eG7N+ak3nap35RFvxyhIdVBeqNwlA==",
-        "dependencies": {
-          "Docker.DotNet.Enhanced": "3.126.1",
-          "Docker.DotNet.Enhanced.X509": "3.126.1",
-          "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
-          "SSH.NET": "2024.2.0",
-          "SharpZipLib": "1.4.2"
-        }
       },
       "xunit.abstractions": {
         "type": "Transitive",
@@ -346,7 +284,7 @@
       "api": {
         "type": "Project",
         "dependencies": {
-          "Beckett.Dashboard": "[0.17.1, )",
+          "Beckett.Dashboard": "[0.18.0, )",
           "Microsoft.AspNetCore.Http.Abstractions": "[2.3.0, )",
           "Npgsql.OpenTelemetry": "[9.0.3, )",
           "OpenTelemetry.Exporter.Console": "[1.11.2, )",
@@ -357,7 +295,7 @@
           "Serilog.AspNetCore": "[9.0.0, )",
           "Serilog.Sinks.Console": "[6.0.0, )",
           "System.Text.Encodings.Web": "[9.0.2, )",
-          "TaskHub": "[0.17.1, )"
+          "TaskHub": "[0.18.0, )"
         }
       },
       "beckett": {
@@ -372,20 +310,20 @@
       "beckett.dashboard": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )"
+          "Beckett": "[0.18.0, )"
         }
       },
       "contracts": {
         "type": "Project",
         "dependencies": {
-          "Core.Contracts": "[0.17.1, )"
+          "Core.Contracts": "[0.18.0, )"
         }
       },
       "core": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )",
-          "Core.Contracts": "[0.17.1, )",
+          "Beckett": "[0.18.0, )",
+          "Core.Contracts": "[0.18.0, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",
           "Scrutor": "[6.0.1, )"
         }
@@ -396,17 +334,17 @@
       "core.testing": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )",
-          "Core": "[0.17.1, )",
-          "xunit": "[2.9.3, )"
+          "Beckett": "[0.18.0, )",
+          "Core": "[0.18.0, )",
+          "xunit.assert": "[2.9.2, )"
         }
       },
       "taskhub": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )",
-          "Contracts": "[0.17.1, )",
-          "Core": "[0.17.1, )",
+          "Beckett": "[0.18.0, )",
+          "Contracts": "[0.18.0, )",
+          "Core": "[0.18.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.2, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",
           "Scrutor": "[6.0.1, )"

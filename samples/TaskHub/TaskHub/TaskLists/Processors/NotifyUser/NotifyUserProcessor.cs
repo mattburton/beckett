@@ -4,7 +4,7 @@ using TaskHub.TaskLists.Events;
 namespace TaskHub.TaskLists.Processors.NotifyUser;
 
 public class NotifyUserProcessor(
-    IQueryDispatcher dispatcher,
+    IDispatcher dispatcher,
     IEmailService emailService
 ) : IProcessor<UserMentionedInTask>
 {
@@ -13,7 +13,7 @@ public class NotifyUserProcessor(
         CancellationToken cancellationToken
     )
     {
-        var user = await dispatcher.Dispatch(new UserLookupQuery(context.Message!.Username), cancellationToken);
+        var user = await dispatcher.Dispatch(new UserLookup(context.Message!.Username), cancellationToken);
 
         if (user == null)
         {
@@ -21,7 +21,7 @@ public class NotifyUserProcessor(
         }
 
         var notificationsToSend = await dispatcher.Dispatch(
-            new UserNotificationsToSendQuery(context.Message.TaskListId),
+            new UserNotificationsToSend(context.Message.TaskListId),
             cancellationToken
         );
 
@@ -43,7 +43,7 @@ public class NotifyUserProcessor(
         var result = new ProcessorResult();
 
         result.Execute(
-            new SendUserNotificationCommand(context.Message.TaskListId, context.Message.Task, context.Message.Username)
+            new SendUserNotification(context.Message.TaskListId, context.Message.Task, context.Message.Username)
         );
 
         return result;

@@ -9,35 +9,29 @@ public class ChangeTaskListNameEndpointTests
     [Fact]
     public async Task executes_command()
     {
-        var taskListId = Generate.Guid();
-        var name = Generate.String();
-        var expectedCommand = new ChangeTaskListNameCommand(taskListId, name);
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var request = new ChangeTaskListNameEndpoint.Request(name);
+        var expectedCommand = new ChangeTaskListName(Example.Guid, Example.String);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var request = new ChangeTaskListNameEndpoint.Request(Example.String);
 
-        await ChangeTaskListNameEndpoint.Handle(taskListId, request, module, CancellationToken.None);
+        await ChangeTaskListNameEndpoint.Handle(Example.Guid, request, module, CancellationToken.None);
 
-        var actualCommand = Assert.IsType<ChangeTaskListNameCommand>(commandDispatcher.Received);
+        var actualCommand = Assert.IsType<ChangeTaskListName>(dispatcher.Received);
         Assert.Equal(expectedCommand, actualCommand);
     }
 
     [Fact]
     public async Task returns_ok_with_result_when_successful()
     {
-        var taskListId = Generate.Guid();
-        var name = Generate.String();
-        var commandDispatcher = new FakeCommandDispatcher();
-        var queryDispatcher = new FakeQueryDispatcher();
-        var module = new TaskListModule(commandDispatcher, queryDispatcher);
-        var request = new ChangeTaskListNameEndpoint.Request(name);
+        var dispatcher = new FakeDispatcher();
+        var module = new TaskListModule(dispatcher);
+        var request = new ChangeTaskListNameEndpoint.Request(Example.String);
 
-        var result = await ChangeTaskListNameEndpoint.Handle(taskListId, request, module, CancellationToken.None);
+        var result = await ChangeTaskListNameEndpoint.Handle(Example.Guid, request, module, CancellationToken.None);
 
         var response = Assert.IsType<Ok<ChangeTaskListNameEndpoint.Response>>(result);
         Assert.NotNull(response.Value);
-        Assert.Equal(taskListId, response.Value.Id);
-        Assert.Equal(name, response.Value.Name);
+        Assert.Equal(Example.Guid, response.Value.Id);
+        Assert.Equal(Example.String, response.Value.Name);
     }
 }
