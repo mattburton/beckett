@@ -148,7 +148,7 @@ public class Instrumentation : IInstrumentation, IDisposable
         );
 
         var activity = _activitySource.StartActivity(
-            $"{_options.Subscriptions.GroupName}.{subscription.Name}",
+            subscription.Name,
             ActivityKind.Internal,
             parentContext.ActivityContext
         );
@@ -160,7 +160,11 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         activity.AddTag(TelemetryConstants.Subscription.GroupName, _options.Subscriptions.GroupName);
         activity.AddTag(TelemetryConstants.Subscription.Name, subscription.Name);
-        activity.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
+
+        if (!string.IsNullOrWhiteSpace(subscription.Category))
+        {
+            activity.AddTag(TelemetryConstants.Subscription.Category, subscription.Category);
+        }
 
         if (!string.IsNullOrWhiteSpace(subscription.HandlerName))
         {

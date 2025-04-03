@@ -163,37 +163,7 @@ public class GlobalStreamConsumer(
                     stoppingToken
                 );
 
-                var categories = new Dictionary<string, DateTimeOffset>();
-                var tenants = new HashSet<string>();
-
-                foreach (var message in globalStream.StreamMessages)
-                {
-                    categories[StreamCategoryParser.Parse(message.StreamName)] = message.Timestamp;
-
-                    if (!message.Metadata.TryGetProperty(MessageConstants.Metadata.Tenant, out var tenantProperty))
-                    {
-                        continue;
-                    }
-
-                    var tenant = tenantProperty.GetString();
-
-                    if (string.IsNullOrWhiteSpace(tenant))
-                    {
-                        continue;
-                    }
-
-                    tenants.Add(tenant);
-                }
-
-                var categoryNames = categories.Keys.ToArray();
-                var categoryTimestamps = categories.Values.ToArray();
-
-                await database.Execute(
-                    new RecordStreamData(categoryNames, categoryTimestamps, tenants.ToArray(), options.Postgres),
-                    connection,
-                    transaction,
-                    stoppingToken
-                );
+                RecordStreamData(globalStream);
 
                 await transaction.CommitAsync(stoppingToken);
 
@@ -212,6 +182,36 @@ public class GlobalStreamConsumer(
                 throw;
             }
         }
+    }
+
+    private static void RecordStreamData(ReadGlobalStreamResult globalStream)
+    {
+        var categories = new Dictionary<string, DateTimeOffset>();
+        var tenants = new HashSet<string>();
+
+        foreach (var message in globalStream.StreamMessages)
+        {
+            categories[StreamCategoryParser.Parse(message.StreamName)] = message.Timestamp;
+
+            if (!message.Metadata.TryGetProperty(MessageConstants.Metadata.Tenant, out var tenantProperty))
+            {
+                continue;
+            }
+
+            var tenant = tenantProperty.GetString();
+
+            if (string.IsNullOrWhiteSpace(tenant))
+            {
+                continue;
+            }
+
+            tenants.Add(tenant);
+        }
+
+        var categoryNames = categories.Keys.ToArray();
+        var categoryTimestamps = categories.Values.ToArray();
+
+        StreamDataQueue.Enqueue(categoryNames, categoryTimestamps, tenants.ToArray());
     }
 }
 

@@ -12,6 +12,11 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton(options.Subscriptions);
 
+        if (!options.Subscriptions.Enabled)
+        {
+            return;
+        }
+
         services.AddSingleton<ISubscriptionInitializer, SubscriptionInitializer>();
 
         services.AddSingleton<IGlobalStreamConsumer, GlobalStreamConsumer>();
@@ -24,11 +29,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPostgresNotificationHandler, MessageNotificationHandler>();
 
-        if (!options.Subscriptions.Enabled)
-        {
-            return;
-        }
-
         services.AddHostedService<BootstrapSubscriptions>();
 
         services.AddHostedService<GlobalStreamConsumerHost>();
@@ -38,6 +38,8 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<CheckpointConsumerGroupHost>();
 
         services.AddHostedService<CheckpointPollingService>();
+
+        services.AddHostedService<StreamDataRecordingService>();
 
         services.AddHostedService<RecoverExpiredCheckpointReservationsService>();
     }

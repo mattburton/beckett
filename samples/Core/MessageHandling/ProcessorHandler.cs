@@ -17,8 +17,6 @@ public static class ProcessorHandler
         CancellationToken cancellationToken
     )
     {
-        Console.WriteLine($"MESSAGE: {context.Type}, lag: {DateTimeOffset.UtcNow.Subtract(context.Timestamp).TotalMilliseconds}ms");
-
         using var scope = serviceProvider.CreateScope();
 
         var handler = scope.ServiceProvider.GetRequiredService(messageHandlerType);
