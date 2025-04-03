@@ -22,6 +22,10 @@ public static class AddTaskEndpoint
         {
             return Results.Conflict();
         }
+        catch (ResourceAlreadyExistsException)
+        {
+            return Results.Conflict();
+        }
     }
 
     public record Request(string Task);

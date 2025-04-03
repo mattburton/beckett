@@ -136,9 +136,7 @@ DECLARE
   _current_version bigint;
   _stream_version bigint;
 BEGIN
-  IF (_expected_version < 0) THEN
-    PERFORM pg_advisory_xact_lock(beckett.stream_hash(_stream_name));
-  END IF;
+  PERFORM pg_advisory_xact_lock(beckett.stream_hash(_stream_name));
 
   SELECT coalesce(max(m.stream_position), 0)
   INTO _current_version
