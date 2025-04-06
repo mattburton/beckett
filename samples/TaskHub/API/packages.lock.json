@@ -291,20 +291,15 @@
       "beckett.dashboard": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )"
-        }
-      },
-      "contracts": {
-        "type": "Project",
-        "dependencies": {
-          "Core.Contracts": "[0.17.1, )"
+          "Beckett": "[0.18.1, )"
         }
       },
       "core": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )",
-          "Core.Contracts": "[0.17.1, )",
+          "Beckett": "[0.18.1, )",
+          "Core.Contracts": "[0.18.1, )",
+          "JetBrains.Annotations": "[2024.3.0, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",
           "Scrutor": "[6.0.1, )"
         }
@@ -312,16 +307,44 @@
       "core.contracts": {
         "type": "Project"
       },
-      "taskhub": {
+      "infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.17.1, )",
-          "Contracts": "[0.17.1, )",
-          "Core": "[0.17.1, )",
+          "Beckett": "[0.18.1, )",
+          "Core": "[0.18.1, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.2, )",
+          "Microsoft.Extensions.Hosting.Abstractions": "[9.0.2, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",
           "Scrutor": "[6.0.1, )"
         }
+      },
+      "tasklists": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[0.18.1, )",
+          "Infrastructure": "[0.18.1, )",
+          "Users.Contracts": "[0.18.1, )"
+        }
+      },
+      "users": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[0.18.1, )",
+          "Infrastructure": "[0.18.1, )",
+          "Users.Contracts": "[0.18.1, )"
+        }
+      },
+      "users.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Core.Contracts": "[0.18.1, )"
+        }
+      },
+      "JetBrains.Annotations": {
+        "type": "CentralTransitive",
+        "requested": "[2024.3.0, )",
+        "resolved": "2024.3.0",
+        "contentHash": "ox5pkeLQXjvJdyAB4b2sBYAlqZGLh3PjSnP1bQNVx72ONuTJ9+34/+Rq91Fc0dG29XG9RgZur9+NcP4riihTug=="
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",

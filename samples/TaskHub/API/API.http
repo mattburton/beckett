@@ -1,4 +1,4 @@
-@base_url = http://localhost:5222/v1
+@base_url = http://localhost:5222
 
 ### Add User
 
@@ -64,7 +64,7 @@ Accept: application/json
 
 ### Add Task
 
-POST {{base_url}}/task-lists/{{id}}
+POST {{base_url}}/task-lists/{{id}}/tasks
 Content-Type: application/json
 
 {
@@ -76,7 +76,7 @@ Content-Type: application/json
 
 ### Add Task & Send User Notification
 
-POST {{base_url}}/task-lists/{{id}}
+POST {{base_url}}/task-lists/{{id}}/tasks
 Content-Type: application/json
 
 {
@@ -88,5 +88,5 @@ Content-Type: application/json
 
 ### Complete Task
 
-POST {{base_url}}/task-lists/{{id}}/complete/{{task}}
+POST {{base_url}}/task-lists/{{id}}/tasks/{{task}}/complete
 Content-Type: application/json

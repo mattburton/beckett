@@ -1,22 +1,22 @@
 using Beckett.Messages;
 using Core.Contracts;
-using Core.MessageHandling;
+using Core.Processors;
 using Xunit;
 
 namespace Core.Testing;
 
 public static class ProcessorResultExtensions
 {
-    public static void NotificationPublished(this ProcessorResult result, INotification notification)
+    public static void ExternalEventPublished(this ProcessorResult result, IExternalEvent externalEvent)
     {
-        var notificationType = notification.GetType();
-        var candidates = result.Notifications.Where(x => x.GetType() == notificationType);
+        var externalEventType = externalEvent.GetType();
+        var candidates = result.ExternalEvents.Where(x => x.GetType() == externalEventType);
 
         foreach (var candidate in candidates)
         {
             try
             {
-                Assert.Equivalent(notification, candidate, true);
+                Assert.Equivalent(externalEvent, candidate, true);
 
                 return;
             }
@@ -27,7 +27,7 @@ public static class ProcessorResultExtensions
         }
 
         Assert.Fail(
-            $"No match found: {notificationType.Name} {MessageSerializer.Serialize(notificationType, notification)}"
+            $"No match found: {externalEventType.Name} {MessageSerializer.Serialize(externalEventType, externalEvent)}"
         );
     }
 }

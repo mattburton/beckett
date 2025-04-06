@@ -161,14 +161,21 @@
       "core": {
         "type": "Project",
         "dependencies": {
-          "Beckett": "[0.18.0, )",
-          "Core.Contracts": "[0.18.0, )",
+          "Beckett": "[0.18.1, )",
+          "Core.Contracts": "[0.18.1, )",
+          "JetBrains.Annotations": "[2024.3.0, )",
           "Npgsql.DependencyInjection": "[9.0.3, )",
           "Scrutor": "[6.0.1, )"
         }
       },
       "core.contracts": {
         "type": "Project"
+      },
+      "JetBrains.Annotations": {
+        "type": "CentralTransitive",
+        "requested": "[2024.3.0, )",
+        "resolved": "2024.3.0",
+        "contentHash": "ox5pkeLQXjvJdyAB4b2sBYAlqZGLh3PjSnP1bQNVx72ONuTJ9+34/+Rq91Fc0dG29XG9RgZur9+NcP4riihTug=="
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",

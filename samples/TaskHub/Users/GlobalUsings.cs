@@ -1,0 +1,12 @@
+global using Microsoft.AspNetCore.Http;
+global using Beckett;
+global using Core.Commands;
+global using Core.Events;
+global using Core.Modules;
+global using Core.Processors;
+global using Core.Projections;
+global using Core.Queries;
+global using Core.Scenarios;
+global using Core.State;
+global using Core.Streams;
+global using Npgsql;

@@ -1,4 +1,3 @@
-using Core.Contracts;
 using Core.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 

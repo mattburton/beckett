@@ -1,5 +1,5 @@
 using Beckett;
-using Core.MessageHandling;
+using Core.Scenarios;
 
 namespace Core.Projections;
 

@@ -1,6 +1,6 @@
 using Beckett;
-using Core.MessageHandling;
 using Core.Projections;
+using Core.Scenarios;
 using Core.State;
 
 namespace Core.Tests.Projections;

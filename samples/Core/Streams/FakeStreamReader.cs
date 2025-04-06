@@ -32,7 +32,7 @@ public class FakeStreamReader : IStreamReader
         );
     }
 
-    public void HasExistingStream(IStreamName streamName, params IEvent[] messages)
+    public void HasExistingStream(IStreamName streamName, params IEventType[] messages)
     {
         _storage.AppendToStream(
             streamName.StreamName(),

@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TaskHub\TaskHub.csproj"/>
+    <ProjectReference Include="..\TaskLists\TaskLists.csproj" />
+    <ProjectReference Include="..\Users\Users.csproj" />
   </ItemGroup>
 </Project>

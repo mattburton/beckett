@@ -1,15 +1,16 @@
 using System.Text.Json;
-using API.V1;
 using Beckett;
 using Beckett.Dashboard;
 using Beckett.OpenTelemetry;
 using Core.DependencyInjection;
+using Infrastructure.Database;
 using Microsoft.AspNetCore.Http.Json;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using TaskHub.Infrastructure.Database;
+using TaskLists;
+using Users;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -51,7 +52,8 @@ try
 
     app.MapBeckettDashboard("/beckett");
 
-    app.MapGroup("/v1").MapV1Routes();
+    app.MapTaskListRoutes();
+    app.MapUserRoutes();
 
     app.Run();
 }

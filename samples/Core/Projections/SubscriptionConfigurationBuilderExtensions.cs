@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using Beckett;
 using Beckett.Configuration;
-using Core.MessageHandling;
+using Core.Scenarios;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

@@ -11,7 +11,7 @@ namespace Core.Modules;
 [SuppressMessage("Usage", "CA2255:The \'ModuleInitializer\' attribute should not be used in libraries")]
 public static class MapMessageTypesAtStartup
 {
-    private static readonly Type TypeToMap = typeof(ISupportSubscriptions);
+    private static readonly Type TypeToMap = typeof(IProcessorInput);
     private static readonly Type SkipMappingType = typeof(IShouldNotBeMappedAutomatically);
 
     [ModuleInitializer]

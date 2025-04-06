@@ -2,12 +2,13 @@ using Beckett;
 using Beckett.OpenTelemetry;
 using Core.DependencyInjection;
 using Core.Modules;
+using Infrastructure.Database;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using TaskHub;
-using TaskHub.Infrastructure.Database;
+using TaskLists;
+using Users;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -34,7 +35,7 @@ try
             //default reservation timeout is 5 minutes - we can lower that for the purposes of this demo
             options.Subscriptions.ReservationTimeout = TimeSpan.FromSeconds(60);
         }
-    ).WithModulesFrom(TaskHubAssembly.Instance);
+    ).WithModulesFrom(typeof(ITaskListModule).Assembly, typeof(IUserModule).Assembly);
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("taskhub-worker"))
