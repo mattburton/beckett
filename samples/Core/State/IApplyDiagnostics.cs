@@ -1,9 +1,10 @@
 namespace Core.State;
 
 /// <summary>
-/// Internal interface used by the source generator to provide startup diagnostics for projections
+/// Interface implemented by the source generator that exposes the list of applied message types for a class
 /// </summary>
-public interface IApplyDiagnostics
+public interface IApplyMessageTypes
 {
-    Type[] AppliedMessageTypes();
+    Type[] MessageTypes();
 }
+

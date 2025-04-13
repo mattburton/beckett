@@ -10,12 +10,10 @@ public class Configuration : IModuleConfiguration
 
     public void Configure(IModuleBuilder builder)
     {
-        builder.AddProcessor<NotifyUserProcessor, UserMentionedInTask>(nameof(NotifyUserProcessor));
+        builder.AddProcessor<NotifyUserProcessor, UserMentionedInTask>();
 
-        builder.AddProjection<UserLookupProjection, UserLookupReadModel, string>("UserLookupQueryProjection");
+        builder.AddProjection<UserLookupProjection, UserLookupReadModel>();
 
-        builder.AddProjection<GetListsProjection, GetListsReadModel, Guid>(
-            "GetTaskListsQueryProjection"
-        );
+        builder.AddProjection<GetListsProjection, GetListsReadModel>();
     }
 }

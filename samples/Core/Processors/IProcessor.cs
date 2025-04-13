@@ -3,11 +3,11 @@ using Core.Contracts;
 
 namespace Core.Processors;
 
-public interface IProcessor<in TMessage> : IProcessorDispatcher where TMessage : class, IProcessorInput
+public interface IProcessor<in TMessage> : IProcessor where TMessage : class, IProcessorInput
 {
     Task<ProcessorResult> Handle(IMessageContext<TMessage> context, CancellationToken cancellationToken);
 
-    async Task<ProcessorResult> IProcessorDispatcher.Dispatch(
+    async Task<ProcessorResult> IProcessor.Handle(
         IMessageContext context,
         CancellationToken cancellationToken
     )
@@ -22,21 +22,7 @@ public interface IProcessor<in TMessage> : IProcessorDispatcher where TMessage :
     }
 }
 
-public interface IProcessor : IProcessorDispatcher
+public interface IProcessor
 {
     Task<ProcessorResult> Handle(IMessageContext context, CancellationToken cancellationToken);
-
-    async Task<ProcessorResult> IProcessorDispatcher.Dispatch(
-        IMessageContext context,
-        CancellationToken cancellationToken
-    )
-    {
-        return await Handle(context, cancellationToken) ??
-               throw new InvalidOperationException("Processor returned null");
-    }
-}
-
-public interface IProcessorDispatcher
-{
-    Task<ProcessorResult> Dispatch(IMessageContext context, CancellationToken cancellationToken);
 }

@@ -13,7 +13,7 @@ public partial class ProjectionConfigurationTests
         public void is_valid()
         {
             var projection = new TestReadModelProjection();
-            var configuration = new ProjectionConfiguration<Guid>();
+            var configuration = new ProjectionConfiguration();
 
             projection.Configure(configuration);
 
@@ -34,7 +34,7 @@ public partial class ProjectionConfigurationTests
         public void throws()
         {
             var projection = new TestReadModelProjectionMissingConfiguration();
-            var configuration = new ProjectionConfiguration<Guid>();
+            var configuration = new ProjectionConfiguration();
 
             projection.Configure(configuration);
 
@@ -50,7 +50,7 @@ public partial class ProjectionConfigurationTests
         public void throws()
         {
             var projection = new TestReadModelProjectionMissingApplyMethod();
-            var configuration = new ProjectionConfiguration<Guid>();
+            var configuration = new ProjectionConfiguration();
 
             projection.Configure(configuration);
 
@@ -66,7 +66,7 @@ public partial class ProjectionConfigurationTests
         public void includes_messages_matching_predicate()
         {
             var projection = new TestReadModelProjection();
-            var configuration = new ProjectionConfiguration<Guid>();
+            var configuration = new ProjectionConfiguration();
             projection.Configure(configuration);
             var batch = new List<IMessageContext>
             {
@@ -82,7 +82,7 @@ public partial class ProjectionConfigurationTests
         public void excludes_messages_that_do_not_match_predicate()
         {
             var projection = new TestReadModelProjection();
-            var configuration = new ProjectionConfiguration<Guid>();
+            var configuration = new ProjectionConfiguration();
             projection.Configure(configuration);
             var batch = new List<IMessageContext>
             {
@@ -96,7 +96,7 @@ public partial class ProjectionConfigurationTests
     }
 
     [State]
-    public partial class TestReadModel : IHaveScenarios
+    public partial class TestReadModel : IStateView
     {
         private void Apply(TestCreateMessage _)
         {
@@ -109,67 +109,64 @@ public partial class ProjectionConfigurationTests
         public IScenario[] Scenarios => [];
     }
 
-    public class TestReadModelProjection : IProjection<TestReadModel, Guid>
+    public class TestReadModelProjection : IProjection<TestReadModel>
     {
-        public void Configure(IProjectionConfiguration<Guid> configuration)
+        public void Configure(IProjectionConfiguration configuration)
         {
             configuration.CreatedBy<TestCreateMessage>(x => x.Id).Where(x => x.Id != Guid.Empty);
             configuration.UpdatedBy<TestUpdateMessage>(x => x.Id);
         }
 
-        public Task Create(TestReadModel state, CancellationToken cancellationToken) =>
+        public Task<IReadOnlyList<TestReadModel>> Load(IEnumerable<object> keys, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task<TestReadModel?> Read(Guid key, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public object GetKey(TestReadModel state) => throw new NotImplementedException();
 
-        public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public void Save(TestReadModel state) => throw new NotImplementedException();
 
-        public Task Delete(Guid key, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public void Delete(TestReadModel state) => throw new NotImplementedException();
+
+        public Task SaveChanges(CancellationToken cancellationToken) => throw new NotImplementedException();
     }
 
-    public class TestReadModelProjectionMissingConfiguration : IProjection<TestReadModel, Guid>
+    public class TestReadModelProjectionMissingConfiguration : IProjection<TestReadModel>
     {
-        public void Configure(IProjectionConfiguration<Guid> configuration)
+        public void Configure(IProjectionConfiguration configuration)
         {
             configuration.CreatedBy<TestCreateMessage>(x => x.Id);
         }
 
-        public Task Create(TestReadModel state, CancellationToken cancellationToken) =>
+        public Task<IReadOnlyList<TestReadModel>> Load(IEnumerable<object> keys, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task<TestReadModel?> Read(Guid key, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public object GetKey(TestReadModel state) => throw new NotImplementedException();
 
-        public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public void Save(TestReadModel state) => throw new NotImplementedException();
 
-        public Task Delete(Guid key, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public void Delete(TestReadModel state) => throw new NotImplementedException();
+
+        public Task SaveChanges(CancellationToken cancellationToken) => throw new NotImplementedException();
     }
 
-    public class TestReadModelProjectionMissingApplyMethod : IProjection<TestReadModel, Guid>
+    public class TestReadModelProjectionMissingApplyMethod : IProjection<TestReadModel>
     {
-        public void Configure(IProjectionConfiguration<Guid> configuration)
+        public void Configure(IProjectionConfiguration configuration)
         {
             configuration.CreatedBy<TestCreateMessage>(x => x.Id);
             configuration.UpdatedBy<TestUpdateMessage>(x => x.Id);
             configuration.UpdatedBy<TestUpdateMessageNotApplied>(x => x.Id);
         }
 
-        public Task Create(TestReadModel state, CancellationToken cancellationToken) =>
+        public Task<IReadOnlyList<TestReadModel>> Load(IEnumerable<object> keys, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task<TestReadModel?> Read(Guid key, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public object GetKey(TestReadModel state) => throw new NotImplementedException();
 
-        public Task Update(TestReadModel state, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public void Save(TestReadModel state) => throw new NotImplementedException();
 
-        public Task Delete(Guid key, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
+        public void Delete(TestReadModel state) => throw new NotImplementedException();
+
+        public Task SaveChanges(CancellationToken cancellationToken) => throw new NotImplementedException();
     }
 
     public record TestCreateMessage(Guid Id);

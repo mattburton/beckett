@@ -3,7 +3,7 @@ using Users.Contracts;
 namespace TaskLists.NotifyUser;
 
 [State]
-public partial class UserLookupReadModel : IHaveScenarios
+public partial class UserLookupReadModel : IStateView
 {
     public string Username { get; set; } = null!;
     public string Email { get; set; } = null!;

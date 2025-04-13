@@ -1,26 +1,18 @@
 using System.Runtime.CompilerServices;
-using Beckett;
 using Beckett.Configuration;
-using Core.Scenarios;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Core.State;
 
 namespace Core.Projections;
 
 public static class SubscriptionConfigurationBuilderExtensions
 {
-    public static ISubscriptionConfigurationBuilder Projection<TProjection, TState, TKey>(
-        this ISubscriptionConfigurationBuilder builder,
-        ServiceLifetime lifetime = ServiceLifetime.Transient
-    ) where TProjection : IProjection<TState, TKey> where TState : class, IApply, IHaveScenarios, new()
+    public static ISubscriptionConfigurationBuilder Projection<TProjection, TState>(
+        this ISubscriptionConfigurationBuilder builder
+    ) where TProjection : IProjection<TState> where TState : class, IStateView, new()
     {
-        var handlerType = typeof(TProjection);
+        var projection = (IProjection<TState>)RuntimeHelpers.GetUninitializedObject(typeof(TProjection));
 
-        builder.Services.TryAdd(new ServiceDescriptor(handlerType, handlerType, lifetime));
-
-        var projection = (IProjection<TState, TKey>)RuntimeHelpers.GetUninitializedObject(typeof(TProjection));
-
-        var configuration = new ProjectionConfiguration<TKey>();
+        var configuration = new ProjectionConfiguration();
 
         projection.Configure(configuration);
 
@@ -28,7 +20,7 @@ public static class SubscriptionConfigurationBuilderExtensions
 
         builder.Messages(configuration.GetMessageTypes());
 
-        builder.Handler(ProjectionHandler<TProjection, TState, TKey>.Handle);
+        builder.Handler(ProjectionHandler<TState>.Handle);
 
         return builder;
     }

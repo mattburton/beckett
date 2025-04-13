@@ -1,46 +1,62 @@
 using Beckett;
+using Beckett.Configuration;
 using Core.Contracts;
 using Core.Processors;
 using Core.Projections;
-using Core.Scenarios;
+using Core.State;
 
 namespace Core.Modules;
 
 public interface IModuleBuilder
 {
-    void AddProcessor<TProcessor>(string category, string name) where TProcessor : class, IProcessor;
+    ISubscriptionConfigurationBuilder AddProcessor<TProcessor>(string category, string? name = null)
+        where TProcessor : class, IProcessor;
 
-    void AddProcessor<TProcessor, TMessage>(string name) where TProcessor : class, IProcessor<TMessage>
+    ISubscriptionConfigurationBuilder AddProcessor<TProcessor, TMessage>(string? name = null)
+        where TProcessor : class, IProcessor<TMessage>
         where TMessage : class, IProcessorInput;
 
-    void AddProjection<TProjection, TState, TKey>(string name)
-        where TProjection : IProjection<TState, TKey> where TState : class, IApply, IHaveScenarios, new();
+    ISubscriptionConfigurationBuilder AddBatchProcessor<TBatchProcessor>(string? name = null)
+        where TBatchProcessor : class, IBatchProcessor;
+
+    ISubscriptionConfigurationBuilder AddProjection<TProjection, TState>(string? name = null)
+        where TProjection : IProjection<TState> where TState : class, IStateView, new();
 }
 
 public class ModuleBuilder(IModuleConfiguration configuration, IBeckettBuilder builder) : IModuleBuilder
 {
-    public void AddProcessor<TProcessor>(string category, string name) where TProcessor : class, IProcessor
+    public ISubscriptionConfigurationBuilder AddProcessor<TProcessor>(string category, string? name = null)
+        where TProcessor : class, IProcessor
     {
-        builder.AddSubscription($"{configuration.ModuleName}:{name}")
+        return builder.AddSubscription($"{configuration.ModuleName}:{name ?? typeof(TProcessor).Name}")
             .Category(category)
             .Handler(ProcessorHandler.For(typeof(TProcessor)))
             .StartingPosition(StartingPosition.Latest);
     }
 
-    public void AddProcessor<TProcessor, TMessage>(string name) where TProcessor : class, IProcessor<TMessage>
+    public ISubscriptionConfigurationBuilder AddProcessor<TProcessor, TMessage>(string? name = null)
+        where TProcessor : class, IProcessor<TMessage>
         where TMessage : class, IProcessorInput
     {
-        builder.AddSubscription($"{configuration.ModuleName}:{name}")
+        return builder.AddSubscription($"{configuration.ModuleName}:{name ?? typeof(TProcessor).Name}")
             .Message<TMessage>()
             .Handler(ProcessorHandler.For(typeof(TProcessor)))
             .StartingPosition(StartingPosition.Latest);
     }
 
-    public void AddProjection<TProjection, TState, TKey>(string name)
-        where TProjection : IProjection<TState, TKey> where TState : class, IApply, IHaveScenarios, new()
+    public ISubscriptionConfigurationBuilder AddBatchProcessor<TBatchProcessor>(string? name = null)
+        where TBatchProcessor : class, IBatchProcessor
     {
-        builder.AddSubscription($"{configuration.ModuleName}:{name}")
-            .Projection<TProjection, TState, TKey>()
+        return builder.AddSubscription($"{configuration.ModuleName}:{name ?? typeof(TBatchProcessor).Name}")
+            .Handler(ProcessorHandler.For(typeof(TBatchProcessor)))
+            .StartingPosition(StartingPosition.Latest);
+    }
+
+    public ISubscriptionConfigurationBuilder AddProjection<TProjection, TState>(string? name = null)
+        where TProjection : IProjection<TState> where TState : class, IStateView, new()
+    {
+        return builder.AddSubscription($"{configuration.ModuleName}:{name ?? typeof(TProjection).Name}")
+            .Projection<TProjection, TState>()
             .StartingPosition(StartingPosition.Earliest);
     }
 }

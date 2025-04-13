@@ -139,7 +139,7 @@ using Core.State;
 
 namespace {state.ContainingNamespace}
 {{
-    {state.AccessModifier} partial class {state.Name} : IApply, IApplyDiagnostics
+    {state.AccessModifier} partial class {state.Name} : IApply, IApplyMessageTypes
     {{
         public void Apply(IMessageContext context)
         {{
@@ -149,7 +149,7 @@ namespace {state.ContainingNamespace}
             }}
         }}
 
-        public Type[] AppliedMessageTypes() => [
+        public Type[] MessageTypes() => [
             {string.Join(",\n", state.ApplyMethods.Select(MessageTypeArrayLine))}
         ];
     }}
@@ -165,7 +165,7 @@ namespace {state.ContainingNamespace}
 {{
     {state.ContainingTypeAccessModifier} partial {(state.ContainingTypeIsRecord ? "record" : "class")} {state.ContainingTypeName}
     {{
-        {state.AccessModifier} partial class {state.Name} : IApply, IApplyDiagnostics
+        {state.AccessModifier} partial class {state.Name} : IApply, IApplyMessageTypes
         {{
             public void Apply(IMessageContext context)
             {{
@@ -175,7 +175,7 @@ namespace {state.ContainingNamespace}
                 }}
             }}
 
-            public Type[] AppliedMessageTypes() => [
+            public Type[] MessageTypes() => [
                 {string.Join(",\n", state.ApplyMethods.Select(MessageTypeArrayLine))}
             ];
         }}

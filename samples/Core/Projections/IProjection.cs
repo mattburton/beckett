@@ -1,13 +1,13 @@
-using Beckett;
-using Core.Scenarios;
+using Core.State;
 
 namespace Core.Projections;
 
-public interface IProjection<TState, TKey> where TState : class, IApply, IHaveScenarios, new()
+public interface IProjection<TState> where TState : class, IStateView, new()
 {
-    void Configure(IProjectionConfiguration<TKey> configuration);
-    Task Create(TState state, CancellationToken cancellationToken);
-    Task<TState?> Read(TKey key, CancellationToken cancellationToken);
-    Task Update(TState state, CancellationToken cancellationToken);
-    Task Delete(TKey key, CancellationToken cancellationToken);
+    void Configure(IProjectionConfiguration configuration);
+    Task<IReadOnlyList<TState>> Load(IEnumerable<object> keys, CancellationToken cancellationToken);
+    object GetKey(TState state);
+    void Save(TState state);
+    void Delete(TState state);
+    Task SaveChanges(CancellationToken cancellationToken);
 }

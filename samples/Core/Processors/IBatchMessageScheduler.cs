@@ -5,7 +5,16 @@ using Beckett.Messages;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Core.Batching;
+namespace Core.Processors;
+
+public interface IBatchMessageScheduler
+{
+    NpgsqlBatchCommand ScheduleMessage(
+        string streamName,
+        Message message,
+        DateTimeOffset deliverAt
+    );
+}
 
 public class BatchMessageScheduler(PostgresOptions options) : IBatchMessageScheduler
 {

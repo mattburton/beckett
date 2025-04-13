@@ -1,72 +1,73 @@
+using NpgsqlTypes;
 using TaskLists.Events;
 
 namespace TaskLists.GetLists;
 
-public class GetListsProjection(NpgsqlDataSource dataSource) : IProjection<GetListsReadModel, Guid>
+public class GetListsProjection(NpgsqlDataSource dataSource) : PostgresProjection<GetListsReadModel>(dataSource)
 {
-    public void Configure(IProjectionConfiguration<Guid> configuration)
+    public override void Configure(IProjectionConfiguration configuration)
     {
         configuration.CreatedBy<TaskListAdded>(x => x.Id);
         configuration.UpdatedBy<TaskListNameChanged>(x => x.Id);
         configuration.DeletedBy<TaskListDeleted>(x => x.Id);
     }
 
-    public async Task Create(GetListsReadModel state, CancellationToken cancellationToken)
+    public override object GetKey(GetListsReadModel state) => state.Id;
+
+    protected override async Task<IReadOnlyList<GetListsReadModel>> Load(
+        IReadOnlyList<object> keys,
+        NpgsqlDataSource dataSource,
+        CancellationToken cancellationToken
+    )
     {
-        const string sql = "INSERT INTO task_lists.task_lists (id, name) VALUES ($1, $2);";
+        const string sql = "SELECT id, name FROM task_lists.task_lists WHERE id = ANY($1);";
 
         var command = dataSource.CreateCommand(sql);
 
-        command.Parameters.AddWithValue(state.Id);
-        command.Parameters.AddWithValue(state.Name);
-
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    public async Task<GetListsReadModel?> Read(Guid key, CancellationToken cancellationToken)
-    {
-        const string sql = "SELECT id, name FROM task_lists.task_lists WHERE id = $1;";
-
-        var command = dataSource.CreateCommand(sql);
-
-        command.Parameters.AddWithValue(key);
+        command.Parameters.AddWithValue(NpgsqlDbType.Uuid | NpgsqlDbType.Array, keys);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        await reader.ReadAsync(cancellationToken);
+        var results = new List<GetListsReadModel>();
 
-        if (!reader.HasRows)
+        while (await reader.ReadAsync(cancellationToken))
         {
-            return null;
+            results.Add(
+                new GetListsReadModel
+                {
+                    Id = reader.GetFieldValue<Guid>(0),
+                    Name = reader.GetFieldValue<string>(1)
+                }
+            );
         }
 
-        return new GetListsReadModel
-        {
-            Id = reader.GetFieldValue<Guid>(0),
-            Name = reader.GetFieldValue<string>(1)
-        };
+        return results;
     }
 
-    public async Task Update(GetListsReadModel state, CancellationToken cancellationToken)
+    protected override NpgsqlBatchCommand SaveCommand(GetListsReadModel state)
     {
-        const string sql = "UPDATE task_lists.task_lists SET name = $2 WHERE id = $1;";
+        const string sql = """
+            INSERT INTO task_lists.task_lists (id, name)
+            VALUES ($1, $2)
+            ON CONFLICT (id) DO UPDATE SET name = $2;
+        """;
 
-        var command = dataSource.CreateCommand(sql);
+        var command = new NpgsqlBatchCommand(sql);
 
         command.Parameters.AddWithValue(state.Id);
         command.Parameters.AddWithValue(state.Name);
 
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        return command;
     }
 
-    public async Task Delete(Guid key, CancellationToken cancellationToken)
+    protected override NpgsqlBatchCommand DeleteCommand(GetListsReadModel state)
     {
         const string sql = "DELETE FROM task_lists.task_lists WHERE id = $1;";
 
-        var command = dataSource.CreateCommand(sql);
+        var command = new NpgsqlBatchCommand(sql);
 
-        command.Parameters.AddWithValue(key);
+        command.Parameters.AddWithValue(state.Id);
 
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        return command;
     }
 }

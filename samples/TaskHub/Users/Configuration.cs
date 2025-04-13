@@ -9,8 +9,8 @@ public class Configuration : IModuleConfiguration
 
     public void Configure(IModuleBuilder builder)
     {
-        builder.AddProcessor<PublishEventProcessor>(UserStream.Category, nameof(PublishEventProcessor));
+        builder.AddProcessor<PublishEventProcessor>(UserStream.Category);
 
-        builder.AddProjection<GetUsersProjection, GetUsersReadModel, string>("GetUsersQueryProjection");
+        builder.AddProjection<GetUsersProjection, GetUsersReadModel>();
     }
 }

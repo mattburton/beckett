@@ -3,7 +3,7 @@ using TaskLists.Events;
 namespace TaskLists.GetLists;
 
 [State]
-public partial class GetListsReadModel : IHaveScenarios
+public partial class GetListsReadModel : IStateView
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;

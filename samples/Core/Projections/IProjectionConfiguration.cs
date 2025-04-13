@@ -4,34 +4,34 @@ using Core.State;
 
 namespace Core.Projections;
 
-public interface IProjectionConfiguration<TKey>
+public interface IProjectionConfiguration
 {
-    IProjectionMessageConfiguration<TMessage, TKey> CreatedBy<TMessage>(Func<TMessage, TKey> key);
-    IProjectionMessageConfiguration<TMessage, TKey> CreatedOrUpdatedBy<TMessage>(Func<TMessage, TKey> key);
-    IProjectionMessageConfiguration<TMessage, TKey> UpdatedBy<TMessage>(Func<TMessage, TKey> key);
-    IProjectionMessageConfiguration<TMessage, TKey> DeletedBy<TMessage>(Func<TMessage, TKey> key);
+    IProjectionMessageConfiguration<TMessage> CreatedBy<TMessage>(Func<TMessage, object> key);
+    IProjectionMessageConfiguration<TMessage> CreatedOrUpdatedBy<TMessage>(Func<TMessage, object> key);
+    IProjectionMessageConfiguration<TMessage> UpdatedBy<TMessage>(Func<TMessage, object> key);
+    IProjectionMessageConfiguration<TMessage> DeletedBy<TMessage>(Func<TMessage, object> key);
 }
 
-public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
+public class ProjectionConfiguration : IProjectionConfiguration
 {
     private readonly Dictionary<Type, ProjectionMessageConfiguration> _map = new();
 
-    public IProjectionMessageConfiguration<TMessage, TKey> CreatedBy<TMessage>(Func<TMessage, TKey> key)
+    public IProjectionMessageConfiguration<TMessage> CreatedBy<TMessage>(Func<TMessage, object> key)
     {
         return RegisterMessageConfiguration(ProjectionAction.Create, key);
     }
 
-    public IProjectionMessageConfiguration<TMessage, TKey> CreatedOrUpdatedBy<TMessage>(Func<TMessage, TKey> key)
+    public IProjectionMessageConfiguration<TMessage> CreatedOrUpdatedBy<TMessage>(Func<TMessage, object> key)
     {
         return RegisterMessageConfiguration(ProjectionAction.CreateOrUpdate, key);
     }
 
-    public IProjectionMessageConfiguration<TMessage, TKey> UpdatedBy<TMessage>(Func<TMessage, TKey> key)
+    public IProjectionMessageConfiguration<TMessage> UpdatedBy<TMessage>(Func<TMessage, object> key)
     {
         return RegisterMessageConfiguration(ProjectionAction.Update, key);
     }
 
-    public IProjectionMessageConfiguration<TMessage, TKey> DeletedBy<TMessage>(Func<TMessage, TKey> key)
+    public IProjectionMessageConfiguration<TMessage> DeletedBy<TMessage>(Func<TMessage, object> key)
     {
         return RegisterMessageConfiguration(ProjectionAction.Delete, key);
     }
@@ -40,13 +40,13 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
 
     public void Validate<TState>(TState state)
     {
-        if (state is not IApplyDiagnostics diagnostics)
+        if (state is not IApplyMessageTypes diagnostics)
         {
             return;
         }
 
         var configuredMessageTypes = GetMessageTypesExcludingDeletedBy().ToArray();
-        var appliedMessageTypes = diagnostics.AppliedMessageTypes();
+        var appliedMessageTypes = diagnostics.MessageTypes();
 
         if (configuredMessageTypes.Length == appliedMessageTypes.Length)
         {
@@ -90,22 +90,21 @@ public class ProjectionConfiguration<TKey> : IProjectionConfiguration<TKey>
             .Where(x => _map[x.MessageType!].WherePredicate(x.Message!)).ToList();
     }
 
-    public TKey GetKey(IMessageContext context) =>
-        (TKey)GetConfigurationFor(context.MessageType!).Key(context.Message!);
+    public object GetKey(IMessageContext context) => GetConfigurationFor(context.MessageType!).Key(context.Message!);
 
     public ProjectionMessageConfiguration GetConfigurationFor(Type messageType) => _map[messageType];
 
     private Type[] GetMessageTypesExcludingDeletedBy() =>
         _map.Where(x => x.Value.Action != ProjectionAction.Delete).Select(x => x.Key).ToArray();
 
-    private ProjectionMessageConfiguration<TMessage, TKey> RegisterMessageConfiguration<TMessage>(
+    private ProjectionMessageConfiguration<TMessage> RegisterMessageConfiguration<TMessage>(
         ProjectionAction action,
-        Func<TMessage, TKey> key
+        Func<TMessage, object> key
     )
     {
         var messageType = typeof(TMessage);
 
-        var messageConfiguration = ProjectionMessageConfiguration<TMessage, TKey>.Create(action, key);
+        var messageConfiguration = ProjectionMessageConfiguration<TMessage>.Create(action, key);
 
         _map.TryAdd(messageType, messageConfiguration.Configuration);
 

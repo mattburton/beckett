@@ -1,13 +1,12 @@
 using Beckett;
 using Beckett.Messages;
 using Core.Events;
-using Core.Scenarios;
 using Core.State;
 using Core.Streams;
 
 namespace Core.Commands;
 
-public interface ICommand : ICommandDispatcher, IHaveStreamName, IHaveScenarios
+public interface ICommand : ICommandDispatcher, IHaveStreamName, IStateChange
 {
     /// <summary>
     /// Override the expected version used when executing the command. By default the resulting events from the command
@@ -55,7 +54,7 @@ public interface ICommand : ICommandDispatcher, IHaveStreamName, IHaveScenarios
     }
 }
 
-public interface ICommand<in TState> : ICommandDispatcher, IHaveStreamName, IHaveScenarios
+public interface ICommand<in TState> : ICommandDispatcher, IHaveStreamName, IStateChange
     where TState : class, IApply, new()
 {
     /// <summary>
@@ -103,9 +102,9 @@ public interface ICommand<in TState> : ICommandDispatcher, IHaveStreamName, IHav
 
         var readOptions = ReadOptions.Default;
 
-        if (initialState is IApplyDiagnostics diagnostics)
+        if (initialState is IApplyMessageTypes diagnostics)
         {
-            var types = diagnostics.AppliedMessageTypes();
+            var types = diagnostics.MessageTypes();
 
             readOptions = new ReadOptions
             {

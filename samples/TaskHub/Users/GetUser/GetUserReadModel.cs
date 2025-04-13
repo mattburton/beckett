@@ -3,7 +3,7 @@ using Users.Events;
 namespace Users.GetUser;
 
 [State]
-public partial class GetUserReadModel : IHaveScenarios
+public partial class GetUserReadModel : IStateView
 {
     public string Email { get; set; } = null!;
     public string Username { get; set; } = null!;

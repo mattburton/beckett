@@ -1,40 +1,40 @@
 namespace Core.Projections;
 
-public interface IProjectionMessageConfiguration<out TMessage, TKey>
+public interface IProjectionMessageConfiguration<out TMessage>
 {
-    IProjectionMessageConfiguration<TMessage, TKey> IgnoreWhenNotFound();
-    IProjectionMessageConfiguration<TMessage, TKey> Where(Predicate<TMessage> predicate);
+    IProjectionMessageConfiguration<TMessage> IgnoreWhenNotFound();
+    IProjectionMessageConfiguration<TMessage> Where(Predicate<TMessage> predicate);
 }
 
-public class ProjectionMessageConfiguration<TMessage, TKey> : IProjectionMessageConfiguration<TMessage, TKey>
+public class ProjectionMessageConfiguration<TMessage> : IProjectionMessageConfiguration<TMessage>
 {
     private ProjectionMessageConfiguration(
         ProjectionAction action,
-        Func<object, TKey> key
+        Func<object, object> key
     )
     {
         Configuration.Action = action;
-        Configuration.Key = x => key(x)!;
+        Configuration.Key = key;
     }
 
     internal ProjectionMessageConfiguration Configuration { get; } = new();
 
-    internal static ProjectionMessageConfiguration<TMessage, TKey> Create(
+    internal static ProjectionMessageConfiguration<TMessage> Create(
         ProjectionAction action,
-        Func<TMessage, TKey> keySelector
+        Func<TMessage, object> keySelector
     )
     {
-        return new ProjectionMessageConfiguration<TMessage, TKey>(action, x => keySelector((TMessage)x));
+        return new ProjectionMessageConfiguration<TMessage>(action, x => keySelector((TMessage)x));
     }
 
-    public IProjectionMessageConfiguration<TMessage, TKey> IgnoreWhenNotFound()
+    public IProjectionMessageConfiguration<TMessage> IgnoreWhenNotFound()
     {
         Configuration.IgnoreWhenNotFound = true;
 
         return this;
     }
 
-    public IProjectionMessageConfiguration<TMessage, TKey> Where(Predicate<TMessage> predicate)
+    public IProjectionMessageConfiguration<TMessage> Where(Predicate<TMessage> predicate)
     {
         Configuration.WherePredicate = x => predicate((TMessage)x);
 
@@ -49,5 +49,5 @@ public class ProjectionMessageConfiguration
     internal bool IgnoreWhenNotFound { get; set; }
     internal Predicate<object> WherePredicate { get; set; } = _ => true;
 
-    internal TKey GetKey<TKey>(object message) => (TKey)Key(message);
+    internal object GetKey(object message) => Key(message);
 }

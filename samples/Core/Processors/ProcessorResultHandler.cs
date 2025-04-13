@@ -1,7 +1,6 @@
 using Beckett;
 using Beckett.Messages;
 using Beckett.MessageStorage.Postgres;
-using Core.Batching;
 using Core.Commands;
 using Core.Contracts;
 using Core.Jobs;
@@ -17,7 +16,7 @@ public class ProcessorResultHandler(
     IStreamReader reader
 ) : IProcessorResultHandler
 {
-    public async Task Process(ProcessorResult result, CancellationToken cancellationToken)
+    public async Task Handle(ProcessorResult result, CancellationToken cancellationToken)
     {
         var batch = new NpgsqlBatch();
 

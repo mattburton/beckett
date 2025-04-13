@@ -3,15 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Core.Processors;
 
-public static class ProcessorHandler
+public static class BatchProcessorHandler
 {
-    public static Func<IMessageContext, IServiceProvider, CancellationToken, Task> For(Type processorType)
+    public static Func<IReadOnlyList<IMessageContext>, IServiceProvider, CancellationToken, Task> For(Type processorType)
     {
-        return (context, serviceProvider, token) => Handle(context, processorType, serviceProvider, token);
+        return (batch, serviceProvider, token) => Handle(batch, processorType, serviceProvider, token);
     }
 
     private static async Task Handle(
-        IMessageContext context,
+        IReadOnlyList<IMessageContext> batch,
         Type processorType,
         IServiceProvider serviceProvider,
         CancellationToken cancellationToken
@@ -22,12 +22,12 @@ public static class ProcessorHandler
         var instance = scope.ServiceProvider.GetRequiredService(processorType);
         var resultHandler = scope.ServiceProvider.GetRequiredService<IProcessorResultHandler>();
 
-        if (instance is not IProcessor processor)
+        if (instance is not IBatchProcessor batchProcessor)
         {
             return;
         }
 
-        var result = await processor.Handle(context, cancellationToken);
+        var result = await batchProcessor.Handle(batch, cancellationToken);
 
         await resultHandler.Handle(result, cancellationToken);
     }

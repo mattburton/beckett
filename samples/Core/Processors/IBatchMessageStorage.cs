@@ -6,7 +6,16 @@ using Beckett.OpenTelemetry;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Core.Batching;
+namespace Core.Processors;
+
+public interface IBatchMessageStorage
+{
+    NpgsqlBatchCommand AppendToStream(
+        string streamName,
+        ExpectedVersion expectedVersion,
+        IReadOnlyList<Message> messages
+    );
+}
 
 public class BatchMessageStorage(IInstrumentation instrumentation, PostgresOptions options) : IBatchMessageStorage
 {

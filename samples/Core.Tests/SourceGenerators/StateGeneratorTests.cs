@@ -26,7 +26,7 @@ public class StateGeneratorTests
             var state = new TestReadModel();
 
             Assert.Collection(
-                state.AppliedMessageTypes(),
+                state.MessageTypes(),
                 type => Assert.Equal(typeof(TestMessage), type),
                 type => Assert.Equal(typeof(TestMessageWithContext), type)
             );
