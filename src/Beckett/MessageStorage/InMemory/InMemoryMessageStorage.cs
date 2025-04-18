@@ -58,6 +58,11 @@ public class InMemoryMessageStorage : IMessageStorage
         var messages = _store.Where(x => x.GlobalPosition > options.StartingGlobalPosition).Take(options.Count)
             .ToList();
 
+        if (!string.IsNullOrWhiteSpace(options.Category))
+        {
+            messages = messages.Where(x => x.StreamName.StartsWith(options.Category + "-")).ToList();
+        }
+
         if (options.Types is { Length: > 0 })
         {
             messages = messages.Where(x => options.Types.Contains(x.Type)).ToList();

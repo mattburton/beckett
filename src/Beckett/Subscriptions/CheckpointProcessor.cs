@@ -275,6 +275,7 @@ public class CheckpointProcessor(
                 {
                     StartingGlobalPosition = startingStreamPosition,
                     Count = batchSize,
+                    Category = subscription.Category,
                     Types = subscription.MessageTypeNames.ToArray()
                 },
                 CancellationToken.None

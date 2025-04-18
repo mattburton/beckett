@@ -443,10 +443,10 @@ $$;
 
 
 --
--- Name: read_global_stream(bigint, integer, text[]); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: read_global_stream(bigint, integer, text, text[]); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.read_global_stream(_starting_global_position bigint, _count integer, _types text[] DEFAULT NULL::text[]) RETURNS TABLE(id uuid, stream_name text, stream_position bigint, global_position bigint, type text, data jsonb, metadata jsonb, "timestamp" timestamp with time zone)
+CREATE FUNCTION beckett.read_global_stream(_starting_global_position bigint, _count integer, _category text DEFAULT NULL::text, _types text[] DEFAULT NULL::text[]) RETURNS TABLE(id uuid, stream_name text, stream_position bigint, global_position bigint, type text, data jsonb, metadata jsonb, "timestamp" timestamp with time zone)
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -475,6 +475,7 @@ BEGIN
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
+    AND (_category IS NULL OR beckett.stream_category(m.stream_name) = _category)
     AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY m.transaction_id, m.global_position
     LIMIT _count;

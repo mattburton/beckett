@@ -23,11 +23,12 @@ public class ReadGlobalStream(ReadGlobalStreamOptions readOptions, PostgresOptio
                    data,
                    metadata,
                    timestamp
-            from {options.Schema}.read_global_stream($1, $2, $3);
+            from {options.Schema}.read_global_stream($1, $2, $3, $4);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(
             new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text, IsNullable = true }
         );
@@ -39,7 +40,9 @@ public class ReadGlobalStream(ReadGlobalStreamOptions readOptions, PostgresOptio
 
         command.Parameters[0].Value = readOptions.StartingGlobalPosition;
         command.Parameters[1].Value = readOptions.Count;
-        command.Parameters[2].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
+        command.Parameters[2].Value =
+            string.IsNullOrWhiteSpace(readOptions.Category) ? DBNull.Value : readOptions.Category;
+        command.Parameters[3].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

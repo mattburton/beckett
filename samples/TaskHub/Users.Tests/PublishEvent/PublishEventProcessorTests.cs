@@ -19,7 +19,7 @@ public class PublishEventProcessorTests
             var context = MessageContext.From(userRegisteredEvent) with { StreamName = stream.StreamName() };
             reader.HasExistingStream(stream, userRegisteredEvent);
 
-            var result = await processor.Handle(context, CancellationToken.None);
+            var result = await processor.Handle([context], CancellationToken.None);
 
             result.ExternalEventPublished(expectedExternalEvent);
         }
@@ -35,11 +35,11 @@ public class PublishEventProcessorTests
             var stream = new UserStream(Example.String);
             var expectedExternalEvent = new ExternalUserDeleted(Example.String);
             var userRegisteredEvent = new UserRegistered(Example.String, Example.String);
-            var userDeletedEvent = new global::Users.Events.UserDeleted(Example.String);
+            var userDeletedEvent = new UserDeleted(Example.String);
             var context = MessageContext.From(userRegisteredEvent) with { StreamName = stream.StreamName() };
             reader.HasExistingStream(stream, userRegisteredEvent, userDeletedEvent);
 
-            var result = await processor.Handle(context, CancellationToken.None);
+            var result = await processor.Handle([context], CancellationToken.None);
 
             result.ExternalEventPublished(expectedExternalEvent);
         }
