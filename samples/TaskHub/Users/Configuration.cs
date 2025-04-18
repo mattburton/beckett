@@ -9,7 +9,9 @@ public class Configuration : IModuleConfiguration
 
     public void Configure(IModuleBuilder builder)
     {
-        builder.AddProcessor<PublishEventProcessor>(UserStream.Category);
+        builder.AddBatchProcessor<PublishEventProcessor>()
+            .Category(UserStream.Category)
+            .StreamScope(StreamScope.GlobalStream);
 
         builder.AddProjection<GetUsersProjection, GetUsersReadModel>();
     }

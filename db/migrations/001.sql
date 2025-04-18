@@ -250,6 +250,7 @@ $$;
 CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
   _starting_global_position bigint,
   _count int,
+  _category text DEFAULT NULL,
   _types text[] DEFAULT NULL
 )
   RETURNS TABLE (
@@ -291,6 +292,7 @@ BEGIN
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
+    AND (_category IS NULL OR __schema__.stream_category(m.stream_name) = _category)
     AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY m.transaction_id, m.global_position
     LIMIT _count;

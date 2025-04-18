@@ -48,7 +48,7 @@ public class ModuleBuilder(IModuleConfiguration configuration, IBeckettBuilder b
         where TBatchProcessor : class, IBatchProcessor
     {
         return builder.AddSubscription($"{configuration.ModuleName}:{name ?? typeof(TBatchProcessor).Name}")
-            .Handler(ProcessorHandler.For(typeof(TBatchProcessor)))
+            .Handler(BatchProcessorHandler.For(typeof(TBatchProcessor)))
             .StartingPosition(StartingPosition.Latest);
     }
 
