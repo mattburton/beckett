@@ -54,9 +54,17 @@ public class Message
         Metadata = metadata ?? new Dictionary<string, string>();
     }
 
+    public Guid Id { get; private set; } = MessageId.New();
     public string Type { get; }
     public JsonElement Data { get; }
     public Dictionary<string, string> Metadata { get; }
+
+    public Message WithMessageId(Guid id)
+    {
+        Id = id;
+
+        return this;
+    }
 
     public Message WithMetadata(string key, string? value)
     {
@@ -67,6 +75,11 @@ public class Message
 
         return this;
     }
+
+    public Message WithCausationId(string causationId) => WithMetadata(
+        MessageConstants.Metadata.CausationId,
+        causationId
+    );
 
     public Message WithCorrelationId(string correlationId) => WithMetadata(
         MessageConstants.Metadata.CorrelationId,

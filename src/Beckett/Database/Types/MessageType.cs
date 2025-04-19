@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Beckett.Messages;
 
 namespace Beckett.Database.Types;
 
@@ -19,7 +18,7 @@ public class MessageType
     {
         return new MessageType
         {
-            Id = MessageId.New(),
+            Id = message.Id,
             StreamName = streamName,
             Type = message.Type,
             Data = message.Data,
