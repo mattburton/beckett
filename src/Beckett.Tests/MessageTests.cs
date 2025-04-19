@@ -49,7 +49,7 @@ public class MessageTests
         var input = new TestMessage(Guid.NewGuid());
         var message = new Message(input);
 
-        message.WithId(expectedId);
+        message.WithMessageId(expectedId);
 
         Assert.Equal(expectedId, message.Id);
     }

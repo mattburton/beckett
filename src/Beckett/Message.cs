@@ -59,7 +59,7 @@ public class Message
     public JsonElement Data { get; }
     public Dictionary<string, string> Metadata { get; }
 
-    public Message WithId(Guid id)
+    public Message WithMessageId(Guid id)
     {
         Id = id;
 
