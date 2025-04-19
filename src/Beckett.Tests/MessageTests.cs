@@ -43,6 +43,18 @@ public class MessageTests
     }
 
     [Fact]
+    public void can_set_message_id()
+    {
+        var expectedId = Guid.NewGuid();
+        var input = new TestMessage(Guid.NewGuid());
+        var message = new Message(input);
+
+        message.WithId(expectedId);
+
+        Assert.Equal(expectedId, message.Id);
+    }
+
+    [Fact]
     public void can_add_correlation_id_to_message_metadata()
     {
         const string expectedCorrelationId = "correlation-id";

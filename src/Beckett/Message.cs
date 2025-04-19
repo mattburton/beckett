@@ -54,9 +54,17 @@ public class Message
         Metadata = metadata ?? new Dictionary<string, string>();
     }
 
+    public Guid Id { get; private set; } = MessageId.New();
     public string Type { get; }
     public JsonElement Data { get; }
     public Dictionary<string, string> Metadata { get; }
+
+    public Message WithId(Guid id)
+    {
+        Id = id;
+
+        return this;
+    }
 
     public Message WithMetadata(string key, string? value)
     {
