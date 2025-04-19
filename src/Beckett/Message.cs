@@ -76,6 +76,11 @@ public class Message
         return this;
     }
 
+    public Message WithCausationId(string causationId) => WithMetadata(
+        MessageConstants.Metadata.CausationId,
+        causationId
+    );
+
     public Message WithCorrelationId(string correlationId) => WithMetadata(
         MessageConstants.Metadata.CorrelationId,
         correlationId
