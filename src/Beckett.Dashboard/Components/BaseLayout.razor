@@ -69,6 +69,11 @@
                 Change Theme
               </a>
             </li>
+            <li>
+              <div class="dropdown-item disabled">
+                <span class="text-muted">v@(DisplayVersion)</span>
+              </div>
+            </li>
           </ul>
         </div>
         <div>
@@ -90,8 +95,17 @@
 
   const string HtmxRequestHeader = "HX-Request";
 
+  static readonly string DisplayVersion = BuildDisplayVersion();
+
   [CascadingParameter] public HttpContext? Context { get; set; }
 
   private bool IsHtmx() => Context?.Request.Headers.ContainsKey(HtmxRequestHeader) ?? false;
+
+  private static string BuildDisplayVersion()
+  {
+    var version = typeof(IBeckettBuilder).Assembly.GetName().Version;
+
+    return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "0.0.0";
+  }
 
 }
