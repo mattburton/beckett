@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
-    <Version>0.18.2</Version>
-    <AssemblyVersion>$(PackageVersion)</AssemblyVersion>
+    <Version>0.18.3</Version>
     <Authors>Matt Burton</Authors>
     <Description>Messaging and event sourcing library</Description>
     <PackageProjectUrl>https://github.com/mattburton/beckett</PackageProjectUrl>
