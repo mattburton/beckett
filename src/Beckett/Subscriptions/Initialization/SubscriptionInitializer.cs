@@ -104,7 +104,9 @@ public class SubscriptionInitializer(
                 new ReadGlobalStreamOptions
                 {
                     StartingGlobalPosition = checkpoint.StreamPosition,
-                    Count = options.Subscriptions.InitializationBatchSize
+                    Count = options.Subscriptions.InitializationBatchSize,
+                    Category = subscription.Category,
+                    Types = subscription.MessageTypeNames.ToArray()
                 },
                 cancellationToken
             );
@@ -132,7 +134,9 @@ public class SubscriptionInitializer(
                     new ReadGlobalStreamOptions
                     {
                         StartingGlobalPosition = checkpoint.StreamPosition,
-                        Count = 1
+                        Count = 1,
+                        Category = subscription.Category,
+                        Types = subscription.MessageTypeNames.ToArray()
                     },
                     cancellationToken
                 );
