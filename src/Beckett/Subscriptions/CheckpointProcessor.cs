@@ -291,7 +291,8 @@ public class CheckpointProcessor(
             new ReadStreamOptions
             {
                 StartingStreamPosition = startingStreamPosition,
-                EndingStreamPosition = endingStreamPosition
+                EndingStreamPosition = endingStreamPosition,
+                Types = subscription.MessageTypeNames.ToArray()
             },
             CancellationToken.None
         );
