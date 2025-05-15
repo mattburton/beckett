@@ -1,7 +1,6 @@
 using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Database.Types;
-using Beckett.Messages;
 using Beckett.MessageStorage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
@@ -62,29 +61,26 @@ public class GlobalStreamConsumer(
 
                 stoppingToken.ThrowIfCancellationRequested();
 
-                var globalStream = await messageStorage.ReadGlobalStream(
-                    new ReadGlobalStreamOptions
-                    {
-                        StartingGlobalPosition = checkpoint.StreamPosition,
-                        Count = options.Subscriptions.GlobalStreamBatchSize
-                    },
+                var globalStream = await messageStorage.ReadGlobalStreamCheckpointData(
+                    checkpoint.StreamPosition,
+                    options.Subscriptions.GlobalStreamBatchSize,
                     stoppingToken
                 );
 
-                if (globalStream.StreamMessages.Count == 0)
+                if (globalStream.Items.Count == 0)
                 {
                     logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
 
                     continue;
                 }
 
-                logger.NewGlobalStreamMessagesToProcess(globalStream.StreamMessages.Count, checkpoint.StreamPosition);
+                logger.NewGlobalStreamMessagesToProcess(globalStream.Items.Count, checkpoint.StreamPosition);
 
                 var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
 
                 var globalStreamSubscriptions = registeredSubscriptions
                     .Where(x => x.StreamScope == StreamScope.GlobalStream)
-                    .Where(x => globalStream.StreamMessages.Any(m => m.AppliesTo(x))).OrderBy(x => x.Priority)
+                    .Where(x => globalStream.Items.Any(m => m.AppliesTo(x))).OrderBy(x => x.Priority)
                     .ToArray();
 
                 foreach (var subscription in globalStreamSubscriptions)
@@ -94,13 +90,13 @@ public class GlobalStreamConsumer(
                         GroupName = options.Subscriptions.GroupName,
                         Name = subscription.Name,
                         StreamName = GlobalStream.Name,
-                        StreamVersion = globalStream.StreamMessages.Where(x => x.AppliesTo(subscription))
+                        StreamVersion = globalStream.Items.Where(x => x.AppliesTo(subscription))
                             .Max(x => x.GlobalPosition)
                     };
 
                     if (checkpoints.TryGetValue(subscriptionCheckpoint, out var existingCheckpoint))
                     {
-                        existingCheckpoint.StreamVersion = globalStream.StreamMessages
+                        existingCheckpoint.StreamVersion = globalStream.Items
                             .Where(x => x.AppliesTo(subscription)).Max(x => x.GlobalPosition);
                     }
                     else
@@ -109,7 +105,7 @@ public class GlobalStreamConsumer(
                     }
                 }
 
-                foreach (var stream in globalStream.StreamMessages.GroupBy(x => x.StreamName))
+                foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
                         .Where(x => x.StreamScope == StreamScope.PerStream)
@@ -154,7 +150,7 @@ public class GlobalStreamConsumer(
                     logger.NoNewCheckpointsToRecord();
                 }
 
-                var newGlobalPosition = globalStream.StreamMessages.Max(x => x.GlobalPosition);
+                var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
 
                 await database.Execute(
                     new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition, options.Postgres),
@@ -184,28 +180,21 @@ public class GlobalStreamConsumer(
         }
     }
 
-    private static void RecordStreamData(ReadGlobalStreamResult globalStream)
+    private static void RecordStreamData(ReadGlobalStreamCheckpointDataResult globalStream)
     {
         var categories = new Dictionary<string, DateTimeOffset>();
         var tenants = new HashSet<string>();
 
-        foreach (var message in globalStream.StreamMessages)
+        foreach (var message in globalStream.Items)
         {
             categories[StreamCategoryParser.Parse(message.StreamName)] = message.Timestamp;
 
-            if (!message.Metadata.TryGetProperty(MessageConstants.Metadata.Tenant, out var tenantProperty))
+            if (string.IsNullOrWhiteSpace(message.Tenant))
             {
                 continue;
             }
 
-            var tenant = tenantProperty.GetString();
-
-            if (string.IsNullOrWhiteSpace(tenant))
-            {
-                continue;
-            }
-
-            tenants.Add(tenant);
+            tenants.Add(message.Tenant);
         }
 
         var categoryNames = categories.Keys.ToArray();

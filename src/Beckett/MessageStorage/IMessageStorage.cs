@@ -9,6 +9,12 @@ public interface IMessageStorage
         CancellationToken cancellationToken
     );
 
+    Task<ReadGlobalStreamCheckpointDataResult> ReadGlobalStreamCheckpointData(
+        long lastGlobalPosition,
+        int batchSize,
+        CancellationToken cancellationToken
+    );
+
     Task<ReadGlobalStreamResult> ReadGlobalStream(
         ReadGlobalStreamOptions options,
         CancellationToken cancellationToken

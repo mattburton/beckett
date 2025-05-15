@@ -19,7 +19,7 @@ public class StreamDataRecordingService(
             {
                 await database.Execute(
                     new RecordStreamData(data.Categories, data.CategoryTimestamps, data.Tenants, options.Postgres),
-                    stoppingToken
+                    CancellationToken.None
                 );
             }
             catch (Exception e)

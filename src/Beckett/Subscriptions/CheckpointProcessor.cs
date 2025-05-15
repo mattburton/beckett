@@ -105,13 +105,15 @@ public class CheckpointProcessor(
         {
             if (messageBatch.Count == 0)
             {
-                if (checkpoint.StreamPosition < checkpoint.StreamVersion &&
-                    subscription.StreamScope == StreamScope.GlobalStream)
+                if (subscription.StreamScope == StreamScope.PerStream ||
+                    checkpoint.StreamPosition >= checkpoint.StreamVersion)
                 {
-                    return new Success(checkpoint.StreamVersion);
+                    return NoMessages.Instance;
                 }
 
-                return NoMessages.Instance;
+                var readPosition = checkpoint.StreamPosition + options.Subscriptions.SubscriptionStreamBatchSize;
+
+                return new Success(readPosition);
             }
 
             if (subscription.Handler.IsBatchHandler)
