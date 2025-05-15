@@ -113,6 +113,11 @@ public class CheckpointProcessor(
 
                 var readPosition = checkpoint.StreamPosition + options.Subscriptions.SubscriptionStreamBatchSize;
 
+                if (readPosition > checkpoint.StreamVersion)
+                {
+                    readPosition = checkpoint.StreamVersion;
+                }
+
                 return new Success(readPosition);
             }
 
