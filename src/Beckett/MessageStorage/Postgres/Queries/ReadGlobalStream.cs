@@ -16,7 +16,7 @@ public class ReadGlobalStream(ReadGlobalStreamOptions readOptions, PostgresOptio
         command.CommandText = $@"
             select id,
                    stream_name,
-                   0 as stream_version,
+                   global_position as stream_version,
                    stream_position,
                    global_position,
                    type,
