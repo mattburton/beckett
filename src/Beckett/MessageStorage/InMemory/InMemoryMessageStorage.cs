@@ -50,6 +50,40 @@ public class InMemoryMessageStorage : IMessageStorage
         return Task.FromResult(new AppendToStreamResult(newStreamVersion));
     }
 
+    public async Task<ReadGlobalStreamCheckpointDataResult> ReadGlobalStreamCheckpointData(long lastGlobalPosition, int batchSize, CancellationToken cancellationToken)
+    {
+        var globalStream = await ReadGlobalStream(
+            new ReadGlobalStreamOptions
+            {
+                StartingGlobalPosition = lastGlobalPosition,
+                Count = batchSize
+            },
+            cancellationToken
+        );
+
+        var items = globalStream.StreamMessages.Select(x =>
+            {
+                string? tenant = null;
+
+                if (x.Metadata.TryGetProperty("$tenant", out var tenantProperty))
+                {
+                    tenant = tenantProperty.GetString();
+                }
+
+                return new GlobalStreamItem(
+                    x.StreamName,
+                    x.StreamPosition,
+                    x.GlobalPosition,
+                    x.Type,
+                    tenant,
+                    x.Timestamp
+                );
+            }
+        ).ToList();
+
+        return new ReadGlobalStreamCheckpointDataResult(items);
+    }
+
     public Task<ReadGlobalStreamResult> ReadGlobalStream(
         ReadGlobalStreamOptions options,
         CancellationToken cancellationToken

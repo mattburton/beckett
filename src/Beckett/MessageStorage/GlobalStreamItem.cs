@@ -6,7 +6,9 @@ public record GlobalStreamItem(
     string StreamName,
     long StreamPosition,
     long GlobalPosition,
-    string MessageType
+    string MessageType,
+    string? Tenant,
+    DateTimeOffset Timestamp
 )
 {
     public bool AppliesTo(Subscription subscription)

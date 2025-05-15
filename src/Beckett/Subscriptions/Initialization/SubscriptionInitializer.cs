@@ -100,18 +100,13 @@ public class SubscriptionInitializer(
 
             logger.InitializingSubscription(subscription.Name);
 
-            var globalStream = await messageStorage.ReadGlobalStream(
-                new ReadGlobalStreamOptions
-                {
-                    StartingGlobalPosition = checkpoint.StreamPosition,
-                    Count = options.Subscriptions.InitializationBatchSize,
-                    Category = subscription.Category,
-                    Types = subscription.MessageTypeNames.ToArray()
-                },
+            var globalStream = await messageStorage.ReadGlobalStreamCheckpointData(
+                checkpoint.StreamPosition,
+                options.Subscriptions.InitializationBatchSize,
                 cancellationToken
             );
 
-            if (globalStream.StreamMessages.Count == 0)
+            if (globalStream.Items.Count == 0)
             {
                 var globalStreamCheck = await database.Execute(
                     new LockCheckpoint(
@@ -130,18 +125,13 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
-                var globalStreamUpdates = await messageStorage.ReadGlobalStream(
-                    new ReadGlobalStreamOptions
-                    {
-                        StartingGlobalPosition = checkpoint.StreamPosition,
-                        Count = 1,
-                        Category = subscription.Category,
-                        Types = subscription.MessageTypeNames.ToArray()
-                    },
+                var globalStreamUpdates = await messageStorage.ReadGlobalStreamCheckpointData(
+                    checkpoint.StreamPosition,
+                    1,
                     cancellationToken
                 );
 
-                if (globalStreamUpdates.StreamMessages.Any())
+                if (globalStreamUpdates.Items.Any())
                 {
                     continue;
                 }
@@ -162,7 +152,7 @@ public class SubscriptionInitializer(
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var stream in globalStream.StreamMessages.GroupBy(x => x.StreamName))
+            foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
             {
                 if (stream.All(x => !x.AppliesTo(subscription)))
                 {
@@ -187,7 +177,7 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            var newGlobalPosition = globalStream.StreamMessages.Max(x => x.GlobalPosition);
+            var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new UpdateSystemCheckpointPosition(
