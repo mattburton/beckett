@@ -312,6 +312,7 @@ AS
 $$
 DECLARE
   _transaction_id xid8;
+  _ending_global_position bigint;
 BEGIN
   SELECT m.transaction_id
   INTO _transaction_id
@@ -322,6 +323,8 @@ BEGIN
   IF (_transaction_id IS NULL) THEN
     _transaction_id = '0'::xid8;
   END IF;
+
+  _ending_global_position = _starting_global_position + _count;
 
   RETURN QUERY
     SELECT m.id,
@@ -334,12 +337,12 @@ BEGIN
            m.timestamp
     FROM __schema__.messages m
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
+    AND m.global_position <= _ending_global_position
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
     AND (_category IS NULL OR __schema__.stream_category(m.stream_name) = _category)
     AND (_types IS NULL OR m.type = ANY(_types))
-    ORDER BY m.transaction_id, m.global_position
-    LIMIT _count;
+    ORDER BY m.transaction_id, m.global_position;
 END;
 $$;
 
@@ -655,6 +658,22 @@ AND stream_name = _stream_name
 UNION ALL
 SELECT stream_version
 FROM new_checkpoint;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.get_checkpoint_stream_version(
+  _group_name text,
+  _name text,
+  _stream_name text
+)
+  RETURNS bigint
+  LANGUAGE sql
+AS
+$$
+SELECT stream_version
+FROM __schema__.checkpoints
+WHERE group_name = _group_name
+AND name = _name
+AND stream_name = _stream_name;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
