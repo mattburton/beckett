@@ -12,22 +12,14 @@ public class PostgresDatabase(IPostgresDataSource dataSource) : IPostgresDatabas
 
         await connection.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-
-        return await query.Execute(command, cancellationToken);
-    }
-
-    public async Task<T> ExecuteWithRetry<T>(IPostgresDatabaseQuery<T> query, CancellationToken cancellationToken)
-    {
-        await using var connection = dataSource.CreateConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        await using var command = connection.CreateCommand();
-
         return await Pipeline.ExecuteAsync(
-            static async (state, token) => await state.query.Execute(state.command, token),
-            (connection, query, command),
+            static async (state, token) =>
+            {
+                await using var command = state.connection.CreateCommand();
+
+                return await state.query.Execute(command, token);
+            },
+            (connection, query),
             cancellationToken
         );
     }
@@ -38,22 +30,14 @@ public class PostgresDatabase(IPostgresDataSource dataSource) : IPostgresDatabas
         CancellationToken cancellationToken
     )
     {
-        await using var command = connection.CreateCommand();
-
-        return await query.Execute(command, cancellationToken);
-    }
-
-    public async Task<T> ExecuteWithRetry<T>(
-        IPostgresDatabaseQuery<T> query,
-        NpgsqlConnection connection,
-        CancellationToken cancellationToken
-    )
-    {
-        await using var command = connection.CreateCommand();
-
         return await Pipeline.ExecuteAsync(
-            static async (state, token) => await state.query.Execute(state.command, token),
-            (connection, query, command),
+            static async (state, token) =>
+            {
+                await using var command = state.connection.CreateCommand();
+
+                return await state.query.Execute(command, token);
+            },
+            (connection, query),
             cancellationToken
         );
     }
@@ -65,27 +49,16 @@ public class PostgresDatabase(IPostgresDataSource dataSource) : IPostgresDatabas
         CancellationToken cancellationToken
     )
     {
-        await using var command = connection.CreateCommand();
-
-        command.Transaction = transaction;
-
-        return await query.Execute(command, cancellationToken);
-    }
-
-    public async Task<T> ExecuteWithRetry<T>(
-        IPostgresDatabaseQuery<T> query,
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        CancellationToken cancellationToken
-    )
-    {
-        await using var command = connection.CreateCommand();
-
-        command.Transaction = transaction;
-
         return await Pipeline.ExecuteAsync(
-            static async (state, token) => await state.query.Execute(state.command, token),
-            (connection, query, command),
+            static async (state, token) =>
+            {
+                await using var command = state.connection.CreateCommand();
+
+                command.Transaction = state.transaction;
+
+                return await state.query.Execute(command, token);
+            },
+            (connection, transaction, query),
             cancellationToken
         );
     }
@@ -93,7 +66,7 @@ public class PostgresDatabase(IPostgresDataSource dataSource) : IPostgresDatabas
     private static readonly ResiliencePipeline Pipeline = new ResiliencePipelineBuilder().AddRetry(
         new RetryStrategyOptions
         {
-            ShouldHandle = new PredicateBuilder().Handle<NpgsqlException>(),
+            ShouldHandle = new PredicateBuilder().Handle<NpgsqlException>(e => e.IsTransient),
             MaxRetryAttempts = 3,
             Delay = TimeSpan.FromMilliseconds(50),
             BackoffType = DelayBackoffType.Exponential,
