@@ -22,7 +22,7 @@ public class PostgresMessageStorage(
 
         await connection.OpenAsync(cancellationToken);
 
-        var streamVersion = await database.ExecuteWithRetry(
+        var streamVersion = await database.Execute(
             new AppendToStream(streamName, expectedVersion.Value, newMessages, options),
             connection,
             cancellationToken
