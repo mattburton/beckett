@@ -89,7 +89,7 @@ BEGIN
            m.timestamp
     FROM beckett.messages m
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
-    AND m.global_position <= _ending_global_position
+    AND (m.global_position > _starting_global_position AND m.global_position <= _ending_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
     AND (_category IS NULL OR beckett.stream_category(m.stream_name) = _category)

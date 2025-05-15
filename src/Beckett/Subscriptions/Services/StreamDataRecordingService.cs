@@ -17,7 +17,7 @@ public class StreamDataRecordingService(
         {
             try
             {
-                await database.Execute(
+                await database.ExecuteWithRetry(
                     new RecordStreamData(data.Categories, data.CategoryTimestamps, data.Tenants, options.Postgres),
                     CancellationToken.None
                 );
