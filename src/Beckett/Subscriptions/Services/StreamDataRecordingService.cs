@@ -13,12 +13,39 @@ public class StreamDataRecordingService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await foreach (var data in StreamDataQueue.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var batch in StreamDataQueue.Reader.BatchReadAllAsync(100, TimeSpan.FromSeconds(10))
+                           .WithCancellation(stoppingToken))
         {
             try
             {
-                await database.ExecuteWithRetry(
-                    new RecordStreamData(data.Categories, data.CategoryTimestamps, data.Tenants, options.Postgres),
+                if (batch.Length == 0)
+                {
+                    continue;
+                }
+
+                var categories = new Dictionary<string, DateTimeOffset>();
+                var tenants = new HashSet<string>();
+
+                foreach (var item in batch)
+                {
+                    foreach (var category in item.Categories.Select((Value, Index) => (Value, Index)))
+                    {
+                        categories[category.Value] = item.CategoryTimestamps[category.Index];
+                    }
+
+                    foreach (var tenant in item.Tenants)
+                    {
+                        tenants.Add(tenant);
+                    }
+                }
+
+                await database.Execute(
+                    new RecordStreamData(
+                        categories.Keys.ToArray(),
+                        categories.Values.ToArray(),
+                        tenants.ToArray(),
+                        options.Postgres
+                    ),
                     CancellationToken.None
                 );
             }
