@@ -21,7 +21,8 @@ public class ReadStreamOptions
             EndingGlobalPosition = options.EndingGlobalPosition,
             Count = options.Count,
             ReadForwards = options.ReadForwards,
-            RequirePrimary = options.RequirePrimary
+            RequirePrimary = options.RequirePrimary,
+            Types = options.Types
         };
     }
 }
