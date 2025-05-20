@@ -72,9 +72,10 @@ public class BootstrapSubscriptions(
             if (subscription.StreamScope == StreamScope.GlobalStream)
             {
                 logger.LogTrace(
-                    "Subscription {Name} in group {GroupName} is scoped to the global stream so it will be set to active and will start processing messages from the beginning of the global stream.",
+                    "Subscription {Name} in group {GroupName} is scoped to the global stream so it will be set to active and will start processing messages from the {StartingPosition} of the global stream.",
                     subscription.Name,
-                    options.Subscriptions.GroupName
+                    options.Subscriptions.GroupName,
+                    subscription.StartingPosition == StartingPosition.Latest ? "end" : "beginning"
                 );
 
                 checkpoints.Add(
@@ -83,7 +84,8 @@ public class BootstrapSubscriptions(
                         GroupName = options.Subscriptions.GroupName,
                         Name = subscription.Name,
                         StreamName = GlobalStream.Name,
-                        StreamVersion = globalPosition
+                        StreamVersion = globalPosition,
+                        StreamPosition = subscription.StartingPosition == StartingPosition.Latest ? globalPosition : 0
                     }
                 );
 
