@@ -61,26 +61,29 @@ public class GlobalStreamConsumer(
 
                 stoppingToken.ThrowIfCancellationRequested();
 
-                var globalStream = await messageStorage.ReadGlobalStreamCheckpointData(
-                    checkpoint.StreamPosition,
-                    options.Subscriptions.GlobalStreamBatchSize,
+                var batch = await messageStorage.ReadIndexBatch(
+                    new ReadIndexBatchOptions
+                    {
+                        StartingGlobalPosition = checkpoint.StreamPosition,
+                        BatchSize = options.Subscriptions.GlobalStreamBatchSize
+                    },
                     stoppingToken
                 );
 
-                if (globalStream.Items.Count == 0)
+                if (batch.Items.Count == 0)
                 {
                     logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
 
                     continue;
                 }
 
-                logger.NewGlobalStreamMessagesToProcess(globalStream.Items.Count, checkpoint.StreamPosition);
+                logger.NewGlobalStreamMessagesToProcess(batch.Items.Count, checkpoint.StreamPosition);
 
                 var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
 
                 var globalStreamSubscriptions = registeredSubscriptions
                     .Where(x => x.StreamScope == StreamScope.GlobalStream)
-                    .Where(x => globalStream.Items.Any(m => m.AppliesTo(x))).OrderBy(x => x.Priority)
+                    .Where(x => batch.Items.Any(m => m.AppliesTo(x))).OrderBy(x => x.Priority)
                     .ToArray();
 
                 foreach (var subscription in globalStreamSubscriptions)
@@ -90,13 +93,13 @@ public class GlobalStreamConsumer(
                         GroupName = options.Subscriptions.GroupName,
                         Name = subscription.Name,
                         StreamName = GlobalStream.Name,
-                        StreamVersion = globalStream.Items.Where(x => x.AppliesTo(subscription))
+                        StreamVersion = batch.Items.Where(x => x.AppliesTo(subscription))
                             .Max(x => x.GlobalPosition)
                     };
 
                     if (checkpoints.TryGetValue(subscriptionCheckpoint, out var existingCheckpoint))
                     {
-                        existingCheckpoint.StreamVersion = globalStream.Items
+                        existingCheckpoint.StreamVersion = batch.Items
                             .Where(x => x.AppliesTo(subscription)).Max(x => x.GlobalPosition);
                     }
                     else
@@ -105,7 +108,7 @@ public class GlobalStreamConsumer(
                     }
                 }
 
-                foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
+                foreach (var stream in batch.Items.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
                         .Where(x => x.StreamScope == StreamScope.PerStream)
@@ -150,7 +153,7 @@ public class GlobalStreamConsumer(
                     logger.NoNewCheckpointsToRecord();
                 }
 
-                var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
+                var newGlobalPosition = batch.Items.Max(x => x.GlobalPosition);
 
                 await database.Execute(
                     new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition, options.Postgres),
@@ -159,7 +162,7 @@ public class GlobalStreamConsumer(
                     stoppingToken
                 );
 
-                RecordStreamData(globalStream);
+                RecordStreamData(batch);
 
                 await transaction.CommitAsync(stoppingToken);
 
@@ -180,7 +183,7 @@ public class GlobalStreamConsumer(
         }
     }
 
-    private static void RecordStreamData(ReadGlobalStreamCheckpointDataResult globalStream)
+    private static void RecordStreamData(ReadIndexBatchResult globalStream)
     {
         var categories = new Dictionary<string, DateTimeOffset>();
         var tenants = new HashSet<string>();

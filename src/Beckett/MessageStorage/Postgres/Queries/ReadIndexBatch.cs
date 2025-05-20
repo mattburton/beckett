@@ -4,29 +4,35 @@ using NpgsqlTypes;
 
 namespace Beckett.MessageStorage.Postgres.Queries;
 
-public class ReadGlobalStreamCheckpointData(
-    long lastGlobalPosition,
-    int batchSize,
+public class ReadIndexBatch(
+    ReadIndexBatchOptions readOptions,
     PostgresOptions options
-) : IPostgresDatabaseQuery<IReadOnlyList<ReadGlobalStreamCheckpointData.Result>>
+) : IPostgresDatabaseQuery<IReadOnlyList<ReadIndexBatch.Result>>
 {
     public async Task<IReadOnlyList<Result>> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             select stream_name, stream_position, global_position, type, tenant, timestamp
-            from {options.Schema}.read_global_stream_checkpoint_data($1, $2);
+            from {options.Schema}.read_index_batch($1, $2, $3, $4);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
+        command.Parameters.Add(
+            new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text, IsNullable = true }
+        );
 
         if (options.PrepareStatements)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = lastGlobalPosition;
-        command.Parameters[1].Value = batchSize;
+        command.Parameters[0].Value = readOptions.StartingGlobalPosition;
+        command.Parameters[1].Value = readOptions.BatchSize;
+        command.Parameters[2].Value =
+            string.IsNullOrWhiteSpace(readOptions.Category) ? DBNull.Value : readOptions.Category;
+        command.Parameters[3].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
