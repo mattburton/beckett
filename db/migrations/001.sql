@@ -439,7 +439,8 @@ CREATE TYPE __schema__.checkpoint AS
   group_name text,
   name text,
   stream_name text,
-  stream_version bigint
+  stream_version bigint,
+  stream_position bigint
 );
 
 CREATE TYPE __schema__.retry AS
@@ -730,8 +731,8 @@ CREATE OR REPLACE FUNCTION __schema__.record_checkpoints(
   LANGUAGE sql
 AS
 $$
-INSERT INTO __schema__.checkpoints (stream_version, group_name, name, stream_name)
-SELECT c.stream_version, c.group_name, c.name, c.stream_name
+INSERT INTO __schema__.checkpoints (stream_version, stream_position, group_name, name, stream_name)
+SELECT c.stream_version, c.stream_position, c.group_name, c.name, c.stream_name
 FROM unnest(_checkpoints) c
 ON CONFLICT (group_name, name, stream_name) DO UPDATE
   SET stream_version = excluded.stream_version;
