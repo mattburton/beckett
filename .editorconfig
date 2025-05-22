@@ -8,6 +8,7 @@ trim_trailing_whitespace = true
 insert_final_newline = true
 
 # ReSharper properties
+resharper_bitwise_operator_on_enum_without_flags_highlighting = none
 resharper_braces_for_ifelse = required
 resharper_braces_for_while = required
 resharper_csharp_wrap_after_declaration_lpar = true

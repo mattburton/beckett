@@ -1,6 +1,22 @@
 -- Beckett v0.18.10 - subscription initialization fixes and improvements
 ALTER TYPE beckett.checkpoint ADD ATTRIBUTE stream_position bigint;
 
+CREATE OR REPLACE FUNCTION beckett.get_checkpoint_stream_version(
+  _group_name text,
+  _name text,
+  _stream_name text
+)
+  RETURNS bigint
+  LANGUAGE sql
+AS
+$$
+SELECT stream_version
+FROM beckett.checkpoints
+WHERE group_name = _group_name
+AND name = _name
+AND stream_name = _stream_name;
+$$;
+
 CREATE OR REPLACE FUNCTION beckett.record_checkpoints(
   _checkpoints beckett.checkpoint[]
 )
