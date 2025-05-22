@@ -4,6 +4,7 @@ using Beckett.Database.Types;
 using Beckett.MessageStorage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Beckett.Subscriptions.Initialization;
 
@@ -19,8 +20,13 @@ public class SubscriptionInitializer(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
+            await using var connection = dataSource.CreateConnection();
+
+            await connection.OpenAsync(cancellationToken);
+
             var subscriptionName = await database.Execute(
                 new GetNextUninitializedSubscription(options.Subscriptions.GroupName, options.Postgres),
+                connection,
                 cancellationToken
             );
 
@@ -33,7 +39,10 @@ public class SubscriptionInitializer(
 
             if (subscription == null)
             {
-                logger.LogWarning("Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'", subscriptionName);
+                logger.LogWarning(
+                    "Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'",
+                    subscriptionName
+                );
 
                 await database.Execute(
                     new SetSubscriptionStatus(
@@ -42,6 +51,7 @@ public class SubscriptionInitializer(
                         SubscriptionStatus.Unknown,
                         options.Postgres
                     ),
+                    connection,
                     cancellationToken
                 );
 
@@ -52,6 +62,7 @@ public class SubscriptionInitializer(
 
             var locked = await database.Execute(
                 new TryAdvisoryLock(advisoryLockKey, options.Postgres),
+                connection,
                 cancellationToken
             );
 
@@ -66,13 +77,19 @@ public class SubscriptionInitializer(
             }
             finally
             {
-                await database.Execute(new AdvisoryUnlock(advisoryLockKey, options.Postgres), cancellationToken);
+                await database.Execute(
+                    new AdvisoryUnlock(advisoryLockKey, options.Postgres),
+                    connection,
+                    cancellationToken
+                );
             }
         }
     }
 
     private async Task InitializeSubscription(Subscription subscription, CancellationToken cancellationToken)
     {
+        long? globalCheckpointPosition = null;
+
         while (!cancellationToken.IsCancellationRequested)
         {
             await using var connection = dataSource.CreateConnection();
@@ -100,15 +117,29 @@ public class SubscriptionInitializer(
 
             logger.InitializingSubscription(subscription.Name);
 
-            var globalStream = await messageStorage.ReadGlobalStreamCheckpointData(
-                checkpoint.StreamPosition,
-                options.Subscriptions.InitializationBatchSize,
+            var batch = await messageStorage.ReadIndexBatch(
+                new ReadIndexBatchOptions
+                {
+                    StartingGlobalPosition = checkpoint.StreamPosition,
+                    BatchSize = options.Subscriptions.InitializationBatchSize,
+                    Category = subscription.Category,
+                    Types = subscription.MessageTypeNames.ToArray()
+                },
                 cancellationToken
             );
 
-            if (globalStream.Items.Count == 0)
+            var subscriptionGlobalPosition = checkpoint.StreamPosition + options.Subscriptions.InitializationBatchSize;
+
+            globalCheckpointPosition ??= await GetGlobalCheckpointPosition(connection, cancellationToken);
+
+            if (batch.Items.Count == 0)
             {
-                var globalStreamCheck = await database.Execute(
+                if (subscriptionGlobalPosition < globalCheckpointPosition.Value)
+                {
+                    continue;
+                }
+
+                var globalCheckpoint = await database.Execute(
                     new LockCheckpoint(
                         options.Subscriptions.GroupName,
                         GlobalCheckpoint.Name,
@@ -120,18 +151,29 @@ public class SubscriptionInitializer(
                     cancellationToken
                 );
 
-                if (globalStreamCheck == null)
+                if (globalCheckpoint == null)
                 {
                     continue;
                 }
 
-                var globalStreamUpdates = await messageStorage.ReadGlobalStreamCheckpointData(
-                    checkpoint.StreamPosition,
-                    1,
+                //if the global stream position is greater than the previously known max position try again
+                if (globalCheckpoint.StreamPosition > globalCheckpointPosition.Value)
+                {
+                    continue;
+                }
+
+                var nextBatch = await messageStorage.ReadIndexBatch(
+                    new ReadIndexBatchOptions
+                    {
+                        StartingGlobalPosition = subscriptionGlobalPosition,
+                        BatchSize = 1,
+                        Category = subscription.Category,
+                        Types = subscription.MessageTypeNames.ToArray()
+                    },
                     cancellationToken
                 );
 
-                if (globalStreamUpdates.Items.Any())
+                if (nextBatch.Items.Any())
                 {
                     continue;
                 }
@@ -152,7 +194,7 @@ public class SubscriptionInitializer(
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var stream in globalStream.Items.GroupBy(x => x.StreamName))
+            foreach (var stream in batch.Items.GroupBy(x => x.StreamName))
             {
                 if (stream.All(x => !x.AppliesTo(subscription)))
                 {
@@ -177,7 +219,7 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            var newGlobalPosition = globalStream.Items.Max(x => x.GlobalPosition);
+            var newGlobalPosition = batch.Items.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new UpdateSystemCheckpointPosition(
@@ -195,6 +237,21 @@ public class SubscriptionInitializer(
             logger.SubscriptionInitializationPosition(subscription.Name, newGlobalPosition);
         }
     }
+
+    private async Task<long> GetGlobalCheckpointPosition(
+        NpgsqlConnection connection,
+        CancellationToken cancellationToken
+    ) =>
+        await database.Execute(
+            new GetCheckpointStreamVersion(
+                options.Subscriptions.GroupName,
+                GlobalCheckpoint.Name,
+                GlobalCheckpoint.StreamName,
+                options.Postgres
+            ),
+            connection,
+            cancellationToken
+        );
 }
 
 public static partial class Log

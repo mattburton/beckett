@@ -247,9 +247,11 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.read_global_stream_checkpoint_data(
+CREATE OR REPLACE FUNCTION __schema__.read_index_batch(
   _starting_global_position bigint,
-  _batch_size int
+  _batch_size int,
+  _category text DEFAULT NULL,
+  _types text[] DEFAULT NULL
 )
   RETURNS TABLE (
     stream_name text,
@@ -264,6 +266,7 @@ AS
 $$
 DECLARE
   _transaction_id xid8;
+  _ending_global_position bigint;
 BEGIN
   SELECT m.transaction_id
   INTO _transaction_id
@@ -275,6 +278,8 @@ BEGIN
     _transaction_id = '0'::xid8;
   END IF;
 
+  _ending_global_position = _starting_global_position + _batch_size;
+
   RETURN QUERY
     SELECT m.stream_name,
            m.stream_position,
@@ -284,8 +289,11 @@ BEGIN
            m.timestamp
     FROM __schema__.messages m
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
+    AND (m.global_position > _starting_global_position AND m.global_position <= _ending_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
+    AND (_category IS NULL OR __schema__.stream_category(m.stream_name) = _category)
+    AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY m.transaction_id, m.global_position
     LIMIT _batch_size;
 END;
@@ -471,7 +479,7 @@ CREATE TABLE IF NOT EXISTS __schema__.subscriptions
   PRIMARY KEY (group_name, name)
 );
 
-CREATE INDEX ix_subscriptions_active ON beckett.subscriptions (group_name, name, status) WHERE status = 'active';
+CREATE INDEX ix_subscriptions_active ON __schema__.subscriptions (group_name, name, status) WHERE status = 'active';
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
@@ -493,13 +501,13 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   UNIQUE (group_name, name, stream_name)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON beckett.checkpoints (group_name, process_at, reserved_until)
+CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (group_name, process_at, reserved_until)
   WHERE process_at IS NOT NULL AND reserved_until IS NULL;
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (group_name, reserved_until)
   WHERE reserved_until IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON beckett.checkpoints (status, lagging, group_name, name);
+CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, lagging, group_name, name);
 
 CREATE FUNCTION __schema__.checkpoint_preprocessor()
   RETURNS trigger

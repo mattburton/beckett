@@ -31,45 +31,6 @@ public class PostgresMessageStorage(
         return new AppendToStreamResult(streamVersion);
     }
 
-    public async Task<ReadGlobalStreamCheckpointDataResult> ReadGlobalStreamCheckpointData(
-        long lastGlobalPosition,
-        int batchSize,
-        CancellationToken cancellationToken
-    )
-    {
-        await using var connection = dataSource.CreateMessageStoreReadConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        var results = await database.Execute(
-            new ReadGlobalStreamCheckpointData(lastGlobalPosition, batchSize, options),
-            connection,
-            cancellationToken
-        );
-
-        var items = new List<GlobalStreamItem>();
-
-        if (results.Count <= 0)
-        {
-            return new ReadGlobalStreamCheckpointDataResult(items);
-        }
-
-        items.AddRange(
-            results.Select(
-                result => new GlobalStreamItem(
-                    result.StreamName,
-                    result.StreamPosition,
-                    result.GlobalPosition,
-                    result.MessageType,
-                    result.Tenant,
-                    result.Timestamp
-                )
-            )
-        );
-
-        return new ReadGlobalStreamCheckpointDataResult(items);
-    }
-
     public async Task<ReadGlobalStreamResult> ReadGlobalStream(
         ReadGlobalStreamOptions readOptions,
         CancellationToken cancellationToken
@@ -104,6 +65,43 @@ public class PostgresMessageStorage(
         }
 
         return new ReadGlobalStreamResult(messages);
+    }
+
+    public async Task<ReadIndexBatchResult> ReadIndexBatch(
+        ReadIndexBatchOptions readOptions,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var connection = dataSource.CreateMessageStoreReadConnection();
+
+        await connection.OpenAsync(cancellationToken);
+
+        var results = await database.Execute(
+            new ReadIndexBatch(readOptions, options),
+            connection,
+            cancellationToken
+        );
+
+        var items = new List<IndexBatchItem>();
+
+        if (results.Count <= 0)
+        {
+            return new ReadIndexBatchResult(items);
+        }
+
+        items.AddRange(
+            results.Select(result => new IndexBatchItem(
+                    result.StreamName,
+                    result.StreamPosition,
+                    result.GlobalPosition,
+                    result.MessageType,
+                    result.Tenant,
+                    result.Timestamp
+                )
+            )
+        );
+
+        return new ReadIndexBatchResult(items);
     }
 
     public async Task<ReadStreamResult> ReadStream(

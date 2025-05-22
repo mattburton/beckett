@@ -50,13 +50,18 @@ public class InMemoryMessageStorage : IMessageStorage
         return Task.FromResult(new AppendToStreamResult(newStreamVersion));
     }
 
-    public async Task<ReadGlobalStreamCheckpointDataResult> ReadGlobalStreamCheckpointData(long lastGlobalPosition, int batchSize, CancellationToken cancellationToken)
+    public async Task<ReadIndexBatchResult> ReadIndexBatch(
+        ReadIndexBatchOptions options,
+        CancellationToken cancellationToken
+    )
     {
         var globalStream = await ReadGlobalStream(
             new ReadGlobalStreamOptions
             {
-                StartingGlobalPosition = lastGlobalPosition,
-                Count = batchSize
+                StartingGlobalPosition = options.StartingGlobalPosition,
+                Count = options.BatchSize,
+                Category = options.Category,
+                Types = options.Types
             },
             cancellationToken
         );
@@ -70,7 +75,7 @@ public class InMemoryMessageStorage : IMessageStorage
                     tenant = tenantProperty.GetString();
                 }
 
-                return new GlobalStreamItem(
+                return new IndexBatchItem(
                     x.StreamName,
                     x.StreamPosition,
                     x.GlobalPosition,
@@ -81,7 +86,7 @@ public class InMemoryMessageStorage : IMessageStorage
             }
         ).ToList();
 
-        return new ReadGlobalStreamCheckpointDataResult(items);
+        return new ReadIndexBatchResult(items);
     }
 
     public Task<ReadGlobalStreamResult> ReadGlobalStream(
