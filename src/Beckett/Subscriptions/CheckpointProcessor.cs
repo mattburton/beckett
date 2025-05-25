@@ -193,7 +193,7 @@ public class CheckpointProcessor(
 
         try
         {
-            await subscription.Handler.Invoke(messageContext, scope.ServiceProvider, cts.Token);
+            await subscription.Handler.Invoke(messageContext, scope.ServiceProvider, logger, cts.Token);
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -225,7 +225,7 @@ public class CheckpointProcessor(
 
             using var scope = serviceProvider.CreateScope();
 
-            await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, cts.Token);
+            await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, logger, cts.Token);
 
             return new Success(messageBatch[^1].PositionFor(subscription));
         }
