@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
 
@@ -12,11 +13,12 @@ public class SubscriptionHandler
     private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
     private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
+    private static readonly Type ResultHandlerType = typeof(IResultHandler<>);
 
     private readonly Subscription _subscription;
     private readonly ParameterInfo[] _parameters;
     private readonly Func<IServiceProvider, object>?[] _parameterResolvers;
-    private readonly Func<object[], Task> _invoker;
+    private readonly Func<object[], Task<object>> _invoker;
 
     public SubscriptionHandler(Subscription subscription, Delegate handler)
     {
@@ -32,9 +34,10 @@ public class SubscriptionHandler
 
     public bool IsBatchHandler { get; private set; }
 
-    public Task Invoke(
+    public async Task Invoke(
         IMessageContext context,
         IServiceProvider serviceProvider,
+        ILogger logger,
         CancellationToken cancellationToken
     )
     {
@@ -68,12 +71,31 @@ public class SubscriptionHandler
             }
         }
 
-        return _invoker(arguments);
+        var result = await _invoker(arguments);
+
+        if (result is EmptyResult)
+        {
+            return;
+        }
+
+        var resultType = result.GetType();
+
+        if (serviceProvider.GetService(
+                ResultHandlerType.MakeGenericType(resultType)
+            ) is not IResultHandler handler)
+        {
+            logger.ResultHandlerNotRegistered(resultType, _subscription.Name);
+
+            return;
+        }
+
+        await handler.Handle(result, cancellationToken);
     }
 
-    public Task Invoke(
+    public async Task Invoke(
         IReadOnlyList<IMessageContext> batch,
         IServiceProvider serviceProvider,
+        ILogger logger,
         CancellationToken cancellationToken
     )
     {
@@ -99,7 +121,25 @@ public class SubscriptionHandler
             }
         }
 
-        return _invoker(arguments);
+        var result = await _invoker(arguments);
+
+        if (result is EmptyResult)
+        {
+            return;
+        }
+
+        var resultType = result.GetType();
+
+        if (serviceProvider.GetService(
+                ResultHandlerType.MakeGenericType(resultType)
+            ) is not IResultHandler handler)
+        {
+            logger.ResultHandlerNotRegistered(resultType, _subscription.Name);
+
+            return;
+        }
+
+        await handler.Handle(result, cancellationToken);
     }
 
     private void TrySetHandlerName(Delegate handler)
@@ -185,25 +225,25 @@ public class SubscriptionHandler
 
     private IEnumerable<Func<IServiceProvider, object>?> BuildParameterResolvers()
     {
-        return _parameters.Select(
-            parameter => IsWellKnownType(parameter)
-                ? null
-                : new Func<IServiceProvider, object>(sp => sp.GetRequiredService(parameter.ParameterType))
+        return _parameters.Select(parameter => IsWellKnownType(parameter)
+            ? null
+            : new Func<IServiceProvider, object>(sp => sp.GetRequiredService(parameter.ParameterType))
         );
     }
 
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == MessageContextType ||
-                                                            x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType ||
+                                                            x.ParameterType.IsGenericType &&
+                                                            x.ParameterType.GetGenericTypeDefinition() ==
+                                                            TypedMessageContextType ||
                                                             x.ParameterType == BatchType ||
                                                             x.ParameterType == CancellationTokenType;
 
-    private static Func<object[], Task> BuildInvoker(Delegate handler)
+    private static Func<object[], Task<object>> BuildInvoker(Delegate handler)
     {
         var method = handler.Method;
         var returnType = method.ReturnType;
         var argumentsParameter = Expression.Parameter(typeof(object[]), "arguments");
-        var arguments = method.GetParameters().Select(
-            (parameter, index) => Expression.Convert(
+        var arguments = method.GetParameters().Select((parameter, index) => Expression.Convert(
                 Expression.ArrayIndex(argumentsParameter, Expression.Constant(index)),
                 parameter.ParameterType
             )
@@ -213,7 +253,49 @@ public class SubscriptionHandler
 
         if (returnType == typeof(Task))
         {
-            return Expression.Lambda<Func<object[], Task>>(call, argumentsParameter).Compile();
+            var taskHandlerDelegate = Expression.Lambda<Func<object[], Task>>(call, argumentsParameter).Compile();
+
+            return async parameters =>
+            {
+                await taskHandlerDelegate(parameters);
+
+                return EmptyResult.Instance;
+            };
+        }
+
+        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            var taskReturnType = returnType.GetGenericArguments()[0];
+            var taskHandlerDelegate = Expression.Lambda<Func<object[], Task<object>>>(
+                Expression.Call(
+                    ExecuteTaskWithResultMethod.MakeGenericMethod(taskReturnType),
+                    call
+                ),
+                argumentsParameter
+            ).Compile();
+
+            return async parameters =>
+            {
+                var task = taskHandlerDelegate(parameters);
+
+                if (task == null)
+                {
+                    throw new InvalidOperationException(
+                        "The Task returned by the subscription handler must not be null."
+                    );
+                }
+
+                var result = await task;
+
+                if (result is null)
+                {
+                    throw new InvalidOperationException(
+                        "The result returned by the subscription handler must not be null."
+                    );
+                }
+
+                return result;
+            };
         }
 
         if (returnType != typeof(void))
@@ -230,7 +312,65 @@ public class SubscriptionHandler
         {
             voidHandlerDelegate(parameters);
 
-            return Task.CompletedTask;
+            return Task.FromResult(EmptyResult.Instance);
         };
     }
+
+    private static async Task<object> ExecuteTaskWithResult<T>(Task<T> task)
+    {
+        if (task is null)
+        {
+            throw new InvalidOperationException("The Task returned by the subscription handler must not be null.");
+        }
+
+        var result = await task;
+
+        if (result is null)
+        {
+            throw new InvalidOperationException("The result returned by the subscription handler must not be null.");
+        }
+
+        return result;
+    }
+
+    private static readonly MethodInfo ExecuteTaskWithResultMethod = typeof(SubscriptionHandler).GetMethod(
+        nameof(ExecuteTaskWithResult),
+        BindingFlags.NonPublic | BindingFlags.Static
+    )!;
+}
+
+public interface IResultHandler<in T> : IResultHandler
+{
+    Task Handle(T result, CancellationToken cancellationToken);
+
+    Task IResultHandler.Handle(object result, CancellationToken cancellationToken)
+    {
+        if (result is T typedResult)
+        {
+            return Handle(typedResult, cancellationToken);
+        }
+
+        throw new InvalidOperationException(
+            $"The result type '{result.GetType()}' does not match the expected type '{typeof(T)}'."
+        );
+    }
+}
+
+public class EmptyResult
+{
+    public static readonly object Instance = new EmptyResult();
+}
+
+public static partial class Log
+{
+    [LoggerMessage(
+        0,
+        LogLevel.Trace,
+        "Result handler for {ResultType} returned by the handler for subscription {SubscriptionName} was not registered in the container - skipping."
+    )]
+    public static partial void ResultHandlerNotRegistered(
+        this ILogger logger,
+        Type ResultType,
+        string SubscriptionName
+    );
 }
