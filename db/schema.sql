@@ -31,7 +31,8 @@ CREATE TYPE beckett.checkpoint AS (
 	group_name text,
 	name text,
 	stream_name text,
-	stream_version bigint
+	stream_version bigint,
+	stream_position bigint
 );
 
 
@@ -502,14 +503,15 @@ $$;
 
 
 --
--- Name: read_global_stream_checkpoint_data(bigint, integer); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: read_index_batch(bigint, integer, text, text[]); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.read_global_stream_checkpoint_data(_starting_global_position bigint, _batch_size integer) RETURNS TABLE(stream_name text, stream_position bigint, global_position bigint, type text, tenant text, "timestamp" timestamp with time zone)
+CREATE FUNCTION beckett.read_index_batch(_starting_global_position bigint, _batch_size integer, _category text DEFAULT NULL::text, _types text[] DEFAULT NULL::text[]) RETURNS TABLE(stream_name text, stream_position bigint, global_position bigint, type text, tenant text, "timestamp" timestamp with time zone)
     LANGUAGE plpgsql
     AS $_$
 DECLARE
   _transaction_id xid8;
+  _ending_global_position bigint;
 BEGIN
   SELECT m.transaction_id
   INTO _transaction_id
@@ -519,6 +521,10 @@ BEGIN
 
   IF (_transaction_id IS NULL) THEN
     _transaction_id = '0'::xid8;
+  END IF;
+
+  IF (_category IS NOT NULL OR _types IS NOT NULL) THEN
+    _ending_global_position = _starting_global_position + _batch_size;
   END IF;
 
   RETURN QUERY
@@ -532,6 +538,9 @@ BEGIN
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
+    AND (_ending_global_position IS NULL or m.global_position <= _ending_global_position)
+    AND (_category IS NULL OR beckett.stream_category(m.stream_name) = _category)
+    AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY m.transaction_id, m.global_position
     LIMIT _batch_size;
 END;
@@ -612,8 +621,8 @@ $$;
 CREATE FUNCTION beckett.record_checkpoints(_checkpoints beckett.checkpoint[]) RETURNS void
     LANGUAGE sql
     AS $$
-INSERT INTO beckett.checkpoints (stream_version, group_name, name, stream_name)
-SELECT c.stream_version, c.group_name, c.name, c.stream_name
+INSERT INTO beckett.checkpoints (stream_version, stream_position, group_name, name, stream_name)
+SELECT c.stream_version, c.stream_position, c.group_name, c.name, c.stream_name
 FROM unnest(_checkpoints) c
 ON CONFLICT (group_name, name, stream_name) DO UPDATE
   SET stream_version = excluded.stream_version;

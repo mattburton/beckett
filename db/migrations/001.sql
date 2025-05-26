@@ -278,7 +278,9 @@ BEGIN
     _transaction_id = '0'::xid8;
   END IF;
 
-  _ending_global_position = _starting_global_position + _batch_size;
+  IF (_category IS NOT NULL OR _types IS NOT NULL) THEN
+    _ending_global_position = _starting_global_position + _batch_size;
+  END IF;
 
   RETURN QUERY
     SELECT m.stream_name,
@@ -289,9 +291,9 @@ BEGIN
            m.timestamp
     FROM __schema__.messages m
     WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
-    AND (m.global_position > _starting_global_position AND m.global_position <= _ending_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
+    AND (_ending_global_position IS NULL or m.global_position <= _ending_global_position)
     AND (_category IS NULL OR __schema__.stream_category(m.stream_name) = _category)
     AND (_types IS NULL OR m.type = ANY(_types))
     ORDER BY m.transaction_id, m.global_position
