@@ -4,6 +4,7 @@ using Beckett.Database;
 using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling;
+using Beckett.Storage;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.DependencyInjection;

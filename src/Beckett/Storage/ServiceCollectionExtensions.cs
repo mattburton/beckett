@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Beckett.MessageStorage;
+namespace Beckett.Storage;
 
 public static class ServiceCollectionExtensions
 {

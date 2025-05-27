@@ -1,7 +1,7 @@
-using Beckett.MessageStorage;
-using Beckett.MessageStorage.InMemory;
+using Beckett.Storage;
+using Beckett.Storage.InMemory;
 
-namespace Beckett.Tests.MessageStorage.InMemory;
+namespace Beckett.Tests.Storage.InMemory;
 
 public class InMemoryMessageStorageTests
 {

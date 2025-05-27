@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Beckett.Messages;
-using Beckett.MessageStorage;
+using Beckett.Storage;
 
 namespace Beckett;
 

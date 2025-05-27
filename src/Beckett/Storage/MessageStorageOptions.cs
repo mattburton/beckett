@@ -1,6 +1,6 @@
-using Beckett.MessageStorage.Postgres;
+using Beckett.Storage.Postgres;
 
-namespace Beckett.MessageStorage;
+namespace Beckett.Storage;
 
 public class MessageStorageOptions
 {

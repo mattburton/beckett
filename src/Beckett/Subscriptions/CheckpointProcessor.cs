@@ -1,6 +1,6 @@
 using Beckett.Database;
-using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
+using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.DependencyInjection;

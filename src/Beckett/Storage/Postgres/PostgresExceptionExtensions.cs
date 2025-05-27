@@ -1,6 +1,6 @@
 using Npgsql;
 
-namespace Beckett.MessageStorage.Postgres;
+namespace Beckett.Storage.Postgres;
 
 public static class PostgresExceptionExtensions
 {

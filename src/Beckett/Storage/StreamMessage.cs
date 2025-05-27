@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Beckett.Subscriptions;
 
-namespace Beckett.MessageStorage;
+namespace Beckett.Storage;
 
 public record StreamMessage(
     string Id,

@@ -2,7 +2,7 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.MessageStorage.Postgres.Queries;
+namespace Beckett.Storage.Postgres.Queries;
 
 public class ReadIndexBatch(
     ReadIndexBatchOptions readOptions,

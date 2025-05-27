@@ -1,4 +1,4 @@
-namespace Beckett.MessageStorage.InMemory;
+namespace Beckett.Storage.InMemory;
 
 public class InMemoryMessageStorage : IMessageStorage
 {

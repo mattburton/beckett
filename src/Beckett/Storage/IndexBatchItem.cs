@@ -1,6 +1,6 @@
 using Beckett.Subscriptions;
 
-namespace Beckett.MessageStorage;
+namespace Beckett.Storage;
 
 public record IndexBatchItem(
     string StreamName,

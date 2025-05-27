@@ -1,4 +1,4 @@
-namespace Beckett.MessageStorage;
+namespace Beckett.Storage;
 
 public interface IMessageStorage
 {

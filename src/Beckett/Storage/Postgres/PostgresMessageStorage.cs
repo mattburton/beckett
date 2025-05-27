@@ -1,8 +1,8 @@
 using Beckett.Database;
 using Beckett.Database.Types;
-using Beckett.MessageStorage.Postgres.Queries;
+using Beckett.Storage.Postgres.Queries;
 
-namespace Beckett.MessageStorage.Postgres;
+namespace Beckett.Storage.Postgres;
 
 public class PostgresMessageStorage(
     IPostgresDataSource dataSource,

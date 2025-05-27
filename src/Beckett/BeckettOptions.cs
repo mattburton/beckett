@@ -1,6 +1,6 @@
 using Beckett.Database;
-using Beckett.MessageStorage;
 using Beckett.Scheduling;
+using Beckett.Storage;
 using Beckett.Subscriptions;
 
 namespace Beckett;

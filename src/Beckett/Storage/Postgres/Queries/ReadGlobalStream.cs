@@ -3,7 +3,7 @@ using Beckett.Database.Models;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.MessageStorage.Postgres.Queries;
+namespace Beckett.Storage.Postgres.Queries;
 
 public class ReadGlobalStream(ReadGlobalStreamOptions readOptions, PostgresOptions options)
     : IPostgresDatabaseQuery<IReadOnlyList<PostgresMessage>>

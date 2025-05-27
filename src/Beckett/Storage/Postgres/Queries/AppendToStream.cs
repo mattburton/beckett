@@ -3,7 +3,7 @@ using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.MessageStorage.Postgres.Queries;
+namespace Beckett.Storage.Postgres.Queries;
 
 public class AppendToStream(
     string streamName,
