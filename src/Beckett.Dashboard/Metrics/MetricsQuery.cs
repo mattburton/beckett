@@ -1,11 +1,11 @@
 using Beckett.Database;
 using Npgsql;
 
-namespace Beckett.Dashboard.Postgres.Metrics.Queries;
+namespace Beckett.Dashboard.Metrics;
 
-public class GetSubscriptionMetrics(PostgresOptions options) : IPostgresDatabaseQuery<GetSubscriptionMetricsResult>
+public class MetricsQuery(PostgresOptions options) : IPostgresDatabaseQuery<MetricsQuery.Result>
 {
-    public async Task<GetSubscriptionMetricsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             WITH lagging AS (
@@ -50,10 +50,12 @@ public class GetSubscriptionMetrics(PostgresOptions options) : IPostgresDatabase
 
         await reader.ReadAsync(cancellationToken);
 
-        return new GetSubscriptionMetricsResult(
+        return new Result(
             reader.GetFieldValue<long>(0),
             reader.GetFieldValue<long>(1),
             reader.GetFieldValue<long>(2)
         );
     }
+
+    public record Result(long Lagging, long Retries, long Failed);
 }
