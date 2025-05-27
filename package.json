@@ -6,10 +6,10 @@
     "dump-schema": "./db/scripts/dump-schema.sh",
     "reset": "docker compose down -v && docker compose up -d",
     "prestart": "npm run build",
-    "start": "npm run taskhub",
-    "taskhub": "concurrently --raw -k \"npm:taskhub:api\" \"npm:taskhub:worker\"",
-    "taskhub:api": "dotnet run --no-build --project samples/TaskHub/API/API.csproj",
-    "taskhub:worker": "dotnet run --no-build --project samples/TaskHub/Worker/Worker.csproj"
+    "start": "npm run todolist",
+    "todolist": "concurrently --raw -k \"npm:todolist:api\" \"npm:todolist:worker\"",
+    "todolist:api": "dotnet run --no-build --project samples/TodoList/API/API.csproj",
+    "todolist:worker": "dotnet run --no-build --project samples/TodoList/Worker/Worker.csproj"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
