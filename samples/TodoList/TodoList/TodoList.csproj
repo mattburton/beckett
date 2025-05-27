@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Beckett\Beckett.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Npgsql.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="AddItem\AddItemCommandHandler.cs" />
+    <Compile Remove="CompleteItem\CompleteItemCommandHandler.cs" />
+    <Compile Remove="CreateList\CreateListCommandHandler.cs" />
+    <Compile Remove="GetList\GetListQueryHandler.cs" />
+    <Compile Remove="Infrastructure\Commands\ServiceCollectionExtensions.cs" />
+    <Compile Remove="Infrastructure\Commands\ICommandHandler.cs" />
+    <Compile Remove="Infrastructure\Commands\ICommand.cs" />
+    <Compile Remove="Infrastructure\Commands\CommandHandlerOptions.cs" />
+    <Compile Remove="Infrastructure\Queries\ServiceCollectionExtensions.cs" />
+    <Compile Remove="Infrastructure\Queries\QueryExecutor.cs" />
+    <Compile Remove="Infrastructure\Queries\IQueryHandler.cs" />
+    <Compile Remove="Infrastructure\Queries\IQueryExecutor.cs" />
+    <Compile Remove="Infrastructure\Subscriptions\ResultHandler.cs" />
+    <Compile Remove="ITodoListModule.cs" />
+  </ItemGroup>
+
+</Project>

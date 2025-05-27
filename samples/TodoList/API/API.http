@@ -1,0 +1,45 @@
+@base_url = http://localhost:5222/todo-lists
+
+### Create List
+
+POST {{base_url}}
+Content-Type: application/json
+
+{
+  "id": "{{$random.uuid}}",
+  "name": "{{$random.uuid}}"
+}
+> {%
+  client.global.set("id", response.body.id)
+%}
+
+### Add Item
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "item": "{{$random.uuid}}"
+}
+> {%
+  client.global.set("item", response.body.item)
+%}
+
+### Add Item - CC User
+
+POST {{base_url}}/{{id}}
+Content-Type: application/json
+
+{
+  "item": "{{$random.uuid}} cc: @bob"
+}
+
+### Complete Item
+
+POST {{base_url}}/{{id}}/complete/{{item}}
+Content-Type: application/json
+
+### Get List
+
+GET {{base_url}}/{{id}}
+Accept: application/json
