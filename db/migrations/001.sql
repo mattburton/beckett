@@ -76,38 +76,6 @@ CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema
 CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id ON __schema__.messages_active ((metadata ->> '$correlation_id'))
   WHERE metadata ->> '$correlation_id' IS NOT NULL;
 
-CREATE FUNCTION __schema__.stream_operations()
-  RETURNS trigger
-  LANGUAGE plpgsql
-AS
-$$
-BEGIN
-  IF NEW.type = '$stream_truncated' THEN
-    UPDATE __schema__.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  IF NEW.type = '$stream_archived' THEN
-    UPDATE __schema__.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER stream_operations
-  BEFORE INSERT
-  ON __schema__.messages
-  FOR EACH ROW
-EXECUTE FUNCTION __schema__.stream_operations();
-
 CREATE OR REPLACE FUNCTION __schema__.stream_hash(
   _stream_name text
 )
