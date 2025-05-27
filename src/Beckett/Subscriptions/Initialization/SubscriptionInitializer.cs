@@ -4,7 +4,6 @@ using Beckett.Database.Types;
 using Beckett.MessageStorage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Beckett.Subscriptions.Initialization;
 
@@ -88,8 +87,6 @@ public class SubscriptionInitializer(
 
     private async Task InitializeSubscription(Subscription subscription, CancellationToken cancellationToken)
     {
-        long? globalCheckpointPosition = null;
-
         while (!cancellationToken.IsCancellationRequested)
         {
             await using var connection = dataSource.CreateConnection();
@@ -121,18 +118,12 @@ public class SubscriptionInitializer(
                 new ReadIndexBatchOptions
                 {
                     StartingGlobalPosition = checkpoint.StreamPosition,
-                    BatchSize = options.Subscriptions.InitializationBatchSize,
-                    Category = subscription.Category,
-                    Types = subscription.MessageTypeNames.ToArray()
+                    BatchSize = options.Subscriptions.InitializationBatchSize
                 },
                 cancellationToken
             );
 
-            var subscriptionGlobalPosition = checkpoint.StreamPosition + options.Subscriptions.InitializationBatchSize;
-
-            globalCheckpointPosition ??= await GetGlobalCheckpointPosition(connection, cancellationToken);
-
-            if (batch.Items.Count == 0 && subscriptionGlobalPosition >= globalCheckpointPosition.Value)
+            if (batch.Items.Count == 0)
             {
                 var globalCheckpoint = await database.Execute(
                     new LockCheckpoint(
@@ -151,19 +142,11 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
-                //if the global stream position is greater than the previously known max position try again
-                if (globalCheckpoint.StreamPosition > globalCheckpointPosition.Value)
-                {
-                    continue;
-                }
-
                 var nextBatch = await messageStorage.ReadIndexBatch(
                     new ReadIndexBatchOptions
                     {
-                        StartingGlobalPosition = subscriptionGlobalPosition,
-                        BatchSize = 1,
-                        Category = subscription.Category,
-                        Types = subscription.MessageTypeNames.ToArray()
+                        StartingGlobalPosition = checkpoint.StreamPosition,
+                        BatchSize = 1
                     },
                     cancellationToken
                 );
@@ -187,42 +170,39 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            if (batch.Items.Count > 0)
+            var checkpoints = new List<CheckpointType>();
+
+            foreach (var stream in batch.Items.GroupBy(x => x.StreamName))
             {
-                var checkpoints = new List<CheckpointType>();
-
-                foreach (var stream in batch.Items.GroupBy(x => x.StreamName))
+                if (stream.All(x => !x.AppliesTo(subscription)))
                 {
-                    if (stream.All(x => !x.AppliesTo(subscription)))
-                    {
-                        continue;
-                    }
-
-                    checkpoints.Add(
-                        new CheckpointType
-                        {
-                            GroupName = options.Subscriptions.GroupName,
-                            Name = subscription.Name,
-                            StreamName = stream.Key,
-                            StreamVersion = stream.Max(x => x.StreamPosition)
-                        }
-                    );
+                    continue;
                 }
 
-                await database.Execute(
-                    new RecordCheckpoints(checkpoints.ToArray(), options.Postgres),
-                    connection,
-                    transaction,
-                    cancellationToken
+                checkpoints.Add(
+                    new CheckpointType
+                    {
+                        GroupName = options.Subscriptions.GroupName,
+                        Name = subscription.Name,
+                        StreamName = stream.Key,
+                        StreamVersion = stream.Max(x => x.StreamPosition)
+                    }
                 );
-
-                subscriptionGlobalPosition = batch.Items.Max(x => x.GlobalPosition);
             }
+
+            await database.Execute(
+                new RecordCheckpoints(checkpoints.ToArray(), options.Postgres),
+                connection,
+                transaction,
+                cancellationToken
+            );
+
+            var newGlobalPosition = batch.Items.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new UpdateSystemCheckpointPosition(
                     checkpoint.Id,
-                    subscriptionGlobalPosition,
+                    newGlobalPosition,
                     options.Postgres
                 ),
                 connection,
@@ -232,24 +212,9 @@ public class SubscriptionInitializer(
 
             await transaction.CommitAsync(cancellationToken);
 
-            logger.SubscriptionInitializationPosition(subscription.Name, subscriptionGlobalPosition);
+            logger.SubscriptionInitializationPosition(subscription.Name, newGlobalPosition);
         }
     }
-
-    private async Task<long> GetGlobalCheckpointPosition(
-        NpgsqlConnection connection,
-        CancellationToken cancellationToken
-    ) =>
-        await database.Execute(
-            new GetCheckpointStreamVersion(
-                options.Subscriptions.GroupName,
-                GlobalCheckpoint.Name,
-                GlobalCheckpoint.StreamName,
-                options.Postgres
-            ),
-            connection,
-            cancellationToken
-        );
 }
 
 public static partial class Log

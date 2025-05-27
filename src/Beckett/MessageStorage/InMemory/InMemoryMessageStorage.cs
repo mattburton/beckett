@@ -59,9 +59,7 @@ public class InMemoryMessageStorage : IMessageStorage
             new ReadGlobalStreamOptions
             {
                 StartingGlobalPosition = options.StartingGlobalPosition,
-                Count = options.BatchSize,
-                Category = options.Category,
-                Types = options.Types
+                Count = options.BatchSize
             },
             cancellationToken
         );
