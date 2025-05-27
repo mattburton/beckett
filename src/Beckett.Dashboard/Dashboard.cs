@@ -25,6 +25,8 @@ public static class Dashboard
         }
 
         services.AddRazorComponents();
+
+        services.AddDashboardSupport();
     }
 
     public static RouteGroupBuilder MapBeckettDashboard(

@@ -1,4 +1,5 @@
 using Beckett.Dashboard.MessageStore.Components;
+using Beckett.Database;
 
 namespace Beckett.Dashboard.MessageStore.Streams;
 
@@ -10,7 +11,8 @@ public static class StreamsEndpoint
         string? query,
         int? page,
         int? pageSize,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
@@ -18,13 +20,10 @@ public static class StreamsEndpoint
         var decodedCategory = HttpUtility.UrlDecode(category);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
+        var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
-        var result = await dashboard.MessageStore.GetCategoryStreams(
-            tenant,
-            decodedCategory,
-            query,
-            pageParameter,
-            pageSizeParameter,
+        var result = await database.Execute(
+            new StreamsQuery(tenant, decodedCategory, query, offset, pageSizeParameter, options),
             cancellationToken
         );
 

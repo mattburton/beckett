@@ -1,3 +1,5 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.MessageStore.Messages;
 
 public static class MessagesEndpoint
@@ -8,19 +10,18 @@ public static class MessagesEndpoint
         string? query,
         int? page,
         int? pageSize,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
         var decodedStreamName = HttpUtility.UrlDecode(streamName);
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
+        var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
-        var result = await dashboard.MessageStore.GetStreamMessages(
-            decodedStreamName,
-            query,
-            pageParameter,
-            pageSizeParameter,
+        var result = await database.Execute(
+            new MessagesQuery(streamName, query, offset, pageSizeParameter, options),
             cancellationToken
         );
 

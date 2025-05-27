@@ -2,17 +2,17 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.MessageStore.Queries;
+namespace Beckett.Dashboard.MessageStore.Messages;
 
-public class GetStreamMessages(
+public class MessagesQuery(
     string streamName,
     string? query,
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<GetStreamMessagesResult>
+) : IPostgresDatabaseQuery<MessagesQuery.Result>
 {
-    public async Task<GetStreamMessagesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             select id, stream_position, type, timestamp, count(*) over() as total_results
@@ -42,7 +42,7 @@ public class GetStreamMessages(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<GetStreamMessagesResult.Message>();
+        var results = new List<Result.Message>();
 
         int? totalResults = null;
 
@@ -51,7 +51,7 @@ public class GetStreamMessages(
             totalResults ??= reader.GetFieldValue<int>(4);
 
             results.Add(
-                new GetStreamMessagesResult.Message(
+                new Result.Message(
                     reader.GetFieldValue<Guid>(0),
                     reader.GetFieldValue<int>(1),
                     reader.GetFieldValue<string>(2),
@@ -60,6 +60,11 @@ public class GetStreamMessages(
             );
         }
 
-        return new GetStreamMessagesResult(results, totalResults.GetValueOrDefault(0));
+        return new Result(results, totalResults.GetValueOrDefault(0));
+    }
+
+    public record Result(List<Result.Message> Messages, int TotalResults)
+    {
+        public record Message(Guid Id, int StreamPosition, string Type, DateTimeOffset Timestamp);
     }
 }

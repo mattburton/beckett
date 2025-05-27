@@ -2,32 +2,32 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.MessageStore.Queries;
+namespace Beckett.Dashboard.MessageStore.Streams;
 
-public class GetCategoryStreams(
+public class StreamsQuery(
     string tenant,
     string category,
     string? query,
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<GetCategoryStreamsResult>
+) : IPostgresDatabaseQuery<StreamsQuery.Result>
 {
-    public async Task<GetCategoryStreamsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
-            select stream_name,
-                   max(timestamp) as last_updated,
-                   count(*) over() as total_results
-            from {options.Schema}.messages_active
-            where metadata ->> '$tenant' = $1
-            and {options.Schema}.stream_category(stream_name) = $2
-            and ($3 is null or stream_name ilike '%' || $3 || '%')
-            group by stream_name
-            order by max(timestamp) desc
-            offset $4
-            limit $5;
-        ";
+        command.CommandText = $"""
+           select stream_name,
+                  max(timestamp) as last_updated,
+                  count(*) over() as total_results
+           from {options.Schema}.messages_active
+           where metadata ->> '$tenant' = $1
+           and {options.Schema}.stream_category(stream_name) = $2
+           and ($3 is null or stream_name ilike '%' || $3 || '%')
+           group by stream_name
+           order by max(timestamp) desc
+           offset $4
+           limit $5;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -48,7 +48,7 @@ public class GetCategoryStreams(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<GetCategoryStreamsResult.Stream>();
+        var results = new List<Result.Stream>();
 
         int? totalResults = null;
 
@@ -57,13 +57,18 @@ public class GetCategoryStreams(
             totalResults ??= reader.GetFieldValue<int>(2);
 
             results.Add(
-                new GetCategoryStreamsResult.Stream(
+                new Result.Stream(
                     reader.GetFieldValue<string>(0),
                     reader.GetFieldValue<DateTimeOffset>(1)
                 )
             );
         }
 
-        return new GetCategoryStreamsResult(results, totalResults.GetValueOrDefault(0));
+        return new Result(results, totalResults.GetValueOrDefault(0));
+    }
+
+    public record Result(List<Result.Stream> Streams, int TotalResults)
+    {
+        public record Stream(string StreamName, DateTimeOffset LastUpdated);
     }
 }

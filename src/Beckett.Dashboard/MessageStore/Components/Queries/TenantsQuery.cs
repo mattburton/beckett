@@ -1,11 +1,11 @@
 using Beckett.Database;
 using Npgsql;
 
-namespace Beckett.Dashboard.Postgres.MessageStore.Queries;
+namespace Beckett.Dashboard.MessageStore.Components.Queries;
 
-public class GetTenants(PostgresOptions options) : IPostgresDatabaseQuery<GetTenantsResult>
+public class TenantsQuery(PostgresOptions options) : IPostgresDatabaseQuery<TenantsQuery.Result>
 {
-    public async Task<GetTenantsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $"select tenant from {options.Schema}.tenants order by tenant;";
 
@@ -18,6 +18,8 @@ public class GetTenants(PostgresOptions options) : IPostgresDatabaseQuery<GetTen
             results.Add(reader.GetFieldValue<string>(0));
         }
 
-        return new GetTenantsResult(results);
+        return new Result(results);
     }
+
+    public record Result(List<string> Tenants);
 }

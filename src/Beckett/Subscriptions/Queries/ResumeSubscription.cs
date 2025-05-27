@@ -12,7 +12,14 @@ public class ResumeSubscription(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.resume_subscription($1, $2);";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.subscriptions
+            SET status = 'active'
+            WHERE group_name = $1
+            AND name = $2;
+
+            SELECT pg_notify('beckett:checkpoints', $1);
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

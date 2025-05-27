@@ -1,14 +1,22 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.MessageStore.Message;
 
 public static class MessageByIdEndpoint
 {
     public static async Task<IResult> Handle(
         string id,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
-        var result = await dashboard.MessageStore.GetMessage(id, cancellationToken);
+        if (!Guid.TryParse(id, out var guid))
+        {
+            throw new InvalidOperationException("Invalid message ID");
+        }
+
+        var result = await database.Execute(new MessageQuery(guid, options), cancellationToken);
 
         return result is null ? Results.NotFound() : Results.Extensions.Render<Message>(new Message.ViewModel(result));
     }

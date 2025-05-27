@@ -12,7 +12,12 @@ public class PauseSubscription(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.pause_subscription($1, $2);";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.subscriptions
+            SET status = 'paused'
+            WHERE group_name = $1
+            AND name = $2;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

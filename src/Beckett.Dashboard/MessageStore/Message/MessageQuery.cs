@@ -4,11 +4,11 @@ using Beckett.Messages;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.MessageStore.Queries;
+namespace Beckett.Dashboard.MessageStore.Message;
 
-public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<GetMessageResult?>
+public class MessageQuery(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<MessageResult?>
 {
-    public async Task<GetMessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<MessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT {options.Schema}.stream_category(m.stream_name) AS category,
@@ -55,7 +55,7 @@ public class GetMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQue
 
         return !reader.HasRows
             ? null
-            : new GetMessageResult(
+            : new MessageResult(
                 id.ToString(),
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),

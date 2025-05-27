@@ -2,27 +2,27 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.MessageStore.Queries;
+namespace Beckett.Dashboard.MessageStore.Categories;
 
-public class GetCategories(
+public class CategoriesQuery(
     string? query,
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<GetCategoriesResult>
+) : IPostgresDatabaseQuery<CategoriesQuery.Result>
 {
-    public async Task<GetCategoriesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
-            select name,
-                   updated_at,
-                   count(*) over() as total_results
-            from {options.Schema}.categories
-            where ($1 is null or name ilike '%' || $1 || '%')
-            order by name
-            offset $2
-            limit $3;
-        ";
+        command.CommandText = $"""
+           select name,
+                  updated_at,
+                  count(*) over() as total_results
+           from {options.Schema}.categories
+           where ($1 is null or name ilike '%' || $1 || '%')
+           order by name
+           offset $2
+           limit $3;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
@@ -39,7 +39,7 @@ public class GetCategories(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<GetCategoriesResult.Category>();
+        var results = new List<Result.Category>();
 
         int? totalResults = null;
 
@@ -48,13 +48,18 @@ public class GetCategories(
             totalResults ??= reader.GetFieldValue<int>(2);
 
             results.Add(
-                new GetCategoriesResult.Category(
+                new Result.Category(
                     reader.GetFieldValue<string>(0),
                     reader.GetFieldValue<DateTimeOffset>(1)
                 )
             );
         }
 
-        return new GetCategoriesResult(results, totalResults.GetValueOrDefault(0));
+        return new Result(results, totalResults.GetValueOrDefault(0));
+    }
+
+    public record Result(List<Result.Category> Categories, int TotalResults)
+    {
+        public record Category(string Name, DateTimeOffset LastUpdated);
     }
 }

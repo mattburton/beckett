@@ -4,12 +4,12 @@ using Beckett.Messages;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.MessageStore.Queries;
+namespace Beckett.Dashboard.MessageStore.Message;
 
-public class GetMessageByStreamPosition(string streamName, long streamPosition, PostgresOptions options)
-    : IPostgresDatabaseQuery<GetMessageResult?>
+public class MessageByStreamPositionQuery(string streamName, long streamPosition, PostgresOptions options)
+    : IPostgresDatabaseQuery<MessageResult?>
 {
-    public async Task<GetMessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<MessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT id::text,
@@ -62,7 +62,7 @@ public class GetMessageByStreamPosition(string streamName, long streamPosition, 
 
         return !reader.HasRows
             ? null
-            : new GetMessageResult(
+            : new MessageResult(
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),
                 reader.GetFieldValue<string>(2),

@@ -1,3 +1,5 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.MessageStore.CorrelatedBy;
 
 public static class CorrelatedByEndpoint
@@ -7,18 +9,17 @@ public static class CorrelatedByEndpoint
         string? query,
         int? page,
         int? pageSize,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
+        var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
-        var result = await dashboard.MessageStore.GetCorrelatedMessages(
-            correlationId,
-            query,
-            pageParameter,
-            pageSizeParameter,
+        var result = await database.Execute(
+            new CorrelatedMessagesQuery(correlationId, query, offset, pageSizeParameter, options),
             cancellationToken
         );
 
