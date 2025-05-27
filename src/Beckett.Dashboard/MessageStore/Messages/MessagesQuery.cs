@@ -15,14 +15,14 @@ public class MessagesQuery(
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select id, stream_position, type, timestamp, count(*) over() as total_results
-            from {options.Schema}.messages
-            where stream_name = $1
-            and ($2 is null or (id::text ilike '%' || $2 || '%' or type ilike '%' || $2 || '%'))
-            and archived = false
-            order by stream_position
-            offset $3
-            limit $4;
+            SELECT id, stream_position, type, timestamp, count(*) over() AS total_results
+            FROM {options.Schema}.messages
+            WHERE stream_name = $1
+            AND ($2 IS NULL OR (id::text ILIKE '%' || $2 || '%' OR type ILIKE '%' || $2 || '%'))
+            AND archived = false
+            ORDER BY stream_position
+            OFFSET $3
+            LIMIT $4;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

@@ -16,17 +16,17 @@ public class StreamsQuery(
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $"""
-           select stream_name,
-                  max(timestamp) as last_updated,
-                  count(*) over() as total_results
-           from {options.Schema}.messages_active
-           where metadata ->> '$tenant' = $1
-           and {options.Schema}.stream_category(stream_name) = $2
-           and ($3 is null or stream_name ilike '%' || $3 || '%')
-           group by stream_name
-           order by max(timestamp) desc
-           offset $4
-           limit $5;
+           SELECT stream_name,
+                  max(timestamp) AS last_updated,
+                  count(*) over() AS total_results
+           FROM {options.Schema}.messages_active
+           WHERE metadata ->> '$tenant' = $1
+           AND {options.Schema}.stream_category(stream_name) = $2
+           AND ($3 IS NULL OR stream_name ILIKE '%' || $3 || '%')
+           GROUP BY stream_name
+           ORDER BY max(timestamp) DESC
+           OFFSET $4
+           LIMIT $5;
         """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

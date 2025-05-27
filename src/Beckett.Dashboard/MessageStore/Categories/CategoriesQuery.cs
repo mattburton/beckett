@@ -14,14 +14,14 @@ public class CategoriesQuery(
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $"""
-           select name,
+           SELECT name,
                   updated_at,
-                  count(*) over() as total_results
-           from {options.Schema}.categories
-           where ($1 is null or name ilike '%' || $1 || '%')
-           order by name
-           offset $2
-           limit $3;
+                  count(*) over() AS total_results
+           FROM {options.Schema}.categories
+           WHERE ($1 IS NULL OR name ILIKE '%' || $1 || '%')
+           ORDER BY name
+           OFFSET $2
+           LIMIT $3;
         """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });

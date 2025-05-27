@@ -2,23 +2,23 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Retries;
 
-public class GetReservations(
+public class RetriesQuery(
     string? query,
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<GetReservationsResult>
+) : IPostgresDatabaseQuery<RetriesQuery.Result>
 {
-    public async Task<GetReservationsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT id, group_name, name, stream_name, stream_position, reserved_until, count(*) over() as total_results
+            SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
             FROM {options.Schema}.checkpoints
-            WHERE reserved_until IS NOT NULL
+            WHERE status = 'retry'
             AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
-            ORDER BY reserved_until
+            ORDER BY updated_at desc, group_name, name, stream_name, stream_position
             OFFSET $2
             LIMIT $3;
         ";
@@ -38,7 +38,7 @@ public class GetReservations(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<GetReservationsResult.Reservation>();
+        var results = new List<Result.Retry>();
 
         int? totalResults = null;
 
@@ -47,7 +47,7 @@ public class GetReservations(
             totalResults ??= reader.GetFieldValue<int>(6);
 
             results.Add(
-                new GetReservationsResult.Reservation(
+                new Result.Retry(
                     reader.GetFieldValue<long>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
@@ -58,6 +58,18 @@ public class GetReservations(
             );
         }
 
-        return new GetReservationsResult(results, totalResults.GetValueOrDefault(0));
+        return new Result(results, totalResults.GetValueOrDefault(0));
+    }
+
+    public record Result(List<Result.Retry> Retries, int TotalResults)
+    {
+        public record Retry(
+            long Id,
+            string GroupName,
+            string Name,
+            string StreamName,
+            long StreamPosition,
+            DateTimeOffset LastAttempted
+        );
     }
 }

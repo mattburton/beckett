@@ -3,14 +3,14 @@ using Beckett.Subscriptions;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Subscription;
 
-public class GetSubscription(
+public class SubscriptionQuery(
     string groupName,
     string name,
-    PostgresOptions options) : IPostgresDatabaseQuery<GetSubscriptionResult?>
+    PostgresOptions options) : IPostgresDatabaseQuery<SubscriptionQuery.Result?>
 {
-    public async Task<GetSubscriptionResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT group_name, name, status
@@ -39,10 +39,12 @@ public class GetSubscription(
             return null;
         }
 
-        return new GetSubscriptionResult(
+        return new Result(
             reader.GetFieldValue<string>(0),
             reader.GetFieldValue<string>(1),
             reader.GetFieldValue<SubscriptionStatus>(2)
         );
     }
+
+    public record Result(string GroupName, string Name, SubscriptionStatus Status);
 }

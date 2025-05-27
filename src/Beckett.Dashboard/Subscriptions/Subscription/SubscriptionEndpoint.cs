@@ -1,3 +1,5 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.Subscriptions.Subscription;
 
 public static class SubscriptionEndpoint
@@ -5,11 +7,12 @@ public static class SubscriptionEndpoint
     public static async Task<IResult> Handle(
         string groupName,
         string name,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
-        var result = await dashboard.Subscriptions.GetSubscription(groupName, name, cancellationToken);
+        var result = await database.Execute(new SubscriptionQuery(groupName, name, options), cancellationToken);
 
         return result == null
             ? Results.NotFound()

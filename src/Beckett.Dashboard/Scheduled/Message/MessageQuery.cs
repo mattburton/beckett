@@ -6,9 +6,9 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.Scheduled.Message;
 
-public class Query(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<ViewModel?>
+public class MessageQuery(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<Message.ViewModel?>
 {
-    public async Task<ViewModel?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Message.ViewModel?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT stream_name,
@@ -46,7 +46,7 @@ public class Query(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<Vi
 
         return !reader.HasRows
             ? null
-            : new ViewModel(
+            : new Message.ViewModel(
                 id,
                 reader.GetFieldValue<string>(0),
                 reader.GetFieldValue<string>(1),

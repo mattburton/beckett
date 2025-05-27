@@ -1,3 +1,5 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.Subscriptions.Reset;
 
 public static class ResetEndpoint
@@ -6,11 +8,12 @@ public static class ResetEndpoint
         HttpContext context,
         string groupName,
         string name,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
-        await dashboard.Subscriptions.ResetSubscription(groupName, name, cancellationToken);
+        await database.Execute(new ResetQuery(groupName, name, options), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
         context.Response.Headers.Append("HX-Trigger", new StringValues("subscription_reset"));

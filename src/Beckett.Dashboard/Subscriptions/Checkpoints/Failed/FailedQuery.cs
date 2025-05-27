@@ -2,24 +2,25 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Scheduled.Messages;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Failed;
 
-public class Query(
+public class FailedQuery(
     string? query,
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<Query.Result>
+) : IPostgresDatabaseQuery<FailedQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select id, stream_name, type, deliver_at, count(*) over() as total_results
-            from {options.Schema}.scheduled_messages
-            where ($1 is null or (stream_name ilike '%' || $1 || '%' or type ilike '%' || $1 || '%'))
-            order by deliver_at
-            offset $2
-            limit $3;
+            SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
+            FROM {options.Schema}.checkpoints
+            WHERE status = 'failed'
+            AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
+            ORDER BY updated_at desc, group_name, name, stream_name, stream_position
+            OFFSET $2
+            LIMIT $3;
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
@@ -37,20 +38,22 @@ public class Query(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<ViewModel.Message>();
+        var results = new List<Result.Failure>();
 
         int? totalResults = null;
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            totalResults ??= reader.GetFieldValue<int>(4);
+            totalResults ??= reader.GetFieldValue<int>(6);
 
             results.Add(
-                new ViewModel.Message(
-                    reader.GetFieldValue<Guid>(0),
+                new Result.Failure(
+                    reader.GetFieldValue<long>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
-                    reader.GetFieldValue<DateTimeOffset>(3)
+                    reader.GetFieldValue<string>(3),
+                    reader.GetFieldValue<long>(4),
+                    reader.GetFieldValue<DateTimeOffset>(5)
                 )
             );
         }
@@ -58,5 +61,15 @@ public class Query(
         return new Result(results, totalResults.GetValueOrDefault(0));
     }
 
-    public record Result(IReadOnlyList<ViewModel.Message> Messages, int TotalResults);
+    public record Result(List<Result.Failure> Failures, int TotalResults)
+    {
+        public record Failure(
+            long Id,
+            string GroupName,
+            string Name,
+            string StreamName,
+            long StreamPosition,
+            DateTimeOffset LastAttempted
+        );
+    }
 }

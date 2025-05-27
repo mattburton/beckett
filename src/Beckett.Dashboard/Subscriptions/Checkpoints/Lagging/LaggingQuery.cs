@@ -2,15 +2,15 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Lagging;
 
-public class GetLaggingSubscriptions(
+public class LaggingQuery(
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<GetLaggingSubscriptionsResult>
+) : IPostgresDatabaseQuery<LaggingQuery.Result>
 {
-    public async Task<GetLaggingSubscriptionsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT c.group_name,
@@ -41,7 +41,7 @@ public class GetLaggingSubscriptions(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<GetLaggingSubscriptionsResult.Subscription>();
+        var results = new List<Result.Subscription>();
 
         int? totalResults = null;
 
@@ -50,7 +50,7 @@ public class GetLaggingSubscriptions(
             totalResults ??= reader.GetFieldValue<int>(3);
 
             results.Add(
-                new GetLaggingSubscriptionsResult.Subscription(
+                new Result.Subscription(
                     reader.GetFieldValue<string>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<int>(2)
@@ -58,6 +58,14 @@ public class GetLaggingSubscriptions(
             );
         }
 
-        return new GetLaggingSubscriptionsResult(results, totalResults.GetValueOrDefault(0));
+        return new Result(results, totalResults.GetValueOrDefault(0));
+    }
+
+    public record Result(
+        List<Result.Subscription> Subscriptions,
+        int TotalResults
+    )
+    {
+        public record Subscription(string GroupName, string Name, int TotalLag);
     }
 }

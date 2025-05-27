@@ -4,11 +4,11 @@ using Beckett.Subscriptions;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Checkpoint;
 
-public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabaseQuery<GetCheckpointResult?>
+public class CheckpointQuery(long id, PostgresOptions options) : IPostgresDatabaseQuery<CheckpointQuery.Result?>
 {
-    public async Task<GetCheckpointResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT c.id,
@@ -46,7 +46,7 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
             return null;
         }
 
-        return new GetCheckpointResult{
+        return new Result{
             Id = reader.GetFieldValue<long>(0),
             GroupName = reader.GetFieldValue<string>(1),
             Name = reader.GetFieldValue<string>(2),
@@ -60,5 +60,43 @@ public class GetCheckpoint(long id, PostgresOptions options) : IPostgresDatabase
             ActualStreamName = reader.IsDBNull(10) ? null : reader.GetFieldValue<string>(10),
             ActualStreamPosition = reader.IsDBNull(11) ? null : reader.GetFieldValue<long>(11)
         };
+    }
+
+    public class Result
+    {
+        public required long Id { get; init; }
+        public required string GroupName { get; init; }
+        public required string Name { get; init; }
+        public required string StreamName { get; init; }
+        public required long StreamVersion { get; init; }
+        public required long StreamPosition { get; init; }
+        public required CheckpointStatus Status { get; init; }
+        public DateTimeOffset? ProcessAt { get; init; }
+        public DateTimeOffset? ReservedUntil { get; init; }
+        public required RetryType[] Retries { get; init; }
+        public required string? ActualStreamName { get; init; }
+        public required long? ActualStreamPosition { get; init; }
+
+        public int TotalAttempts => Retries?.Length > 0 ? Retries.Length - 1 : 0;
+
+        public string StreamCategory
+        {
+            get
+            {
+                var firstHyphen = StreamNameForLink.IndexOf('-');
+
+                return firstHyphen < 0 ? StreamNameForLink : StreamNameForLink[..firstHyphen];
+            }
+        }
+
+        public bool ShowControls => Status switch
+        {
+            CheckpointStatus.Active => false,
+            _ => true
+        };
+
+        public string StreamNameForLink => ActualStreamName ?? StreamName;
+
+        public long StreamPositionForLink => ActualStreamPosition ?? StreamPosition;
     }
 }

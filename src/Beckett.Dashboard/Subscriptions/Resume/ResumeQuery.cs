@@ -13,12 +13,13 @@ public class ResumeQuery(
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $"""
+            WITH notify AS (
+                SELECT pg_notify('beckett:checkpoints', $1)
+            )
             UPDATE {options.Schema}.subscriptions
             SET status = 'active'
             WHERE group_name = $1
             AND name = $2;
-
-            SELECT pg_notify('beckett:checkpoints', $1);
         """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

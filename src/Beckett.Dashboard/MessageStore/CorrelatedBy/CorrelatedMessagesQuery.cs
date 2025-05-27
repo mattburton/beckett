@@ -15,14 +15,14 @@ public class CorrelatedMessagesQuery(
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $"""
-           select id, stream_name, stream_position, type, timestamp, count(*) over() as total_results
-           from {options.Schema}.messages
-           where metadata->>'$correlation_id' = $1
-           and ($2 is null or (id::text ilike '%' || $2 || '%' or stream_name ilike '%' || $2 || '%' or type ilike '%' || $2 || '%'))
-           and archived = false
-           order by global_position
-           offset $3
-           limit $4;
+           SELECT id, stream_name, stream_position, type, timestamp, count(*) over() AS total_results
+           FROM {options.Schema}.messages
+           WHERE metadata->>'$correlation_id' = $1
+           AND ($2 IS NULL OR (id::text ILIKE '%' || $2 || '%' OR stream_name ILIKE '%' || $2 || '%' OR type ILIKE '%' || $2 || '%'))
+           AND archived = false
+           ORDER BY global_position
+           OFFSET $3
+           LIMIT $4;
         """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

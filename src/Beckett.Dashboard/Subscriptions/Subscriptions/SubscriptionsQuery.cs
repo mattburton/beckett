@@ -3,16 +3,16 @@ using Beckett.Subscriptions;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Subscriptions;
 
-public class GetSubscriptions(
+public class SubscriptionsQuery(
     string? query,
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<GetSubscriptionsResult>
+) : IPostgresDatabaseQuery<SubscriptionsQuery.Result>
 {
-    public async Task<GetSubscriptionsResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
             SELECT group_name, name, status, count(*) over() as total_results
@@ -38,7 +38,7 @@ public class GetSubscriptions(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<GetSubscriptionsResult.Subscription>();
+        var results = new List<Result.Subscription>();
 
         int? totalResults = null;
 
@@ -47,7 +47,7 @@ public class GetSubscriptions(
             totalResults ??= reader.GetFieldValue<int>(3);
 
             results.Add(
-                new GetSubscriptionsResult.Subscription(
+                new Result.Subscription(
                     reader.GetFieldValue<string>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<SubscriptionStatus>(2)
@@ -55,6 +55,11 @@ public class GetSubscriptions(
             );
         }
 
-        return new GetSubscriptionsResult(results, totalResults.GetValueOrDefault(0));
+        return new Result(results, totalResults.GetValueOrDefault(0));
+    }
+
+    public record Result(List<Result.Subscription> Subscriptions, int TotalResults)
+    {
+        public record Subscription(string GroupName, string Name, SubscriptionStatus Status);
     }
 }

@@ -1,4 +1,4 @@
-@inherits Component<ViewModel>
+@inherits Component<Messages.ViewModel>
 @layout Layout
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
@@ -51,3 +51,20 @@
     </tbody>
   </table>
 </div>
+
+@code {
+
+  public record ViewModel(
+    IReadOnlyList<ViewModel.Message> Messages,
+    string? Query,
+    int Page,
+    int PageSize,
+    int TotalResults
+  ) : IPagedViewModel
+  {
+    public string UrlTemplate => $"{Dashboard.Prefix}/scheduled?page={{0}}&pageSize={{1}}&query={{2}}";
+
+    public record Message(Guid Id, string StreamName, string Type, DateTimeOffset DeliverAt);
+  }
+
+}

@@ -2,23 +2,22 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Postgres.Subscriptions.Queries;
+namespace Beckett.Dashboard.Scheduled.Messages;
 
-public class GetRetries(
+public class Query(
     string? query,
     int offset,
     int limit,
     PostgresOptions options
-) : IPostgresDatabaseQuery<GetRetriesResult>
+) : IPostgresDatabaseQuery<Query.Result>
 {
-    public async Task<GetRetriesResult> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
-            FROM {options.Schema}.checkpoints
-            WHERE status = 'retry'
-            AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
-            ORDER BY updated_at desc, group_name, name, stream_name, stream_position
+            SELECT id, stream_name, type, deliver_at, count(*) over() AS total_results
+            FROM {options.Schema}.scheduled_messages
+            WHERE ($1 IS NULL OR (stream_name ILIKE '%' || $1 || '%' OR type ILIKE '%' || $1 || '%'))
+            ORDER BY deliver_at
             OFFSET $2
             LIMIT $3;
         ";
@@ -38,26 +37,26 @@ public class GetRetries(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<GetRetriesResult.Retry>();
+        var results = new List<Messages.ViewModel.Message>();
 
         int? totalResults = null;
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            totalResults ??= reader.GetFieldValue<int>(6);
+            totalResults ??= reader.GetFieldValue<int>(4);
 
             results.Add(
-                new GetRetriesResult.Retry(
-                    reader.GetFieldValue<long>(0),
+                new Messages.ViewModel.Message(
+                    reader.GetFieldValue<Guid>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
-                    reader.GetFieldValue<string>(3),
-                    reader.GetFieldValue<long>(4),
-                    reader.GetFieldValue<DateTimeOffset>(5)
+                    reader.GetFieldValue<DateTimeOffset>(3)
                 )
             );
         }
 
-        return new GetRetriesResult(results, totalResults.GetValueOrDefault(0));
+        return new Result(results, totalResults.GetValueOrDefault(0));
     }
+
+    public record Result(IReadOnlyList<Messages.ViewModel.Message> Messages, int TotalResults);
 }
