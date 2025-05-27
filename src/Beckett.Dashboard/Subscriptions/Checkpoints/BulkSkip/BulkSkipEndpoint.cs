@@ -1,4 +1,4 @@
-using Beckett.Subscriptions.Retries;
+using Beckett.Database;
 
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.BulkSkip;
 
@@ -7,11 +7,12 @@ public static class BulkSkipEndpoint
     public static async Task<IResult> Handle(
         HttpContext context,
         [FromForm(Name = "id")] long[] ids,
-        IRetryClient retryClient,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
-        await retryClient.BulkSkip(ids, cancellationToken);
+        await database.Execute(new BulkSkipQuery(ids, options), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
         context.Response.Headers.Append("HX-Trigger", new StringValues("bulk_skip_requested"));

@@ -2,9 +2,9 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.BulkSkip;
 
-public class SkipCheckpointPositions(
+public class BulkSkipQuery(
     long[] ids,
     PostgresOptions options
 ) : IPostgresDatabaseQuery<int>

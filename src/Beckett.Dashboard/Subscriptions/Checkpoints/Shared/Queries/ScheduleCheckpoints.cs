@@ -2,7 +2,7 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Shared.Queries;
 
 public class ScheduleCheckpoints(
     long[] ids,
@@ -12,7 +12,11 @@ public class ScheduleCheckpoints(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.schedule_checkpoints($1, $2);";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.checkpoints
+            SET process_at = $2
+            WHERE id = ANY($1);
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.TimestampTz });

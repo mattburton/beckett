@@ -2,16 +2,24 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Checkpoints.Skip;
 
-public class SkipCheckpointPosition(
+public class SkipQuery(
     long id,
     PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.skip_checkpoint_position($1);";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.checkpoints
+            SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
+                process_at = NULL,
+                reserved_until = NULL,
+                status = 'active',
+                retries = NULL
+            WHERE id = $1;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
