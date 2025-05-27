@@ -13,15 +13,11 @@ public class ReadIndexBatch(
     {
         command.CommandText = $@"
             select stream_name, stream_position, global_position, type, tenant, timestamp
-            from {options.Schema}.read_index_batch($1, $2, $3, $4);
+            from {options.Schema}.read_index_batch($1, $2);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
-        command.Parameters.Add(
-            new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text, IsNullable = true }
-        );
 
         if (options.PrepareStatements)
         {
@@ -30,9 +26,6 @@ public class ReadIndexBatch(
 
         command.Parameters[0].Value = readOptions.StartingGlobalPosition;
         command.Parameters[1].Value = readOptions.BatchSize;
-        command.Parameters[2].Value =
-            string.IsNullOrWhiteSpace(readOptions.Category) ? DBNull.Value : readOptions.Category;
-        command.Parameters[3].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
