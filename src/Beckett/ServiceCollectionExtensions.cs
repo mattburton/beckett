@@ -1,9 +1,7 @@
-using Beckett.Configuration;
-using Beckett.Dashboard;
 using Beckett.Database;
-using Beckett.MessageStorage;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling;
+using Beckett.Storage;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,8 +31,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
 
         services.AddSingleton<IMessageStore, MessageStore>();
-
-        services.AddDashboardSupport();
 
         services.AddMessageStorageSupport(options);
 

@@ -1,5 +1,5 @@
 @using Beckett.Dashboard.Subscriptions.Checkpoints.Checkpoint
-@inherits Component<ViewModel>
+@inherits Component<Message.ViewModel>
 @layout LayoutWithoutSearch
 
 <script type="text/javascript">
@@ -169,3 +169,17 @@
     configureCopyButton(message);
   })();
 </script>
+
+@code {
+
+  public record ViewModel(
+    Guid Id,
+    string StreamName,
+    string Type,
+    DateTimeOffset DeliverAt,
+    DateTimeOffset Timestamp,
+    string Data,
+    Dictionary<string, string> Metadata
+  );
+
+}

@@ -10,11 +10,6 @@ public static class MessageTypeMap
     private static GetNameFallback? _getNameFallback;
     private static TryGetTypeFallback? _tryGetTypeFallback;
 
-    static MessageTypeMap()
-    {
-        MapSystemTypes();
-    }
-
     public static void Configure(GetNameFallback getNameFallback)
     {
         _getNameFallback = getNameFallback;
@@ -98,12 +93,6 @@ public static class MessageTypeMap
     {
         NameToTypeMap.Clear();
         TypeToNameMap.Clear();
-    }
-
-    private static void MapSystemTypes()
-    {
-        Map<StreamArchived>("$stream_archived");
-        Map<StreamTruncated>("$stream_truncated");
     }
 }
 

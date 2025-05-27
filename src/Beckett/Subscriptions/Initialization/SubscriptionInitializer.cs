@@ -1,7 +1,7 @@
 using Beckett.Database;
 using Beckett.Database.Queries;
 using Beckett.Database.Types;
-using Beckett.MessageStorage;
+using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
 

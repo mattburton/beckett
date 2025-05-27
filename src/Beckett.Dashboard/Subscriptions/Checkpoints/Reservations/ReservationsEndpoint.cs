@@ -1,3 +1,5 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.Reservations;
 
 public static class ReservationsEndpoint
@@ -6,17 +8,17 @@ public static class ReservationsEndpoint
         string? query,
         int? page,
         int? pageSize,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
+        var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
-        var result = await dashboard.Subscriptions.GetReservations(
-            query,
-            pageParameter,
-            pageSizeParameter,
+        var result = await database.Execute(
+            new ReservationsQuery(query, offset, pageSizeParameter, options),
             cancellationToken
         );
 

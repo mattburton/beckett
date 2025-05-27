@@ -1,14 +1,12 @@
 using Beckett.Database;
-using Beckett.MessageStorage;
 using Beckett.Scheduling;
+using Beckett.Storage;
 using Beckett.Subscriptions;
 
 namespace Beckett;
 
 public class BeckettOptions
 {
-    public const string SectionName = "Beckett";
-
     public MessageStorageOptions MessageStorage { get; } = new();
     public SchedulingOptions Scheduling { get; } = new();
     public SubscriptionOptions Subscriptions { get; } = new();

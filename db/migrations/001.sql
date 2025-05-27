@@ -76,38 +76,6 @@ CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema
 CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id ON __schema__.messages_active ((metadata ->> '$correlation_id'))
   WHERE metadata ->> '$correlation_id' IS NOT NULL;
 
-CREATE FUNCTION __schema__.stream_operations()
-  RETURNS trigger
-  LANGUAGE plpgsql
-AS
-$$
-BEGIN
-  IF NEW.type = '$stream_truncated' THEN
-    UPDATE __schema__.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  IF NEW.type = '$stream_archived' THEN
-    UPDATE __schema__.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER stream_operations
-  BEFORE INSERT
-  ON __schema__.messages
-  FOR EACH ROW
-EXECUTE FUNCTION __schema__.stream_operations();
-
 CREATE OR REPLACE FUNCTION __schema__.stream_hash(
   _stream_name text
 )
@@ -568,36 +536,6 @@ AND status = 'uninitialized'
 LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.pause_subscription(
-  _group_name text,
-  _name text
-)
-  RETURNS void
-  LANGUAGE sql
-AS
-$$
-UPDATE __schema__.subscriptions
-SET status = 'paused'
-WHERE group_name = _group_name
-AND name = _name;
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.resume_subscription(
-  _group_name text,
-  _name text
-)
-  RETURNS void
-  LANGUAGE sql
-AS
-$$
-UPDATE __schema__.subscriptions
-SET status = 'active'
-WHERE group_name = _group_name
-AND name = _name;
-
-SELECT pg_notify('beckett:checkpoints', _group_name);
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_active(
   _group_name text,
   _name text
@@ -659,22 +597,6 @@ AND stream_name = _stream_name
 UNION ALL
 SELECT stream_version
 FROM new_checkpoint;
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.get_checkpoint_stream_version(
-  _group_name text,
-  _name text,
-  _stream_name text
-)
-  RETURNS bigint
-  LANGUAGE sql
-AS
-$$
-SELECT stream_version
-FROM __schema__.checkpoints
-WHERE group_name = _group_name
-AND name = _name
-AND stream_name = _stream_name;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
@@ -818,35 +740,6 @@ RETURNING
   c.status;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.schedule_checkpoints(
-  _ids bigint[],
-  _process_at timestamp with time zone
-)
-  RETURNS void
-  LANGUAGE sql
-AS
-$$
-UPDATE __schema__.checkpoints
-SET process_at = _process_at
-WHERE id = ANY(_ids);
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.skip_checkpoint_position(
-  _id bigint
-)
-  RETURNS void
-  LANGUAGE sql
-AS
-$$
-UPDATE __schema__.checkpoints
-SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
-    process_at = NULL,
-    reserved_until = NULL,
-    status = 'active',
-    retries = NULL
-WHERE id = _id;
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.update_system_checkpoint_position(
   _id bigint,
   _position bigint
@@ -940,48 +833,6 @@ WITH metric AS (
 SELECT value
 FROM metric
 LIMIT 1;
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.get_subscription_metrics()
-  RETURNS TABLE (
-    lagging bigint,
-    retries bigint,
-    failed bigint
-  )
-  LANGUAGE sql
-AS
-$$
-WITH lagging AS (
-    WITH lagging_subscriptions AS (
-        SELECT COUNT(*) AS lagging
-        FROM __schema__.subscriptions s
-        INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-        WHERE s.status = 'active'
-        AND c.status = 'active'
-        AND c.lagging = TRUE
-        GROUP BY c.group_name, c.name
-    )
-    SELECT count(*) as lagging FROM lagging_subscriptions
-    UNION ALL
-    SELECT 0
-    LIMIT 1
-),
-retries AS (
-    SELECT count(*) as retries
-    FROM __schema__.subscriptions s
-    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'retry'
- ),
-failed AS (
-    SELECT count(*) as failed
-    FROM __schema__.subscriptions s
-    INNER JOIN __schema__.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'failed'
-)
-SELECT l.lagging, r.retries, f.failed
-FROM lagging AS l, retries AS r, failed AS f;
 $$;
 
 -------------------------------------------------

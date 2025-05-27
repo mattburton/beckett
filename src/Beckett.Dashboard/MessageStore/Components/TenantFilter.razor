@@ -1,5 +1,8 @@
+@using Beckett.Dashboard.MessageStore.Components.Queries
+@using Beckett.Database
 @inherits Component<TenantFilter.ViewModel>
-@inject IDashboard DashboardService
+@inject IPostgresDatabase Database
+@inject PostgresOptions PostgresOptions
 
 <form id="tenantFilter" class="d-flex input-group w-auto me-2" method="GET">
   <span class="input-group-text" for="tenant">
@@ -64,7 +67,12 @@
 
   protected override async Task OnInitializedAsync()
   {
-    var result = await DashboardService.MessageStore.GetTenants(CancellationToken.None);
+    var result = await Database.Execute(new TenantsQuery(PostgresOptions), CancellationToken.None);
+
+    if (result.Tenants.Count == 0)
+    {
+      result.Tenants.Add(BeckettContext.DefaultTenant);
+    }
 
     Model = new ViewModel(result.Tenants);
   }

@@ -23,7 +23,7 @@ public static class MessagesEndpoint
         );
 
         return Results.Extensions.Render<Messages>(
-            new ViewModel(result.Messages, query, pageParameter, pageSizeParameter, result.TotalResults)
+            new Messages.ViewModel(result.Messages, query, pageParameter, pageSizeParameter, result.TotalResults)
         );
     }
 }

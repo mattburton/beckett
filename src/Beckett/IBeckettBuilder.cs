@@ -1,5 +1,8 @@
 using System.Text.Json.Nodes;
-using Beckett.Configuration;
+using Beckett.Messages;
+using Beckett.Subscriptions;
+using Beckett.Subscriptions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett;
 
@@ -50,4 +53,24 @@ public interface ISubscriptionBuilder
     /// <param name="name"></param>
     /// <returns></returns>
     ISubscriptionConfigurationBuilder AddSubscription(string name);
+}
+
+public class BeckettBuilder(IServiceCollection services) : IBeckettBuilder
+{
+    public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
+
+    public void Map(Type type, string name) => MessageTypeMap.Map(type, name);
+
+    public void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster) =>
+        MessageUpcaster.Register(oldTypeName, newTypeName, upcaster);
+
+    public ISubscriptionConfigurationBuilder AddSubscription(string name)
+    {
+        if (!SubscriptionRegistry.TryAdd(name, out var subscription))
+        {
+            throw new InvalidOperationException($"There is already a subscription with the name {name}");
+        }
+
+        return new SubscriptionConfigurationBuilder(subscription, services);
+    }
 }

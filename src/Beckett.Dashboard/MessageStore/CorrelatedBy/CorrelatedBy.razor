@@ -58,7 +58,7 @@
   public record ViewModel(
     string CorrelationId,
     string? Query,
-    IReadOnlyList<GetCorrelatedMessagesResult.Message> Messages,
+    IReadOnlyList<CorrelatedMessagesQuery.Result.Message> Messages,
     int Page,
     int PageSize,
     int TotalResults

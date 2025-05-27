@@ -1,3 +1,5 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.Failed;
 
 public static class FailedEndpoint
@@ -6,17 +8,17 @@ public static class FailedEndpoint
         string? query,
         int? page,
         int? pageSize,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
+        var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
-        var result = await dashboard.Subscriptions.GetFailed(
-            query,
-            pageParameter,
-            pageSizeParameter,
+        var result = await database.Execute(
+            new FailedQuery(query, offset, pageSizeParameter, options),
             cancellationToken
         );
 

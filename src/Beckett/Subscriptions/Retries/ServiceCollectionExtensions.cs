@@ -7,7 +7,5 @@ public static class ServiceCollectionExtensions
     internal static void AddRetrySupport(this IServiceCollection services, BeckettOptions options)
     {
         services.AddSingleton(options.Subscriptions.Retries);
-
-        services.AddSingleton<IRetryClient, RetryClient>();
     }
 }

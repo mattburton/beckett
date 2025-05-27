@@ -1,3 +1,5 @@
+using Beckett.Database;
+
 namespace Beckett.Dashboard.MessageStore.Categories;
 
 public static class CategoriesEndpoint
@@ -7,17 +9,17 @@ public static class CategoriesEndpoint
         string? query,
         int? page,
         int? pageSize,
-        IDashboard dashboard,
+        IPostgresDatabase database,
+        PostgresOptions options,
         CancellationToken cancellationToken
     )
     {
         var pageParameter = page.ToPageParameter();
         var pageSizeParameter = pageSize.ToPageSizeParameter();
+        var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
-        var result = await dashboard.MessageStore.GetCategories(
-            query,
-            pageParameter,
-            pageSizeParameter,
+        var result = await database.Execute(
+            new CategoriesQuery(query, offset, pageSizeParameter, options),
             cancellationToken
         );
 
