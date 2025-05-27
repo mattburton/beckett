@@ -10,8 +10,7 @@ public interface IMessageTypeBuilder
     /// <summary>
     /// Explicitly map a message type to the name that will be stored as the type in the message store. When reading a
     /// message from the store Beckett will use the mapping during deserialization to map the message to the correct
-    /// type at runtime. This is primarily used when <c>BeckettOptions.Messages.AllowDynamicTypeMapping</c> is
-    /// set to false, but can be used in conjunction with that setting to override mapping as necessary.
+    /// type at runtime.
     /// </summary>
     /// <param name="name">The message type name</param>
     /// <typeparam name="TMessage">The message type</typeparam>
