@@ -1,11 +1,11 @@
 namespace Beckett;
 
-public static class StateExtensions
+public static class ApplyExtensions
 {
-    public static TState ProjectTo<TState>(this IEnumerable<IMessageContext> messages)
-        where TState : class, IApply, new() =>
+    public static T ProjectTo<T>(this IEnumerable<IMessageContext> messages)
+        where T : class, IApply, new() =>
         messages.Aggregate(
-            new TState(),
+            new T(),
             (current, message) =>
             {
                 current.Apply(message);
@@ -14,10 +14,10 @@ public static class StateExtensions
             }
         );
 
-    public static TState ApplyTo<TState>(this IEnumerable<IMessageContext> messages, TState state)
-        where TState : class, IApply, new() =>
+    public static T ApplyTo<T>(this IEnumerable<IMessageContext> messages, T instance)
+        where T : class, IApply, new() =>
         messages.Aggregate(
-            state,
+            instance,
             (current, message) =>
             {
                 current.Apply(message);
