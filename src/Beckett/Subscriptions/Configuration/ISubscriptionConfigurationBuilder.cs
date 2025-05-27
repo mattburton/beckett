@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Beckett.Configuration;
+namespace Beckett.Subscriptions.Configuration;
 
 public interface ISubscriptionConfigurationBuilder
 {
