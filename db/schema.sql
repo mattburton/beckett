@@ -365,47 +365,6 @@ $$;
 
 
 --
--- Name: get_subscription_metrics(); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.get_subscription_metrics() RETURNS TABLE(lagging bigint, retries bigint, failed bigint)
-    LANGUAGE sql
-    AS $$
-WITH lagging AS (
-    WITH lagging_subscriptions AS (
-        SELECT COUNT(*) AS lagging
-        FROM beckett.subscriptions s
-        INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-        WHERE s.status = 'active'
-        AND c.status = 'active'
-        AND c.lagging = TRUE
-        GROUP BY c.group_name, c.name
-    )
-    SELECT count(*) as lagging FROM lagging_subscriptions
-    UNION ALL
-    SELECT 0
-    LIMIT 1
-),
-retries AS (
-    SELECT count(*) as retries
-    FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'retry'
- ),
-failed AS (
-    SELECT count(*) as failed
-    FROM beckett.subscriptions s
-    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-    WHERE s.status != 'uninitialized'
-    AND c.status = 'failed'
-)
-SELECT l.lagging, r.retries, f.failed
-FROM lagging AS l, retries AS r, failed AS f;
-$$;
-
-
---
 -- Name: get_subscription_retry_count(); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -441,20 +400,6 @@ AND name = _name
 AND stream_name = _stream_name
 FOR UPDATE
 SKIP LOCKED;
-$$;
-
-
---
--- Name: pause_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.pause_subscription(_group_name text, _name text) RETURNS void
-    LANGUAGE sql
-    AS $$
-UPDATE beckett.subscriptions
-SET status = 'paused'
-WHERE group_name = _group_name
-AND name = _name;
 $$;
 
 
@@ -714,35 +659,6 @@ $$;
 
 
 --
--- Name: resume_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.resume_subscription(_group_name text, _name text) RETURNS void
-    LANGUAGE sql
-    AS $$
-UPDATE beckett.subscriptions
-SET status = 'active'
-WHERE group_name = _group_name
-AND name = _name;
-
-SELECT pg_notify('beckett:checkpoints', _group_name);
-$$;
-
-
---
--- Name: schedule_checkpoints(bigint[], timestamp with time zone); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.schedule_checkpoints(_ids bigint[], _process_at timestamp with time zone) RETURNS void
-    LANGUAGE sql
-    AS $$
-UPDATE beckett.checkpoints
-SET process_at = _process_at
-WHERE id = ANY(_ids);
-$$;
-
-
---
 -- Name: schedule_message(text, beckett.scheduled_message); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -803,23 +719,6 @@ $_$;
 
 
 --
--- Name: skip_checkpoint_position(bigint); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.skip_checkpoint_position(_id bigint) RETURNS void
-    LANGUAGE sql
-    AS $$
-UPDATE beckett.checkpoints
-SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
-    process_at = NULL,
-    reserved_until = NULL,
-    status = 'active',
-    retries = NULL
-WHERE id = _id;
-$$;
-
-
---
 -- Name: stream_category(text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -839,35 +738,6 @@ CREATE FUNCTION beckett.stream_hash(_stream_name text) RETURNS bigint
     AS $$
 SELECT abs(hashtextextended(_stream_name, 0));
 $$;
-
-
---
--- Name: stream_operations(); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.stream_operations() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $_$
-BEGIN
-  IF NEW.type = '$stream_truncated' THEN
-    UPDATE beckett.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  IF NEW.type = '$stream_archived' THEN
-    UPDATE beckett.messages
-    SET archived = TRUE
-    WHERE stream_name = NEW.stream_name
-    AND stream_position < NEW.stream_position
-    AND archived = FALSE;
-  END IF;
-
-  RETURN NEW;
-END;
-$_$;
 
 
 --
@@ -1305,13 +1175,6 @@ ALTER INDEX beckett.messages_stream_name_stream_position_archived_key ATTACH PAR
 --
 
 CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkpoints FOR EACH ROW EXECUTE FUNCTION beckett.checkpoint_preprocessor();
-
-
---
--- Name: messages stream_operations; Type: TRIGGER; Schema: beckett; Owner: -
---
-
-CREATE TRIGGER stream_operations BEFORE INSERT ON beckett.messages FOR EACH ROW EXECUTE FUNCTION beckett.stream_operations();
 
 
 --
