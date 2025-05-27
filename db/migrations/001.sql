@@ -599,22 +599,6 @@ SELECT stream_version
 FROM new_checkpoint;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.get_checkpoint_stream_version(
-  _group_name text,
-  _name text,
-  _stream_name text
-)
-  RETURNS bigint
-  LANGUAGE sql
-AS
-$$
-SELECT stream_version
-FROM __schema__.checkpoints
-WHERE group_name = _group_name
-AND name = _name
-AND stream_name = _stream_name;
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.lock_checkpoint(
   _group_name text,
   _name text,
