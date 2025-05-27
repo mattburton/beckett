@@ -2,9 +2,9 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Subscriptions.Queries;
+namespace Beckett.Dashboard.Subscriptions.Pause;
 
-public class ResumeSubscription(
+public class PauseQuery(
     string groupName,
     string name,
     PostgresOptions options
@@ -14,11 +14,9 @@ public class ResumeSubscription(
     {
         command.CommandText = $"""
             UPDATE {options.Schema}.subscriptions
-            SET status = 'active'
+            SET status = 'paused'
             WHERE group_name = $1
             AND name = $2;
-
-            SELECT pg_notify('beckett:checkpoints', $1);
         """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

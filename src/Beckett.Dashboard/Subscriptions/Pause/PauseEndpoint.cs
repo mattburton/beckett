@@ -13,7 +13,7 @@ public static class PauseEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new Beckett.Subscriptions.Queries.PauseSubscription(groupName, name, options), cancellationToken);
+        await database.Execute(new PauseQuery(groupName, name, options), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
 
