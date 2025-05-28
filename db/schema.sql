@@ -229,6 +229,25 @@ $_$;
 
 
 --
+-- Name: delete_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.delete_subscription(_group_name text, _name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  DELETE FROM beckett.checkpoints
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  DELETE FROM beckett.subscriptions
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+
+--
 -- Name: ensure_checkpoint_exists(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
@@ -249,21 +268,6 @@ AND stream_name = _stream_name
 UNION ALL
 SELECT stream_version
 FROM new_checkpoint;
-$$;
-
-
---
--- Name: get_checkpoint_stream_version(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.get_checkpoint_stream_version(_group_name text, _name text, _stream_name text) RETURNS bigint
-    LANGUAGE sql
-    AS $$
-SELECT stream_version
-FROM beckett.checkpoints
-WHERE group_name = _group_name
-AND name = _name
-AND stream_name = _stream_name;
 $$;
 
 

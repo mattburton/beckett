@@ -899,3 +899,19 @@ AS
 $$
 SELECT pg_advisory_unlock(abs(hashtextextended(_key, 0)));
 $$;
+
+CREATE OR REPLACE FUNCTION __schema__.delete_subscription(_group_name text, _name text)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  DELETE FROM __schema__.checkpoints
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  DELETE FROM __schema__.subscriptions
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
