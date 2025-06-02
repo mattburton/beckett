@@ -17,6 +17,25 @@ public class BootstrapSubscriptions(
 {
     public async Task StartAsync(CancellationToken stoppingToken)
     {
+        var tasks = options.Subscriptions.Groups.Select(x => ExecuteForSubscriptionGroup(x, stoppingToken)).ToArray();
+
+        await Task.WhenAll(tasks);
+
+        if (options.Subscriptions.InitializationConcurrency <= 0)
+        {
+            return;
+        }
+
+        await Task.Yield();
+
+        var initializationTasks = Enumerable.Range(1, options.Subscriptions.InitializationConcurrency)
+            .Select(_ => subscriptionInitializer.Initialize(stoppingToken)).ToArray();
+
+        await Task.WhenAll(initializationTasks);
+    }
+
+    private async Task ExecuteForSubscriptionGroup(SubscriptionGroup group, CancellationToken stoppingToken)
+    {
         await using var connection = dataSource.CreateConnection();
 
         await connection.OpenAsync(stoppingToken);
@@ -25,7 +44,7 @@ public class BootstrapSubscriptions(
 
         var globalPosition = await database.Execute(
             new EnsureCheckpointExists(
-                options.Subscriptions.GroupName,
+                group.Name,
                 GlobalCheckpoint.Name,
                 GlobalCheckpoint.StreamName,
                 options.Postgres
@@ -37,19 +56,19 @@ public class BootstrapSubscriptions(
 
         var checkpoints = new List<CheckpointType>();
 
-        foreach (var subscription in SubscriptionRegistry.All())
+        foreach (var subscription in group.GetSubscriptions())
         {
             subscription.BuildHandler();
 
             logger.LogTrace(
                 "Adding or updating subscription {Name} in group {GroupName}",
                 subscription.Name,
-                options.Subscriptions.GroupName
+                group.Name
             );
 
             var status = await database.Execute(
                 new AddOrUpdateSubscription(
-                    options.Subscriptions.GroupName,
+                    group.Name,
                     subscription.Name,
                     options.Postgres
                 ),
@@ -63,7 +82,7 @@ public class BootstrapSubscriptions(
                 logger.LogTrace(
                     "Subscription {Name} in group {GroupName} is already active - no need for further action.",
                     subscription.Name,
-                    options.Subscriptions.GroupName
+                    group.Name
                 );
 
                 continue;
@@ -74,14 +93,14 @@ public class BootstrapSubscriptions(
                 logger.LogTrace(
                     "Subscription {Name} in group {GroupName} is scoped to the global stream so it will be set to active and will start processing messages from the {StartingPosition} of the global stream.",
                     subscription.Name,
-                    options.Subscriptions.GroupName,
+                    group.Name,
                     subscription.StartingPosition == StartingPosition.Latest ? "end" : "beginning"
                 );
 
                 checkpoints.Add(
                     new CheckpointType
                     {
-                        GroupName = options.Subscriptions.GroupName,
+                        GroupName = group.Name,
                         Name = subscription.Name,
                         StreamName = GlobalStream.Name,
                         StreamVersion = globalPosition,
@@ -91,7 +110,7 @@ public class BootstrapSubscriptions(
 
                 await database.Execute(
                     new SetSubscriptionToActive(
-                        options.Subscriptions.GroupName,
+                        group.Name,
                         subscription.Name,
                         options.Postgres
                     ),
@@ -108,13 +127,13 @@ public class BootstrapSubscriptions(
                 logger.LogTrace(
                     "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will be set to active and will start processing new messages going forward.",
                     subscription.Name,
-                    options.Subscriptions.GroupName,
+                    group.Name,
                     subscription.StartingPosition
                 );
 
                 await database.Execute(
                     new SetSubscriptionToActive(
-                        options.Subscriptions.GroupName,
+                        group.Name,
                         subscription.Name,
                         options.Postgres
                     ),
@@ -129,14 +148,14 @@ public class BootstrapSubscriptions(
             logger.LogTrace(
                 "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will need to be initialized before it can start processing new messages.",
                 subscription.Name,
-                options.Subscriptions.GroupName,
+                group.Name,
                 subscription.StartingPosition
             );
 
             checkpoints.Add(
                 new CheckpointType
                 {
-                    GroupName = options.Subscriptions.GroupName,
+                    GroupName = group.Name,
                     Name = subscription.Name,
                     StreamName = InitializationConstants.StreamName,
                     StreamVersion = 0
@@ -155,18 +174,6 @@ public class BootstrapSubscriptions(
         }
 
         await transaction.CommitAsync(stoppingToken);
-
-        if (options.Subscriptions.InitializationConcurrency <= 0)
-        {
-            return;
-        }
-
-        await Task.Yield();
-
-        var initializationTasks = Enumerable.Range(1, options.Subscriptions.InitializationConcurrency)
-            .Select(_ => subscriptionInitializer.Initialize(stoppingToken)).ToArray();
-
-        await Task.WhenAll(initializationTasks);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

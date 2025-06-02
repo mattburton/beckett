@@ -17,6 +17,14 @@ public class SubscriptionInitializer(
 {
     public async Task Initialize(CancellationToken cancellationToken)
     {
+        var tasks = options.Subscriptions.Groups.Select(x => InitializeSubscriptionsForGroup(x, cancellationToken))
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task InitializeSubscriptionsForGroup(SubscriptionGroup group, CancellationToken cancellationToken)
+    {
         while (!cancellationToken.IsCancellationRequested)
         {
             await using var connection = dataSource.CreateConnection();
@@ -24,7 +32,7 @@ public class SubscriptionInitializer(
             await connection.OpenAsync(cancellationToken);
 
             var subscriptionName = await database.Execute(
-                new GetNextUninitializedSubscription(options.Subscriptions.GroupName, options.Postgres),
+                new GetNextUninitializedSubscription(group.Name, options.Postgres),
                 connection,
                 cancellationToken
             );
@@ -34,7 +42,7 @@ public class SubscriptionInitializer(
                 break;
             }
 
-            var subscription = SubscriptionRegistry.GetSubscription(subscriptionName);
+            var subscription = group.GetSubscription(subscriptionName);
 
             if (subscription == null)
             {
@@ -45,7 +53,7 @@ public class SubscriptionInitializer(
 
                 await database.Execute(
                     new SetSubscriptionStatus(
-                        options.Subscriptions.GroupName,
+                        group.Name,
                         subscriptionName,
                         SubscriptionStatus.Unknown,
                         options.Postgres
@@ -57,7 +65,7 @@ public class SubscriptionInitializer(
                 continue;
             }
 
-            var advisoryLockKey = subscription.GetAdvisoryLockKey(options.Subscriptions.GroupName);
+            var advisoryLockKey = subscription.GetAdvisoryLockKey(group.Name);
 
             var locked = await database.Execute(
                 new TryAdvisoryLock(advisoryLockKey, options.Postgres),
@@ -97,7 +105,7 @@ public class SubscriptionInitializer(
 
             var checkpoint = await database.Execute(
                 new LockCheckpoint(
-                    options.Subscriptions.GroupName,
+                    subscription.Group.Name,
                     subscription.Name,
                     InitializationConstants.StreamName,
                     options.Postgres
@@ -127,7 +135,7 @@ public class SubscriptionInitializer(
             {
                 var globalCheckpoint = await database.Execute(
                     new LockCheckpoint(
-                        options.Subscriptions.GroupName,
+                        subscription.Group.Name,
                         GlobalCheckpoint.Name,
                         GlobalCheckpoint.StreamName,
                         options.Postgres
@@ -157,7 +165,7 @@ public class SubscriptionInitializer(
                 }
 
                 await database.Execute(
-                    new SetSubscriptionToActive(options.Subscriptions.GroupName, subscription.Name, options.Postgres),
+                    new SetSubscriptionToActive(subscription.Group.Name, subscription.Name, options.Postgres),
                     connection,
                     transaction,
                     cancellationToken
@@ -182,7 +190,7 @@ public class SubscriptionInitializer(
                 checkpoints.Add(
                     new CheckpointType
                     {
-                        GroupName = options.Subscriptions.GroupName,
+                        GroupName = subscription.Group.Name,
                         Name = subscription.Name,
                         StreamName = stream.Key,
                         StreamVersion = stream.Max(x => x.StreamPosition)

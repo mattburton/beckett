@@ -8,27 +8,20 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class GlobalStreamConsumer(
+    SubscriptionGroup group,
+    Channel<MessagesAvailable> channel,
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
-    BeckettOptions options,
+    PostgresOptions postgresOptions,
     ILogger<GlobalStreamConsumer> logger
-) : IGlobalStreamConsumer
+)
 {
-    private readonly Channel<MessagesAvailable> _channel = Channel.CreateBounded<MessagesAvailable>(
-        options.Subscriptions.GetConcurrency() * 2
-    );
-
-    public void Notify()
-    {
-        _channel.Writer.TryWrite(MessagesAvailable.Instance);
-    }
-
     public async Task Poll(CancellationToken stoppingToken)
     {
-        var registeredSubscriptions = SubscriptionRegistry.All().ToArray();
+        var registeredSubscriptions = group.GetSubscriptions().ToArray();
 
-        await foreach (var _ in _channel.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var _ in channel.Reader.ReadAllAsync(stoppingToken))
         {
             try
             {
@@ -42,10 +35,10 @@ public class GlobalStreamConsumer(
 
                 var checkpoint = await database.Execute(
                     new LockCheckpoint(
-                        options.Subscriptions.GroupName,
+                        group.Name,
                         GlobalCheckpoint.Name,
                         GlobalCheckpoint.StreamName,
-                        options.Postgres
+                        postgresOptions
                     ),
                     connection,
                     transaction,
@@ -65,7 +58,7 @@ public class GlobalStreamConsumer(
                     new ReadIndexBatchOptions
                     {
                         StartingGlobalPosition = checkpoint.StreamPosition,
-                        BatchSize = options.Subscriptions.GlobalStreamBatchSize
+                        BatchSize = group.GlobalStreamBatchSize
                     },
                     stoppingToken
                 );
@@ -90,7 +83,7 @@ public class GlobalStreamConsumer(
                 {
                     var subscriptionCheckpoint = new CheckpointType
                     {
-                        GroupName = options.Subscriptions.GroupName,
+                        GroupName = group.Name,
                         Name = subscription.Name,
                         StreamName = GlobalStream.Name,
                         StreamVersion = batch.Items.Where(x => x.AppliesTo(subscription))
@@ -119,14 +112,14 @@ public class GlobalStreamConsumer(
                     {
                         logger.NewMessagesFoundForSubscription(
                             subscription.Name,
-                            options.Subscriptions.GroupName,
+                            group.Name,
                             stream.Key
                         );
 
                         checkpoints.Add(
                             new CheckpointType
                             {
-                                GroupName = options.Subscriptions.GroupName,
+                                GroupName = group.Name,
                                 Name = subscription.Name,
                                 StreamName = stream.Key,
                                 StreamVersion = stream.Max(x => x.StreamPosition)
@@ -140,7 +133,7 @@ public class GlobalStreamConsumer(
                 if (checkpoints.Count > 0)
                 {
                     await database.Execute(
-                        new RecordCheckpoints(checkpoints.ToArray(), options.Postgres),
+                        new RecordCheckpoints(checkpoints.ToArray(), postgresOptions),
                         connection,
                         transaction,
                         stoppingToken
@@ -156,7 +149,7 @@ public class GlobalStreamConsumer(
                 var newGlobalPosition = batch.Items.Max(x => x.GlobalPosition);
 
                 await database.Execute(
-                    new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition, options.Postgres),
+                    new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition, postgresOptions),
                     connection,
                     transaction,
                     stoppingToken
@@ -168,7 +161,7 @@ public class GlobalStreamConsumer(
 
                 logger.UpdatedGlobalStreamPosition(newGlobalPosition);
 
-                _channel.Writer.TryWrite(MessagesAvailable.Instance);
+                channel.Writer.TryWrite(MessagesAvailable.Instance);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

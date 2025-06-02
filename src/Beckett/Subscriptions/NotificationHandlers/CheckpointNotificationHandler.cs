@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions.NotificationHandlers;
 
 public class CheckpointNotificationHandler(
-    ICheckpointConsumerGroup checkpointConsumerGroup,
+    ICheckpointNotificationChannel channel,
     ILogger<CheckpointNotificationHandler> logger
 ) : IPostgresNotificationHandler
 {
@@ -16,7 +16,7 @@ public class CheckpointNotificationHandler(
         {
             logger.StartingCheckpointNotificationPolling();
 
-            checkpointConsumerGroup.Notify(payload);
+            channel.Notify(payload);
         }
         catch (Exception e)
         {

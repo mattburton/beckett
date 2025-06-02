@@ -6,7 +6,12 @@ namespace TodoList;
 
 public static class Configuration
 {
-    public static void WithTodoList(this IBeckettBuilder builder)
+    public static void WithTodoListMessageTypes(this IBeckettBuilder builder)
+    {
+        MessageTypes(builder);
+    }
+
+    public static void WithTodoListSubscriptions(this IBeckettBuilder builder)
     {
         MessageTypes(builder);
         Subscriptions(builder);
@@ -21,11 +26,13 @@ public static class Configuration
 
     private static void Subscriptions(IBeckettBuilder builder)
     {
-        builder.AddSubscription("TodoList:Mentions")
+        var group = builder.MapGroup("TodoList");
+
+        group.AddSubscription("TodoList:Mentions")
             .Message<TodoListItemAdded>()
             .Handler(MentionsHandler.Handle);
 
-        builder.AddSubscription("TodoList:Wiretap")
+        builder.MapGroup("TodoList:Wiretap").AddSubscription("TodoList:Wiretap")
             .Category(TodoList.Category)
             .Handler(WiretapHandler.Handle);
     }

@@ -6,9 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett;
 
-public interface IBeckettBuilder : IMessageTypeBuilder, ISubscriptionBuilder;
-
-public interface IMessageTypeBuilder
+public interface IBeckettBuilder
 {
     /// <summary>
     /// Explicitly map a message type to the name that will be stored as the type in the message store. When reading a
@@ -42,20 +40,25 @@ public interface IMessageTypeBuilder
     /// <param name="newTypeName">The new type name</param>
     /// <param name="upcaster">The upcaster function</param>
     void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster);
-}
 
-public interface ISubscriptionBuilder
-{
-   /// <summary>
-    /// Add a subscription to the subscription group hosted by this application and configure it using the resulting
-    /// <see cref="ISubscriptionConfigurationBuilder"/>
+    /// <summary>
+    /// Creates an <see cref="ISubscriptionGroupBuilder"/> that allows you to configure subscriptions for a group
+    /// </summary>
+    /// <param name="groupName"></param>
+    /// <returns></returns>
+    ISubscriptionGroupBuilder MapGroup(string groupName);
+
+    /// <summary>
+    /// Add a subscription to the default subscription group hosted by this application and configure it using the
+    /// resulting <see cref="ISubscriptionConfigurationBuilder"/>. If there is more than one group configured for the
+    /// host you must use <see cref="MapGroup"/> to configure subscriptions per group.
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
     ISubscriptionConfigurationBuilder AddSubscription(string name);
 }
 
-public class BeckettBuilder(IServiceCollection services) : IBeckettBuilder
+public class BeckettBuilder(BeckettOptions options, IServiceCollection services) : IBeckettBuilder
 {
     public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
 
@@ -64,11 +67,33 @@ public class BeckettBuilder(IServiceCollection services) : IBeckettBuilder
     public void Upcast(string oldTypeName, string newTypeName, Func<JsonObject, JsonObject> upcaster) =>
         MessageUpcaster.Register(oldTypeName, newTypeName, upcaster);
 
+    public ISubscriptionGroupBuilder MapGroup(string groupName)
+    {
+        var group = options.Subscriptions.Groups.FirstOrDefault(x => x.Name == groupName);
+
+        if (group == null)
+        {
+            throw new InvalidOperationException($"There is no subscription group named {groupName} configured for this host.");
+        }
+
+        return new SubscriptionGroupBuilder(group, services);
+    }
+
     public ISubscriptionConfigurationBuilder AddSubscription(string name)
     {
-        if (!SubscriptionRegistry.TryAdd(name, out var subscription))
+        switch (options.Subscriptions.Groups.Count)
         {
-            throw new InvalidOperationException($"There is already a subscription with the name {name}");
+            case 0:
+                throw new InvalidOperationException("You must configure at least one subscription group before configuring subscriptions.");
+            case > 1:
+                throw new InvalidOperationException("There is more than one subscription group configured for this host - you must use builder.MapGroup to configure subscriptions per group.");
+        }
+
+        var group = options.Subscriptions.Groups[0];
+
+        if (!group.TryAddSubscription(name, out var subscription))
+        {
+            throw new InvalidOperationException($"There is already a subscription with the name {name} in the group {group.Name}");
         }
 
         return new SubscriptionConfigurationBuilder(subscription, services);

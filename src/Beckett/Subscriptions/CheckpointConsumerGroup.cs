@@ -5,38 +5,26 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class CheckpointConsumerGroup(
+    SubscriptionGroup group,
     BeckettOptions options,
+    Channel<CheckpointAvailable> channel,
     IPostgresDatabase database,
     ICheckpointProcessor checkpointProcessor,
-    ILogger<CheckpointConsumer> logger
-) : ICheckpointConsumerGroup
+    ILoggerFactory loggerFactory
+)
 {
-    private readonly Channel<CheckpointAvailable> _channel = Channel.CreateBounded<CheckpointAvailable>(
-        options.Subscriptions.GetConcurrency() * 2
-    );
-
-    public void Notify(string groupName)
-    {
-        if (options.Subscriptions.GroupName != groupName)
-        {
-            return;
-        }
-
-        _channel.Writer.TryWrite(CheckpointAvailable.Instance);
-    }
-
     public async Task Poll(CancellationToken stoppingToken)
     {
-        var tasks = Enumerable.Range(1, options.Subscriptions.GetConcurrency()).Select(
+        var tasks = Enumerable.Range(1, group.GetConcurrency()).Select(
             x => new CheckpointConsumer(
+                group,
+                channel,
                 database,
                 checkpointProcessor,
                 options,
-                logger
-            ).Poll(x, _channel, stoppingToken)
+                loggerFactory.CreateLogger<CheckpointConsumer>()
+            ).Poll(x, stoppingToken)
         ).ToArray();
-
-        stoppingToken.Register(() => _channel.Writer.Complete());
 
         await Task.WhenAll(tasks);
     }
