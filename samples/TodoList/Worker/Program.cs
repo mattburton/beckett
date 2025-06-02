@@ -23,7 +23,6 @@ try
         options =>
         {
             options.WithSubscriptionGroup("TodoList");
-            options.WithSubscriptionGroup("TodoList:Wiretap");
         }
     ).WithTodoListSubscriptions();
 

@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.Database.Queries;
 using Beckett.Database.Types;
 using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
@@ -65,31 +64,7 @@ public class SubscriptionInitializer(
                 continue;
             }
 
-            var advisoryLockKey = subscription.GetAdvisoryLockKey(group.Name);
-
-            var locked = await database.Execute(
-                new TryAdvisoryLock(advisoryLockKey, options.Postgres),
-                connection,
-                cancellationToken
-            );
-
-            if (!locked)
-            {
-                continue;
-            }
-
-            try
-            {
-                await InitializeSubscription(subscription, cancellationToken);
-            }
-            finally
-            {
-                await database.Execute(
-                    new AdvisoryUnlock(advisoryLockKey, options.Postgres),
-                    connection,
-                    cancellationToken
-                );
-            }
+            await InitializeSubscription(subscription, cancellationToken);
         }
     }
 
@@ -164,12 +139,34 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
-                await database.Execute(
-                    new SetSubscriptionToActive(subscription.Group.Name, subscription.Name, options.Postgres),
-                    connection,
-                    transaction,
-                    cancellationToken
-                );
+                // subscriptions for a new group can just be activated immediately vs put into replay mode
+                if (globalCheckpoint.StreamPosition == 0)
+                {
+                    await database.Execute(
+                        new SetSubscriptionToActive(
+                            subscription.Group.Name,
+                            subscription.Name,
+                            options.Postgres
+                        ),
+                        connection,
+                        transaction,
+                        cancellationToken
+                    );
+                }
+                else
+                {
+                    await database.Execute(
+                        new SetSubscriptionToReplay(
+                            subscription.Group.Name,
+                            subscription.Name,
+                            globalCheckpoint.StreamPosition,
+                            options.Postgres
+                        ),
+                        connection,
+                        transaction,
+                        cancellationToken
+                    );
+                }
 
                 await transaction.CommitAsync(cancellationToken);
 

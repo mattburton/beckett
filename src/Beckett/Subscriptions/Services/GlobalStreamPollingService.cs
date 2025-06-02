@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -29,24 +30,36 @@ public class GlobalStreamPollingService(
 
         var groupChannel = channel.For(group.Name);
 
+        //start polling immediately then poll on an interval after that
+        await TriggerPollingForGroup(group, groupChannel, stoppingToken);
+
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            try
-            {
-                logger.StartingGlobalStreamIntervalPolling(group.Name);
+            await TriggerPollingForGroup(group, groupChannel, stoppingToken);
+        }
+    }
 
-                groupChannel.Writer.TryWrite(MessagesAvailable.Instance);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Unhandled error - will retry in 10 seconds");
+    private async Task TriggerPollingForGroup(
+        SubscriptionGroup group,
+        Channel<MessagesAvailable> groupChannel,
+        CancellationToken stoppingToken
+    )
+    {
+        try
+        {
+            logger.StartingGlobalStreamIntervalPolling(group.Name);
 
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
-            }
+            groupChannel.Writer.TryWrite(MessagesAvailable.Instance);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Unhandled error - will retry in 10 seconds");
+
+            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
         }
     }
 }

@@ -43,9 +43,7 @@ public class Subscription(SubscriptionGroup group, string name)
         Handler = new SubscriptionHandler(this, HandlerDelegate);
     }
 
-    internal string GetAdvisoryLockKey(string groupName) => $"{groupName}:{Name}";
-
-    internal int GetMaxRetryCount(BeckettOptions options, Type exceptionType)
+    internal int GetMaxRetryCount(Type exceptionType)
     {
         var defaultIsConfigured = group.MaxRetriesByExceptionType.TryGetValue(
             exceptionType,

@@ -422,7 +422,8 @@ CREATE TYPE __schema__.subscription_status AS ENUM (
   'uninitialized',
   'active',
   'paused',
-  'unknown'
+  'unknown',
+  'replay'
 );
 
 CREATE TYPE __schema__.checkpoint_status AS ENUM (
@@ -436,10 +437,11 @@ CREATE TABLE IF NOT EXISTS __schema__.subscriptions
   group_name text NOT NULL,
   name text NOT NULL,
   status __schema__.subscription_status DEFAULT 'uninitialized' NOT NULL,
+  replay_target_position bigint NULL,
   PRIMARY KEY (group_name, name)
 );
 
-CREATE INDEX ix_subscriptions_active ON __schema__.subscriptions (group_name, name, status) WHERE status = 'active';
+CREATE INDEX ix_subscriptions_reservation_candidates ON beckett.subscriptions (group_name, name, status) WHERE status = 'active' OR status = 'replay';
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
@@ -550,7 +552,29 @@ AND name = _name
 AND stream_name = '$initializing';
 
 UPDATE __schema__.subscriptions
-SET status = 'active'
+SET status = 'active',
+    replay_target_position = NULL
+WHERE group_name = _group_name
+AND name = _name;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_replay(
+  _group_name text,
+  _name text,
+  _replay_target_position bigint
+)
+  RETURNS void
+  LANGUAGE sql
+AS
+$$
+DELETE FROM __schema__.checkpoints
+WHERE group_name = _group_name
+AND name = _name
+AND stream_name = '$initializing';
+
+UPDATE __schema__.subscriptions
+SET status = 'replay',
+    replay_target_position = _replay_target_position
 WHERE group_name = _group_name
 AND name = _name;
 $$;
@@ -698,7 +722,10 @@ $$;
 
 CREATE OR REPLACE FUNCTION __schema__.reserve_next_available_checkpoint(
   _group_name text,
-  _reservation_timeout interval
+  _reservation_timeout interval,
+  _reserve_any boolean,
+  _reserve_active_only boolean,
+  _reserve_replay_only boolean
 )
   RETURNS TABLE (
     id bigint,
@@ -708,7 +735,8 @@ CREATE OR REPLACE FUNCTION __schema__.reserve_next_available_checkpoint(
     stream_position bigint,
     stream_version bigint,
     retry_attempts int,
-    status __schema__.checkpoint_status
+    status __schema__.checkpoint_status,
+    replay_target_position bigint
   )
   LANGUAGE sql
 AS
@@ -716,13 +744,15 @@ $$
 UPDATE __schema__.checkpoints c
 SET reserved_until = now() + _reservation_timeout
 FROM (
-  SELECT c.id
+  SELECT c.id, s.replay_target_position
   FROM __schema__.checkpoints c
   INNER JOIN __schema__.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
   WHERE c.group_name = _group_name
   AND c.process_at <= now()
   AND c.reserved_until IS NULL
-  AND s.status = 'active'
+  AND (_reserve_any = false OR (s.status = 'active' OR s.status = 'replay'))
+  AND (_reserve_active_only = false OR s.status = 'active')
+  AND (_reserve_replay_only = false OR s.status = 'replay')
   ORDER BY c.process_at
   LIMIT 1
   FOR UPDATE
@@ -737,7 +767,8 @@ RETURNING
   c.stream_position,
   c.stream_version,
   coalesce(array_length(c.retries, 1), 0) as retry_attempts,
-  c.status;
+  c.status,
+  d.replay_target_position;
 $$;
 
 CREATE OR REPLACE FUNCTION __schema__.update_system_checkpoint_position(
@@ -880,26 +911,6 @@ $$;
 -------------------------------------------------
 -- UTILITIES
 -------------------------------------------------
-CREATE OR REPLACE FUNCTION __schema__.try_advisory_lock(
-  _key text
-)
-  RETURNS boolean
-  LANGUAGE sql
-AS
-$$
-SELECT pg_try_advisory_lock(abs(hashtextextended(_key, 0)));
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.advisory_unlock(
-  _key text
-)
-  RETURNS boolean
-  LANGUAGE sql
-AS
-$$
-SELECT pg_advisory_unlock(abs(hashtextextended(_key, 0)));
-$$;
-
 CREATE OR REPLACE FUNCTION __schema__.delete_subscription(_group_name text, _name text)
   RETURNS void
   LANGUAGE plpgsql
@@ -911,6 +922,32 @@ BEGIN
   AND name = _name;
 
   DELETE FROM __schema__.subscriptions
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.replay_subscription(_group_name text, _name text)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.checkpoints
+  SET stream_position = 0
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  WITH global_position AS (
+    SELECT stream_position
+    FROM beckett.checkpoints
+    WHERE group_name = _group_name
+    AND name = '$global'
+  )
+  UPDATE __schema__.subscriptions
+  SET status = 'replay',
+      replay_target_position = global_position.stream_position
+  FROM global_position
   WHERE group_name = _group_name
   AND name = _name;
 END;

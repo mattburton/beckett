@@ -32,8 +32,9 @@ public static class Configuration
             .Message<TodoListItemAdded>()
             .Handler(MentionsHandler.Handle);
 
-        builder.MapGroup("TodoList:Wiretap").AddSubscription("TodoList:Wiretap")
+        group.AddSubscription("TodoList:Wiretap")
             .Category(TodoList.Category)
-            .Handler(WiretapHandler.Handle);
+            .Handler(WiretapHandler.Handle)
+            .StartingPosition(StartingPosition.Earliest);
     }
 }

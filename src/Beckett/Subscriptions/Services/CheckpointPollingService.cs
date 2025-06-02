@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -22,24 +23,35 @@ public class CheckpointPollingService(
 
         var groupChannel = channel.For(group.Name);
 
+        //start polling immediately then poll on an interval after that
+        await TriggerPollingForGroup(groupChannel, stoppingToken);
+
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            try
-            {
-                logger.StartingCheckpointIntervalPolling();
+            await TriggerPollingForGroup(groupChannel, stoppingToken);
+        }
+    }
 
-                groupChannel.Writer.TryWrite(CheckpointAvailable.Instance);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Unhandled error - will retry in 10 seconds");
+    private async Task TriggerPollingForGroup(
+        Channel<CheckpointAvailable> groupChannel,
+        CancellationToken stoppingToken
+    )
+    {
+        try
+        {
+            logger.StartingCheckpointIntervalPolling();
 
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
-            }
+            groupChannel.Writer.TryWrite(CheckpointAvailable.Instance);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Unhandled error - will retry in 10 seconds");
+
+            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
         }
     }
 }

@@ -24,6 +24,13 @@ public class SubscriptionOptions
     /// </summary>
     public int InitializationConcurrency { get; set; } = 5;
 
+    /// <summary>
+    /// Control whether this host processes all subscriptions, active-only, or replay-only. An example of where this
+    /// setting is helpful is when you want to have dedicated services for active vs replay to allow subscriptions to be
+    /// replayed without affecting the rest of the system.
+    /// </summary>
+    public ReplayMode ReplayMode { get; set; } = ReplayMode.All;
+
     public IReadOnlyList<SubscriptionGroup> Groups => _groups.Values.ToArray();
 
     public SubscriptionGroup WithSubscriptionGroup(string name, Action<SubscriptionGroup>? configure)

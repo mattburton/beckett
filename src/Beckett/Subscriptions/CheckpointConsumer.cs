@@ -32,6 +32,7 @@ public class CheckpointConsumer(
                     new ReserveNextAvailableCheckpoint(
                         group.Name,
                         group.ReservationTimeout,
+                        options.Subscriptions.ReplayMode,
                         options.Postgres
                     ),
                     stoppingToken
