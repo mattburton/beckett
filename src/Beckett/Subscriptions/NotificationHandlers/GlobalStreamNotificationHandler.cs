@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.NotificationHandlers;
 
-public class MessageNotificationHandler(
-    IGlobalStreamConsumer globalStreamConsumer,
-    ILogger<MessageNotificationHandler> logger
+public class GlobalStreamNotificationHandler(
+    IGlobalStreamNotificationChannel channel,
+    ILogger<GlobalStreamNotificationHandler> logger
 ) : IPostgresNotificationHandler
 {
     public string Channel => "beckett:messages";
@@ -16,7 +16,7 @@ public class MessageNotificationHandler(
         {
             logger.StartingGlobalStreamNotificationPolling();
 
-            globalStreamConsumer.Notify();
+            channel.Notify();
         }
         catch (Exception e)
         {

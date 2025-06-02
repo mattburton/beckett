@@ -1,11 +1,28 @@
+using Beckett.Database;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Services;
 
-public class CheckpointConsumerGroupHost(ICheckpointConsumerGroup consumerGroup) : BackgroundService
+public class CheckpointConsumerGroupHost(
+    BeckettOptions options,
+    ICheckpointNotificationChannel channel,
+    IPostgresDatabase database,
+    ICheckpointProcessor processor,
+    ILoggerFactory loggerFactory
+) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await consumerGroup.Poll(stoppingToken);
+        var consumerGroups = options.Subscriptions.Groups.Select(BuildConsumerGroupForSubscriptionGroup);
+
+        var tasks = consumerGroups.Select(x => x.Poll(stoppingToken)).ToArray();
+
+        await Task.WhenAll(tasks);
+    }
+
+    private CheckpointConsumerGroup BuildConsumerGroupForSubscriptionGroup(SubscriptionGroup group)
+    {
+        return new CheckpointConsumerGroup(group, options, channel.For(group.Name), database, processor, loggerFactory);
     }
 }

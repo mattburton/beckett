@@ -19,15 +19,15 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ISubscriptionInitializer, SubscriptionInitializer>();
 
-        services.AddSingleton<IGlobalStreamConsumer, GlobalStreamConsumer>();
+        services.AddSingleton<IGlobalStreamNotificationChannel, GlobalStreamNotificationChannel>();
+
+        services.AddSingleton<ICheckpointNotificationChannel, CheckpointNotificationChannel>();
 
         services.AddSingleton<ICheckpointProcessor, CheckpointProcessor>();
 
-        services.AddSingleton<ICheckpointConsumerGroup, CheckpointConsumerGroup>();
-
         services.AddSingleton<IPostgresNotificationHandler, CheckpointNotificationHandler>();
 
-        services.AddSingleton<IPostgresNotificationHandler, MessageNotificationHandler>();
+        services.AddSingleton<IPostgresNotificationHandler, GlobalStreamNotificationHandler>();
 
         services.AddHostedService<BootstrapSubscriptions>();
 

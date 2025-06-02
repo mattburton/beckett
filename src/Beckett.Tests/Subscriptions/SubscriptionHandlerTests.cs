@@ -8,7 +8,7 @@ namespace Beckett.Tests.Subscriptions;
 
 public class SubscriptionHandlerTests
 {
-    private readonly Subscription _subscription = new("test");
+    private readonly Subscription _subscription = new(new SubscriptionGroup("test"), "test");
     private readonly IServiceProvider _serviceProvider;
     private readonly ITestService _testService = new TestService();
     private readonly TestResultHandler _testResultHandler = new();

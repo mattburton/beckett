@@ -25,8 +25,7 @@ public class CheckpointProcessor(
 
         var result = await HandleMessageBatch(
             checkpoint,
-            subscription,
-            options.Subscriptions.SubscriptionStreamBatchSize
+            subscription
         );
 
         switch (result)
@@ -51,8 +50,8 @@ public class CheckpointProcessor(
 
                 DateTimeOffset? processAt = status == CheckpointStatus.Retry
                     ? attempt.GetNextDelayWithExponentialBackoff(
-                        options.Subscriptions.Retries.InitialDelay,
-                        options.Subscriptions.Retries.MaxDelay
+                        subscription.Group.Retries.InitialDelay,
+                        subscription.Group.Retries.MaxDelay
                     )
                     : null;
 
@@ -77,15 +76,14 @@ public class CheckpointProcessor(
 
     private async Task<IMessageBatchResult> HandleMessageBatch(
         Checkpoint checkpoint,
-        Subscription subscription,
-        int batchSize
+        Subscription subscription
     )
     {
         IReadOnlyList<IMessageContext> messageBatch;
 
         try
         {
-            messageBatch = await ReadMessageBatch(checkpoint, subscription, batchSize);
+            messageBatch = await ReadMessageBatch(checkpoint, subscription);
         }
         catch (Exception e)
         {
@@ -111,7 +109,7 @@ public class CheckpointProcessor(
                     return NoMessages.Instance;
                 }
 
-                var readPosition = checkpoint.StreamPosition + options.Subscriptions.SubscriptionStreamBatchSize;
+                var readPosition = checkpoint.StreamPosition + subscription.Group.SubscriptionStreamBatchSize;
 
                 if (readPosition > checkpoint.StreamVersion)
                 {
@@ -189,7 +187,7 @@ public class CheckpointProcessor(
 
         using var cts = new CancellationTokenSource();
 
-        cts.CancelAfter(options.Subscriptions.ReservationTimeout);
+        cts.CancelAfter(subscription.Group.ReservationTimeout);
 
         try
         {
@@ -203,7 +201,7 @@ public class CheckpointProcessor(
         catch (OperationCanceledException e) when (cts.IsCancellationRequested)
         {
             throw new TimeoutException(
-                $"Handler exceeded the reservation timeout of {options.Subscriptions.ReservationTimeout.TotalSeconds} seconds while handling message {messageContext.Id} for checkpoint {checkpoint.Id}",
+                $"Handler exceeded the reservation timeout of {subscription.Group.ReservationTimeout.TotalSeconds} seconds while handling message {messageContext.Id} for checkpoint {checkpoint.Id}",
                 e
             );
         }
@@ -217,7 +215,7 @@ public class CheckpointProcessor(
     {
         using var cts = new CancellationTokenSource();
 
-        cts.CancelAfter(options.Subscriptions.ReservationTimeout);
+        cts.CancelAfter(subscription.Group.ReservationTimeout);
 
         try
         {
@@ -237,7 +235,7 @@ public class CheckpointProcessor(
         catch (OperationCanceledException e) when (cts.IsCancellationRequested)
         {
             throw new TimeoutException(
-                $"Handler exceeded the reservation timeout of {options.Subscriptions.ReservationTimeout.TotalSeconds} seconds while handling message batch starting with {messages[0].Id} for checkpoint {checkpoint.Id}",
+                $"Handler exceeded the reservation timeout of {subscription.Group.ReservationTimeout.TotalSeconds} seconds while handling message batch starting with {messages[0].Id} for checkpoint {checkpoint.Id}",
                 e
             );
         }
@@ -245,8 +243,7 @@ public class CheckpointProcessor(
 
     private async Task<IReadOnlyList<IMessageContext>> ReadMessageBatch(
         Checkpoint checkpoint,
-        Subscription subscription,
-        int batchSize
+        Subscription subscription
     )
     {
         var startingStreamPosition = checkpoint.StartingPositionFor(subscription);
@@ -269,9 +266,9 @@ public class CheckpointProcessor(
         {
             var count = endingStreamPosition - checkpoint.StreamPosition;
 
-            if (count > batchSize)
+            if (count > subscription.Group.SubscriptionStreamBatchSize)
             {
-                endingStreamPosition = checkpoint.StreamPosition + batchSize;
+                endingStreamPosition = checkpoint.StreamPosition + subscription.Group.SubscriptionStreamBatchSize;
             }
         }
 
@@ -281,7 +278,7 @@ public class CheckpointProcessor(
                 new ReadGlobalStreamOptions
                 {
                     StartingGlobalPosition = startingStreamPosition,
-                    Count = batchSize,
+                    Count = subscription.Group.SubscriptionStreamBatchSize,
                     Category = subscription.Category,
                     Types = subscription.MessageTypeNames.ToArray()
                 },

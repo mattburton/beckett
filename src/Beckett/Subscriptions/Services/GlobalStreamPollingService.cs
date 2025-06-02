@@ -4,29 +4,38 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions.Services;
 
 public class GlobalStreamPollingService(
-    IGlobalStreamConsumer globalStreamConsumer,
-    SubscriptionOptions options,
+    BeckettOptions options,
+    IGlobalStreamNotificationChannel channel,
     ILogger<GlobalStreamPollingService> logger
 ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (options.GlobalStreamPollingInterval == TimeSpan.Zero)
+        var tasks = options.Subscriptions.Groups.Select(x => ExecuteForSubscriptionGroup(x, stoppingToken)).ToArray();
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task ExecuteForSubscriptionGroup(SubscriptionGroup group, CancellationToken stoppingToken)
+    {
+        if (group.GlobalStreamPollingInterval == TimeSpan.Zero)
         {
             logger.LogInformation("Disabling global stream polling - the polling interval is set to zero.");
 
             return;
         }
 
-        var timer = new PeriodicTimer(options.GlobalStreamPollingInterval);
+        var timer = new PeriodicTimer(group.GlobalStreamPollingInterval);
+
+        var groupChannel = channel.For(group.Name);
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
             {
-                logger.StartingGlobalStreamIntervalPolling();
+                logger.StartingGlobalStreamIntervalPolling(group.Name);
 
-                globalStreamConsumer.Notify();
+                groupChannel.Writer.TryWrite(MessagesAvailable.Instance);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -44,6 +53,6 @@ public class GlobalStreamPollingService(
 
 public static partial class Log
 {
-    [LoggerMessage(0, LogLevel.Trace, "Starting global stream interval polling")]
-    public static partial void StartingGlobalStreamIntervalPolling(this ILogger logger);
+    [LoggerMessage(0, LogLevel.Trace, "Starting global stream interval polling for group {GroupName}")]
+    public static partial void StartingGlobalStreamIntervalPolling(this ILogger logger, string groupName);
 }

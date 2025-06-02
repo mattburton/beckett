@@ -13,6 +13,13 @@ public class RecoverExpiredCheckpointReservationsService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var tasks = options.Subscriptions.Groups.Select(x => ExecuteForSubscriptionGroup(x, stoppingToken)).ToArray();
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task ExecuteForSubscriptionGroup(SubscriptionGroup group, CancellationToken stoppingToken)
+    {
         while (true)
         {
             try
@@ -21,8 +28,8 @@ public class RecoverExpiredCheckpointReservationsService(
 
                 var recovered = await database.Execute(
                     new RecoverExpiredCheckpointReservations(
-                        options.Subscriptions.GroupName,
-                        options.Subscriptions.ReservationRecoveryBatchSize,
+                        group.Name,
+                        group.ReservationRecoveryBatchSize,
                         options.Postgres
                     ),
                     stoppingToken
@@ -30,11 +37,11 @@ public class RecoverExpiredCheckpointReservationsService(
 
                 if (recovered <= 0)
                 {
-                    await Task.Delay(options.Subscriptions.ReservationRecoveryInterval, stoppingToken);
+                    await Task.Delay(group.ReservationRecoveryInterval, stoppingToken);
                 }
                 else
                 {
-                    logger.RecoveredExpiredCheckpointReservations(recovered);
+                    logger.RecoveredExpiredCheckpointReservations(recovered, group.Name);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -53,6 +60,6 @@ public class RecoverExpiredCheckpointReservationsService(
 
 public static partial class Log
 {
-    [LoggerMessage(0, LogLevel.Information, "Recovered {Count} expired checkpoint reservation(s)")]
-    public static partial void RecoveredExpiredCheckpointReservations(this ILogger logger, int count);
+    [LoggerMessage(0, LogLevel.Information, "Recovered {Count} expired checkpoint reservation(s) for group {GroupName}")]
+    public static partial void RecoveredExpiredCheckpointReservations(this ILogger logger, int count, string groupName);
 }

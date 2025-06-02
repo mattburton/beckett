@@ -3,7 +3,6 @@ using Beckett.OpenTelemetry;
 using Beckett.Scheduling;
 using Beckett.Storage;
 using Beckett.Subscriptions;
-using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett;
@@ -38,12 +37,10 @@ public static class ServiceCollectionExtensions
 
         services.AddPostgresSupport(options);
 
-        services.AddRetrySupport(options);
-
         services.AddScheduledMessageSupport(options);
 
         services.AddSubscriptionSupport(options);
 
-        return new BeckettBuilder(services);
+        return new BeckettBuilder(options, services);
     }
 }

@@ -4,14 +4,23 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions.Services;
 
 public class CheckpointPollingService(
-    SubscriptionOptions options,
-    ICheckpointConsumerGroup consumerGroup,
+    BeckettOptions options,
+    ICheckpointNotificationChannel channel,
     ILogger<CheckpointPollingService> logger
 ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var timer = new PeriodicTimer(options.CheckpointPollingInterval);
+        var tasks = options.Subscriptions.Groups.Select(x => ExecuteForSubscriptionGroup(x, stoppingToken)).ToArray();
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task ExecuteForSubscriptionGroup(SubscriptionGroup group, CancellationToken stoppingToken)
+    {
+        var timer = new PeriodicTimer(group.CheckpointPollingInterval);
+
+        var groupChannel = channel.For(group.Name);
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
@@ -19,7 +28,7 @@ public class CheckpointPollingService(
             {
                 logger.StartingCheckpointIntervalPolling();
 
-                consumerGroup.Notify(options.GroupName);
+                groupChannel.Writer.TryWrite(CheckpointAvailable.Instance);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

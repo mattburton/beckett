@@ -2,8 +2,9 @@ using Beckett.Messages;
 
 namespace Beckett.Subscriptions;
 
-public class Subscription(string name)
+public class Subscription(SubscriptionGroup group, string name)
 {
+    internal SubscriptionGroup Group => group;
     internal string Name { get; } = name;
     internal string? Category { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];
@@ -46,7 +47,7 @@ public class Subscription(string name)
 
     internal int GetMaxRetryCount(BeckettOptions options, Type exceptionType)
     {
-        var defaultIsConfigured = options.Subscriptions.MaxRetriesByExceptionType.TryGetValue(
+        var defaultIsConfigured = group.MaxRetriesByExceptionType.TryGetValue(
             exceptionType,
             out var defaultMaxRetries
         );
@@ -63,6 +64,6 @@ public class Subscription(string name)
 
         return defaultIsConfigured
             ? defaultMaxRetries
-            : options.Subscriptions.MaxRetriesByExceptionType[typeof(Exception)];
+            : group.MaxRetriesByExceptionType[typeof(Exception)];
     }
 }

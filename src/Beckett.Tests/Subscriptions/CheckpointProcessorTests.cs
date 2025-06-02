@@ -19,20 +19,15 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task only_reads_messages_up_to_stream_version()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 0, 10, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
+                var options = new BeckettOptions();
+                var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.SubscriptionStreamBatchSize = 10);
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 10, 0, CheckpointStatus.Active);
+                var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        SubscriptionStreamBatchSize = 10
-                    }
-                };
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
@@ -51,20 +46,15 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task only_reads_messages_up_to_batch_size()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 0, 20, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
+                var options = new BeckettOptions();
+                var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.SubscriptionStreamBatchSize = 10);
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 20, 0, CheckpointStatus.Active);
+                var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        SubscriptionStreamBatchSize = 10
-                    }
-                };
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
@@ -86,8 +76,10 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
+                var options = new BeckettOptions();
+                var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1));
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
                     {
@@ -96,13 +88,6 @@ public class CheckpointProcessorTests
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                    }
-                };
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
@@ -124,8 +109,10 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
+                var options = new BeckettOptions();
+                var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1));
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IMessageContext _, CancellationToken ct) =>
                     {
@@ -134,13 +121,6 @@ public class CheckpointProcessorTests
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                    }
-                };
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
@@ -162,20 +142,15 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task only_reads_one_message_to_retry()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 20, 0, CheckpointStatus.Retry);
-                var subscription = new Subscription("test")
+                var options = new BeckettOptions();
+                var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.SubscriptionStreamBatchSize = 10);
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
+                var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        SubscriptionStreamBatchSize = 10
-                    }
-                };
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
@@ -197,8 +172,10 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
+                var options = new BeckettOptions();
+                var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1));
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = async (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
                     {
@@ -207,13 +184,6 @@ public class CheckpointProcessorTests
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                    }
-                };
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
@@ -235,8 +205,10 @@ public class CheckpointProcessorTests
             [Fact]
             public async Task throws_timeout_exception()
             {
-                var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription("test")
+                var options = new BeckettOptions();
+                var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1));
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+                var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
                     {
@@ -245,13 +217,6 @@ public class CheckpointProcessorTests
                 };
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
-                var options = new BeckettOptions
-                {
-                    Subscriptions =
-                    {
-                        ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                    }
-                };
                 var messageStorage = Substitute.For<IMessageStorage>();
                 var database = Substitute.For<IPostgresDatabase>();
                 var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
@@ -275,20 +240,15 @@ public class CheckpointProcessorTests
                 [Fact]
                 public async Task only_reads_messages_up_to_stream_version()
                 {
-                    var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 10, 0, CheckpointStatus.Retry);
-                    var subscription = new Subscription("test")
+                    var options = new BeckettOptions();
+                    var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.SubscriptionStreamBatchSize = 10);
+                    var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 10, 0, CheckpointStatus.Retry);
+                    var subscription = new Subscription(group, "test")
                     {
                         HandlerDelegate = (IReadOnlyList<IMessageContext> _) => { }
                     };
                     subscription.RegisterMessageType<TestMessage>();
                     subscription.BuildHandler();
-                    var options = new BeckettOptions
-                    {
-                        Subscriptions =
-                        {
-                            SubscriptionStreamBatchSize = 10
-                        }
-                    };
                     var messageStorage = Substitute.For<IMessageStorage>();
                     var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
@@ -307,20 +267,15 @@ public class CheckpointProcessorTests
                 [Fact]
                 public async Task only_reads_messages_up_to_batch_size()
                 {
-                    var checkpoint = new Checkpoint(1, "test", "test", "test", 1, 20, 0, CheckpointStatus.Retry);
-                    var subscription = new Subscription("test")
+                    var options = new BeckettOptions();
+                    var group = options.WithSubscriptionGroup(Guid.NewGuid().ToString(), x => x.SubscriptionStreamBatchSize = 10);
+                    var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
+                    var subscription = new Subscription(group, "test")
                     {
                         HandlerDelegate = (IReadOnlyList<IMessageContext> _) => { }
                     };
                     subscription.RegisterMessageType<TestMessage>();
                     subscription.BuildHandler();
-                    var options = new BeckettOptions
-                    {
-                        Subscriptions =
-                        {
-                            SubscriptionStreamBatchSize = 10
-                        }
-                    };
                     var messageStorage = Substitute.For<IMessageStorage>();
                     var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 

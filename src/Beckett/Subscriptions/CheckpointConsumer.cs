@@ -6,13 +6,15 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions;
 
 public class CheckpointConsumer(
+    SubscriptionGroup group,
+    Channel<CheckpointAvailable> channel,
     IPostgresDatabase database,
     ICheckpointProcessor checkpointProcessor,
     BeckettOptions options,
     ILogger<CheckpointConsumer> logger
 )
 {
-    public async Task Poll(int instance, Channel<CheckpointAvailable> channel, CancellationToken stoppingToken)
+    public async Task Poll(int instance, CancellationToken stoppingToken)
     {
         logger.StartingCheckpointPolling(instance);
 
@@ -28,8 +30,8 @@ public class CheckpointConsumer(
                 //to shutting down the host - reservation timeout applies
                 var checkpoint = await database.Execute(
                     new ReserveNextAvailableCheckpoint(
-                        options.Subscriptions.GroupName,
-                        options.Subscriptions.ReservationTimeout,
+                        group.Name,
+                        group.ReservationTimeout,
                         options.Postgres
                     ),
                     stoppingToken
@@ -54,13 +56,13 @@ public class CheckpointConsumer(
                     continue;
                 }
 
-                var subscription = SubscriptionRegistry.GetSubscription(checkpoint.Name);
+                var subscription = group.GetSubscription(checkpoint.Name);
 
                 if (subscription == null)
                 {
                     logger.SubscriptionNotRegistered(
                         checkpoint.Name,
-                        options.Subscriptions.GroupName,
+                        group.Name,
                         checkpoint.Id,
                         instance
                     );

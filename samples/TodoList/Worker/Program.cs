@@ -23,8 +23,9 @@ try
         options =>
         {
             options.WithSubscriptionGroup("TodoList");
+            options.WithSubscriptionGroup("TodoList:Wiretap");
         }
-    ).WithTodoList();
+    ).WithTodoListSubscriptions();
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("todo-list-worker"))
