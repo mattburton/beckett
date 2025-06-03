@@ -538,6 +538,32 @@ AND status = 'uninitialized'
 LIMIT 1;
 $$;
 
+CREATE OR REPLACE FUNCTION __schema__.replay_subscription(_group_name text, _name text)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.checkpoints
+  SET stream_position = 0
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  WITH global_position AS (
+    SELECT stream_position
+    FROM beckett.checkpoints
+    WHERE group_name = _group_name
+    AND name = '$global'
+  )
+  UPDATE __schema__.subscriptions
+  SET status = 'replay',
+      replay_target_position = global_position.stream_position
+  FROM global_position
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION __schema__.set_subscription_to_active(
   _group_name text,
   _name text
@@ -922,32 +948,6 @@ BEGIN
   AND name = _name;
 
   DELETE FROM __schema__.subscriptions
-  WHERE group_name = _group_name
-  AND name = _name;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.replay_subscription(_group_name text, _name text)
-  RETURNS void
-  LANGUAGE plpgsql
-AS
-$$
-BEGIN
-  UPDATE __schema__.checkpoints
-  SET stream_position = 0
-  WHERE group_name = _group_name
-  AND name = _name;
-
-  WITH global_position AS (
-    SELECT stream_position
-    FROM beckett.checkpoints
-    WHERE group_name = _group_name
-    AND name = '$global'
-  )
-  UPDATE __schema__.subscriptions
-  SET status = 'replay',
-      replay_target_position = global_position.stream_position
-  FROM global_position
   WHERE group_name = _group_name
   AND name = _name;
 END;

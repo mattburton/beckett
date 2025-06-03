@@ -22,6 +22,7 @@
             {
               SubscriptionStatus.Active => "text-bg-success",
               SubscriptionStatus.Paused => "text-bg-secondary",
+              SubscriptionStatus.Replay => "text-bg-danger",
               SubscriptionStatus.Uninitialized => "text-bg-warning",
               SubscriptionStatus.Unknown => "text-bg-warning",
               _ => throw new ArgumentOutOfRangeException()
@@ -51,13 +52,16 @@
               Resume
             </button>
           }
-          <button class="btn btn-danger ms-2"
-                  title="Reset Subscription"
-                  hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/reset"
-                  hx-confirm="Are you sure you want to reset this subscription?"
-                  hx-on::response-error="alert('Unable to reset subscription at this time - please try again later')">
-            Reset
-          </button>
+          @if (Model.Details.Status != SubscriptionStatus.Replay)
+          {
+            <button class="btn btn-danger ms-2"
+                    title="Replay Subscription"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/replay"
+                    hx-confirm="Are you sure you want to replay this subscription?"
+                    hx-on::response-error="alert('Unable to replay subscription at this time - please try again later')">
+              Replay
+            </button>
+          }
         </div>
       </div>
     </div>

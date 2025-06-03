@@ -35,6 +35,7 @@ public static class Configuration
         group.AddSubscription("TodoList:Wiretap")
             .Category(TodoList.Category)
             .Handler(WiretapHandler.Handle)
-            .StartingPosition(StartingPosition.Earliest);
+            .StartingPosition(StartingPosition.Earliest)
+            .SkipDuringReplay();
     }
 }
