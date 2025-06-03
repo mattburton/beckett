@@ -26,16 +26,12 @@ public static class Configuration
 
     private static void Subscriptions(IBeckettBuilder builder)
     {
-        var group = builder.MapGroup("TodoList");
-
-        group.AddSubscription("TodoList:Mentions")
+        builder.AddSubscription("TodoList:Mentions")
             .Message<TodoListItemAdded>()
             .Handler(MentionsHandler.Handle);
 
-        group.AddSubscription("TodoList:Wiretap")
+        builder.AddSubscription("TodoList:Wiretap")
             .Category(TodoList.Category)
-            .Handler(WiretapHandler.Handle)
-            .StartingPosition(StartingPosition.Earliest)
-            .SkipDuringReplay();
+            .Handler(WiretapHandler.Handle);
     }
 }

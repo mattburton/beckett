@@ -1,11 +1,10 @@
 using Beckett.Database;
 
-namespace Beckett.Dashboard.Subscriptions.Subscriptions;
+namespace Beckett.Dashboard.Subscriptions.Groups;
 
-public static class SubscriptionsEndpoint
+public static class GroupsEndpoint
 {
     public static async Task<IResult> Handle(
-        string groupName,
         string? query,
         int? page,
         int? pageSize,
@@ -19,14 +18,13 @@ public static class SubscriptionsEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new SubscriptionsQuery(groupName, query, offset, pageSizeParameter, options),
+            new GroupsQuery(query, offset, pageSizeParameter, options),
             cancellationToken
         );
 
-        return Results.Extensions.Render<Subscriptions>(
-            new Subscriptions.ViewModel(
-                groupName,
-                result.Subscriptions,
+        return Results.Extensions.Render<Groups>(
+            new Groups.ViewModel(
+                result.Groups,
                 query,
                 pageParameter,
                 pageSizeParameter,

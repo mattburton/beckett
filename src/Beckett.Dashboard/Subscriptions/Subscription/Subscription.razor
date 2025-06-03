@@ -2,18 +2,40 @@
 @inherits Component<Subscription.ViewModel>
 @layout LayoutWithoutSearch
 
-<SubscriptionNavbar ActiveLink="SubscriptionNavbar.Links.None"/>
+<SubscriptionNavbar ActiveLink="SubscriptionNavbar.Links.Subscriptions"/>
+
 <script type="text/javascript">
-  document.body.addEventListener("subscription_reset", function () {
-    alert('Subscription reset successfully');
+  document.body.addEventListener("subscription_replay_started", function () {
+    alert('Subscription replay started successfully');
   });
 </script>
+
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary mt-2" aria-label="breadcrumb">
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Dashboard.Prefix/subscriptions">
+          Groups
+        </a>
+      </li>
+      <li class="breadcrumb-item" aria-current="page">
+        <a class="link-body-emphasis fw-semibold" href="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName">
+          @Model.Details.GroupName
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        @Model.Details.Name
+      </li>
+    </ol>
+  </div>
+</nav>
+
 <div id="subscription-details"
      hx-get="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name"
      hx-trigger="every 10s"
      hx-select="#subscription-details"
      hx-swap="outerHTML">
-  <div class="card m-4">
+  <div class="card m-2">
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
         <div class="fs-4">

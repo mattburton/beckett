@@ -3,16 +3,26 @@
 
 <SubscriptionNavbar Model="Model" ActiveLink="SubscriptionNavbar.Links.Subscriptions"/>
 
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary mt-2" aria-label="breadcrumb">
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Dashboard.Prefix/subscriptions">
+          Groups
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        @Model.GroupName
+      </li>
+    </ol>
+  </div>
+</nav>
+
 <div class="p-2 pt-0">
   <table class="table table-striped">
     <thead>
     <tr>
-      <th style="width: 18em;">
-        <div class="d-flex align-items-end" style="height: 2.25em;">
-          Group Name
-        </div>
-      </th>
-      <th>Name</th>
+      <th>Subscription Name</th>
       <th style="width: 12em;">Status</th>
     </tr>
     </thead>
@@ -20,9 +30,8 @@
     @foreach (var subscription in Model.Subscriptions)
     {
       <tr>
-        <td>@subscription.GroupName</td>
         <td>
-          <a href="@Dashboard.Prefix/subscriptions/@subscription.GroupName/@subscription.Name">@subscription.Name</a>
+          <a href="@Dashboard.Prefix/subscriptions/@Model.GroupName/@subscription.Name">@subscription.Name</a>
         </td>
         <td>@subscription.Status</td>
       </tr>
@@ -42,6 +51,7 @@
 @code {
 
   public record ViewModel(
+    string GroupName,
     List<SubscriptionsQuery.Result.Subscription> Subscriptions,
     string? Query,
     int Page,
@@ -49,7 +59,7 @@
     int TotalResults
   ) : IPagedViewModel
   {
-    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions?page={{0}}&pageSize={{1}}";
+    public string UrlTemplate => $"{Dashboard.Prefix}/subscriptions/{GroupName}?page={{0}}&pageSize={{1}}";
   }
 
 }

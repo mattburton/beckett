@@ -6,6 +6,7 @@ using NpgsqlTypes;
 namespace Beckett.Dashboard.Subscriptions.Subscriptions;
 
 public class SubscriptionsQuery(
+    string groupName,
     string? query,
     int offset,
     int limit,
@@ -15,14 +16,16 @@ public class SubscriptionsQuery(
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            SELECT group_name, name, status, count(*) over() as total_results
+            SELECT name, status, count(*) over() as total_results
             FROM {options.Schema}.subscriptions
-            WHERE ($1 is null or name ILIKE '%' || $1 || '%')
-            ORDER BY group_name, name
-            OFFSET $2
-            LIMIT $3;
+            WHERE group_name = $1
+            AND ($2 IS NULL or name ILIKE '%' || $2 || '%')
+            ORDER BY name
+            OFFSET $3
+            LIMIT $4;
         ";
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
@@ -32,9 +35,10 @@ public class SubscriptionsQuery(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
-        command.Parameters[1].Value = offset;
-        command.Parameters[2].Value = limit;
+        command.Parameters[0].Value = groupName;
+        command.Parameters[1].Value = string.IsNullOrWhiteSpace(query) ? DBNull.Value : query;
+        command.Parameters[2].Value = offset;
+        command.Parameters[3].Value = limit;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -44,13 +48,12 @@ public class SubscriptionsQuery(
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            totalResults ??= reader.GetFieldValue<int>(3);
+            totalResults ??= reader.GetFieldValue<int>(2);
 
             results.Add(
                 new Result.Subscription(
                     reader.GetFieldValue<string>(0),
-                    reader.GetFieldValue<string>(1),
-                    reader.GetFieldValue<SubscriptionStatus>(2)
+                    reader.GetFieldValue<SubscriptionStatus>(1)
                 )
             );
         }
@@ -60,6 +63,6 @@ public class SubscriptionsQuery(
 
     public record Result(List<Result.Subscription> Subscriptions, int TotalResults)
     {
-        public record Subscription(string GroupName, string Name, SubscriptionStatus Status);
+        public record Subscription(string Name, SubscriptionStatus Status);
     }
 }
