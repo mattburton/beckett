@@ -1,3 +1,4 @@
+using Beckett.Dashboard.Subscriptions.Groups;
 using Beckett.Dashboard.Subscriptions.Pause;
 using Beckett.Dashboard.Subscriptions.Replay;
 using Beckett.Dashboard.Subscriptions.Resume;
@@ -12,7 +13,8 @@ public class Routes : IConfigureRoutes
     {
         var routes = builder.MapGroup("/subscriptions");
 
-        routes.MapGet("/", SubscriptionsEndpoint.Handle);
+        routes.MapGet("/", GroupsEndpoint.Handle);
+        routes.MapGet("/{groupName}", SubscriptionsEndpoint.Handle);
         routes.MapGet("/{groupName}/{name}", SubscriptionEndpoint.Handle);
         routes.MapPost("/{groupName}/{name}/pause", PauseEndpoint.Handle).DisableAntiforgery();
         routes.MapPost("/{groupName}/{name}/replay", ReplayEndpoint.Handle).DisableAntiforgery();
