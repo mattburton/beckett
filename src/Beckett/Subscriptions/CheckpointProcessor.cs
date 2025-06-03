@@ -149,11 +149,20 @@ public class CheckpointProcessor(
                 return new Success(readPosition, readPosition);
             }
 
+            var subscriptionContext = BuildSubscriptionContext(checkpoint, subscription);
+
+            var lastMessageInBatch = messageBatch[^1];
+
+            if (subscription.SkipDuringReplay && subscriptionContext.IsReplay)
+            {
+                return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
+            }
+
             if (subscription.Handler.IsBatchHandler)
             {
                 try
                 {
-                    return await DispatchMessageBatchToHandler(checkpoint, subscription, messageBatch);
+                    return await DispatchMessageBatchToHandler(checkpoint, subscription, messageBatch, subscriptionContext);
                 }
                 catch (Exception e)
                 {
@@ -173,7 +182,7 @@ public class CheckpointProcessor(
             {
                 try
                 {
-                    await DispatchMessageToHandler(checkpoint, subscription, streamMessage);
+                    await DispatchMessageToHandler(checkpoint, subscription, streamMessage, subscriptionContext);
                 }
                 catch (Exception e)
                 {
@@ -191,8 +200,6 @@ public class CheckpointProcessor(
                 }
             }
 
-            var lastMessageInBatch = messageBatch[^1];
-
             return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
         }
         catch (Exception e)
@@ -206,7 +213,8 @@ public class CheckpointProcessor(
     private async Task DispatchMessageToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        IMessageContext messageContext
+        IMessageContext messageContext,
+        ISubscriptionContext subscriptionContext
     )
     {
         using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
@@ -223,8 +231,6 @@ public class CheckpointProcessor(
 
         try
         {
-            var subscriptionContext = BuildSubscriptionContext(checkpoint, subscription);
-
             await subscription.Handler.Invoke(
                 messageContext,
                 subscriptionContext,
@@ -250,7 +256,8 @@ public class CheckpointProcessor(
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        IReadOnlyList<IMessageContext> messages
+        IReadOnlyList<IMessageContext> messages,
+        ISubscriptionContext subscriptionContext
     )
     {
         using var cts = new CancellationTokenSource();
@@ -262,8 +269,6 @@ public class CheckpointProcessor(
             var messageBatch = messages.ToList();
 
             using var scope = serviceProvider.CreateScope();
-
-            var subscriptionContext = BuildSubscriptionContext(checkpoint, subscription);
 
             await subscription.Handler.Invoke(
                 messageBatch,

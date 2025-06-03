@@ -16,6 +16,7 @@ public class Subscription(SubscriptionGroup group, string name)
     internal StreamScope StreamScope { get; set; } = StreamScope.PerStream;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
     internal int Priority { get; set; } = int.MaxValue;
+    internal bool SkipDuringReplay { get; set; }
 
     internal bool IsCategoryOnly => Category != null && MessageTypeNames.Count == 0;
 

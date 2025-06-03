@@ -140,7 +140,7 @@ public class SubscriptionInitializer(
                 }
 
                 // subscriptions for a new group can just be activated immediately vs put into replay mode
-                if (globalCheckpoint.StreamPosition == 0)
+                if (globalCheckpoint.StreamPosition == 0 || subscription.SkipDuringReplay)
                 {
                     await database.Execute(
                         new SetSubscriptionToActive(
@@ -184,13 +184,19 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
+                var streamVersion = stream.Max(x => x.StreamPosition);
+
+                // if the subscription is set to skip during replay automatically advance the stream position
+                var streamPosition = subscription.SkipDuringReplay ? streamVersion : 0;
+
                 checkpoints.Add(
                     new CheckpointType
                     {
                         GroupName = subscription.Group.Name,
                         Name = subscription.Name,
                         StreamName = stream.Key,
-                        StreamVersion = stream.Max(x => x.StreamPosition)
+                        StreamPosition = streamPosition,
+                        StreamVersion = streamVersion
                     }
                 );
             }
