@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,9 @@ public class SubscriptionHandler
     private static readonly Type TypedMessageContextType = typeof(IMessageContext<>);
     private static readonly Type ConcreteTypedMessageContextType = typeof(MessageContext<>);
     private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
+    private static readonly Type TypedBatchType = typeof(IReadOnlyList<>);
+    private static readonly Type ListType = typeof(List<>);
+    private static readonly Type TypedListConverterType = typeof(TypedListConverter<>);
     private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
     private static readonly Type SubscriptionContextType = typeof(ISubscriptionContext);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
@@ -51,8 +55,7 @@ public class SubscriptionHandler
             {
                 arguments[i] = context;
             }
-            else if (_parameters[i].ParameterType.IsGenericType &&
-                     _parameters[i].ParameterType.GetGenericTypeDefinition() == TypedMessageContextType)
+            else if (IsTypedMessageContext(_parameters[i]))
             {
                 var messageType = _parameters[i].ParameterType.GetGenericArguments()[0];
                 var contextType = ConcreteTypedMessageContextType.MakeGenericType(messageType);
@@ -118,6 +121,21 @@ public class SubscriptionHandler
             {
                 arguments[i] = batch.Where(x => x.Message != null).Select(x => x.Message!).ToList();
             }
+            else if (IsTypedBatch(_parameters[i]))
+            {
+                var messageType = _parameters[i].ParameterType.GetGenericArguments()[0];
+                var listConverterType = TypedListConverterType.MakeGenericType(messageType);
+                var listType = ListType.MakeGenericType(messageType);
+
+                var filteredBatch = batch.Where(x => x.MessageType != null).Where(x => x.MessageType == messageType)
+                    .Select(x => x.Message!)
+                    .ToList();
+
+                var listEnumerable = Activator.CreateInstance(listConverterType, filteredBatch)!;
+                var list = Activator.CreateInstance(listType, listEnumerable)!;
+
+                arguments[i] = list;
+            }
             else if (_parameters[i].ParameterType == SubscriptionContextType)
             {
                 arguments[i] = subscriptionContext;
@@ -171,6 +189,7 @@ public class SubscriptionHandler
         var messageContextHandler = false;
         var batchHandler = false;
         var typedMessageHandler = false;
+        var typedBatchHandler = false;
 
         foreach (var parameter in _parameters)
         {
@@ -179,11 +198,14 @@ public class SubscriptionHandler
                 messageContextHandler = true;
             }
 
-            if (parameter.ParameterType == BatchType || parameter.ParameterType == UnwrappedBatchType)
+            if (parameter.ParameterType == BatchType || parameter.ParameterType == UnwrappedBatchType ||
+                IsTypedBatch(parameter))
             {
                 IsBatchHandler = true;
 
                 batchHandler = true;
+
+                typedBatchHandler = IsTypedBatch(parameter);
             }
 
             if (parameter.ParameterType.IsGenericType &&
@@ -219,7 +241,14 @@ public class SubscriptionHandler
             );
         }
 
-        if (!messageContextHandler && !batchHandler && !typedMessageHandler)
+        if (typedBatchHandler && _subscription.MessageTypes.Count > 1)
+        {
+            throw new InvalidOperationException(
+                $"$Typed batch handlers can only subscribe to one message type [Subscription: {_subscription.Name}]"
+            );
+        }
+
+        if (!messageContextHandler && !batchHandler && !typedMessageHandler && !typedBatchHandler)
         {
             throw new InvalidOperationException(
                 $"Subscription handlers must handle either a message or a message batch [Subscription: {_subscription.Name}]"
@@ -243,12 +272,21 @@ public class SubscriptionHandler
     }
 
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == MessageContextType ||
-                                                            x.ParameterType.IsGenericType &&
-                                                            x.ParameterType.GetGenericTypeDefinition() ==
-                                                            TypedMessageContextType ||
+                                                            IsTypedMessageContext(x) ||
                                                             x.ParameterType == BatchType ||
+                                                            x.ParameterType == UnwrappedBatchType ||
+                                                            IsTypedBatch(x) ||
                                                             x.ParameterType == SubscriptionContextType ||
                                                             x.ParameterType == CancellationTokenType;
+
+
+    private static bool IsTypedMessageContext(ParameterInfo parameter) =>
+        parameter.ParameterType.IsGenericType &&
+        parameter.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType;
+
+    private static bool IsTypedBatch(ParameterInfo parameter) => parameter.ParameterType.IsGenericType &&
+                                                                 parameter.ParameterType.GetGenericTypeDefinition() ==
+                                                                 TypedBatchType;
 
     private static Func<object[], Task<object>> BuildInvoker(Delegate handler)
     {
@@ -349,6 +387,13 @@ public class SubscriptionHandler
         nameof(ExecuteTaskWithResult),
         BindingFlags.NonPublic | BindingFlags.Static
     )!;
+}
+
+public class TypedListConverter<T>(List<object> target) : IEnumerable<T>
+{
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public IEnumerator<T> GetEnumerator() => target.Cast<T>().GetEnumerator();
 }
 
 public class EmptyResult
