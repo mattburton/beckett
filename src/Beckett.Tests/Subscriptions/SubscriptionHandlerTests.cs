@@ -170,7 +170,6 @@ public class SubscriptionHandlerTests
         Assert.Equal(message, receivedMessage);
     }
 
-
     [Fact]
     public void handlers_can_subscribe_to_categories_without_specifying_message_types()
     {
@@ -183,6 +182,21 @@ public class SubscriptionHandlerTests
         catch
         {
             Assert.Fail("Category-only subscription should be valid");
+        }
+    }
+
+    [Fact]
+    public void handlers_can_subscribe_to_a_stream_without_specifying_message_types()
+    {
+        _subscription.StreamName = "test";
+
+        try
+        {
+            _ = new SubscriptionHandler(_subscription, MessageContextHandler.Handle);
+        }
+        catch
+        {
+            Assert.Fail("Stream-only subscription should be valid");
         }
     }
 
@@ -229,7 +243,7 @@ public class SubscriptionHandlerTests
     }
 
     [Fact]
-    public void handlers_must_subscribe_to_at_least_one_message_type_if_category_not_specified()
+    public void handlers_must_subscribe_to_at_least_one_message_type_if_category_or_stream_not_specified()
     {
         Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
                 _subscription,

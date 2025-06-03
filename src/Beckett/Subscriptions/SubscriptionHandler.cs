@@ -222,14 +222,14 @@ public class SubscriptionHandler
         if (!messageContextHandler && !batchHandler && !typedMessageHandler)
         {
             throw new InvalidOperationException(
-                $"Subscription handlers must handle either a message or a message batc [Subscription: {_subscription.Name}]"
+                $"Subscription handlers must handle either a message or a message batch [Subscription: {_subscription.Name}]"
             );
         }
 
-        if (_subscription.Category == null && _subscription.MessageTypes.Count == 0)
+        if (_subscription.Category == null && _subscription.StreamName == null && _subscription.MessageTypes.Count == 0)
         {
             throw new InvalidOperationException(
-                $"Subscription handlers must subscribe to at least one message type if a category is not configured [Subscription: {_subscription.Name}]"
+                $"Subscription handlers must subscribe to at least one message type if a category or stream is not configured [Subscription: {_subscription.Name}]"
             );
         }
     }

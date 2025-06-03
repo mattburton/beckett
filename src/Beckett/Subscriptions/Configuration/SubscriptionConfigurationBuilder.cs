@@ -20,6 +20,15 @@ public class SubscriptionConfigurationBuilder(
         return this;
     }
 
+    public ISubscriptionConfigurationBuilder Stream(string streamName)
+    {
+        ArgumentNullException.ThrowIfNull(streamName);
+
+        subscription.StreamName = streamName;
+
+        return this;
+    }
+
     public ISubscriptionConfigurationBuilder Message<TMessage>()
     {
         subscription.RegisterMessageType<TMessage>();
