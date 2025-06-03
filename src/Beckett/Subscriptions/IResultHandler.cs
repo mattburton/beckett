@@ -1,5 +1,22 @@
 namespace Beckett.Subscriptions;
 
+public interface IResultHandler<in T> : IResultHandler
+{
+    Task Handle(T result, CancellationToken cancellationToken);
+
+    Task IResultHandler.Handle(object result, CancellationToken cancellationToken)
+    {
+        if (result is T typedResult)
+        {
+            return Handle(typedResult, cancellationToken);
+        }
+
+        throw new InvalidOperationException(
+            $"The result type '{result.GetType()}' does not match the expected type '{typeof(T)}'."
+        );
+    }
+}
+
 /// <summary>
 /// If your subscription handler returns a result, you can optionally implement this interface to have Beckett handle
 /// the result. By registering your implementation in the container it will be resolved when a result matching the type

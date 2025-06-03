@@ -12,6 +12,7 @@ public class SubscriptionHandler
     private static readonly Type ConcreteTypedMessageContextType = typeof(MessageContext<>);
     private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
     private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
+    private static readonly Type SubscriptionContextType = typeof(ISubscriptionContext);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
     private static readonly Type ResultHandlerType = typeof(IResultHandler<>);
 
@@ -36,6 +37,7 @@ public class SubscriptionHandler
 
     public async Task Invoke(
         IMessageContext context,
+        ISubscriptionContext subscriptionContext,
         IServiceProvider serviceProvider,
         ILogger logger,
         CancellationToken cancellationToken
@@ -60,6 +62,10 @@ public class SubscriptionHandler
             else if (_parameters[i].ParameterType == context.MessageType)
             {
                 arguments[i] = context.Message!;
+            }
+            else if (_parameters[i].ParameterType == SubscriptionContextType)
+            {
+                arguments[i] = subscriptionContext;
             }
             else if (_parameters[i].ParameterType == CancellationTokenType)
             {
@@ -94,6 +100,7 @@ public class SubscriptionHandler
 
     public async Task Invoke(
         IReadOnlyList<IMessageContext> batch,
+        ISubscriptionContext subscriptionContext,
         IServiceProvider serviceProvider,
         ILogger logger,
         CancellationToken cancellationToken
@@ -110,6 +117,10 @@ public class SubscriptionHandler
             else if (_parameters[i].ParameterType == UnwrappedBatchType)
             {
                 arguments[i] = batch.Where(x => x.Message != null).Select(x => x.Message!).ToList();
+            }
+            else if (_parameters[i].ParameterType == SubscriptionContextType)
+            {
+                arguments[i] = subscriptionContext;
             }
             else if (_parameters[i].ParameterType == CancellationTokenType)
             {
@@ -236,6 +247,7 @@ public class SubscriptionHandler
                                                             x.ParameterType.GetGenericTypeDefinition() ==
                                                             TypedMessageContextType ||
                                                             x.ParameterType == BatchType ||
+                                                            x.ParameterType == SubscriptionContextType ||
                                                             x.ParameterType == CancellationTokenType;
 
     private static Func<object[], Task<object>> BuildInvoker(Delegate handler)
@@ -337,23 +349,6 @@ public class SubscriptionHandler
         nameof(ExecuteTaskWithResult),
         BindingFlags.NonPublic | BindingFlags.Static
     )!;
-}
-
-public interface IResultHandler<in T> : IResultHandler
-{
-    Task Handle(T result, CancellationToken cancellationToken);
-
-    Task IResultHandler.Handle(object result, CancellationToken cancellationToken)
-    {
-        if (result is T typedResult)
-        {
-            return Handle(typedResult, cancellationToken);
-        }
-
-        throw new InvalidOperationException(
-            $"The result type '{result.GetType()}' does not match the expected type '{typeof(T)}'."
-        );
-    }
 }
 
 public class EmptyResult
