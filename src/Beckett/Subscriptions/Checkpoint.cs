@@ -1,3 +1,4 @@
+using Beckett.Subscriptions.PartitionStrategies;
 using Npgsql;
 
 namespace Beckett.Subscriptions;
@@ -18,12 +19,16 @@ public record Checkpoint(
 
     public long StartingPositionFor(Subscription subscription)
     {
-        return subscription.StreamScope == StreamScope.PerStream ? StreamPosition + 1 : StreamPosition;
+        return subscription.PartitionStrategy is not GlobalStreamPartitionStrategy
+            ? StreamPosition + 1
+            : StreamPosition;
     }
 
     public long RetryStartingPositionFor(Subscription subscription)
     {
-        return subscription.StreamScope == StreamScope.PerStream ? StreamPosition : StreamPosition - 1;
+        return subscription.PartitionStrategy is not GlobalStreamPartitionStrategy
+            ? StreamPosition
+            : StreamPosition - 1;
     }
 
     public static Checkpoint? From(NpgsqlDataReader reader)

@@ -1,3 +1,4 @@
+using Beckett.Subscriptions.PartitionStrategies;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett.Subscriptions.Configuration;
@@ -80,9 +81,16 @@ public class SubscriptionConfigurationBuilder(
         return this;
     }
 
-    public ISubscriptionConfigurationBuilder StreamScope(StreamScope streamScope)
+    public ISubscriptionConfigurationBuilder PartitionByStream()
     {
-        subscription.StreamScope = streamScope;
+        subscription.PartitionStrategy = PerStreamPartitionStrategy.Instance;
+
+        return this;
+    }
+
+    public ISubscriptionConfigurationBuilder PartitionByGlobalStream()
+    {
+        subscription.PartitionStrategy = GlobalStreamPartitionStrategy.Instance;
 
         return this;
     }
