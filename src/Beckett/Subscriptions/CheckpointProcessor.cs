@@ -1,6 +1,7 @@
 using Beckett.Database;
 using Beckett.OpenTelemetry;
 using Beckett.Storage;
+using Beckett.Subscriptions.PartitionStrategies;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries;
 using Microsoft.Extensions.DependencyInjection;
@@ -133,7 +134,7 @@ public class CheckpointProcessor(
         {
             if (messageBatch.Count == 0)
             {
-                if (subscription.StreamScope == StreamScope.PerStream ||
+                if (subscription.PartitionStrategy is not GlobalStreamPartitionStrategy ||
                     checkpoint.StreamPosition >= checkpoint.StreamVersion)
                 {
                     return NoMessages.Instance;
@@ -327,7 +328,7 @@ public class CheckpointProcessor(
             }
         }
 
-        if (subscription.StreamScope == StreamScope.GlobalStream)
+        if (subscription.PartitionStrategy is GlobalStreamPartitionStrategy)
         {
             var globalStream = await messageStorage.ReadGlobalStream(
                 new ReadGlobalStreamOptions
@@ -610,7 +611,7 @@ public static class MessageContextExtensions
 {
     public static long PositionFor(this IMessageContext context, Subscription subscription)
     {
-        return subscription.StreamScope == StreamScope.PerStream
+        return subscription.PartitionStrategy is not GlobalStreamPartitionStrategy
             ? context.StreamPosition
             : context.GlobalPosition;
     }

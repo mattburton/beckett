@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Storage;
+using Beckett.Subscriptions.PartitionStrategies;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
 
@@ -75,7 +76,7 @@ public class GlobalStreamConsumer(
                 var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
 
                 var globalStreamSubscriptions = registeredSubscriptions
-                    .Where(x => x.StreamScope == StreamScope.GlobalStream)
+                    .Where(x => x.PartitionStrategy is GlobalStreamPartitionStrategy)
                     .Where(x => batch.Items.Any(m => m.AppliesTo(x))).OrderBy(x => x.Priority)
                     .ToArray();
 
@@ -104,7 +105,7 @@ public class GlobalStreamConsumer(
                 foreach (var stream in batch.Items.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
-                        .Where(x => x.StreamScope == StreamScope.PerStream)
+                        .Where(x => x.PartitionStrategy is not GlobalStreamPartitionStrategy)
                         .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
                         .OrderBy(subscription => subscription.Priority).ToArray();
 

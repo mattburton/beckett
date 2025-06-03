@@ -107,14 +107,19 @@ public interface ISubscriptionConfigurationBuilder
     ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition);
 
     /// <summary>
-    /// Configure the stream scope of the subscription. By default Beckett tracks checkpoints per stream which is the
-    /// same as the <c>StreamScope.PerStream</c>. For certain situations having a subscription have a single checkpoint
-    /// and consume the global stream instead is preferred, for example projections where bulk persistence is used to
-    /// increase performance.
+    /// Configure the subscription to partition checkpoints by stream. Checkpoints will be tracked for each stream
+    /// that matches the subscription configuration and processed in parallel based on the concurrency level configured
+    /// for the group the subscription belongs to.
     /// </summary>
-    /// <param name="streamScope">Stream scope of the subscription</param>
     /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder StreamScope(StreamScope streamScope);
+    ISubscriptionConfigurationBuilder PartitionByStream();
+
+    /// <summary>
+    /// Configure the subscription to track a single checkpoint based on the global stream. Messages will be processed
+    /// in global order in batches using the configured batch size.
+    /// </summary>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder PartitionByGlobalStream();
 
     /// <summary>
     /// Configure the default max retry count for this subscription. This will override the max retry count configured

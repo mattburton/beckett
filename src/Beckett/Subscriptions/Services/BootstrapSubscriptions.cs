@@ -1,6 +1,7 @@
 using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Subscriptions.Initialization;
+using Beckett.Subscriptions.PartitionStrategies;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -99,7 +100,7 @@ public class BootstrapSubscriptions(
                 continue;
             }
 
-            if (subscription.StreamScope == StreamScope.GlobalStream)
+            if (subscription.PartitionStrategy is GlobalStreamPartitionStrategy)
             {
                 logger.LogTrace(
                     "Subscription {Name} in group {GroupName} is scoped to the global stream so it will be set to active and will start processing messages from the {StartingPosition} of the global stream.",
@@ -146,8 +147,6 @@ public class BootstrapSubscriptions(
                         stoppingToken
                     );
                 }
-
-                await transaction.CommitAsync(stoppingToken);
 
                 continue;
             }
