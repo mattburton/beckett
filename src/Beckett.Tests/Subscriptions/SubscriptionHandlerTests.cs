@@ -119,6 +119,22 @@ public class SubscriptionHandlerTests
     }
 
     [Fact]
+    public async Task supports_typed_batch_handler()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        var handler = new SubscriptionHandler(_subscription, TypedBatchHandler.Handle);
+        var batch = BuildMessageBatch();
+        var subscriptionContext = BuildSubscriptionContext();
+        var expectedBatch = batch.Select(x => x.Message).Cast<TestMessage>().ToList();
+
+        await handler.Invoke(batch, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
+
+        Assert.True(handler.IsBatchHandler);
+        Assert.NotNull(TypedBatchHandler.ReceivedBatch);
+        Assert.Equal(expectedBatch, TypedBatchHandler.ReceivedBatch);
+    }
+
+    [Fact]
     public async Task supports_unwrapped_batch_handler()
     {
         _subscription.RegisterMessageType<TestMessage>();
@@ -268,7 +284,19 @@ public class SubscriptionHandlerTests
         _subscription.RegisterMessageType<TestMessage>();
         _subscription.RegisterMessageType<AnotherTestMessage>();
 
-        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(_subscription, MessageHandler.Handle)
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(_subscription, MessageHandler.Handle));
+    }
+
+    [Fact]
+    public void typed_batch_handlers_cannot_accept_multiple_message_types()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        _subscription.RegisterMessageType<AnotherTestMessage>();
+
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
+                _subscription,
+                TypedBatchHandler.Handle
+            )
         );
     }
 
@@ -431,6 +459,18 @@ public class SubscriptionHandlerTests
         public static IReadOnlyList<IMessageContext>? ReceivedBatch { get; private set; }
 
         public static Task Handle(IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
+        {
+            ReceivedBatch = batch;
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private static class TypedBatchHandler
+    {
+        public static IReadOnlyList<TestMessage>? ReceivedBatch { get; private set; }
+
+        public static Task Handle(IReadOnlyList<TestMessage> batch, CancellationToken cancellationToken)
         {
             ReceivedBatch = batch;
 
