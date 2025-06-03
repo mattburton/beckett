@@ -14,6 +14,7 @@ public record IndexBatchItem(
     public bool AppliesTo(Subscription subscription)
     {
         var categoryMatch = subscription.CategoryMatches(StreamName);
+        var streamNameMatch = subscription.StreamName == StreamName;
         var messageTypeMatch = subscription.MessageTypeNames.Contains(MessageType);
 
         if (subscription.IsCategoryOnly)
@@ -21,9 +22,19 @@ public record IndexBatchItem(
             return categoryMatch;
         }
 
+        if (subscription.IsStreamNameOnly)
+        {
+            return streamNameMatch;
+        }
+
         if (subscription.IsMessageTypesOnly)
         {
             return messageTypeMatch;
+        }
+
+        if (subscription.IsStreamNameAndMessageTypes)
+        {
+            return streamNameMatch && messageTypeMatch;
         }
 
         return categoryMatch && messageTypeMatch;

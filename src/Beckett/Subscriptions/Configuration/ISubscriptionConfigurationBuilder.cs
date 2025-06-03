@@ -25,8 +25,15 @@ public interface ISubscriptionConfigurationBuilder
     /// </para>
     /// </summary>
     /// <param name="category">The stream category to constrain this subscription to</param>
-    /// <returns></returns>
+    /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder Category(string category);
+
+    /// <summary>
+    /// Optional - only subscribe to messages appended to a given stream.
+    /// </summary>
+    /// <param name="streamName">The stream name to constrain this subscription to</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder Stream(string streamName);
 
     /// <summary>
     /// Subscribe to a specific message type within this category. When this message type is read from the global stream

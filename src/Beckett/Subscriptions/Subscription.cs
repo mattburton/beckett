@@ -7,6 +7,7 @@ public class Subscription(SubscriptionGroup group, string name)
     internal SubscriptionGroup Group => group;
     internal string Name { get; } = name;
     internal string? Category { get; set; }
+    internal string? StreamName { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];
     internal HashSet<string> MessageTypeNames { get; } = [];
     internal Delegate? HandlerDelegate { get; set; }
@@ -20,6 +21,10 @@ public class Subscription(SubscriptionGroup group, string name)
 
     internal bool IsCategoryOnly => Category != null && MessageTypeNames.Count == 0;
 
+    internal bool IsStreamNameOnly => !string.IsNullOrWhiteSpace(StreamName) && MessageTypeNames.Count == 0;
+
+    internal bool IsStreamNameAndMessageTypes => !string.IsNullOrWhiteSpace(StreamName) && MessageTypeNames.Count > 0;
+
     internal bool IsMessageTypesOnly => Category == null && MessageTypeNames.Count > 0;
 
     internal bool CategoryMatches(string streamName) => Category != null && streamName.StartsWith(Category);
@@ -32,7 +37,8 @@ public class Subscription(SubscriptionGroup group, string name)
         MessageTypes.Add(messageType);
     }
 
-    internal bool SubscribedToMessage(string messageType) => IsCategoryOnly || MessageTypeNames.Contains(messageType);
+    internal bool SubscribedToMessage(string messageType) =>
+        IsCategoryOnly || IsStreamNameOnly || MessageTypeNames.Contains(messageType);
 
     internal void BuildHandler()
     {
