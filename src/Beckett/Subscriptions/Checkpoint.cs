@@ -10,7 +10,8 @@ public record Checkpoint(
     long StreamPosition,
     long StreamVersion,
     int RetryAttempts,
-    CheckpointStatus Status
+    CheckpointStatus Status,
+    long? ReplayTargetPosition = null
 )
 {
     public bool IsRetryOrFailure => Status is CheckpointStatus.Retry or CheckpointStatus.Failed;
@@ -37,7 +38,8 @@ public record Checkpoint(
                 reader.GetFieldValue<long>(4),
                 reader.GetFieldValue<long>(5),
                 reader.GetFieldValue<int>(6),
-                reader.GetFieldValue<CheckpointStatus>(7)
+                reader.GetFieldValue<CheckpointStatus>(7),
+                reader.GetFieldValue<long?>(8)
             );
     }
 }

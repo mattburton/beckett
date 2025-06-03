@@ -27,13 +27,29 @@ public class SubscriptionHandlerTests
     {
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, MessageContextHandler.Handle);
-        var context = BuildMessageContext();
+        var messageContext = BuildMessageContext();
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(context, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(MessageContextHandler.ReceivedContext);
-        Assert.Equal(context, MessageContextHandler.ReceivedContext);
+        Assert.Equal(messageContext, MessageContextHandler.ReceivedContext);
+    }
+
+    [Fact]
+    public async Task supports_handler_that_expects_subscription_context()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        var handler = new SubscriptionHandler(_subscription, SubscriptionContextHandler.Handle);
+        var messageContext = BuildMessageContext();
+        var subscriptionContext = BuildSubscriptionContext();
+
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
+
+        Assert.False(handler.IsBatchHandler);
+        Assert.NotNull(SubscriptionContextHandler.ReceivedContext);
+        Assert.Equal(subscriptionContext, SubscriptionContextHandler.ReceivedContext);
     }
 
     [Fact]
@@ -42,9 +58,10 @@ public class SubscriptionHandlerTests
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, MessageHandler.Handle);
         var message = new TestMessage(Guid.NewGuid());
-        var context = BuildMessageContext(message);
+        var messageContext = BuildMessageContext(message);
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(context, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(MessageHandler.ReceivedMessage);
@@ -59,8 +76,9 @@ public class SubscriptionHandlerTests
         var message = new TestMessage(Guid.NewGuid());
         var context = BuildMessageContext(message);
         var typedContext = new MessageContext<TestMessage>(context);
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(typedContext, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(typedContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(TypedMessageContextHandler.ReceivedMessage);
@@ -73,15 +91,16 @@ public class SubscriptionHandlerTests
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, MessageAndContextHandler.Handle);
         var message = new TestMessage(Guid.NewGuid());
-        var context = BuildMessageContext(message);
+        var messageContext = BuildMessageContext(message);
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(context, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.False(handler.IsBatchHandler);
         Assert.NotNull(MessageAndContextHandler.ReceivedMessage);
         Assert.NotNull(MessageAndContextHandler.ReceivedContext);
         Assert.Equal(message, MessageAndContextHandler.ReceivedMessage);
-        Assert.Equal(context, MessageAndContextHandler.ReceivedContext);
+        Assert.Equal(messageContext, MessageAndContextHandler.ReceivedContext);
     }
 
     [Fact]
@@ -90,8 +109,9 @@ public class SubscriptionHandlerTests
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, BatchHandler.Handle);
         var batch = BuildMessageBatch();
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(batch, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(batch, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.True(handler.IsBatchHandler);
         Assert.NotNull(BatchHandler.ReceivedBatch);
@@ -104,9 +124,10 @@ public class SubscriptionHandlerTests
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, UnwrappedBatchHandler.Handle);
         var batch = BuildMessageBatch();
+        var subscriptionContext = BuildSubscriptionContext();
         var expectedBatch = batch.Select(x => x.Message!).ToList();
 
-        await handler.Invoke(batch, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(batch, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.True(handler.IsBatchHandler);
         Assert.NotNull(UnwrappedBatchHandler.ReceivedBatch);
@@ -118,9 +139,10 @@ public class SubscriptionHandlerTests
     {
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, HandlerWithDependencies.Handle);
-        var context = BuildMessageContext();
+        var messageContext = BuildMessageContext();
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(context, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.True(_testService.ExecuteCalled);
     }
@@ -140,9 +162,10 @@ public class SubscriptionHandlerTests
             }
         );
         var message = new TestMessage(Guid.NewGuid());
-        var context = BuildMessageContext(message);
+        var messageContext = BuildMessageContext(message);
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(context, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.Equal(message, receivedMessage);
     }
@@ -183,9 +206,10 @@ public class SubscriptionHandlerTests
     {
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, HandlerThatReturnsResult.Handle);
-        var context = BuildMessageContext(new TestMessage(Guid.NewGuid()));
+        var messageContext = BuildMessageContext(new TestMessage(Guid.NewGuid()));
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(context, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.Equal(100, _testResultHandler.Value);
     }
@@ -195,9 +219,10 @@ public class SubscriptionHandlerTests
     {
         _subscription.RegisterMessageType<TestMessage>();
         var handler = new SubscriptionHandler(_subscription, HandlerThatReturnsResultWithNoHandler.Handle);
-        var context = BuildMessageContext(new TestMessage(Guid.NewGuid()));
+        var messageContext = BuildMessageContext(new TestMessage(Guid.NewGuid()));
+        var subscriptionContext = BuildSubscriptionContext();
 
-        await handler.Invoke(context, _serviceProvider, _logger, CancellationToken.None);
+        await handler.Invoke(messageContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.Equal(LogLevel.Trace, _logger.LatestRecord.Level);
         Assert.Contains("was not registered in the container", _logger.LatestRecord.Message);
@@ -206,16 +231,20 @@ public class SubscriptionHandlerTests
     [Fact]
     public void handlers_must_subscribe_to_at_least_one_message_type_if_category_not_specified()
     {
-        Assert.Throws<InvalidOperationException>(
-            () => new SubscriptionHandler(_subscription, MessageContextHandler.Handle)
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
+                _subscription,
+                MessageContextHandler.Handle
+            )
         );
     }
 
     [Fact]
     public void handlers_can_only_accept_messages_or_batches_not_both()
     {
-        Assert.Throws<InvalidOperationException>(
-            () => new SubscriptionHandler(_subscription, InvalidHandlerWithContextAndBatch.Handle)
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
+                _subscription,
+                InvalidHandlerWithContextAndBatch.Handle
+            )
         );
     }
 
@@ -225,8 +254,7 @@ public class SubscriptionHandlerTests
         _subscription.RegisterMessageType<TestMessage>();
         _subscription.RegisterMessageType<AnotherTestMessage>();
 
-        Assert.Throws<InvalidOperationException>(
-            () => new SubscriptionHandler(_subscription, MessageHandler.Handle)
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(_subscription, MessageHandler.Handle)
         );
     }
 
@@ -235,24 +263,30 @@ public class SubscriptionHandlerTests
     {
         _subscription.RegisterMessageType<TestMessage>();
 
-        Assert.Throws<InvalidOperationException>(
-            () => new SubscriptionHandler(_subscription, InvalidHandlerWithBatchAndMessage.Handle)
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
+                _subscription,
+                InvalidHandlerWithBatchAndMessage.Handle
+            )
         );
     }
 
     [Fact]
     public void handlers_must_handle_something()
     {
-        Assert.Throws<InvalidOperationException>(
-            () => new SubscriptionHandler(_subscription, InvalidHandlerThatHandlesNothing.Handle)
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
+                _subscription,
+                InvalidHandlerThatHandlesNothing.Handle
+            )
         );
     }
 
     [Fact]
     public void handlers_must_return_task_or_void_only()
     {
-        Assert.Throws<InvalidOperationException>(
-            () => new SubscriptionHandler(_subscription, InvalidHandlerThatReturnsNonTaskOrVoid.Handle)
+        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
+                _subscription,
+                InvalidHandlerThatReturnsNonTaskOrVoid.Handle
+            )
         );
     }
 
@@ -288,6 +322,9 @@ public class SubscriptionHandlerTests
         Assert.Equal("test", _subscription.HandlerName);
     }
 
+    private static ISubscriptionContext BuildSubscriptionContext() =>
+        new SubscriptionContext(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), SubscriptionStatus.Active);
+
     private static MessageContext BuildMessageContext(TestMessage? message = null) => new(
         Guid.NewGuid().ToString(),
         "test-123",
@@ -320,6 +357,18 @@ public class SubscriptionHandlerTests
         public static Task Handle(IMessageContext context, CancellationToken cancellationToken)
         {
             ReceivedContext = context;
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private static class SubscriptionContextHandler
+    {
+        public static ISubscriptionContext? ReceivedContext { get; private set; }
+
+        public static Task Handle(IMessageContext _, ISubscriptionContext subscriptionContext)
+        {
+            ReceivedContext = subscriptionContext;
 
             return Task.CompletedTask;
         }
@@ -434,7 +483,11 @@ public class SubscriptionHandlerTests
 
     private static class InvalidHandlerWithContextAndBatch
     {
-        public static Task Handle(IMessageContext context, IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
+        public static Task Handle(
+            IMessageContext context,
+            IReadOnlyList<IMessageContext> batch,
+            CancellationToken cancellationToken
+        )
         {
             return Task.CompletedTask;
         }
@@ -442,7 +495,11 @@ public class SubscriptionHandlerTests
 
     private static class InvalidHandlerWithBatchAndMessage
     {
-        public static Task Handle(IReadOnlyList<IMessageContext> batch, TestMessage message, CancellationToken cancellationToken)
+        public static Task Handle(
+            IReadOnlyList<IMessageContext> batch,
+            TestMessage message,
+            CancellationToken cancellationToken
+        )
         {
             return Task.CompletedTask;
         }

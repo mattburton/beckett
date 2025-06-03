@@ -1,8 +1,8 @@
 using Beckett.Database;
 
-namespace Beckett.Dashboard.Subscriptions.Reset;
+namespace Beckett.Dashboard.Subscriptions.Replay;
 
-public static class ResetEndpoint
+public static class ReplayEndpoint
 {
     public static async Task<IResult> Handle(
         HttpContext context,
@@ -13,10 +13,10 @@ public static class ResetEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new ResetQuery(groupName, name, options), cancellationToken);
+        await database.Execute(new ReplayQuery(groupName, name, options), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
-        context.Response.Headers.Append("HX-Trigger", new StringValues("subscription_reset"));
+        context.Response.Headers.Append("HX-Trigger", new StringValues("subscription_replay_started"));
 
         return Results.Ok();
     }

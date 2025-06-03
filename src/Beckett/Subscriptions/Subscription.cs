@@ -16,6 +16,7 @@ public class Subscription(SubscriptionGroup group, string name)
     internal StreamScope StreamScope { get; set; } = StreamScope.PerStream;
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
     internal int Priority { get; set; } = int.MaxValue;
+    internal bool SkipDuringReplay { get; set; }
 
     internal bool IsCategoryOnly => Category != null && MessageTypeNames.Count == 0;
 
@@ -43,9 +44,7 @@ public class Subscription(SubscriptionGroup group, string name)
         Handler = new SubscriptionHandler(this, HandlerDelegate);
     }
 
-    internal string GetAdvisoryLockKey(string groupName) => $"{groupName}:{Name}";
-
-    internal int GetMaxRetryCount(BeckettOptions options, Type exceptionType)
+    internal int GetMaxRetryCount(Type exceptionType)
     {
         var defaultIsConfigured = group.MaxRetriesByExceptionType.TryGetValue(
             exceptionType,

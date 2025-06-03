@@ -114,4 +114,11 @@ public class SubscriptionConfigurationBuilder(
 
         return this;
     }
+
+    public ISubscriptionConfigurationBuilder SkipDuringReplay()
+    {
+        subscription.SkipDuringReplay = true;
+
+        return this;
+    }
 }

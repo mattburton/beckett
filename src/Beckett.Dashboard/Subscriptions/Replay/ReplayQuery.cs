@@ -2,9 +2,9 @@ using Beckett.Database;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Beckett.Dashboard.Subscriptions.Reset;
+namespace Beckett.Dashboard.Subscriptions.Replay;
 
-public class ResetQuery(
+public class ReplayQuery(
     string groupName,
     string name,
     PostgresOptions options
@@ -12,12 +12,7 @@ public class ResetQuery(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = @$"
-            UPDATE {options.Schema}.checkpoints
-            SET stream_position = 0
-            WHERE group_name = $1
-            AND name = $2;
-        ";
+        command.CommandText = @$"SELECT {options.Schema}.replay_subscription($1, $2);";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

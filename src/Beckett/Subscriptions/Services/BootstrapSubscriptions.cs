@@ -88,6 +88,17 @@ public class BootstrapSubscriptions(
                 continue;
             }
 
+            if (status == SubscriptionStatus.Replay)
+            {
+                logger.LogTrace(
+                    "Subscription {Name} in group {GroupName} is currently being replayed - no need for further action.",
+                    subscription.Name,
+                    group.Name
+                );
+
+                continue;
+            }
+
             if (subscription.StreamScope == StreamScope.GlobalStream)
             {
                 logger.LogTrace(
@@ -108,16 +119,35 @@ public class BootstrapSubscriptions(
                     }
                 );
 
-                await database.Execute(
-                    new SetSubscriptionToActive(
-                        group.Name,
-                        subscription.Name,
-                        options.Postgres
-                    ),
-                    connection,
-                    transaction,
-                    stoppingToken
-                );
+                if (subscription.StartingPosition == StartingPosition.Latest)
+                {
+                    await database.Execute(
+                        new SetSubscriptionToActive(
+                            group.Name,
+                            subscription.Name,
+                            options.Postgres
+                        ),
+                        connection,
+                        transaction,
+                        stoppingToken
+                    );
+                }
+                else
+                {
+                    await database.Execute(
+                        new SetSubscriptionToReplay(
+                            group.Name,
+                            subscription.Name,
+                            globalPosition,
+                            options.Postgres
+                        ),
+                        connection,
+                        transaction,
+                        stoppingToken
+                    );
+                }
+
+                await transaction.CommitAsync(stoppingToken);
 
                 continue;
             }

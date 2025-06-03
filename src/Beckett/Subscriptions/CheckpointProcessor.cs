@@ -10,6 +10,7 @@ namespace Beckett.Subscriptions;
 
 public class CheckpointProcessor(
     IMessageStorage messageStorage,
+    IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
     BeckettOptions options,
@@ -31,18 +32,47 @@ public class CheckpointProcessor(
         switch (result)
         {
             case Success success:
+            {
+                await using var connection = dataSource.CreateConnection();
+
+                await connection.OpenAsync(CancellationToken.None);
+
+                await using var transaction = await connection.BeginTransactionAsync(CancellationToken.None);
+
                 await database.Execute(
                     new UpdateCheckpointPosition(checkpoint.Id, success.StreamPosition, null, options.Postgres),
+                    connection,
+                    transaction,
                     CancellationToken.None
                 );
+
+                if (checkpoint.ReplayTargetPosition.HasValue)
+                {
+                    if (success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value)
+                    {
+                        await database.Execute(
+                            new SetSubscriptionToActive(
+                                subscription.Group.Name,
+                                subscription.Name,
+                                options.Postgres
+                            ),
+                            connection,
+                            transaction,
+                            CancellationToken.None
+                        );
+                    }
+                }
+
+                await transaction.CommitAsync(CancellationToken.None);
 
                 SuccessTraceLogging(checkpoint, success);
 
                 break;
+            }
             case Error error:
                 var exceptionType = error.Exception.GetType();
 
-                var maxRetryCount = subscription.GetMaxRetryCount(options, exceptionType);
+                var maxRetryCount = subscription.GetMaxRetryCount(exceptionType);
 
                 var attempt = checkpoint.IsRetryOrFailure ? checkpoint.RetryAttempts : 0;
 
@@ -116,14 +146,23 @@ public class CheckpointProcessor(
                     readPosition = checkpoint.StreamVersion;
                 }
 
-                return new Success(readPosition);
+                return new Success(readPosition, readPosition);
+            }
+
+            var subscriptionContext = BuildSubscriptionContext(checkpoint, subscription);
+
+            var lastMessageInBatch = messageBatch[^1];
+
+            if (subscription.SkipDuringReplay && subscriptionContext.IsReplay)
+            {
+                return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
             }
 
             if (subscription.Handler.IsBatchHandler)
             {
                 try
                 {
-                    return await DispatchMessageBatchToHandler(checkpoint, subscription, messageBatch);
+                    return await DispatchMessageBatchToHandler(checkpoint, subscription, messageBatch, subscriptionContext);
                 }
                 catch (Exception e)
                 {
@@ -143,7 +182,7 @@ public class CheckpointProcessor(
             {
                 try
                 {
-                    await DispatchMessageToHandler(checkpoint, subscription, streamMessage);
+                    await DispatchMessageToHandler(checkpoint, subscription, streamMessage, subscriptionContext);
                 }
                 catch (Exception e)
                 {
@@ -161,7 +200,7 @@ public class CheckpointProcessor(
                 }
             }
 
-            return new Success(messageBatch[^1].PositionFor(subscription));
+            return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
         }
         catch (Exception e)
         {
@@ -174,7 +213,8 @@ public class CheckpointProcessor(
     private async Task DispatchMessageToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        IMessageContext messageContext
+        IMessageContext messageContext,
+        ISubscriptionContext subscriptionContext
     )
     {
         using var activity = instrumentation.StartHandleMessageActivity(subscription, messageContext);
@@ -191,7 +231,13 @@ public class CheckpointProcessor(
 
         try
         {
-            await subscription.Handler.Invoke(messageContext, scope.ServiceProvider, logger, cts.Token);
+            await subscription.Handler.Invoke(
+                messageContext,
+                subscriptionContext,
+                scope.ServiceProvider,
+                logger,
+                cts.Token
+            );
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -210,7 +256,8 @@ public class CheckpointProcessor(
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        IReadOnlyList<IMessageContext> messages
+        IReadOnlyList<IMessageContext> messages,
+        ISubscriptionContext subscriptionContext
     )
     {
         using var cts = new CancellationTokenSource();
@@ -223,9 +270,17 @@ public class CheckpointProcessor(
 
             using var scope = serviceProvider.CreateScope();
 
-            await subscription.Handler.Invoke(messageBatch, scope.ServiceProvider, logger, cts.Token);
+            await subscription.Handler.Invoke(
+                messageBatch,
+                subscriptionContext,
+                scope.ServiceProvider,
+                logger,
+                cts.Token
+            );
 
-            return new Success(messageBatch[^1].PositionFor(subscription));
+            var lastMessageInBatch = messageBatch[^1];
+
+            return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -305,6 +360,13 @@ public class CheckpointProcessor(
 
         return stream.StreamMessages.Select(MessageContext.From).ToList();
     }
+
+    private static SubscriptionContext BuildSubscriptionContext(Checkpoint checkpoint, Subscription subscription) =>
+        new(
+            subscription.Group.Name,
+            subscription.Name,
+            checkpoint.ReplayTargetPosition.HasValue ? SubscriptionStatus.Replay : SubscriptionStatus.Active
+        );
 
     private void SuccessTraceLogging(Checkpoint checkpoint, Success success)
     {
@@ -434,7 +496,7 @@ public class CheckpointProcessor(
         public static readonly NoMessages Instance = new();
     }
 
-    private readonly record struct Success(long StreamPosition) : IMessageBatchResult;
+    private readonly record struct Success(long StreamPosition, long GlobalPosition) : IMessageBatchResult;
 
     private readonly record struct Error(long StreamPosition, Exception Exception) : IMessageBatchResult;
 

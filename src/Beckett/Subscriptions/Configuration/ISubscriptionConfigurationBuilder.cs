@@ -141,4 +141,15 @@ public interface ISubscriptionConfigurationBuilder
     /// <param name="priority">Priority</param>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder Priority(int priority);
+
+    /// <summary>
+    /// Configure this subscription to skip calling the handler entirely during replays. When a handler has side effects
+    /// - sending email, processing payments, etc... - this provides a layer of protection against accidental replays.
+    /// When configured to skip during replay the subscription will replay checkpoints, advancing their positions
+    /// without invoking the handler directly. Alternatively you can pass the <see cref="ISubscriptionContext"/> as an
+    /// argument to your handler which can be used to determine if a replay is currently active for the subscription,
+    /// thereby allowing you to skip steps within the handler if appropriate.
+    /// </summary>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder SkipDuringReplay();
 }
