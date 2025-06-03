@@ -63,7 +63,10 @@ RETURNING
   d.replay_target_position;
 $$;
 
-CREATE OR REPLACE FUNCTION beckett.replay_subscription(_group_name text, _name text)
+CREATE OR REPLACE FUNCTION beckett.replay_subscription(
+  _group_name text,
+  _name text
+)
   RETURNS void
   LANGUAGE plpgsql
 AS
@@ -84,6 +87,50 @@ BEGIN
   SET status = 'replay',
       replay_target_position = global_position.stream_position
   FROM global_position
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION beckett.move_subscription(
+  _group_name text,
+  _name text,
+  _new_group_name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE beckett.subscriptions
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  UPDATE beckett.checkpoints
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION beckett.rename_subscription(
+  _group_name text,
+  _name text,
+  _new_name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE beckett.subscriptions
+  SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  UPDATE beckett.checkpoints
+  SET name = _new_name
   WHERE group_name = _group_name
   AND name = _name;
 END;

@@ -952,3 +952,47 @@ BEGIN
   AND name = _name;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION __schema__.move_subscription(
+  _group_name text,
+  _name text,
+  _new_group_name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.subscriptions
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  UPDATE __schema__.checkpoints
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.rename_subscription(
+  _group_name text,
+  _name text,
+  _new_name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  UPDATE __schema__.subscriptions
+  SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  UPDATE __schema__.checkpoints
+  SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
