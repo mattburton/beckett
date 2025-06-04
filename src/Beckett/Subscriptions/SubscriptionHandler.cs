@@ -237,14 +237,14 @@ public class SubscriptionHandler
         if (typedMessageHandler && _subscription.MessageTypes.Count > 1)
         {
             throw new InvalidOperationException(
-                $"$Typed handlers can only subscribe to one message type [Subscription: {_subscription.Name}]"
+                $"Typed handlers can only subscribe to one message type [Subscription: {_subscription.Name}]"
             );
         }
 
         if (typedBatchHandler && _subscription.MessageTypes.Count > 1)
         {
             throw new InvalidOperationException(
-                $"$Typed batch handlers can only subscribe to one message type [Subscription: {_subscription.Name}]"
+                $"Typed batch handlers can only subscribe to one message type [Subscription: {_subscription.Name}]"
             );
         }
 
@@ -285,6 +285,8 @@ public class SubscriptionHandler
         parameter.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType;
 
     private static bool IsTypedBatch(ParameterInfo parameter) => parameter.ParameterType.IsGenericType &&
+                                                                 parameter.ParameterType != BatchType &&
+                                                                 parameter.ParameterType != UnwrappedBatchType &&
                                                                  parameter.ParameterType.GetGenericTypeDefinition() ==
                                                                  TypedBatchType;
 

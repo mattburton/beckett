@@ -119,6 +119,22 @@ public class SubscriptionHandlerTests
     }
 
     [Fact]
+    public async Task supports_batch_handler_with_multiple_message_types()
+    {
+        _subscription.RegisterMessageType<TestMessage>();
+        _subscription.RegisterMessageType<AnotherTestMessage>();
+        var handler = new SubscriptionHandler(_subscription, BatchHandler.Handle);
+        var batch = BuildMessageBatch();
+        var subscriptionContext = BuildSubscriptionContext();
+
+        await handler.Invoke(batch, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
+
+        Assert.True(handler.IsBatchHandler);
+        Assert.NotNull(BatchHandler.ReceivedBatch);
+        Assert.Equal(batch, BatchHandler.ReceivedBatch);
+    }
+
+    [Fact]
     public async Task supports_typed_batch_handler()
     {
         _subscription.RegisterMessageType<TestMessage>();
