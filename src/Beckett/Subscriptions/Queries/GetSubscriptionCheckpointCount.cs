@@ -28,7 +28,7 @@ public class GetSubscriptionCheckpointCount(
         }
 
         command.Parameters[0].Value = groupName;
-        command.Parameters[0].Value = name;
+        command.Parameters[1].Value = name;
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 
