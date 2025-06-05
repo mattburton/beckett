@@ -139,13 +139,40 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
-                // subscriptions for a new group can just be activated immediately vs put into replay mode
-                if (globalCheckpoint.StreamPosition == 0 || subscription.SkipDuringReplay)
+                bool setSubscriptionToReplay;
+
+                if (globalCheckpoint.StreamPosition == 0)
                 {
-                    await database.Execute(
-                        new SetSubscriptionToActive(
+                    // subscriptions for a new group can just be activated immediately vs put into replay mode
+                    setSubscriptionToReplay = false;
+                }
+                else if (subscription.SkipDuringReplay)
+                {
+                    // activate the subscription and let the checkpoint processor advance the checkpoints as no-ops
+                    setSubscriptionToReplay = false;
+                }
+                else
+                {
+                    // if there's no work to catch up on the subscription can be activated immediately
+                    var checkpointCount = await database.Execute(
+                        new GetSubscriptionCheckpointCount(
                             subscription.Group.Name,
                             subscription.Name,
+                            options.Postgres
+                        ),
+                        cancellationToken
+                    );
+
+                    setSubscriptionToReplay = checkpointCount > 0;
+                }
+
+                if (setSubscriptionToReplay)
+                {
+                    await database.Execute(
+                        new SetSubscriptionToReplay(
+                            subscription.Group.Name,
+                            subscription.Name,
+                            globalCheckpoint.StreamPosition,
                             options.Postgres
                         ),
                         connection,
@@ -156,10 +183,9 @@ public class SubscriptionInitializer(
                 else
                 {
                     await database.Execute(
-                        new SetSubscriptionToReplay(
+                        new SetSubscriptionToActive(
                             subscription.Group.Name,
                             subscription.Name,
-                            globalCheckpoint.StreamPosition,
                             options.Postgres
                         ),
                         connection,
