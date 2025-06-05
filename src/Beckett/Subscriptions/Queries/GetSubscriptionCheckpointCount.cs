@@ -16,7 +16,8 @@ public class GetSubscriptionCheckpointCount(
             SELECT count(*)
             FROM {options.Schema}.checkpoints
             WHERE group_name = $1
-            AND name = $2;
+            AND name = $2
+            AND stream_name != '$initializing';
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
