@@ -1,28 +1,20 @@
 using Beckett.Database;
-using Beckett.Database.Models;
+using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
 public class ReadGlobalStream(ReadGlobalStreamOptions readOptions, PostgresOptions options)
-    : IPostgresDatabaseQuery<IReadOnlyList<PostgresMessage>>
+    : IPostgresDatabaseQuery<ReadGlobalStream.Result>
 {
-    public async Task<IReadOnlyList<PostgresMessage>> Execute(
+    public async Task<Result> Execute(
         NpgsqlCommand command,
         CancellationToken cancellationToken
     )
     {
         command.CommandText = $@"
-            select id,
-                   stream_name,
-                   global_position as stream_version,
-                   stream_position,
-                   global_position,
-                   type,
-                   data,
-                   metadata,
-                   timestamp
+            select messages, ending_global_position
             from {options.Schema}.read_global_stream($1, $2, $3, $4);
         ";
 
@@ -46,13 +38,13 @@ public class ReadGlobalStream(ReadGlobalStreamOptions readOptions, PostgresOptio
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<PostgresMessage>();
+        await reader.ReadAsync(cancellationToken);
 
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            results.Add(PostgresMessage.From(reader));
-        }
+        var messages = reader.GetFieldValue<StreamMessageType[]>(0);
+        var globalPosition = reader.GetFieldValue<long>(1);
 
-        return results;
+        return new Result(messages, globalPosition);
     }
+
+    public record Result(IReadOnlyList<StreamMessageType> Messages, long EndingGlobalPosition);
 }
