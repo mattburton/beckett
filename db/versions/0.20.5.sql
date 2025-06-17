@@ -1,4 +1,4 @@
--- Beckett v0.20.1 - replay updates
+-- Beckett v0.20.5 - replay updates
 CREATE TYPE beckett.stream_message AS
 (
   id uuid,
