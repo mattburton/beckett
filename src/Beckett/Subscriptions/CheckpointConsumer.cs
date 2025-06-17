@@ -68,6 +68,11 @@ public class CheckpointConsumer(
                         instance
                     );
 
+                    await database.Execute(
+                        new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
+                        CancellationToken.None
+                    );
+
                     continue;
                 }
 

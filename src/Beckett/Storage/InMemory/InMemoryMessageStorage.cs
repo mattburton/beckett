@@ -105,7 +105,9 @@ public class InMemoryMessageStorage : IMessageStorage
             messages = messages.Where(x => options.Types.Contains(x.Type)).ToList();
         }
 
-        return Task.FromResult(new ReadGlobalStreamResult(messages));
+        var globalPosition = messages.Count == 0 ? 0 : messages.Last().GlobalPosition;
+
+        return Task.FromResult(new ReadGlobalStreamResult(messages, globalPosition));
     }
 
     public Task<ReadStreamResult> ReadStream(

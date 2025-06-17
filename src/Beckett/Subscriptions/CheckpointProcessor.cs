@@ -25,10 +25,7 @@ public class CheckpointProcessor(
 
         logger.ProcessingCheckpoint(checkpoint.Id, checkpoint.StreamPosition, checkpoint.StreamVersion);
 
-        var result = await HandleMessageBatch(
-            checkpoint,
-            subscription
-        );
+        var result = await HandleMessageBatch(checkpoint, subscription);
 
         switch (result)
         {
@@ -52,11 +49,7 @@ public class CheckpointProcessor(
                     if (success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value)
                     {
                         await database.Execute(
-                            new SetSubscriptionToActive(
-                                subscription.Group.Name,
-                                subscription.Name,
-                                options.Postgres
-                            ),
+                            new SetSubscriptionToActive(subscription.Group.Name, subscription.Name, options.Postgres),
                             connection,
                             transaction,
                             CancellationToken.None
@@ -105,16 +98,13 @@ public class CheckpointProcessor(
         }
     }
 
-    private async Task<IMessageBatchResult> HandleMessageBatch(
-        Checkpoint checkpoint,
-        Subscription subscription
-    )
+    private async Task<IMessageBatchResult> HandleMessageBatch(Checkpoint checkpoint, Subscription subscription)
     {
-        IReadOnlyList<IMessageContext> messageBatch;
+        ReadMessageBatchResult batch;
 
         try
         {
-            messageBatch = await ReadMessageBatch(checkpoint, subscription);
+            batch = await ReadMessageBatch(checkpoint, subscription);
         }
         catch (Exception e)
         {
@@ -132,7 +122,7 @@ public class CheckpointProcessor(
 
         try
         {
-            if (messageBatch.Count == 0)
+            if (batch.Messages.Count == 0)
             {
                 if (subscription.PartitionStrategy is not GlobalStreamPartitionStrategy ||
                     checkpoint.StreamPosition >= checkpoint.StreamVersion)
@@ -140,30 +130,26 @@ public class CheckpointProcessor(
                     return NoMessages.Instance;
                 }
 
-                var readPosition = checkpoint.StreamPosition + subscription.Group.SubscriptionStreamBatchSize;
-
-                if (readPosition > checkpoint.StreamVersion)
-                {
-                    readPosition = checkpoint.StreamVersion;
-                }
-
-                return new Success(readPosition, readPosition);
+                return new Success(batch.GlobalPosition, batch.GlobalPosition);
             }
 
             var subscriptionContext = BuildSubscriptionContext(checkpoint, subscription);
 
-            var lastMessageInBatch = messageBatch[^1];
-
             if (subscription.SkipDuringReplay && subscriptionContext.IsReplay)
             {
-                return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
+                return new Success(batch.StreamPosition, batch.GlobalPosition);
             }
 
             if (subscription.Handler.IsBatchHandler)
             {
                 try
                 {
-                    return await DispatchMessageBatchToHandler(checkpoint, subscription, messageBatch, subscriptionContext);
+                    return await DispatchMessageBatchToHandler(
+                        checkpoint,
+                        subscription,
+                        batch,
+                        subscriptionContext
+                    );
                 }
                 catch (Exception e)
                 {
@@ -175,11 +161,15 @@ public class CheckpointProcessor(
                         checkpoint.Id
                     );
 
-                    return new Error(messageBatch[0].PositionFor(subscription), e);
+                    var streamPosition = subscription.PartitionStrategy is GlobalStreamPartitionStrategy
+                        ? batch.Messages[0].GlobalPosition
+                        : batch.Messages[0].StreamPosition;
+
+                    return new Error(streamPosition, e);
                 }
             }
 
-            foreach (var streamMessage in messageBatch.Where(x => subscription.SubscribedToMessage(x.Type)))
+            foreach (var streamMessage in batch.Messages.Where(x => subscription.SubscribedToMessage(x.Type)))
             {
                 try
                 {
@@ -197,11 +187,15 @@ public class CheckpointProcessor(
                         checkpoint.Id
                     );
 
-                    return new Error(streamMessage.PositionFor(subscription), e);
+                    var streamPosition = subscription.PartitionStrategy is GlobalStreamPartitionStrategy
+                        ? streamMessage.GlobalPosition
+                        : streamMessage.StreamPosition;
+
+                    return new Error(streamPosition, e);
                 }
             }
 
-            return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
+            return new Success(batch.StreamPosition, batch.GlobalPosition);
         }
         catch (Exception e)
         {
@@ -257,7 +251,7 @@ public class CheckpointProcessor(
     private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
         Checkpoint checkpoint,
         Subscription subscription,
-        IReadOnlyList<IMessageContext> messages,
+        ReadMessageBatchResult batch,
         ISubscriptionContext subscriptionContext
     )
     {
@@ -267,21 +261,17 @@ public class CheckpointProcessor(
 
         try
         {
-            var messageBatch = messages.ToList();
-
             using var scope = serviceProvider.CreateScope();
 
             await subscription.Handler.Invoke(
-                messageBatch,
+                batch.Messages,
                 subscriptionContext,
                 scope.ServiceProvider,
                 logger,
                 cts.Token
             );
 
-            var lastMessageInBatch = messageBatch[^1];
-
-            return new Success(lastMessageInBatch.PositionFor(subscription), lastMessageInBatch.GlobalPosition);
+            return new Success(batch.StreamPosition, batch.GlobalPosition);
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -291,19 +281,17 @@ public class CheckpointProcessor(
         catch (OperationCanceledException e) when (cts.IsCancellationRequested)
         {
             throw new TimeoutException(
-                $"Handler exceeded the reservation timeout of {subscription.Group.ReservationTimeout.TotalSeconds} seconds while handling message batch starting with {messages[0].Id} for checkpoint {checkpoint.Id}",
+                $"Handler exceeded the reservation timeout of {subscription.Group.ReservationTimeout.TotalSeconds} seconds while handling message batch starting with {batch.Messages[0].Id} for checkpoint {checkpoint.Id}",
                 e
             );
         }
     }
 
-    private async Task<IReadOnlyList<IMessageContext>> ReadMessageBatch(
-        Checkpoint checkpoint,
-        Subscription subscription
-    )
+    private async Task<ReadMessageBatchResult> ReadMessageBatch(Checkpoint checkpoint, Subscription subscription)
     {
         var startingStreamPosition = checkpoint.StartingPositionFor(subscription);
         var endingStreamPosition = checkpoint.StreamVersion;
+        var batchSize = subscription.BatchSize ?? subscription.Group.SubscriptionBatchSize;
         var skipBatchSizeCheck = false;
 
         if (checkpoint.IsRetryOrFailure)
@@ -322,9 +310,9 @@ public class CheckpointProcessor(
         {
             var count = endingStreamPosition - checkpoint.StreamPosition;
 
-            if (count > subscription.Group.SubscriptionStreamBatchSize)
+            if (count > batchSize)
             {
-                endingStreamPosition = checkpoint.StreamPosition + subscription.Group.SubscriptionStreamBatchSize;
+                endingStreamPosition = checkpoint.StreamPosition + batchSize;
             }
         }
 
@@ -334,7 +322,7 @@ public class CheckpointProcessor(
                 new ReadGlobalStreamOptions
                 {
                     StartingGlobalPosition = startingStreamPosition,
-                    Count = subscription.Group.SubscriptionStreamBatchSize,
+                    Count = batchSize,
                     Category = subscription.Category,
                     Types = subscription.MessageTypeNames.ToArray()
                 },
@@ -343,7 +331,11 @@ public class CheckpointProcessor(
 
             logger.FoundMessagesToProcessForCheckpoint(globalStream.StreamMessages.Count, checkpoint.Id);
 
-            return globalStream.StreamMessages.Select(MessageContext.From).ToList();
+            return new ReadMessageBatchResult(
+                globalStream.StreamMessages.Select(MessageContext.From).ToList(),
+                globalStream.GlobalPosition,
+                globalStream.GlobalPosition
+            );
         }
 
         var stream = await messageStorage.ReadStream(
@@ -359,7 +351,22 @@ public class CheckpointProcessor(
 
         logger.FoundMessagesToProcessForCheckpoint(stream.StreamMessages.Count, checkpoint.Id);
 
-        return stream.StreamMessages.Select(MessageContext.From).ToList();
+        var streamPosition = 0L;
+        var globalPosition = 0L;
+
+        if (stream.StreamMessages.Count > 0)
+        {
+            var lastStreamMessage = stream.StreamMessages[^1];
+
+            streamPosition = lastStreamMessage.StreamPosition;
+            globalPosition = lastStreamMessage.GlobalPosition;
+        }
+
+        return new ReadMessageBatchResult(
+            stream.StreamMessages.Select(MessageContext.From).ToList(),
+            streamPosition,
+            globalPosition
+        );
     }
 
     private static SubscriptionContext BuildSubscriptionContext(Checkpoint checkpoint, Subscription subscription) =>
@@ -492,6 +499,12 @@ public class CheckpointProcessor(
 
     private interface IMessageBatchResult;
 
+    private record ReadMessageBatchResult(
+        IReadOnlyList<IMessageContext> Messages,
+        long StreamPosition,
+        long GlobalPosition
+    );
+
     private readonly record struct NoMessages : IMessageBatchResult
     {
         public static readonly NoMessages Instance = new();
@@ -605,14 +618,4 @@ public static partial class Log
         int attempt,
         int maxRetryCount
     );
-}
-
-public static class MessageContextExtensions
-{
-    public static long PositionFor(this IMessageContext context, Subscription subscription)
-    {
-        return subscription.PartitionStrategy is not GlobalStreamPartitionStrategy
-            ? context.StreamPosition
-            : context.GlobalPosition;
-    }
 }

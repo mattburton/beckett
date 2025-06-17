@@ -1,5 +1,5 @@
 using Beckett.Database;
-using Beckett.Database.Models;
+using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -9,9 +9,9 @@ public class ReadStream(
     string streamName,
     ReadStreamOptions readOptions,
     PostgresOptions postgresOptions
-) : IPostgresDatabaseQuery<IReadOnlyList<PostgresMessage>>
+) : IPostgresDatabaseQuery<IReadOnlyList<StreamMessageType>>
 {
-    public async Task<IReadOnlyList<PostgresMessage>> Execute(
+    public async Task<IReadOnlyList<StreamMessageType>> Execute(
         NpgsqlCommand command,
         CancellationToken cancellationToken
     )
@@ -64,11 +64,11 @@ public class ReadStream(
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<PostgresMessage>();
+        var results = new List<StreamMessageType>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            results.Add(PostgresMessage.From(reader));
+            results.Add(StreamMessageType.From(reader));
         }
 
         return results;

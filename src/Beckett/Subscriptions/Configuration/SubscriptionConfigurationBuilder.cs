@@ -81,6 +81,21 @@ public class SubscriptionConfigurationBuilder(
         return this;
     }
 
+    public ISubscriptionConfigurationBuilder BatchSize(int batchSize)
+    {
+        if (batchSize < 1)
+        {
+            throw new ArgumentException(
+                "The batch size must be greater than or equal to 1",
+                nameof(batchSize)
+            );
+        }
+
+        subscription.BatchSize = batchSize;
+
+        return this;
+    }
+
     public ISubscriptionConfigurationBuilder PartitionByStream()
     {
         subscription.PartitionStrategy = PerStreamPartitionStrategy.Instance;

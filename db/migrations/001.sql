@@ -34,6 +34,24 @@ CREATE TYPE __schema__.message AS
   expected_version bigint
 );
 
+CREATE TYPE __schema__.stream_message AS
+(
+  id uuid,
+  stream_name text,
+  stream_position bigint,
+  global_position bigint,
+  type text,
+  data jsonb,
+  metadata jsonb,
+  timestamp timestamp with time zone
+);
+
+CREATE TYPE __schema__.read_global_stream_result AS
+(
+  messages __schema__.stream_message[],
+  ending_global_position bigint
+);
+
 CREATE OR REPLACE FUNCTION __schema__.stream_category(
   _stream_name text
 )
@@ -265,22 +283,13 @@ CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
   _category text DEFAULT NULL,
   _types text[] DEFAULT NULL
 )
-  RETURNS TABLE (
-    id uuid,
-    stream_name text,
-    stream_position bigint,
-    global_position bigint,
-    type text,
-    data jsonb,
-    metadata jsonb,
-    "timestamp" timestamp with time zone
-  )
+  RETURNS __schema__.read_global_stream_result
   LANGUAGE plpgsql
 AS
 $$
 DECLARE
   _transaction_id xid8;
-  _ending_global_position bigint;
+  _result __schema__.read_global_stream_result;
 BEGIN
   SELECT m.transaction_id
   INTO _transaction_id
@@ -292,9 +301,22 @@ BEGIN
     _transaction_id = '0'::xid8;
   END IF;
 
-  _ending_global_position = _starting_global_position + _count;
-
-  RETURN QUERY
+  WITH batch AS (
+    SELECT m.id, m.global_position, m.transaction_id
+    FROM __schema__.messages m
+    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
+    AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+    AND m.archived = false
+    ORDER BY m.transaction_id, m.global_position
+    LIMIT _count
+  ),
+  ending_global_position AS (
+    SELECT b.global_position
+    FROM batch b
+    ORDER BY b.transaction_id DESC, b.global_position DESC
+    LIMIT 1
+  ),
+  results AS (
     SELECT m.id,
            m.stream_name,
            m.stream_position,
@@ -304,13 +326,21 @@ BEGIN
            m.metadata,
            m.timestamp
     FROM __schema__.messages m
-    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
-    AND (m.global_position > _starting_global_position AND m.global_position <= _ending_global_position)
-    AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-    AND m.archived = false
+    INNER JOIN batch b ON m.id = b.id
+    WHERE m.archived = FALSE
     AND (_category IS NULL OR __schema__.stream_category(m.stream_name) = _category)
-    AND (_types IS NULL OR m.type = ANY(_types))
-    ORDER BY m.transaction_id, m.global_position;
+    AND (_types IS NULL OR m.type = ANY (_types))
+    ORDER BY m.transaction_id, m.global_position
+  )
+  SELECT array_agg(r.*), (SELECT global_position FROM ending_global_position)
+  INTO _result.messages, _result.ending_global_position
+  FROM results r;
+
+  IF (_result.messages IS NULL) THEN
+    _result.messages := ARRAY[]::__schema__.stream_message[];
+  END IF;
+
+  RETURN _result;
 END;
 $$;
 

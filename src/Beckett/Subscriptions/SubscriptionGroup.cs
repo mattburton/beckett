@@ -57,7 +57,7 @@ public class SubscriptionGroup(string groupName)
     /// subscription Beckett will keep reading batches of messages from the stream and processing them until there are
     /// none left.
     /// </summary>
-    public int SubscriptionStreamBatchSize { get; set; } = 500;
+    public int SubscriptionBatchSize { get; set; } = 500;
 
     /// <summary>
     /// Configure the polling interval to check for new checkpoints to process. When Postgres notifications are enabled

@@ -22,7 +22,7 @@ public class CheckpointProcessorTests
                 var options = new BeckettOptions();
                 var group = options.WithSubscriptionGroup(
                     Guid.NewGuid().ToString(),
-                    x => x.SubscriptionStreamBatchSize = 10
+                    x => x.SubscriptionBatchSize = 10
                 );
                 var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 10, 0, CheckpointStatus.Active);
                 var subscription = new Subscription(group, "test")
@@ -52,7 +52,7 @@ public class CheckpointProcessorTests
                 var options = new BeckettOptions();
                 var group = options.WithSubscriptionGroup(
                     Guid.NewGuid().ToString(),
-                    x => x.SubscriptionStreamBatchSize = 10
+                    x => x.SubscriptionBatchSize = 10
                 );
                 var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 20, 0, CheckpointStatus.Active);
                 var subscription = new Subscription(group, "test")
@@ -157,7 +157,7 @@ public class CheckpointProcessorTests
                 var options = new BeckettOptions();
                 var group = options.WithSubscriptionGroup(
                     Guid.NewGuid().ToString(),
-                    x => x.SubscriptionStreamBatchSize = 10
+                    x => x.SubscriptionBatchSize = 10
                 );
                 var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
                 var subscription = new Subscription(group, "test")
@@ -264,7 +264,7 @@ public class CheckpointProcessorTests
                     var options = new BeckettOptions();
                     var group = options.WithSubscriptionGroup(
                         Guid.NewGuid().ToString(),
-                        x => x.SubscriptionStreamBatchSize = 10
+                        x => x.SubscriptionBatchSize = 10
                     );
                     var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 10, 0, CheckpointStatus.Retry);
                     var subscription = new Subscription(group, "test")
@@ -294,7 +294,7 @@ public class CheckpointProcessorTests
                     var options = new BeckettOptions();
                     var group = options.WithSubscriptionGroup(
                         Guid.NewGuid().ToString(),
-                        x => x.SubscriptionStreamBatchSize = 10
+                        x => x.SubscriptionBatchSize = 10
                     );
                     var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
                     var subscription = new Subscription(group, "test")

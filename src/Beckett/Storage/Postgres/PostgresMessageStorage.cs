@@ -4,10 +4,8 @@ using Beckett.Storage.Postgres.Queries;
 
 namespace Beckett.Storage.Postgres;
 
-public class PostgresMessageStorage(
-    IPostgresDataSource dataSource,
-    IPostgresDatabase database,
-    PostgresOptions options) : IMessageStorage
+public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDatabase database, PostgresOptions options)
+    : IMessageStorage
 {
     public async Task<AppendToStreamResult> AppendToStream(
         string streamName,
@@ -40,31 +38,21 @@ public class PostgresMessageStorage(
 
         await connection.OpenAsync(cancellationToken);
 
-        var streamMessages = await database.Execute(
-            new ReadGlobalStream(readOptions, options),
-            connection,
-            cancellationToken
-        );
+        var result = await database.Execute(new ReadGlobalStream(readOptions, options), connection, cancellationToken);
 
-        var messages = new List<StreamMessage>();
+        var messages = result.Messages.Select(message => new StreamMessage(
+                message.Id.ToString(),
+                message.StreamName,
+                message.StreamPosition,
+                message.GlobalPosition,
+                message.Type,
+                message.Data,
+                message.Metadata,
+                message.Timestamp
+            )
+        ).ToList();
 
-        foreach (var streamMessage in streamMessages)
-        {
-            messages.Add(
-                new StreamMessage(
-                    streamMessage.Id.ToString(),
-                    streamMessage.StreamName,
-                    streamMessage.StreamPosition,
-                    streamMessage.GlobalPosition,
-                    streamMessage.Type,
-                    streamMessage.Data,
-                    streamMessage.Metadata,
-                    streamMessage.Timestamp
-                )
-            );
-        }
-
-        return new ReadGlobalStreamResult(messages);
+        return new ReadGlobalStreamResult(messages, result.EndingGlobalPosition);
     }
 
     public async Task<ReadIndexBatchResult> ReadIndexBatch(
@@ -76,11 +64,7 @@ public class PostgresMessageStorage(
 
         await connection.OpenAsync(cancellationToken);
 
-        var results = await database.Execute(
-            new ReadIndexBatch(readOptions, options),
-            connection,
-            cancellationToken
-        );
+        var results = await database.Execute(new ReadIndexBatch(readOptions, options), connection, cancellationToken);
 
         var items = new List<IndexBatchItem>();
 

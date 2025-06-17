@@ -107,13 +107,19 @@ public interface ISubscriptionConfigurationBuilder
     ISubscriptionConfigurationBuilder StartingPosition(StartingPosition startingPosition);
 
     /// <summary>
+    /// Configure the subscription batch size, overriding the default batch size configured for the group
+    /// </summary>
+    /// <param name="batchSize">Batch size for the subscription</param>
+    /// <returns>Builder to further configure the subscription</returns>
+    ISubscriptionConfigurationBuilder BatchSize(int batchSize);
+
+    /// <summary>
     /// Configure the subscription to partition checkpoints by stream. Checkpoints will be tracked for each stream
     /// that matches the subscription configuration and processed in parallel based on the concurrency level configured
     /// for the group the subscription belongs to.
     /// </summary>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder PartitionByStream();
-
     /// <summary>
     /// Configure the subscription to track a single checkpoint based on the global stream. Messages will be processed
     /// in global order in batches using the configured batch size.
