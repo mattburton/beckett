@@ -46,7 +46,16 @@ public class CheckpointProcessor(
 
                 if (checkpoint.ReplayTargetPosition.HasValue)
                 {
-                    if (success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value)
+                    var setSubscriptionToActive = success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value;
+
+                    if (subscription.PartitionStrategy is GlobalStreamPartitionStrategy)
+                    {
+                        // handle situation where there are no more messages to process for this subscription after the
+                        // current checkpoint stream version, but the replay target was set to a higher position
+                        setSubscriptionToActive = success.GlobalPosition >= checkpoint.StreamVersion;
+                    }
+
+                    if (setSubscriptionToActive)
                     {
                         await database.Execute(
                             new SetSubscriptionToActive(subscription.Group.Name, subscription.Name, options.Postgres),
