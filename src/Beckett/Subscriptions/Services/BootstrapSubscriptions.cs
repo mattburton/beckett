@@ -120,7 +120,7 @@ public class BootstrapSubscriptions(
                     }
                 );
 
-                if (subscription.StartingPosition == StartingPosition.Latest)
+                if (subscription.StartingPosition == StartingPosition.Latest || globalPosition == 0)
                 {
                     await database.Execute(
                         new SetSubscriptionToActive(
