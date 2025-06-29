@@ -160,15 +160,15 @@ public class CheckpointProcessor(
                         subscriptionContext
                     );
                 }
+                catch (BatchHandlerException e)
+                {
+                    LogDispatchError(checkpoint, subscription, e);
+
+                    return new Error(e.Position, e.InnerException ?? e);
+                }
                 catch (Exception e)
                 {
-                    logger.LogError(
-                        e,
-                        "Error dispatching message batch to subscription {SubscriptionName} for stream {StreamName} [Checkpoint: {CheckpointId}]",
-                        subscription.Name,
-                        checkpoint.StreamName,
-                        checkpoint.Id
-                    );
+                    LogDispatchError(checkpoint, subscription, e);
 
                     var streamPosition = subscription.PartitionStrategy is GlobalStreamPartitionStrategy
                         ? batch.Messages[0].GlobalPosition
@@ -377,6 +377,15 @@ public class CheckpointProcessor(
             globalPosition
         );
     }
+
+    private void LogDispatchError(Checkpoint checkpoint, Subscription subscription, Exception e) =>
+        logger.LogError(
+            e,
+            "Error dispatching message batch to subscription {SubscriptionName} for stream {StreamName} [Checkpoint: {CheckpointId}]",
+            subscription.Name,
+            checkpoint.StreamName,
+            checkpoint.Id
+        );
 
     private static SubscriptionContext BuildSubscriptionContext(Checkpoint checkpoint, Subscription subscription) =>
         new(
