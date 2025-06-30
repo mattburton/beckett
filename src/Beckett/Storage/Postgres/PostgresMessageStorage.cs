@@ -38,43 +38,17 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
 
         await connection.OpenAsync(cancellationToken);
 
-        var result = await database.Execute(new ReadGlobalStream(readOptions, options), connection, cancellationToken);
+        var results = await database.Execute(new ReadGlobalStream(readOptions, options), connection, cancellationToken);
 
-        var messages = result.Messages.Select(message => new StreamMessage(
-                message.Id.ToString(),
-                message.StreamName,
-                message.StreamPosition,
-                message.GlobalPosition,
-                message.Type,
-                message.Data,
-                message.Metadata,
-                message.Timestamp
-            )
-        ).ToList();
-
-        return new ReadGlobalStreamResult(messages, result.EndingGlobalPosition);
-    }
-
-    public async Task<ReadIndexBatchResult> ReadIndexBatch(
-        ReadIndexBatchOptions readOptions,
-        CancellationToken cancellationToken
-    )
-    {
-        await using var connection = dataSource.CreateMessageStoreReadConnection();
-
-        await connection.OpenAsync(cancellationToken);
-
-        var results = await database.Execute(new ReadIndexBatch(readOptions, options), connection, cancellationToken);
-
-        var items = new List<IndexBatchItem>();
+        var items = new List<GlobalStreamMessage>();
 
         if (results.Count <= 0)
         {
-            return new ReadIndexBatchResult(items);
+            return new ReadGlobalStreamResult(items);
         }
 
         items.AddRange(
-            results.Select(result => new IndexBatchItem(
+            results.Select(result => new GlobalStreamMessage(
                     result.StreamName,
                     result.StreamPosition,
                     result.GlobalPosition,
@@ -85,7 +59,7 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
             )
         );
 
-        return new ReadIndexBatchResult(items);
+        return new ReadGlobalStreamResult(items);
     }
 
     public async Task<ReadStreamResult> ReadStream(

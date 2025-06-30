@@ -1,5 +1,4 @@
 using Beckett.Messages;
-using Beckett.Subscriptions.PartitionStrategies;
 
 namespace Beckett.Subscriptions;
 
@@ -15,7 +14,6 @@ public class Subscription(SubscriptionGroup group, string name)
     internal SubscriptionHandler Handler { get; private set; } = null!;
     internal string? HandlerName { get; set; }
     internal StartingPosition StartingPosition { get; set; } = StartingPosition.Latest;
-    internal IPartitionStrategy PartitionStrategy { get; set; } = PerStreamPartitionStrategy.Instance;
     internal int? BatchSize { get; set; }
     internal Dictionary<Type, int> MaxRetriesByExceptionType { get; } = [];
     internal int Priority { get; set; } = int.MaxValue;

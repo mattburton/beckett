@@ -1,17 +1,7 @@
-using Beckett.Subscriptions.PartitionStrategies;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Beckett.Subscriptions.Configuration;
 
-public class SubscriptionConfigurationBuilder(
-    Subscription subscription,
-    IServiceCollection services
-) : ISubscriptionConfigurationBuilder
+public class SubscriptionConfigurationBuilder(Subscription subscription) : ISubscriptionConfigurationBuilder
 {
-    public IServiceCollection Services => services;
-
-    public Subscription Subscription => subscription;
-
     public ISubscriptionConfigurationBuilder Category(string category)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(category);
@@ -92,20 +82,6 @@ public class SubscriptionConfigurationBuilder(
         }
 
         subscription.BatchSize = batchSize;
-
-        return this;
-    }
-
-    public ISubscriptionConfigurationBuilder PartitionByStream()
-    {
-        subscription.PartitionStrategy = PerStreamPartitionStrategy.Instance;
-
-        return this;
-    }
-
-    public ISubscriptionConfigurationBuilder PartitionByGlobalStream()
-    {
-        subscription.PartitionStrategy = GlobalStreamPartitionStrategy.Instance;
 
         return this;
     }

@@ -38,14 +38,14 @@ public class InMemoryMessageStorageTests
 
         var globalStream = await storage.ReadGlobalStream(new ReadGlobalStreamOptions
         {
-            StartingGlobalPosition = 0,
-            Count = 10
+            LastGlobalPosition = 0,
+            BatchSize = 10
         }, CancellationToken.None);
 
-        var item = Assert.Single(globalStream.StreamMessages);
+        var item = Assert.Single(globalStream.Messages);
         Assert.Equal(1, item.GlobalPosition);
         Assert.Equal(1, item.StreamPosition);
         Assert.Equal(streamName, item.StreamName);
-        Assert.Equal("test-event", item.Type);
+        Assert.Equal("test-event", item.MessageType);
     }
 }

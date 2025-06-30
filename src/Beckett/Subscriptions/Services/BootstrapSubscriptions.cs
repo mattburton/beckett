@@ -1,7 +1,6 @@
 using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Subscriptions.Initialization;
-using Beckett.Subscriptions.PartitionStrategies;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -43,7 +42,7 @@ public class BootstrapSubscriptions(
 
         await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
-        var globalPosition = await database.Execute(
+        await database.Execute(
             new EnsureCheckpointExists(
                 group.Name,
                 GlobalCheckpoint.Name,
@@ -96,57 +95,6 @@ public class BootstrapSubscriptions(
                     subscription.Name,
                     group.Name
                 );
-
-                continue;
-            }
-
-            if (subscription.PartitionStrategy is GlobalStreamPartitionStrategy)
-            {
-                logger.LogTrace(
-                    "Subscription {Name} in group {GroupName} is scoped to the global stream so it will be set to active and will start processing messages from the {StartingPosition} of the global stream.",
-                    subscription.Name,
-                    group.Name,
-                    subscription.StartingPosition == StartingPosition.Latest ? "end" : "beginning"
-                );
-
-                checkpoints.Add(
-                    new CheckpointType
-                    {
-                        GroupName = group.Name,
-                        Name = subscription.Name,
-                        StreamName = GlobalStream.Name,
-                        StreamVersion = globalPosition,
-                        StreamPosition = subscription.StartingPosition == StartingPosition.Latest ? globalPosition : 0
-                    }
-                );
-
-                if (subscription.StartingPosition == StartingPosition.Latest || globalPosition == 0)
-                {
-                    await database.Execute(
-                        new SetSubscriptionToActive(
-                            group.Name,
-                            subscription.Name,
-                            options.Postgres
-                        ),
-                        connection,
-                        transaction,
-                        stoppingToken
-                    );
-                }
-                else
-                {
-                    await database.Execute(
-                        new SetSubscriptionToReplay(
-                            group.Name,
-                            subscription.Name,
-                            globalPosition,
-                            options.Postgres
-                        ),
-                        connection,
-                        transaction,
-                        stoppingToken
-                    );
-                }
 
                 continue;
             }

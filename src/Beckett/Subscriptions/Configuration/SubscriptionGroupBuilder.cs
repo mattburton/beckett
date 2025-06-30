@@ -1,8 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Beckett.Subscriptions.Configuration;
 
-public class SubscriptionGroupBuilder(SubscriptionGroup group, IServiceCollection services) : ISubscriptionGroupBuilder
+public class SubscriptionGroupBuilder(SubscriptionGroup group) : ISubscriptionGroupBuilder
 {
     public ISubscriptionConfigurationBuilder AddSubscription(string name)
     {
@@ -13,6 +11,6 @@ public class SubscriptionGroupBuilder(SubscriptionGroup group, IServiceCollectio
             );
         }
 
-        return new SubscriptionConfigurationBuilder(subscription, services);
+        return new SubscriptionConfigurationBuilder(subscription);
     }
 }

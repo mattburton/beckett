@@ -41,6 +41,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSubscriptionSupport(options);
 
-        return new BeckettBuilder(options, services);
+        return new BeckettBuilder(options);
     }
 }

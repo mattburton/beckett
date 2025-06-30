@@ -233,8 +233,8 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.read_index_batch(
-  _starting_global_position bigint,
+CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
+  _last_global_position bigint,
   _batch_size int
 )
   RETURNS TABLE (
@@ -254,7 +254,7 @@ BEGIN
   SELECT m.transaction_id
   INTO _transaction_id
   FROM __schema__.messages m
-  WHERE m.global_position = _starting_global_position
+  WHERE m.global_position = _last_global_position
   AND m.archived = false;
 
   IF (_transaction_id IS NULL) THEN
@@ -269,78 +269,11 @@ BEGIN
            m.metadata ->> '$tenant',
            m.timestamp
     FROM __schema__.messages m
-    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
+    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _last_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
     ORDER BY m.transaction_id, m.global_position
     LIMIT _batch_size;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION __schema__.read_global_stream(
-  _starting_global_position bigint,
-  _count int,
-  _category text DEFAULT NULL,
-  _types text[] DEFAULT NULL
-)
-  RETURNS __schema__.read_global_stream_result
-  LANGUAGE plpgsql
-AS
-$$
-DECLARE
-  _transaction_id xid8;
-  _result __schema__.read_global_stream_result;
-BEGIN
-  SELECT m.transaction_id
-  INTO _transaction_id
-  FROM __schema__.messages m
-  WHERE m.global_position = _starting_global_position
-  AND m.archived = false;
-
-  IF (_transaction_id IS NULL) THEN
-    _transaction_id = '0'::xid8;
-  END IF;
-
-  WITH batch AS (
-    SELECT m.id, m.global_position, m.transaction_id
-    FROM __schema__.messages m
-    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
-    AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-    AND m.archived = false
-    ORDER BY m.transaction_id, m.global_position
-    LIMIT _count
-  ),
-  ending_global_position AS (
-    SELECT b.global_position
-    FROM batch b
-    ORDER BY b.transaction_id DESC, b.global_position DESC
-    LIMIT 1
-  ),
-  results AS (
-    SELECT m.id,
-           m.stream_name,
-           m.stream_position,
-           m.global_position,
-           m.type,
-           m.data,
-           m.metadata,
-           m.timestamp
-    FROM __schema__.messages m
-    INNER JOIN batch b ON m.id = b.id
-    WHERE m.archived = FALSE
-    AND (_category IS NULL OR __schema__.stream_category(m.stream_name) = _category)
-    AND (_types IS NULL OR m.type = ANY (_types))
-    ORDER BY m.transaction_id, m.global_position
-  )
-  SELECT array_agg(r.*), (SELECT global_position FROM ending_global_position)
-  INTO _result.messages, _result.ending_global_position
-  FROM results r;
-
-  IF (_result.messages IS NULL) THEN
-    _result.messages := ARRAY[]::__schema__.stream_message[];
-  END IF;
-
-  RETURN _result;
 END;
 $$;
 
@@ -515,7 +448,7 @@ BEGIN
     NEW.process_at = now();
   END IF;
 
-  IF (NEW.name != '$global' AND NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
     PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
   END IF;
 
