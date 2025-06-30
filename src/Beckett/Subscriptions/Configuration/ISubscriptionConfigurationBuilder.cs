@@ -1,14 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Beckett.Subscriptions.Configuration;
 
 public interface ISubscriptionConfigurationBuilder
 {
-    /// <summary>
-    /// Application service collection exposed for use by subscription builder extension methods
-    /// </summary>
-    IServiceCollection Services { get; }
-
     /// <summary>
     /// <para>
     /// Optional - only subscribe to messages appended to streams in a given category. Example:
@@ -112,20 +105,6 @@ public interface ISubscriptionConfigurationBuilder
     /// <param name="batchSize">Batch size for the subscription</param>
     /// <returns>Builder to further configure the subscription</returns>
     ISubscriptionConfigurationBuilder BatchSize(int batchSize);
-
-    /// <summary>
-    /// Configure the subscription to partition checkpoints by stream. Checkpoints will be tracked for each stream
-    /// that matches the subscription configuration and processed in parallel based on the concurrency level configured
-    /// for the group the subscription belongs to.
-    /// </summary>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder PartitionByStream();
-    /// <summary>
-    /// Configure the subscription to track a single checkpoint based on the global stream. Messages will be processed
-    /// in global order in batches using the configured batch size.
-    /// </summary>
-    /// <returns>Builder to further configure the subscription</returns>
-    ISubscriptionConfigurationBuilder PartitionByGlobalStream();
 
     /// <summary>
     /// Configure the default max retry count for this subscription. This will override the max retry count configured

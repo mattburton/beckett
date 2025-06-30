@@ -1,50 +1,59 @@
 using Beckett.Database;
-using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace Beckett.Storage.Postgres.Queries;
 
-public class ReadGlobalStream(ReadGlobalStreamOptions readOptions, PostgresOptions options)
-    : IPostgresDatabaseQuery<ReadGlobalStream.Result>
+public class ReadGlobalStream(
+    ReadGlobalStreamOptions readOptions,
+    PostgresOptions options
+) : IPostgresDatabaseQuery<IReadOnlyList<ReadGlobalStream.Result>>
 {
-    public async Task<Result> Execute(
-        NpgsqlCommand command,
-        CancellationToken cancellationToken
-    )
+    public async Task<IReadOnlyList<Result>> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         command.CommandText = $@"
-            select messages, ending_global_position
-            from {options.Schema}.read_global_stream($1, $2, $3, $4);
+            select stream_name, stream_position, global_position, type, tenant, timestamp
+            from {options.Schema}.read_global_stream($1, $2);
         ";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
-        command.Parameters.Add(
-            new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text, IsNullable = true }
-        );
 
         if (options.PrepareStatements)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = readOptions.StartingGlobalPosition;
-        command.Parameters[1].Value = readOptions.Count;
-        command.Parameters[2].Value =
-            string.IsNullOrWhiteSpace(readOptions.Category) ? DBNull.Value : readOptions.Category;
-        command.Parameters[3].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
+        command.Parameters[0].Value = readOptions.LastGlobalPosition;
+        command.Parameters[1].Value = readOptions.BatchSize;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        await reader.ReadAsync(cancellationToken);
+        var results = new List<Result>();
 
-        var messages = reader.GetFieldValue<StreamMessageType[]>(0);
-        var globalPosition = reader.GetFieldValue<long>(1);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(
+                new Result(
+                    reader.GetFieldValue<string>(0),
+                    reader.GetFieldValue<long>(1),
+                    reader.GetFieldValue<long>(2),
+                    reader.GetFieldValue<string>(3),
+                    reader.IsDBNull(4) ? null : reader.GetFieldValue<string>(4),
+                    reader.GetFieldValue<DateTimeOffset>(5)
+                )
+            );
+        }
 
-        return new Result(messages, globalPosition);
+        return results;
     }
 
-    public record Result(IReadOnlyList<StreamMessageType> Messages, long EndingGlobalPosition);
+    public readonly record struct Result(
+        string StreamName,
+        long StreamPosition,
+        long GlobalPosition,
+        string MessageType,
+        string? Tenant,
+        DateTimeOffset Timestamp
+    );
 }

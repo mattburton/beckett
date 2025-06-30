@@ -2,7 +2,7 @@ using Beckett.Subscriptions;
 
 namespace Beckett.Storage;
 
-public record IndexBatchItem(
+public record GlobalStreamMessage(
     string StreamName,
     long StreamPosition,
     long GlobalPosition,

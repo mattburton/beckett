@@ -1,8 +1,6 @@
 using System.Text.Json.Nodes;
 using Beckett.Messages;
-using Beckett.Subscriptions;
 using Beckett.Subscriptions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Beckett;
 
@@ -58,7 +56,7 @@ public interface IBeckettBuilder
     ISubscriptionConfigurationBuilder AddSubscription(string name);
 }
 
-public class BeckettBuilder(BeckettOptions options, IServiceCollection services) : IBeckettBuilder
+public class BeckettBuilder(BeckettOptions options) : IBeckettBuilder
 {
     public void Map<TMessage>(string name) => MessageTypeMap.Map<TMessage>(name);
 
@@ -76,7 +74,7 @@ public class BeckettBuilder(BeckettOptions options, IServiceCollection services)
             throw new InvalidOperationException($"There is no subscription group named {groupName} configured for this host.");
         }
 
-        return new SubscriptionGroupBuilder(group, services);
+        return new SubscriptionGroupBuilder(group);
     }
 
     public ISubscriptionConfigurationBuilder AddSubscription(string name)
@@ -96,6 +94,6 @@ public class BeckettBuilder(BeckettOptions options, IServiceCollection services)
             throw new InvalidOperationException($"There is already a subscription with the name {name} in the group {group.Name}");
         }
 
-        return new SubscriptionConfigurationBuilder(subscription, services);
+        return new SubscriptionConfigurationBuilder(subscription);
     }
 }

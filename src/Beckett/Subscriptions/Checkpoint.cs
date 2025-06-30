@@ -1,4 +1,3 @@
-using Beckett.Subscriptions.PartitionStrategies;
 using Npgsql;
 
 namespace Beckett.Subscriptions;
@@ -16,20 +15,6 @@ public record Checkpoint(
 )
 {
     public bool IsRetryOrFailure => Status is CheckpointStatus.Retry or CheckpointStatus.Failed;
-
-    public long StartingPositionFor(Subscription subscription)
-    {
-        return subscription.PartitionStrategy is not GlobalStreamPartitionStrategy
-            ? StreamPosition + 1
-            : StreamPosition;
-    }
-
-    public long RetryStartingPositionFor(Subscription subscription)
-    {
-        return subscription.PartitionStrategy is not GlobalStreamPartitionStrategy
-            ? StreamPosition
-            : StreamPosition - 1;
-    }
 
     public static Checkpoint? From(NpgsqlDataReader reader)
     {

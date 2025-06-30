@@ -50,21 +50,15 @@ public class InMemoryMessageStorage : IMessageStorage
         return Task.FromResult(new AppendToStreamResult(newStreamVersion));
     }
 
-    public async Task<ReadIndexBatchResult> ReadIndexBatch(
-        ReadIndexBatchOptions options,
+    public Task<ReadGlobalStreamResult> ReadGlobalStream(
+        ReadGlobalStreamOptions options,
         CancellationToken cancellationToken
     )
     {
-        var globalStream = await ReadGlobalStream(
-            new ReadGlobalStreamOptions
-            {
-                StartingGlobalPosition = options.StartingGlobalPosition,
-                Count = options.BatchSize
-            },
-            cancellationToken
-        );
+        var messages = _store.Where(x => x.GlobalPosition > options.LastGlobalPosition).Take(options.BatchSize)
+            .ToList();
 
-        var items = globalStream.StreamMessages.Select(x =>
+        var items = messages.Select(x =>
             {
                 string? tenant = null;
 
@@ -73,7 +67,7 @@ public class InMemoryMessageStorage : IMessageStorage
                     tenant = tenantProperty.GetString();
                 }
 
-                return new IndexBatchItem(
+                return new GlobalStreamMessage(
                     x.StreamName,
                     x.StreamPosition,
                     x.GlobalPosition,
@@ -84,30 +78,7 @@ public class InMemoryMessageStorage : IMessageStorage
             }
         ).ToList();
 
-        return new ReadIndexBatchResult(items);
-    }
-
-    public Task<ReadGlobalStreamResult> ReadGlobalStream(
-        ReadGlobalStreamOptions options,
-        CancellationToken cancellationToken
-    )
-    {
-        var messages = _store.Where(x => x.GlobalPosition > options.StartingGlobalPosition).Take(options.Count)
-            .ToList();
-
-        if (!string.IsNullOrWhiteSpace(options.Category))
-        {
-            messages = messages.Where(x => x.StreamName.StartsWith(options.Category + "-")).ToList();
-        }
-
-        if (options.Types is { Length: > 0 })
-        {
-            messages = messages.Where(x => options.Types.Contains(x.Type)).ToList();
-        }
-
-        var globalPosition = messages.Count == 0 ? 0 : messages.Last().GlobalPosition;
-
-        return Task.FromResult(new ReadGlobalStreamResult(messages, globalPosition));
+        return Task.FromResult(new ReadGlobalStreamResult(items));
     }
 
     public Task<ReadStreamResult> ReadStream(

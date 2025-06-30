@@ -2,7 +2,6 @@ using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Storage;
-using Beckett.Subscriptions.PartitionStrategies;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
 
@@ -55,57 +54,29 @@ public class GlobalStreamConsumer(
 
                 stoppingToken.ThrowIfCancellationRequested();
 
-                var batch = await messageStorage.ReadIndexBatch(
-                    new ReadIndexBatchOptions
+                var batch = await messageStorage.ReadGlobalStream(
+                    new ReadGlobalStreamOptions
                     {
-                        StartingGlobalPosition = checkpoint.StreamPosition,
+                        LastGlobalPosition = checkpoint.StreamPosition,
                         BatchSize = group.GlobalStreamBatchSize
                     },
                     stoppingToken
                 );
 
-                if (batch.Items.Count == 0)
+                if (batch.Messages.Count == 0)
                 {
                     logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
 
                     continue;
                 }
 
-                logger.NewGlobalStreamMessagesToProcess(batch.Items.Count, checkpoint.StreamPosition);
+                logger.NewGlobalStreamMessagesToProcess(batch.Messages.Count, checkpoint.StreamPosition);
 
                 var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
 
-                var globalStreamSubscriptions = registeredSubscriptions
-                    .Where(x => x.PartitionStrategy is GlobalStreamPartitionStrategy)
-                    .Where(x => batch.Items.Any(m => m.AppliesTo(x))).OrderBy(x => x.Priority)
-                    .ToArray();
-
-                foreach (var subscription in globalStreamSubscriptions)
-                {
-                    var subscriptionCheckpoint = new CheckpointType
-                    {
-                        GroupName = group.Name,
-                        Name = subscription.Name,
-                        StreamName = GlobalStream.Name,
-                        StreamVersion = batch.Items.Where(x => x.AppliesTo(subscription))
-                            .Max(x => x.GlobalPosition)
-                    };
-
-                    if (checkpoints.TryGetValue(subscriptionCheckpoint, out var existingCheckpoint))
-                    {
-                        existingCheckpoint.StreamVersion = batch.Items
-                            .Where(x => x.AppliesTo(subscription)).Max(x => x.GlobalPosition);
-                    }
-                    else
-                    {
-                        checkpoints.Add(subscriptionCheckpoint);
-                    }
-                }
-
-                foreach (var stream in batch.Items.GroupBy(x => x.StreamName))
+                foreach (var stream in batch.Messages.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
-                        .Where(x => x.PartitionStrategy is not GlobalStreamPartitionStrategy)
                         .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
                         .OrderBy(subscription => subscription.Priority).ToArray();
 
@@ -147,7 +118,7 @@ public class GlobalStreamConsumer(
                     logger.NoNewCheckpointsToRecord();
                 }
 
-                var newGlobalPosition = batch.Items.Max(x => x.GlobalPosition);
+                var newGlobalPosition = batch.Messages.Max(x => x.GlobalPosition);
 
                 await database.Execute(
                     new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition, postgresOptions),
@@ -177,12 +148,12 @@ public class GlobalStreamConsumer(
         }
     }
 
-    private static void RecordStreamData(ReadIndexBatchResult globalStream)
+    private static void RecordStreamData(ReadGlobalStreamResult globalStream)
     {
         var categories = new Dictionary<string, DateTimeOffset>();
         var tenants = new HashSet<string>();
 
-        foreach (var message in globalStream.Items)
+        foreach (var message in globalStream.Messages)
         {
             categories[StreamCategoryParser.Parse(message.StreamName)] = message.Timestamp;
 

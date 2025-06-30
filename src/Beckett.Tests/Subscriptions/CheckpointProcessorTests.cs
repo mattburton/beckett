@@ -75,246 +75,105 @@ public class CheckpointProcessorTests
         }
     }
 
-    public class when_subscription_handler_is_message_handler
+    public class when_reservation_timeout_is_exceeded
     {
-        public class when_reservation_timeout_is_exceeded
+        [Fact]
+        public async Task throws_timeout_exception()
         {
-            [Fact]
-            public async Task throws_timeout_exception()
+            var options = new BeckettOptions();
+            var group = options.WithSubscriptionGroup(
+                Guid.NewGuid().ToString(),
+                x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
+            );
+            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+            var subscription = new Subscription(group, "test")
             {
-                var options = new BeckettOptions();
-                var group = options.WithSubscriptionGroup(
-                    Guid.NewGuid().ToString(),
-                    x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription(group, "test")
+                HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
                 {
-                    HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(5), ct);
-                    }
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
-                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
-                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
-                RecordCheckpointError? error = null;
-                database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
-                    .Do(x => error = x.Arg<RecordCheckpointError>());
+                    await Task.Delay(TimeSpan.FromMilliseconds(5), ct);
+                }
+            };
+            subscription.RegisterMessageType<TestMessage>();
+            subscription.BuildHandler();
+            var messageStorage = Substitute.For<IMessageStorage>();
+            var database = Substitute.For<IPostgresDatabase>();
+            var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+            messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
+                .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
+            RecordCheckpointError? error = null;
+            database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
+                .Do(x => error = x.Arg<RecordCheckpointError>());
 
-                await checkpointProcessor.Process(1, checkpoint, subscription);
+            await checkpointProcessor.Process(1, checkpoint, subscription);
 
-                Assert.NotNull(error);
-                Assert.True(IsTimeoutException(error));
-            }
-        }
-
-        public class when_nested_timeout_exception_is_thrown
-        {
-            [Fact]
-            public async Task throws_timeout_exception()
-            {
-                var options = new BeckettOptions();
-                var group = options.WithSubscriptionGroup(
-                    Guid.NewGuid().ToString(),
-                    x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription(group, "test")
-                {
-                    HandlerDelegate = (IMessageContext _, CancellationToken ct) =>
-                    {
-                        throw new TaskCanceledException("test", new TimeoutException("timeout"), ct);
-                    }
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
-                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
-                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
-                RecordCheckpointError? error = null;
-                database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
-                    .Do(x => error = x.Arg<RecordCheckpointError>());
-
-                await checkpointProcessor.Process(1, checkpoint, subscription);
-
-                Assert.NotNull(error);
-                Assert.True(IsTimeoutException(error));
-            }
-        }
-
-        public class when_checkpoint_is_retry_or_failure
-        {
-            [Fact]
-            public async Task only_reads_one_message_to_retry()
-            {
-                var options = new BeckettOptions();
-                var group = options.WithSubscriptionGroup(
-                    Guid.NewGuid().ToString(),
-                    x => x.SubscriptionBatchSize = 10
-                );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
-                var subscription = new Subscription(group, "test")
-                {
-                    HandlerDelegate = (IMessageContext _) => { }
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
-
-                await checkpointProcessor.Process(1, checkpoint, subscription);
-
-                await messageStorage.Received().ReadStream(
-                    "test",
-                    Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 2),
-                    CancellationToken.None
-                );
-            }
+            Assert.NotNull(error);
+            Assert.True(IsTimeoutException(error));
         }
     }
 
-    public class when_subscription_handler_is_batch_handler
+    public class when_nested_timeout_exception_is_thrown
     {
-        public class when_reservation_timeout_is_exceeded
+        [Fact]
+        public async Task throws_timeout_exception()
         {
-            [Fact]
-            public async Task throws_timeout_exception()
+            var options = new BeckettOptions();
+            var group = options.WithSubscriptionGroup(
+                Guid.NewGuid().ToString(),
+                x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
+            );
+            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+            var subscription = new Subscription(group, "test")
             {
-                var options = new BeckettOptions();
-                var group = options.WithSubscriptionGroup(
-                    Guid.NewGuid().ToString(),
-                    x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription(group, "test")
+                HandlerDelegate = (IMessageContext _, CancellationToken ct) =>
                 {
-                    HandlerDelegate = async (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(5), ct);
-                    }
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
-                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
-                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
-                RecordCheckpointError? error = null;
-                database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
-                    .Do(x => error = x.Arg<RecordCheckpointError>());
-
-                await checkpointProcessor.Process(1, checkpoint, subscription);
-
-                Assert.NotNull(error);
-                Assert.True(IsTimeoutException(error));
-            }
-        }
-
-        public class when_nested_timeout_exception_is_thrown
-        {
-            [Fact]
-            public async Task throws_timeout_exception()
-            {
-                var options = new BeckettOptions();
-                var group = options.WithSubscriptionGroup(
-                    Guid.NewGuid().ToString(),
-                    x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
-                );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
-                var subscription = new Subscription(group, "test")
-                {
-                    HandlerDelegate = (IReadOnlyList<IMessageContext> _, CancellationToken ct) =>
-                    {
-                        throw new TaskCanceledException("test", new TimeoutException("timeout"), ct);
-                    }
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var database = Substitute.For<IPostgresDatabase>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
-                messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
-                    .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
-                RecordCheckpointError? error = null;
-                database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
-                    .Do(x => error = x.Arg<RecordCheckpointError>());
-
-                await checkpointProcessor.Process(1, checkpoint, subscription);
-
-                Assert.NotNull(error);
-                Assert.True(IsTimeoutException(error));
-            }
-        }
-
-        public class when_checkpoint_is_retry_or_failure
-        {
-            public class when_messages_to_process_is_less_than_batch_size
-            {
-                [Fact]
-                public async Task only_reads_messages_up_to_stream_version()
-                {
-                    var options = new BeckettOptions();
-                    var group = options.WithSubscriptionGroup(
-                        Guid.NewGuid().ToString(),
-                        x => x.SubscriptionBatchSize = 10
-                    );
-                    var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 10, 0, CheckpointStatus.Retry);
-                    var subscription = new Subscription(group, "test")
-                    {
-                        HandlerDelegate = (IReadOnlyList<IMessageContext> _) => { }
-                    };
-                    subscription.RegisterMessageType<TestMessage>();
-                    subscription.BuildHandler();
-                    var messageStorage = Substitute.For<IMessageStorage>();
-                    var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
-
-                    await checkpointProcessor.Process(1, checkpoint, subscription);
-
-                    await messageStorage.Received().ReadStream(
-                        "test",
-                        Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
-                        CancellationToken.None
-                    );
+                    throw new TaskCanceledException("test", new TimeoutException("timeout"), ct);
                 }
-            }
+            };
+            subscription.RegisterMessageType<TestMessage>();
+            subscription.BuildHandler();
+            var messageStorage = Substitute.For<IMessageStorage>();
+            var database = Substitute.For<IPostgresDatabase>();
+            var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+            messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
+                .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
+            RecordCheckpointError? error = null;
+            database.WhenForAnyArgs(x => x.Execute(Arg.Any<RecordCheckpointError>(), Arg.Any<CancellationToken>()))
+                .Do(x => error = x.Arg<RecordCheckpointError>());
 
-            public class when_messages_to_process_exceeds_batch_size
+            await checkpointProcessor.Process(1, checkpoint, subscription);
+
+            Assert.NotNull(error);
+            Assert.True(IsTimeoutException(error));
+        }
+    }
+
+    public class when_checkpoint_is_retry_or_failure
+    {
+        [Fact]
+        public async Task only_reads_one_message_to_retry()
+        {
+            var options = new BeckettOptions();
+            var group = options.WithSubscriptionGroup(
+                Guid.NewGuid().ToString(),
+                x => x.SubscriptionBatchSize = 10
+            );
+            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
+            var subscription = new Subscription(group, "test")
             {
-                [Fact]
-                public async Task only_reads_messages_up_to_batch_size()
-                {
-                    var options = new BeckettOptions();
-                    var group = options.WithSubscriptionGroup(
-                        Guid.NewGuid().ToString(),
-                        x => x.SubscriptionBatchSize = 10
-                    );
-                    var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
-                    var subscription = new Subscription(group, "test")
-                    {
-                        HandlerDelegate = (IReadOnlyList<IMessageContext> _) => { }
-                    };
-                    subscription.RegisterMessageType<TestMessage>();
-                    subscription.BuildHandler();
-                    var messageStorage = Substitute.For<IMessageStorage>();
-                    var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
+                HandlerDelegate = (IMessageContext _) => { }
+            };
+            subscription.RegisterMessageType<TestMessage>();
+            subscription.BuildHandler();
+            var messageStorage = Substitute.For<IMessageStorage>();
+            var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
 
-                    await checkpointProcessor.Process(1, checkpoint, subscription);
+            await checkpointProcessor.Process(1, checkpoint, subscription);
 
-                    await messageStorage.Received().ReadStream(
-                        "test",
-                        Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 11),
-                        CancellationToken.None
-                    );
-                }
-            }
+            await messageStorage.Received().ReadStream(
+                "test",
+                Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 2),
+                CancellationToken.None
+            );
         }
     }
 

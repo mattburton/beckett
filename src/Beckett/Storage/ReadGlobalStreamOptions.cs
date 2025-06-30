@@ -2,8 +2,6 @@ namespace Beckett.Storage;
 
 public class ReadGlobalStreamOptions
 {
-    public required long StartingGlobalPosition { get; init; }
-    public required int Count { get; init; }
-    public string? Category { get; init; }
-    public string[]? Types { get; init; }
+    public required long LastGlobalPosition { get; init; }
+    public required int BatchSize { get; init; }
 }

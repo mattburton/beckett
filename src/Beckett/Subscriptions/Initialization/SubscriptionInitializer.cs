@@ -97,16 +97,16 @@ public class SubscriptionInitializer(
 
             logger.InitializingSubscription(subscription.Name);
 
-            var batch = await messageStorage.ReadIndexBatch(
-                new ReadIndexBatchOptions
+            var batch = await messageStorage.ReadGlobalStream(
+                new ReadGlobalStreamOptions
                 {
-                    StartingGlobalPosition = checkpoint.StreamPosition,
+                    LastGlobalPosition = checkpoint.StreamPosition,
                     BatchSize = options.Subscriptions.InitializationBatchSize
                 },
                 cancellationToken
             );
 
-            if (batch.Items.Count == 0)
+            if (batch.Messages.Count == 0)
             {
                 var globalCheckpoint = await database.Execute(
                     new LockCheckpoint(
@@ -125,16 +125,16 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
-                var nextBatch = await messageStorage.ReadIndexBatch(
-                    new ReadIndexBatchOptions
+                var nextBatch = await messageStorage.ReadGlobalStream(
+                    new ReadGlobalStreamOptions
                     {
-                        StartingGlobalPosition = checkpoint.StreamPosition,
+                        LastGlobalPosition = checkpoint.StreamPosition,
                         BatchSize = 1
                     },
                     cancellationToken
                 );
 
-                if (nextBatch.Items.Any())
+                if (nextBatch.Messages.Any())
                 {
                     continue;
                 }
@@ -203,7 +203,7 @@ public class SubscriptionInitializer(
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var stream in batch.Items.GroupBy(x => x.StreamName))
+            foreach (var stream in batch.Messages.GroupBy(x => x.StreamName))
             {
                 if (stream.All(x => !x.AppliesTo(subscription)))
                 {
@@ -234,7 +234,7 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            var newGlobalPosition = batch.Items.Max(x => x.GlobalPosition);
+            var newGlobalPosition = batch.Messages.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new UpdateSystemCheckpointPosition(

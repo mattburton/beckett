@@ -14,11 +14,6 @@ public interface IMessageStorage
         CancellationToken cancellationToken
     );
 
-    Task<ReadIndexBatchResult> ReadIndexBatch(
-        ReadIndexBatchOptions options,
-        CancellationToken cancellationToken
-    );
-
     Task<ReadStreamResult> ReadStream(
         string streamName,
         ReadStreamOptions options,
