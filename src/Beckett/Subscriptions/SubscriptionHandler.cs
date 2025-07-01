@@ -11,11 +11,10 @@ public class SubscriptionHandler
     private static readonly Type MessageContextType = typeof(IMessageContext);
     private static readonly Type TypedMessageContextType = typeof(IMessageContext<>);
     private static readonly Type ConcreteTypedMessageContextType = typeof(MessageContext<>);
+    private static readonly Type ReadOnlyListType = typeof(IReadOnlyList<>);
     private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
-    private static readonly Type TypedBatchType = typeof(IReadOnlyList<>);
     private static readonly Type ListType = typeof(List<>);
     private static readonly Type TypedListConverterType = typeof(TypedListConverter<>);
-    private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
     private static readonly Type SubscriptionContextType = typeof(ISubscriptionContext);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
     private static readonly Type ResultHandlerType = typeof(IResultHandler<>);
@@ -117,18 +116,16 @@ public class SubscriptionHandler
             {
                 arguments[i] = batch;
             }
-            else if (_parameters[i].ParameterType == UnwrappedBatchType)
-            {
-                arguments[i] = batch.Where(x => x.Message != null).Select(x => x.Message!).ToList();
-            }
             else if (IsTypedBatch(_parameters[i]))
             {
-                var messageType = _parameters[i].ParameterType.GetGenericArguments()[0];
-                var listConverterType = TypedListConverterType.MakeGenericType(messageType);
-                var listType = ListType.MakeGenericType(messageType);
+                var messageContextType = _parameters[i].ParameterType.GenericTypeArguments[0];
+                var messageType = messageContextType.GenericTypeArguments[0];
+                var contextType = ConcreteTypedMessageContextType.MakeGenericType(messageType);
+                var listConverterType = TypedListConverterType.MakeGenericType(messageContextType);
+                var listType = ListType.MakeGenericType(messageContextType);
 
                 var filteredBatch = batch.Where(x => x.MessageType != null).Where(x => x.MessageType == messageType)
-                    .Select(x => x.Message!)
+                    .Select(x => Activator.CreateInstance(contextType, x))
                     .ToList();
 
                 var listEnumerable = Activator.CreateInstance(listConverterType, filteredBatch)!;
@@ -198,8 +195,7 @@ public class SubscriptionHandler
                 messageContextHandler = true;
             }
 
-            if (parameter.ParameterType == BatchType || parameter.ParameterType == UnwrappedBatchType ||
-                IsTypedBatch(parameter))
+            if (parameter.ParameterType == BatchType || IsTypedBatch(parameter))
             {
                 IsBatchHandler = true;
 
@@ -274,7 +270,6 @@ public class SubscriptionHandler
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == MessageContextType ||
                                                             IsTypedMessageContext(x) ||
                                                             x.ParameterType == BatchType ||
-                                                            x.ParameterType == UnwrappedBatchType ||
                                                             IsTypedBatch(x) ||
                                                             x.ParameterType == SubscriptionContextType ||
                                                             x.ParameterType == CancellationTokenType;
@@ -284,11 +279,24 @@ public class SubscriptionHandler
         parameter.ParameterType.IsGenericType &&
         parameter.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType;
 
-    private static bool IsTypedBatch(ParameterInfo parameter) => parameter.ParameterType.IsGenericType &&
-                                                                 parameter.ParameterType != BatchType &&
-                                                                 parameter.ParameterType != UnwrappedBatchType &&
-                                                                 parameter.ParameterType.GetGenericTypeDefinition() ==
-                                                                 TypedBatchType;
+    private static bool IsTypedBatch(ParameterInfo parameter)
+    {
+        if (!parameter.ParameterType.IsGenericType)
+        {
+            return false;
+        }
+
+        var genericTypeDefinition = parameter.ParameterType.GetGenericTypeDefinition();
+
+        if (genericTypeDefinition != ReadOnlyListType)
+        {
+            return false;
+        }
+
+        var listType = parameter.ParameterType.GenericTypeArguments[0];
+
+        return listType.IsGenericType && listType.GetGenericTypeDefinition() == TypedMessageContextType;
+    }
 
     private static Func<object[], Task<object>> BuildInvoker(Delegate handler)
     {

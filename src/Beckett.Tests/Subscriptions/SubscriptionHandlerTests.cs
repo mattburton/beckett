@@ -141,29 +141,13 @@ public class SubscriptionHandlerTests
         var handler = new SubscriptionHandler(_subscription, TypedBatchHandler.Handle);
         var batch = BuildMessageBatch();
         var subscriptionContext = BuildSubscriptionContext();
-        var expectedBatch = batch.Select(x => x.Message).Cast<TestMessage>().ToList();
+        var expectedBatch = batch.Select(x => new MessageContext<TestMessage>(x)).ToList();
 
         await handler.Invoke(batch, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
 
         Assert.True(handler.IsBatchHandler);
         Assert.NotNull(TypedBatchHandler.ReceivedBatch);
         Assert.Equal(expectedBatch, TypedBatchHandler.ReceivedBatch);
-    }
-
-    [Fact]
-    public async Task supports_unwrapped_batch_handler()
-    {
-        _subscription.RegisterMessageType<TestMessage>();
-        var handler = new SubscriptionHandler(_subscription, UnwrappedBatchHandler.Handle);
-        var batch = BuildMessageBatch();
-        var subscriptionContext = BuildSubscriptionContext();
-        var expectedBatch = batch.Select(x => x.Message!).ToList();
-
-        await handler.Invoke(batch, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
-
-        Assert.True(handler.IsBatchHandler);
-        Assert.NotNull(UnwrappedBatchHandler.ReceivedBatch);
-        Assert.Equal(expectedBatch, UnwrappedBatchHandler.ReceivedBatch);
     }
 
     [Fact]
@@ -484,21 +468,12 @@ public class SubscriptionHandlerTests
 
     private static class TypedBatchHandler
     {
-        public static IReadOnlyList<TestMessage>? ReceivedBatch { get; private set; }
+        public static IReadOnlyList<IMessageContext<TestMessage>>? ReceivedBatch { get; private set; }
 
-        public static Task Handle(IReadOnlyList<TestMessage> batch, CancellationToken cancellationToken)
-        {
-            ReceivedBatch = batch;
-
-            return Task.CompletedTask;
-        }
-    }
-
-    private static class UnwrappedBatchHandler
-    {
-        public static IReadOnlyList<object>? ReceivedBatch { get; private set; }
-
-        public static Task Handle(IReadOnlyList<object> batch, CancellationToken cancellationToken)
+        public static Task Handle(
+            IReadOnlyList<IMessageContext<TestMessage>> batch,
+            CancellationToken cancellationToken
+        )
         {
             ReceivedBatch = batch;
 
