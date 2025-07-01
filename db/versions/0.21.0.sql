@@ -1,6 +1,8 @@
 -- Beckett v0.21.0 - drop global subscriptions
 DROP FUNCTION beckett.read_global_stream(bigint, int, text, text[]);
 DROP FUNCTION beckett.read_index_batch(bigint, int);
+DROP TYPE beckett.read_global_stream_result;
+DROP TYPE beckett.stream_message;
 
 CREATE OR REPLACE FUNCTION beckett.read_global_stream(
   _last_global_position bigint,
@@ -43,5 +45,20 @@ BEGIN
     AND m.archived = false
     ORDER BY m.transaction_id, m.global_position
     LIMIT _batch_size;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION beckett.reset_subscription(_group_name text, _name text)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  DELETE FROM beckett.checkpoints WHERE group_name = _group_name AND name = _name;
+
+  UPDATE beckett.subscriptions
+  SET status = 'uninitialized', replay_target_position = null
+  WHERE group_name = _group_name
+  AND name = _name;
 END;
 $$;

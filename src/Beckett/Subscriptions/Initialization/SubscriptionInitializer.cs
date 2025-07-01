@@ -106,7 +106,7 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            if (batch.Messages.Count == 0)
+            if (batch.StreamMessages.Count == 0)
             {
                 var globalCheckpoint = await database.Execute(
                     new LockCheckpoint(
@@ -134,7 +134,7 @@ public class SubscriptionInitializer(
                     cancellationToken
                 );
 
-                if (nextBatch.Messages.Any())
+                if (nextBatch.StreamMessages.Any())
                 {
                     continue;
                 }
@@ -203,7 +203,7 @@ public class SubscriptionInitializer(
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var stream in batch.Messages.GroupBy(x => x.StreamName))
+            foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
             {
                 if (stream.All(x => !x.AppliesTo(subscription)))
                 {
@@ -234,7 +234,7 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            var newGlobalPosition = batch.Messages.Max(x => x.GlobalPosition);
+            var newGlobalPosition = batch.StreamMessages.Max(x => x.GlobalPosition);
 
             await database.Execute(
                 new UpdateSystemCheckpointPosition(

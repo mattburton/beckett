@@ -63,18 +63,18 @@ public class GlobalStreamConsumer(
                     stoppingToken
                 );
 
-                if (batch.Messages.Count == 0)
+                if (batch.StreamMessages.Count == 0)
                 {
                     logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
 
                     continue;
                 }
 
-                logger.NewGlobalStreamMessagesToProcess(batch.Messages.Count, checkpoint.StreamPosition);
+                logger.NewGlobalStreamMessagesToProcess(batch.StreamMessages.Count, checkpoint.StreamPosition);
 
                 var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
 
-                foreach (var stream in batch.Messages.GroupBy(x => x.StreamName))
+                foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
                 {
                     var subscriptions = registeredSubscriptions
                         .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
@@ -118,7 +118,7 @@ public class GlobalStreamConsumer(
                     logger.NoNewCheckpointsToRecord();
                 }
 
-                var newGlobalPosition = batch.Messages.Max(x => x.GlobalPosition);
+                var newGlobalPosition = batch.StreamMessages.Max(x => x.GlobalPosition);
 
                 await database.Execute(
                     new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition, postgresOptions),
@@ -153,7 +153,7 @@ public class GlobalStreamConsumer(
         var categories = new Dictionary<string, DateTimeOffset>();
         var tenants = new HashSet<string>();
 
-        foreach (var message in globalStream.Messages)
+        foreach (var message in globalStream.StreamMessages)
         {
             categories[StreamCategoryParser.Parse(message.StreamName)] = message.Timestamp;
 

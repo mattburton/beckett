@@ -34,24 +34,6 @@ CREATE TYPE __schema__.message AS
   expected_version bigint
 );
 
-CREATE TYPE __schema__.stream_message AS
-(
-  id uuid,
-  stream_name text,
-  stream_position bigint,
-  global_position bigint,
-  type text,
-  data jsonb,
-  metadata jsonb,
-  timestamp timestamp with time zone
-);
-
-CREATE TYPE __schema__.read_global_stream_result AS
-(
-  messages __schema__.stream_message[],
-  ending_global_position bigint
-);
-
 CREATE OR REPLACE FUNCTION __schema__.stream_category(
   _stream_name text
 )
@@ -955,6 +937,21 @@ BEGIN
 
   UPDATE __schema__.checkpoints
   SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+CREATE FUNCTION __schema__.reset_subscription(_group_name text, _name text)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  DELETE FROM __schema__.checkpoints WHERE group_name = _group_name AND name = _name;
+
+  UPDATE __schema__.subscriptions
+  SET status = 'uninitialized', replay_target_position = null
   WHERE group_name = _group_name
   AND name = _name;
 END;

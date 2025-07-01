@@ -1,3 +1,3 @@
 namespace Beckett.Storage;
 
-public record ReadGlobalStreamResult(IReadOnlyList<GlobalStreamMessage> Messages);
+public record ReadGlobalStreamResult(IReadOnlyList<GlobalStreamMessage> StreamMessages);
