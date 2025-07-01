@@ -45,9 +45,7 @@ public class CheckpointProcessor(
 
                 if (checkpoint.ReplayTargetPosition.HasValue)
                 {
-                    var setSubscriptionToActive = success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value;
-
-                    if (setSubscriptionToActive)
+                    if (success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value)
                     {
                         await database.Execute(
                             new SetSubscriptionToActive(subscription.Group.Name, subscription.Name, options.Postgres),
@@ -137,6 +135,31 @@ public class CheckpointProcessor(
                 return new Success(batch.StreamPosition, batch.GlobalPosition);
             }
 
+            if (subscription.Handler.IsBatchHandler)
+            {
+                try
+                {
+                    return await DispatchMessageBatchToHandler(
+                        checkpoint,
+                        subscription,
+                        batch,
+                        subscriptionContext
+                    );
+                }
+                catch (BatchHandlerException e)
+                {
+                    LogDispatchError(checkpoint, subscription, e);
+
+                    return new Error(e.StreamPosition, e.InnerException ?? e);
+                }
+                catch (Exception e)
+                {
+                    LogDispatchError(checkpoint, subscription, e);
+
+                    return new Error(batch.Messages[0].StreamPosition, e);
+                }
+            }
+
             foreach (var streamMessage in batch.Messages.Where(x => subscription.SubscribedToMessage(x.Type)))
             {
                 try
@@ -212,6 +235,45 @@ public class CheckpointProcessor(
         }
     }
 
+    private async Task<IMessageBatchResult> DispatchMessageBatchToHandler(
+        Checkpoint checkpoint,
+        Subscription subscription,
+        ReadMessageBatchResult batch,
+        ISubscriptionContext subscriptionContext
+    )
+    {
+        using var cts = new CancellationTokenSource();
+
+        cts.CancelAfter(subscription.Group.ReservationTimeout);
+
+        try
+        {
+            using var scope = serviceProvider.CreateScope();
+
+            await subscription.Handler.Invoke(
+                batch.Messages,
+                subscriptionContext,
+                scope.ServiceProvider,
+                logger,
+                cts.Token
+            );
+
+            return new Success(batch.StreamPosition, batch.GlobalPosition);
+        }
+        //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
+        catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
+        {
+            throw timeoutException;
+        }
+        catch (OperationCanceledException e) when (cts.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                $"Handler exceeded the reservation timeout of {subscription.Group.ReservationTimeout.TotalSeconds} seconds while handling message batch starting with {batch.Messages[0].Id} for checkpoint {checkpoint.Id}",
+                e
+            );
+        }
+    }
+
     private async Task<ReadMessageBatchResult> ReadMessageBatch(Checkpoint checkpoint, Subscription subscription)
     {
         var startingStreamPosition = checkpoint.StreamPosition + 1;
@@ -270,6 +332,15 @@ public class CheckpointProcessor(
             globalPosition
         );
     }
+
+    private void LogDispatchError(Checkpoint checkpoint, Subscription subscription, Exception e) =>
+        logger.LogError(
+            e,
+            "Error dispatching message batch to subscription {SubscriptionName} for stream {StreamName} [Checkpoint: {CheckpointId}]",
+            subscription.Name,
+            checkpoint.StreamName,
+            checkpoint.Id
+        );
 
     private static SubscriptionContext BuildSubscriptionContext(Checkpoint checkpoint, Subscription subscription) =>
         new(

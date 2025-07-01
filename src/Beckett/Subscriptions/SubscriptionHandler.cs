@@ -11,6 +11,11 @@ public class SubscriptionHandler
     private static readonly Type MessageContextType = typeof(IMessageContext);
     private static readonly Type TypedMessageContextType = typeof(IMessageContext<>);
     private static readonly Type ConcreteTypedMessageContextType = typeof(MessageContext<>);
+    private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
+    private static readonly Type TypedBatchType = typeof(IReadOnlyList<>);
+    private static readonly Type ListType = typeof(List<>);
+    private static readonly Type TypedListConverterType = typeof(TypedListConverter<>);
+    private static readonly Type UnwrappedBatchType = typeof(IReadOnlyList<object>);
     private static readonly Type SubscriptionContextType = typeof(ISubscriptionContext);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
     private static readonly Type ResultHandlerType = typeof(IResultHandler<>);
@@ -31,6 +36,8 @@ public class SubscriptionHandler
         _invoker = BuildInvoker(handler);
         TrySetHandlerName(handler);
     }
+
+    public bool IsBatchHandler { get; private set; }
 
     public async Task Invoke(
         IMessageContext context,
@@ -94,6 +101,76 @@ public class SubscriptionHandler
         await handler.Handle(result, cancellationToken);
     }
 
+    public async Task Invoke(
+        IReadOnlyList<IMessageContext> batch,
+        ISubscriptionContext subscriptionContext,
+        IServiceProvider serviceProvider,
+        ILogger logger,
+        CancellationToken cancellationToken
+    )
+    {
+        var arguments = new object[_parameters.Length];
+
+        for (var i = 0; i < _parameters.Length; i++)
+        {
+            if (_parameters[i].ParameterType == BatchType)
+            {
+                arguments[i] = batch;
+            }
+            else if (_parameters[i].ParameterType == UnwrappedBatchType)
+            {
+                arguments[i] = batch.Where(x => x.Message != null).Select(x => x.Message!).ToList();
+            }
+            else if (IsTypedBatch(_parameters[i]))
+            {
+                var messageType = _parameters[i].ParameterType.GetGenericArguments()[0];
+                var listConverterType = TypedListConverterType.MakeGenericType(messageType);
+                var listType = ListType.MakeGenericType(messageType);
+
+                var filteredBatch = batch.Where(x => x.MessageType != null).Where(x => x.MessageType == messageType)
+                    .Select(x => x.Message!)
+                    .ToList();
+
+                var listEnumerable = Activator.CreateInstance(listConverterType, filteredBatch)!;
+                var list = Activator.CreateInstance(listType, listEnumerable)!;
+
+                arguments[i] = list;
+            }
+            else if (_parameters[i].ParameterType == SubscriptionContextType)
+            {
+                arguments[i] = subscriptionContext;
+            }
+            else if (_parameters[i].ParameterType == CancellationTokenType)
+            {
+                arguments[i] = cancellationToken;
+            }
+            else if (_parameterResolvers[i] != null)
+            {
+                arguments[i] = _parameterResolvers[i]!(serviceProvider);
+            }
+        }
+
+        var result = await _invoker(arguments);
+
+        if (result is EmptyResult)
+        {
+            return;
+        }
+
+        var resultType = result.GetType();
+
+        if (serviceProvider.GetService(
+                ResultHandlerType.MakeGenericType(resultType)
+            ) is not IResultHandler handler)
+        {
+            logger.ResultHandlerNotRegistered(resultType, _subscription.Name);
+
+            return;
+        }
+
+        await handler.Handle(result, cancellationToken);
+    }
+
     private void TrySetHandlerName(Delegate handler)
     {
         if (!string.IsNullOrWhiteSpace(_subscription.HandlerName))
@@ -110,13 +187,25 @@ public class SubscriptionHandler
     private void ValidateHandler()
     {
         var messageContextHandler = false;
+        var batchHandler = false;
         var typedMessageHandler = false;
+        var typedBatchHandler = false;
 
         foreach (var parameter in _parameters)
         {
             if (parameter.ParameterType == MessageContextType)
             {
                 messageContextHandler = true;
+            }
+
+            if (parameter.ParameterType == BatchType || parameter.ParameterType == UnwrappedBatchType ||
+                IsTypedBatch(parameter))
+            {
+                IsBatchHandler = true;
+
+                batchHandler = true;
+
+                typedBatchHandler = IsTypedBatch(parameter);
             }
 
             if (parameter.ParameterType.IsGenericType &&
@@ -131,6 +220,20 @@ public class SubscriptionHandler
             }
         }
 
+        if (messageContextHandler && batchHandler)
+        {
+            throw new InvalidOperationException(
+                $"Subscription handlers can only accept a message or a message batch, not both. [Subscription: {_subscription.Name}]"
+            );
+        }
+
+        if (batchHandler && typedMessageHandler)
+        {
+            throw new InvalidOperationException(
+                $"Message batch handlers cannot also handle individual messages [Subscription: {_subscription.Name}]"
+            );
+        }
+
         if (typedMessageHandler && _subscription.MessageTypes.Count > 1)
         {
             throw new InvalidOperationException(
@@ -138,10 +241,17 @@ public class SubscriptionHandler
             );
         }
 
-        if (!messageContextHandler && !typedMessageHandler)
+        if (typedBatchHandler && _subscription.MessageTypes.Count > 1)
         {
             throw new InvalidOperationException(
-                $"Subscription handlers must handle a message or message context [Subscription: {_subscription.Name}]"
+                $"Typed batch handlers can only subscribe to one message type [Subscription: {_subscription.Name}]"
+            );
+        }
+
+        if (!messageContextHandler && !batchHandler && !typedMessageHandler && !typedBatchHandler)
+        {
+            throw new InvalidOperationException(
+                $"Subscription handlers must handle either a message or a message batch [Subscription: {_subscription.Name}]"
             );
         }
 
@@ -163,6 +273,9 @@ public class SubscriptionHandler
 
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == MessageContextType ||
                                                             IsTypedMessageContext(x) ||
+                                                            x.ParameterType == BatchType ||
+                                                            x.ParameterType == UnwrappedBatchType ||
+                                                            IsTypedBatch(x) ||
                                                             x.ParameterType == SubscriptionContextType ||
                                                             x.ParameterType == CancellationTokenType;
 
@@ -170,6 +283,12 @@ public class SubscriptionHandler
     private static bool IsTypedMessageContext(ParameterInfo parameter) =>
         parameter.ParameterType.IsGenericType &&
         parameter.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType;
+
+    private static bool IsTypedBatch(ParameterInfo parameter) => parameter.ParameterType.IsGenericType &&
+                                                                 parameter.ParameterType != BatchType &&
+                                                                 parameter.ParameterType != UnwrappedBatchType &&
+                                                                 parameter.ParameterType.GetGenericTypeDefinition() ==
+                                                                 TypedBatchType;
 
     private static Func<object[], Task<object>> BuildInvoker(Delegate handler)
     {

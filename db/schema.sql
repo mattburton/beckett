@@ -93,7 +93,8 @@ CREATE TYPE beckett.subscription_status AS ENUM (
     'uninitialized',
     'active',
     'paused',
-    'unknown'
+    'unknown',
+    'replay'
 );
 
 
@@ -112,17 +113,6 @@ SELECT status
 FROM beckett.subscriptions
 WHERE group_name = _group_name
 AND name = _name;
-$$;
-
-
---
--- Name: advisory_unlock(text); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.advisory_unlock(_key text) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-SELECT pg_advisory_unlock(abs(hashtextextended(_key, 0)));
 $$;
 
 
@@ -209,7 +199,7 @@ $$;
 
 CREATE FUNCTION beckett.checkpoint_preprocessor() RETURNS trigger
     LANGUAGE plpgsql
-    AS $_$
+    AS $$
 BEGIN
   IF (TG_OP = 'UPDATE') THEN
     NEW.updated_at = now();
@@ -219,13 +209,13 @@ BEGIN
     NEW.process_at = now();
   END IF;
 
-  IF (NEW.name != '$global' AND NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
     PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
   END IF;
 
   RETURN NEW;
 END;
-$_$;
+$$;
 
 
 --
@@ -408,54 +398,31 @@ $$;
 
 
 --
--- Name: read_global_stream(bigint, integer, text, text[]); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: move_subscription(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.read_global_stream(_starting_global_position bigint, _count integer, _category text DEFAULT NULL::text, _types text[] DEFAULT NULL::text[]) RETURNS TABLE(id uuid, stream_name text, stream_position bigint, global_position bigint, type text, data jsonb, metadata jsonb, "timestamp" timestamp with time zone)
+CREATE FUNCTION beckett.move_subscription(_group_name text, _name text, _new_group_name text) RETURNS void
     LANGUAGE plpgsql
     AS $$
-DECLARE
-  _transaction_id xid8;
-  _ending_global_position bigint;
 BEGIN
-  SELECT m.transaction_id
-  INTO _transaction_id
-  FROM beckett.messages m
-  WHERE m.global_position = _starting_global_position
-  AND m.archived = false;
+  UPDATE beckett.subscriptions
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
 
-  IF (_transaction_id IS NULL) THEN
-    _transaction_id = '0'::xid8;
-  END IF;
-
-  _ending_global_position = _starting_global_position + _count;
-
-  RETURN QUERY
-    SELECT m.id,
-           m.stream_name,
-           m.stream_position,
-           m.global_position,
-           m.type,
-           m.data,
-           m.metadata,
-           m.timestamp
-    FROM beckett.messages m
-    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
-    AND (m.global_position > _starting_global_position AND m.global_position <= _ending_global_position)
-    AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-    AND m.archived = false
-    AND (_category IS NULL OR beckett.stream_category(m.stream_name) = _category)
-    AND (_types IS NULL OR m.type = ANY(_types))
-    ORDER BY m.transaction_id, m.global_position;
+  UPDATE beckett.checkpoints
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
 END;
 $$;
 
 
 --
--- Name: read_index_batch(bigint, integer); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: read_global_stream(bigint, integer); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.read_index_batch(_starting_global_position bigint, _batch_size integer) RETURNS TABLE(stream_name text, stream_position bigint, global_position bigint, type text, tenant text, "timestamp" timestamp with time zone)
+CREATE FUNCTION beckett.read_global_stream(_last_global_position bigint, _batch_size integer) RETURNS TABLE(stream_name text, stream_position bigint, global_position bigint, type text, tenant text, "timestamp" timestamp with time zone)
     LANGUAGE plpgsql
     AS $_$
 DECLARE
@@ -464,7 +431,7 @@ BEGIN
   SELECT m.transaction_id
   INTO _transaction_id
   FROM beckett.messages m
-  WHERE m.global_position = _starting_global_position
+  WHERE m.global_position = _last_global_position
   AND m.archived = false;
 
   IF (_transaction_id IS NULL) THEN
@@ -479,7 +446,7 @@ BEGIN
            m.metadata ->> '$tenant',
            m.timestamp
     FROM beckett.messages m
-    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _starting_global_position)
+    WHERE (m.transaction_id, m.global_position) > (_transaction_id, _last_global_position)
     AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
     AND m.archived = false
     ORDER BY m.transaction_id, m.global_position
@@ -628,22 +595,74 @@ $$;
 
 
 --
--- Name: reserve_next_available_checkpoint(text, interval); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: rename_subscription(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_name text, _reservation_timeout interval) RETURNS TABLE(id bigint, group_name text, name text, stream_name text, stream_position bigint, stream_version bigint, retry_attempts integer, status beckett.checkpoint_status)
+CREATE FUNCTION beckett.rename_subscription(_group_name text, _name text, _new_name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  UPDATE beckett.subscriptions
+  SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  UPDATE beckett.checkpoints
+  SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+
+--
+-- Name: replay_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.replay_subscription(_group_name text, _name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+  UPDATE beckett.checkpoints
+  SET stream_position = 0
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  WITH global_position AS (
+    SELECT stream_position
+    FROM beckett.checkpoints
+    WHERE group_name = _group_name
+    AND name = '$global'
+  )
+  UPDATE beckett.subscriptions
+  SET status = 'replay',
+      replay_target_position = global_position.stream_position
+  FROM global_position
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$_$;
+
+
+--
+-- Name: reserve_next_available_checkpoint(text, interval, boolean, boolean, boolean); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.reserve_next_available_checkpoint(_group_name text, _reservation_timeout interval, _reserve_any boolean, _reserve_active_only boolean, _reserve_replay_only boolean) RETURNS TABLE(id bigint, group_name text, name text, stream_name text, stream_position bigint, stream_version bigint, retry_attempts integer, status beckett.checkpoint_status, replay_target_position bigint)
     LANGUAGE sql
     AS $$
 UPDATE beckett.checkpoints c
 SET reserved_until = now() + _reservation_timeout
 FROM (
-  SELECT c.id
+  SELECT c.id, s.replay_target_position
   FROM beckett.checkpoints c
   INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
   WHERE c.group_name = _group_name
   AND c.process_at <= now()
   AND c.reserved_until IS NULL
-  AND s.status = 'active'
+  AND (_reserve_any = false OR (s.status = 'active' OR s.status = 'replay'))
+  AND (_reserve_active_only = false OR s.status = 'active')
+  AND (_reserve_replay_only = false OR s.status = 'replay')
   ORDER BY c.process_at
   LIMIT 1
   FOR UPDATE
@@ -658,7 +677,26 @@ RETURNING
   c.stream_position,
   c.stream_version,
   coalesce(array_length(c.retries, 1), 0) as retry_attempts,
-  c.status;
+  c.status,
+  d.replay_target_position;
+$$;
+
+
+--
+-- Name: reset_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.reset_subscription(_group_name text, _name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  DELETE FROM beckett.checkpoints WHERE group_name = _group_name AND name = _name;
+
+  UPDATE beckett.subscriptions
+  SET status = 'uninitialized', replay_target_position = null
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
 $$;
 
 
@@ -716,7 +754,28 @@ AND name = _name
 AND stream_name = '$initializing';
 
 UPDATE beckett.subscriptions
-SET status = 'active'
+SET status = 'active',
+    replay_target_position = NULL
+WHERE group_name = _group_name
+AND name = _name;
+$_$;
+
+
+--
+-- Name: set_subscription_to_replay(text, text, bigint); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.set_subscription_to_replay(_group_name text, _name text, _replay_target_position bigint) RETURNS void
+    LANGUAGE sql
+    AS $_$
+DELETE FROM beckett.checkpoints
+WHERE group_name = _group_name
+AND name = _name
+AND stream_name = '$initializing';
+
+UPDATE beckett.subscriptions
+SET status = 'replay',
+    replay_target_position = _replay_target_position
 WHERE group_name = _group_name
 AND name = _name;
 $_$;
@@ -741,17 +800,6 @@ CREATE FUNCTION beckett.stream_hash(_stream_name text) RETURNS bigint
     LANGUAGE sql IMMUTABLE
     AS $$
 SELECT abs(hashtextextended(_stream_name, 0));
-$$;
-
-
---
--- Name: try_advisory_lock(text); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.try_advisory_lock(_key text) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-SELECT pg_try_advisory_lock(abs(hashtextextended(_key, 0)));
 $$;
 
 
@@ -921,7 +969,8 @@ CREATE TABLE beckett.migrations (
 CREATE TABLE beckett.subscriptions (
     group_name text NOT NULL,
     name text NOT NULL,
-    status beckett.subscription_status DEFAULT 'uninitialized'::beckett.subscription_status NOT NULL
+    status beckett.subscription_status DEFAULT 'uninitialized'::beckett.subscription_status NOT NULL,
+    replay_target_position bigint
 );
 
 
@@ -1126,10 +1175,10 @@ CREATE INDEX ix_scheduled_messages_deliver_at ON beckett.scheduled_messages USIN
 
 
 --
--- Name: ix_subscriptions_active; Type: INDEX; Schema: beckett; Owner: -
+-- Name: ix_subscriptions_reservation_candidates; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_subscriptions_active ON beckett.subscriptions USING btree (group_name, name, status) WHERE (status = 'active'::beckett.subscription_status);
+CREATE INDEX ix_subscriptions_reservation_candidates ON beckett.subscriptions USING btree (group_name, name, status) WHERE ((status = 'active'::beckett.subscription_status) OR (status = 'replay'::beckett.subscription_status));
 
 
 --

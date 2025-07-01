@@ -42,7 +42,7 @@ public class InMemoryMessageStorageTests
             BatchSize = 10
         }, CancellationToken.None);
 
-        var item = Assert.Single(globalStream.Messages);
+        var item = Assert.Single(globalStream.StreamMessages);
         Assert.Equal(1, item.GlobalPosition);
         Assert.Equal(1, item.StreamPosition);
         Assert.Equal(streamName, item.StreamName);
