@@ -1,4 +1,6 @@
--- Beckett v0.21.0 - drop global subscriptions
+-- Beckett v0.20.8
+
+-- drop global subscriptions
 DROP FUNCTION beckett.read_global_stream(bigint, int, text, text[]);
 DROP FUNCTION beckett.read_index_batch(bigint, int);
 DROP TYPE beckett.read_global_stream_result;
