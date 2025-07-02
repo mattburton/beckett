@@ -6,6 +6,7 @@ public class Subscription(SubscriptionGroup group, string name)
 {
     internal SubscriptionGroup Group => group;
     internal string Name { get; } = name;
+    internal SubscriptionStatus Status { get; set; } = SubscriptionStatus.Unknown;
     internal string? Category { get; set; }
     internal string? StreamName { get; set; }
     internal HashSet<Type> MessageTypes { get; } = [];

@@ -146,6 +146,11 @@ public class SubscriptionInitializer(
                     // subscriptions for a new group can just be activated immediately vs put into replay mode
                     setSubscriptionToReplay = false;
                 }
+                else if (subscription.Status == SubscriptionStatus.Backfill)
+                {
+                    // subscriptions being backfilled do not need to reprocess everything
+                    setSubscriptionToReplay = false;
+                }
                 else if (subscription.SkipDuringReplay)
                 {
                     // activate the subscription and let the checkpoint processor advance the checkpoints as no-ops
@@ -212,8 +217,10 @@ public class SubscriptionInitializer(
 
                 var streamVersion = stream.Max(x => x.StreamPosition);
 
-                // if the subscription is set to skip during replay automatically advance the stream position
-                var streamPosition = subscription.SkipDuringReplay ? streamVersion : 0;
+                // if the subscription is set to skip during replay or is being backfilled automatically advance the stream position
+                var streamPosition = subscription.SkipDuringReplay || subscription.Status == SubscriptionStatus.Backfill
+                    ? streamVersion
+                    : 0;
 
                 checkpoints.Add(
                     new CheckpointType
