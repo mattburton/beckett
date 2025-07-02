@@ -99,7 +99,10 @@ public class BootstrapSubscriptions(
                 continue;
             }
 
-            if (subscription.StartingPosition == StartingPosition.Latest)
+            subscription.Status = status;
+
+            if (subscription.StartingPosition == StartingPosition.Latest &&
+                subscription.Status != SubscriptionStatus.Backfill)
             {
                 logger.LogTrace(
                     "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will be set to active and will start processing new messages going forward.",
@@ -123,7 +126,7 @@ public class BootstrapSubscriptions(
             }
 
             logger.LogTrace(
-                "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} so it will need to be initialized before it can start processing new messages.",
+                "Subscription {Name} in group {GroupName} has a starting position of {StartingPosition} or is being backfilled so it will need to be initialized before it can start processing new messages.",
                 subscription.Name,
                 group.Name,
                 subscription.StartingPosition

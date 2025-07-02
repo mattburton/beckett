@@ -6,5 +6,6 @@ public enum SubscriptionStatus
     Uninitialized,
     Active,
     Paused,
-    Replay
+    Replay,
+    Backfill
 }

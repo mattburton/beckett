@@ -368,7 +368,8 @@ CREATE TYPE __schema__.subscription_status AS ENUM (
   'active',
   'paused',
   'unknown',
-  'replay'
+  'replay',
+  'backfill'
 );
 
 CREATE TYPE __schema__.checkpoint_status AS ENUM (
@@ -479,7 +480,7 @@ $$
 SELECT name
 FROM __schema__.subscriptions
 WHERE group_name = _group_name
-AND status = 'uninitialized'
+AND status in ('uninitialized', 'backfill')
 LIMIT 1;
 $$;
 

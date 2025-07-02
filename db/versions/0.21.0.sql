@@ -48,6 +48,26 @@ BEGIN
 END;
 $$;
 
+-- add subscription backfill support - i.e. reinitialize without reprocessing
+ALTER TYPE beckett.subscription_status ADD VALUE 'backfill';
+
+CREATE OR REPLACE FUNCTION beckett.get_next_uninitialized_subscription(
+  _group_name text
+)
+  RETURNS TABLE (
+    name text
+  )
+  LANGUAGE sql
+AS
+$$
+SELECT name
+FROM beckett.subscriptions
+WHERE group_name = _group_name
+AND status in ('uninitialized', 'backfill')
+LIMIT 1;
+$$;
+
+-- utility function to reset subscriptions
 CREATE OR REPLACE FUNCTION beckett.reset_subscription(_group_name text, _name text)
   RETURNS void
   LANGUAGE plpgsql
