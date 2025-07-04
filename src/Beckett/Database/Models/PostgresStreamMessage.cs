@@ -1,9 +1,9 @@
 using System.Text.Json;
 using Npgsql;
 
-namespace Beckett.Database.Types;
+namespace Beckett.Database.Models;
 
-public class StreamMessageType
+public class PostgresStreamMessage
 {
     public required Guid Id { get; init; }
     public required string StreamName { get; init; }
@@ -15,12 +15,12 @@ public class StreamMessageType
     public required JsonElement Metadata { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 
-    public static StreamMessageType From(NpgsqlDataReader reader)
+    public static PostgresStreamMessage From(NpgsqlDataReader reader)
     {
         using var data = reader.GetFieldValue<JsonDocument>(6);
         using var metadata = reader.GetFieldValue<JsonDocument>(7);
 
-        return new StreamMessageType
+        return new PostgresStreamMessage
         {
             Id = reader.GetFieldValue<Guid>(0),
             StreamName = reader.GetFieldValue<string>(1),

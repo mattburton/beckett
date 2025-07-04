@@ -7,17 +7,26 @@ namespace Beckett.Subscriptions.Queries;
 public class SetSubscriptionToReplay(
     string groupName,
     string name,
-    long replayTargetPosition,
     PostgresOptions options
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.set_subscription_to_replay($1, $2, $3);";
+        command.CommandText = $"""
+            WITH delete_initialization_checkpoint AS (
+                DELETE FROM {options.Schema}.checkpoints
+                WHERE group_name = $1
+                AND name = $2
+                AND stream_name = '$initializing'
+            )
+            UPDATE {options.Schema}.subscriptions
+            SET status = 'replay'
+            WHERE group_name = $1
+            AND name = $2;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
         if (options.PrepareStatements)
         {
@@ -26,7 +35,6 @@ public class SetSubscriptionToReplay(
 
         command.Parameters[0].Value = groupName;
         command.Parameters[1].Value = name;
-        command.Parameters[2].Value = replayTargetPosition;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

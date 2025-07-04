@@ -13,7 +13,15 @@ public class UpdateCheckpointPosition(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.update_checkpoint_position($1, $2, $3);";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.checkpoints
+            SET stream_position = $2,
+                process_at = $3,
+                reserved_until = NULL,
+                status = 'active',
+                retries = NULL
+            WHERE id = $1;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });

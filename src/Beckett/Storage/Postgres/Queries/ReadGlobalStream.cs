@@ -11,10 +11,29 @@ public class ReadGlobalStream(
 {
     public async Task<IReadOnlyList<Result>> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
-            select stream_name, stream_position, global_position, type, tenant, timestamp
-            from {options.Schema}.read_global_stream($1, $2);
-        ";
+        command.CommandText = $"""
+            WITH transaction_id AS (
+                SELECT m.transaction_id
+                FROM {options.Schema}.messages m
+                WHERE m.global_position = $1
+                AND m.archived = false
+                UNION ALL
+                SELECT '0'::xid8
+                LIMIT 1
+            )
+            SELECT m.stream_name,
+                   m.stream_position,
+                   m.global_position,
+                   m.type,
+                   m.metadata ->> '$tenant',
+                   m.timestamp
+            FROM {options.Schema}.messages m
+            WHERE (m.transaction_id, m.global_position) > ((SELECT transaction_id FROM transaction_id), $1)
+            AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+            AND m.archived = false
+            ORDER BY m.transaction_id, m.global_position
+            LIMIT $2;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });

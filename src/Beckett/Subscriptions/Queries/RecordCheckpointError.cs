@@ -18,7 +18,18 @@ public record RecordCheckpointError(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {Options.Schema}.record_checkpoint_error($1, $2, $3, $4, $5, $6);";
+        command.CommandText = $"""
+            UPDATE {Options.Schema}.checkpoints
+            SET stream_position = $2,
+            process_at = $6,
+            reserved_until = NULL,
+            status = $3,
+            retries = array_append(
+                coalesce(retries, array[]::{Options.Schema}.retry[]),
+                row($4, $5, now())::{Options.Schema}.retry
+            )
+            WHERE id = $1;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });

@@ -223,7 +223,19 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_lag_count();";
+        command.CommandText = $"""
+            WITH metric AS (
+                SELECT
+                FROM {_options.Postgres.Schema}.subscriptions s
+                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                WHERE s.status in ('active', 'replay')
+                AND c.status = 'active'
+                AND c.lagging = true
+                GROUP BY c.group_name, c.name
+            )
+            SELECT count(*)
+            FROM metric;
+        """;
 
         command.Prepare();
 
@@ -238,7 +250,20 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_retry_count();";
+        command.CommandText = $"""
+            WITH metric AS (
+                SELECT count(*) as value
+                FROM {_options.Postgres.Schema}.subscriptions s
+                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                WHERE s.status != 'uninitialized'
+                AND c.status = 'retry'
+                UNION ALL
+                SELECT 0
+            )
+            SELECT value
+            FROM metric
+            LIMIT 1;
+        """;
 
         command.Prepare();
 
@@ -253,7 +278,20 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"select {_options.Postgres.Schema}.get_subscription_failed_count();";
+        command.CommandText = $"""
+            WITH metric AS (
+                SELECT count(*) as value
+                FROM {_options.Postgres.Schema}.subscriptions s
+                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                WHERE s.status != 'uninitialized'
+                AND c.status = 'failed'
+                UNION ALL
+                SELECT 0
+            )
+            SELECT value
+            FROM metric
+            LIMIT 1;
+        """;
 
         command.Prepare();
 

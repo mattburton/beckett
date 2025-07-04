@@ -8,7 +8,7 @@ public class CancelScheduledMessage(Guid id, PostgresOptions options) : IPostgre
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.cancel_scheduled_message($1);";
+        command.CommandText = $"DELETE FROM {options.Schema}.scheduled_messages WHERE id = $1;";
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
 

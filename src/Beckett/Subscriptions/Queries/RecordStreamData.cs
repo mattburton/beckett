@@ -13,7 +13,19 @@ public class RecordStreamData(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.record_stream_data($1, $2, $3);";
+        command.CommandText = $"""
+            WITH insert_categories AS (
+                INSERT INTO {options.Schema}.categories (name, updated_at)
+                SELECT d.name, d.timestamp
+                FROM unnest($1, $2) AS d (name, timestamp)
+                ON CONFLICT (name) DO UPDATE
+                SET updated_at = excluded.updated_at
+            )
+            INSERT INTO {options.Schema}.tenants (tenant)
+            SELECT d.tenant
+            FROM unnest($3) AS d (tenant)
+            ON CONFLICT (tenant) DO NOTHING;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.TimestampTz });

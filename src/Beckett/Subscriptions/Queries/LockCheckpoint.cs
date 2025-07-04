@@ -13,7 +13,15 @@ public class LockCheckpoint(
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select id, stream_position from {options.Schema}.lock_checkpoint($1, $2, $3);";
+        command.CommandText = $"""
+            SELECT id, stream_position
+            FROM {options.Schema}.checkpoints
+            WHERE group_name = $1
+            AND name = $2
+            AND stream_name = $3
+            FOR UPDATE
+            SKIP LOCKED;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

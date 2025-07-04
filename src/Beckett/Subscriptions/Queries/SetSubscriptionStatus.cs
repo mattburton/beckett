@@ -14,7 +14,12 @@ public class SetSubscriptionStatus(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.set_subscription_status($1, $2, $3);";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.subscriptions
+            SET status = $3
+            WHERE group_name = $1
+            AND name = $2;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

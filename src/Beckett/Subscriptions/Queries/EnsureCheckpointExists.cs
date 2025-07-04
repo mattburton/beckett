@@ -13,7 +13,22 @@ public class EnsureCheckpointExists(
 {
     public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.ensure_checkpoint_exists($1, $2, $3);";
+        command.CommandText = $"""
+            WITH new_checkpoint AS (
+                INSERT INTO {options.Schema}.checkpoints (group_name, name, stream_name)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (group_name, name, stream_name) DO NOTHING
+                RETURNING 0 as stream_version
+            )
+            SELECT stream_version
+            FROM {options.Schema}.checkpoints
+            WHERE group_name = $1
+            AND name = $2
+            AND stream_name = $3
+            UNION ALL
+            SELECT stream_version
+            FROM new_checkpoint;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

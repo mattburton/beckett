@@ -11,7 +11,12 @@ public class ReleaseCheckpointReservation(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.release_checkpoint_reservation($1);";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.checkpoints
+            SET process_at = NULL,
+                reserved_until = NULL
+            WHERE id = $1;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 

@@ -8,7 +8,13 @@ public class RecordCheckpoints(CheckpointType[] checkpoints, PostgresOptions opt
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.record_checkpoints($1);";
+        command.CommandText = $"""
+            INSERT INTO {options.Schema}.checkpoints (stream_version, stream_position, group_name, name, stream_name)
+            SELECT c.stream_version, c.stream_position, c.group_name, c.name, c.stream_name
+            FROM unnest($1) c
+            ON CONFLICT (group_name, name, stream_name) DO UPDATE
+                SET stream_version = excluded.stream_version;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointArray(options.Schema) });
 
