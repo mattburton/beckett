@@ -16,7 +16,7 @@ public class CheckpointConsumer(
 {
     public async Task Poll(int instance, CancellationToken stoppingToken)
     {
-        logger.StartingCheckpointPolling(instance);
+        logger.StartingCheckpointPolling(instance, group.Name);
 
         await foreach (var _ in channel.Reader.ReadAllAsync(stoppingToken))
         {
@@ -24,7 +24,7 @@ public class CheckpointConsumer(
             {
                 stoppingToken.ThrowIfCancellationRequested();
 
-                logger.AttemptingToReserveCheckpoint(instance);
+                logger.AttemptingToReserveCheckpoint(instance, group.Name);
 
                 //once we reserve a checkpoint the stopping token is ignored so the checkpoint can be processed prior
                 //to shutting down the host - reservation timeout applies
@@ -40,14 +40,14 @@ public class CheckpointConsumer(
 
                 if (checkpoint == null)
                 {
-                    logger.NoAvailableCheckpoints(instance);
+                    logger.NoAvailableCheckpoints(instance, group.Name);
 
                     continue;
                 }
 
                 if (!checkpoint.IsRetryOrFailure && checkpoint.StreamPosition >= checkpoint.StreamVersion)
                 {
-                    logger.CheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance);
+                    logger.CheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance, group.Name);
 
                     await database.Execute(
                         new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
@@ -65,7 +65,8 @@ public class CheckpointConsumer(
                         checkpoint.Name,
                         group.Name,
                         checkpoint.Id,
-                        instance
+                        instance,
+                        group.Name
                     );
 
                     await database.Execute(
@@ -94,37 +95,39 @@ public class CheckpointConsumer(
 
 public static partial class Log
 {
-    [LoggerMessage(0, LogLevel.Trace, "Starting checkpoint polling for consumer {Consumer}")]
-    public static partial void StartingCheckpointPolling(this ILogger logger, int consumer);
+    [LoggerMessage(0, LogLevel.Trace, "Starting checkpoint polling for consumer {Consumer} in group {Group}")]
+    public static partial void StartingCheckpointPolling(this ILogger logger, int consumer, string group);
 
-    [LoggerMessage(0, LogLevel.Trace, "Attempting to reserve checkpoint for consumer {Consumer}")]
-    public static partial void AttemptingToReserveCheckpoint(this ILogger logger, int consumer);
+    [LoggerMessage(0, LogLevel.Trace, "Attempting to reserve checkpoint for consumer {Consumer} in group {Group}")]
+    public static partial void AttemptingToReserveCheckpoint(this ILogger logger, int consumer, string group);
 
-    [LoggerMessage(0, LogLevel.Trace, "No available checkpoints - will continue to wait for consumer {Consumer}")]
-    public static partial void NoAvailableCheckpoints(this ILogger logger, int consumer);
+    [LoggerMessage(0, LogLevel.Trace, "No available checkpoints - will continue to wait for consumer {Consumer} in group {Group}")]
+    public static partial void NoAvailableCheckpoints(this ILogger logger, int consumer, string group);
 
     [LoggerMessage(
         0,
         LogLevel.Trace,
-        "Skipping checkpoint {CheckpointId} - already caught up at stream position {StreamPosition} - releasing reservation and continuing polling in consumer {Consumer}"
+        "Skipping checkpoint {CheckpointId} - already caught up at stream position {StreamPosition} - releasing reservation and continuing polling in consumer {Consumer} in group {Group}"
     )]
     public static partial void CheckpointAlreadyCaughtUp(
         this ILogger logger,
         long checkpointId,
         long streamPosition,
-        int consumer
+        int consumer,
+        string group
     );
 
     [LoggerMessage(
         0,
         LogLevel.Trace,
-        "Subscription {SubscriptionName} not registered for group {GroupName} - skipping checkpoint {CheckpointId} in consumer {Consumer}"
+        "Subscription {SubscriptionName} not registered for group {GroupName} - skipping checkpoint {CheckpointId} in consumer {Consumer} in group {Group}"
     )]
     public static partial void SubscriptionNotRegistered(
         this ILogger logger,
         string subscriptionName,
         string groupName,
         long checkpointId,
-        int consumer
+        int consumer,
+        string group
     );
 }
