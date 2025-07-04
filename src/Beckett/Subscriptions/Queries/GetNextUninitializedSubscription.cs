@@ -11,7 +11,13 @@ public class GetNextUninitializedSubscription(
 {
     public async Task<string?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select name from {options.Schema}.get_next_uninitialized_subscription($1);";
+        command.CommandText = $"""
+            SELECT name
+            FROM {options.Schema}.subscriptions
+            WHERE group_name = $1
+            AND status in ('uninitialized', 'backfill')
+            LIMIT 1;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 

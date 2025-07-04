@@ -1,4 +1,5 @@
 using Beckett.Database;
+using Beckett.Database.Models;
 using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
@@ -9,36 +10,56 @@ public class ReadStream(
     string streamName,
     ReadStreamOptions readOptions,
     PostgresOptions postgresOptions
-) : IPostgresDatabaseQuery<IReadOnlyList<StreamMessageType>>
+) : IPostgresDatabaseQuery<IReadOnlyList<PostgresStreamMessage>>
 {
-    public async Task<IReadOnlyList<StreamMessageType>> Execute(
+    public async Task<IReadOnlyList<PostgresStreamMessage>> Execute(
         NpgsqlCommand command,
         CancellationToken cancellationToken
     )
     {
-        command.CommandText = $@"
-            select id,
-                   stream_name,
-                   stream_version,
-                   stream_position,
-                   global_position,
-                   type,
-                   data,
-                   metadata,
-                   timestamp
-            from {postgresOptions.Schema}.read_stream($1, $2, $3, $4, $5, $6, $7);
-        ";
+        command.CommandText = $"""
+            WITH stream_version AS (
+                SELECT max(m.stream_position) AS stream_version
+                FROM {postgresOptions.Schema}.messages m
+                WHERE m.stream_name = $1
+                AND m.archived = false
+            ),
+            stream_version_or_default AS (
+                SELECT coalesce(stream_version, 0) AS stream_version
+                FROM stream_version
+            )
+            SELECT m.id,
+                   m.stream_name,
+                   (SELECT stream_version FROM stream_version_or_default) AS stream_version,
+                   m.stream_position,
+                   m.global_position,
+                   m.type,
+                   m.data,
+                   m.metadata,
+                   m.timestamp
+            FROM {postgresOptions.Schema}.messages m
+            WHERE m.stream_name = $1
+            AND ($2 IS NULL OR m.stream_position >= $2)
+            AND ($3 IS NULL OR m.stream_position <= $3)
+            AND m.archived = false
+            AND ($4 IS NULL OR m.global_position >= $4)
+            AND ($5 IS NULL OR m.global_position <= $5)
+            AND ($6 IS NULL OR m.type = ANY($6))
+            ORDER BY CASE WHEN $7 = true THEN m.stream_position END,
+                     CASE WHEN $7 = false THEN m.stream_position END DESC
+            LIMIT $8;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, IsNullable = true });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
         command.Parameters.Add(
             new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text, IsNullable = true }
         );
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, IsNullable = true });
 
         if (postgresOptions.PrepareStatements)
         {
@@ -58,17 +79,17 @@ public class ReadStream(
         command.Parameters[4].Value = readOptions.EndingGlobalPosition.HasValue
             ? readOptions.EndingGlobalPosition.Value
             : DBNull.Value;
-        command.Parameters[5].Value = readOptions.Count.HasValue ? readOptions.Count.Value : DBNull.Value;
+        command.Parameters[5].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
         command.Parameters[6].Value = readOptions.ReadForwards.GetValueOrDefault(true);
-        command.Parameters[7].Value = readOptions.Types is { Length: > 0 } ? readOptions.Types : DBNull.Value;
+        command.Parameters[7].Value = readOptions.Count.HasValue ? readOptions.Count.Value : DBNull.Value;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<StreamMessageType>();
+        var results = new List<PostgresStreamMessage>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            results.Add(StreamMessageType.From(reader));
+            results.Add(PostgresStreamMessage.From(reader));
         }
 
         return results;

@@ -12,7 +12,21 @@ public class AddOrUpdateSubscription(
 {
     public async Task<SubscriptionStatus> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select status from {options.Schema}.add_or_update_subscription($1, $2);";
+        command.CommandText = $"""
+            WITH insert_subscription AS (
+                INSERT INTO {options.Schema}.subscriptions (group_name, name)
+                VALUES ($1, $2)
+                ON CONFLICT (group_name, name) DO NOTHING
+                RETURNING status
+            )
+            SELECT status
+            FROM insert_subscription
+            UNION
+            SELECT status
+            FROM {options.Schema}.subscriptions
+            WHERE group_name = $1
+            AND name = $2;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });

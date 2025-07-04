@@ -19,7 +19,7 @@ public class LaggingQuery(
                    count(*) over() as total_results
             FROM {options.Schema}.subscriptions s
             INNER JOIN {options.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-            WHERE s.status = 'active'
+            WHERE s.status in ('active', 'replay')
             AND c.status = 'active'
             AND c.lagging = true
             GROUP BY c.group_name, c.name

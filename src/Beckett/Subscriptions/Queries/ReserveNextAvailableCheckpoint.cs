@@ -13,18 +13,36 @@ public class ReserveNextAvailableCheckpoint(
 {
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
-            select id,
-                   group_name,
-                   name,
-                   stream_name,
-                   stream_position,
-                   stream_version,
-                   retry_attempts,
-                   status,
-                   replay_target_position
-            from {options.Schema}.reserve_next_available_checkpoint($1, $2, $3, $4, $5);
-        ";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.checkpoints c
+            SET reserved_until = now() + $2
+            FROM (
+                SELECT c.id, s.replay_target_position
+                FROM {options.Schema}.checkpoints c
+                INNER JOIN {options.Schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+                WHERE c.group_name = $1
+                AND c.process_at <= now()
+                AND c.reserved_until IS NULL
+                AND ($3 = false OR (s.status = 'active' OR s.status = 'replay'))
+                AND ($4 = false OR s.status = 'active')
+                AND ($5 = false OR s.status = 'replay')
+                ORDER BY c.process_at
+                LIMIT 1
+                FOR UPDATE
+                SKIP LOCKED
+            ) as d
+            WHERE c.id = d.id
+            RETURNING
+                c.id,
+                c.group_name,
+                c.name,
+                c.stream_name,
+                c.stream_position,
+                c.stream_version,
+                coalesce(array_length(c.retries, 1), 0) as retry_attempts,
+                c.status,
+                d.replay_target_position;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Interval });

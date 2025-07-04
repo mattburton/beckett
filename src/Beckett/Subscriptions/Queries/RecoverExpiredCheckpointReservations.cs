@@ -12,7 +12,19 @@ public class RecoverExpiredCheckpointReservations(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"SELECT {options.Schema}.recover_expired_checkpoint_reservations($1, $2); ";
+        command.CommandText = $"""
+            UPDATE {options.Schema}.checkpoints c
+            SET reserved_until = NULL
+            FROM (
+                SELECT id
+                FROM {options.Schema}.checkpoints
+                WHERE group_name = $1
+                AND reserved_until <= now()
+                FOR UPDATE SKIP LOCKED
+                LIMIT $2
+            ) as d
+            WHERE c.id = d.id;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });

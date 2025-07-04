@@ -13,18 +13,44 @@ public class ScheduleMessage(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"select {options.Schema}.schedule_message($1, $2);";
+        command.CommandText = $"""
+            INSERT INTO {options.Schema}.scheduled_messages (
+              id,
+              stream_name,
+              type,
+              data,
+              metadata,
+              deliver_at
+            )
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6
+            )
+            ON CONFLICT (id) DO NOTHING;
+        """;
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.ScheduledMessage(options.Schema) });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.TimestampTz });
 
         if (options.PrepareStatements)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = streamName;
-        command.Parameters[1].Value = scheduledMessage;
+        command.Parameters[0].Value = scheduledMessage.Id;
+        command.Parameters[1].Value = streamName;
+        command.Parameters[2].Value = scheduledMessage.Type;
+        command.Parameters[3].Value = scheduledMessage.Data;
+        command.Parameters[4].Value = scheduledMessage.Metadata;
+        command.Parameters[5].Value = scheduledMessage.DeliverAt;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

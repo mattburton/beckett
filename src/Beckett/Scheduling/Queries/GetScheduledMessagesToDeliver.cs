@@ -15,16 +15,28 @@ public class GetScheduledMessagesToDeliver(
         CancellationToken cancellationToken
     )
     {
-        command.CommandText = $@"
-            select id,
+        command.CommandText = $"""
+            WITH messages_to_deliver AS (
+                DELETE FROM {options.Schema}.scheduled_messages
+                WHERE id IN (
+                  SELECT id
+                  FROM {options.Schema}.scheduled_messages
+                  WHERE deliver_at <= CURRENT_TIMESTAMP
+                  FOR UPDATE
+                  SKIP LOCKED
+                  LIMIT $1
+                )
+                RETURNING *
+            )
+            SELECT id,
                    stream_name,
                    type,
                    data,
                    metadata,
                    deliver_at,
                    timestamp
-            from {options.Schema}.get_scheduled_messages_to_deliver($1);
-        ";
+            FROM messages_to_deliver;
+        """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
