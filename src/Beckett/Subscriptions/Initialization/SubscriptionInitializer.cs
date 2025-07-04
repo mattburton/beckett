@@ -70,6 +70,8 @@ public class SubscriptionInitializer(
 
     private async Task InitializeSubscription(Subscription subscription, CancellationToken cancellationToken)
     {
+        long? replayTargetPosition = null;
+
         while (!cancellationToken.IsCancellationRequested)
         {
             await using var connection = dataSource.CreateConnection();
@@ -177,7 +179,6 @@ public class SubscriptionInitializer(
                         new SetSubscriptionToReplay(
                             subscription.Group.Name,
                             subscription.Name,
-                            globalCheckpoint.StreamPosition,
                             options.Postgres
                         ),
                         connection,
@@ -187,6 +188,25 @@ public class SubscriptionInitializer(
                 }
                 else
                 {
+                    if (subscription.Status == SubscriptionStatus.Backfill)
+                    {
+                        var count = -1;
+
+                        while (count != 0)
+                        {
+                            count = await database.Execute(
+                                new AdvanceLaggingSubscriptionCheckpoints(
+                                    subscription.Group.Name,
+                                    subscription.Name,
+                                    options.Postgres
+                                ),
+                                connection,
+                                transaction,
+                                cancellationToken
+                            );
+                        }
+                    }
+
                     await database.Execute(
                         new SetSubscriptionToActive(
                             subscription.Group.Name,
@@ -222,6 +242,14 @@ public class SubscriptionInitializer(
                     ? streamVersion
                     : 0;
 
+                // track the replay target position
+                var globalPosition = stream.Max(x => x.GlobalPosition);
+
+                if (globalPosition > replayTargetPosition.GetValueOrDefault())
+                {
+                    replayTargetPosition = globalPosition;
+                }
+
                 checkpoints.Add(
                     new CheckpointType
                     {
@@ -247,6 +275,18 @@ public class SubscriptionInitializer(
                 new UpdateSystemCheckpointPosition(
                     checkpoint.Id,
                     newGlobalPosition,
+                    options.Postgres
+                ),
+                connection,
+                transaction,
+                cancellationToken
+            );
+
+            await database.Execute(
+                new UpdateSubscriptionReplayTargetPosition(
+                    subscription.Group.Name,
+                    subscription.Name,
+                    replayTargetPosition.GetValueOrDefault(),
                     options.Postgres
                 ),
                 connection,
