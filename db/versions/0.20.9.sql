@@ -28,5 +28,9 @@ DROP FUNCTION IF EXISTS beckett.record_stream_data(text[], timestamp with time z
 DROP FUNCTION IF EXISTS beckett.get_subscription_lag_count();
 DROP FUNCTION IF EXISTS beckett.get_subscription_retry_count();
 DROP FUNCTION IF EXISTS beckett.get_subscription_failed_count();
+DROP FUNCTION IF EXISTS beckett.delete_subscription(text, text);
+DROP FUNCTION IF EXISTS beckett.move_subscription(text, text, text);
+DROP FUNCTION IF EXISTS beckett.rename_subscription(text, text, text);
+DROP FUNCTION IF EXISTS beckett.reset_subscription(text, text);
 
 DROP TYPE IF EXISTS beckett.scheduled_message;
