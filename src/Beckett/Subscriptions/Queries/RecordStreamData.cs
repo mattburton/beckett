@@ -12,6 +12,7 @@ public class RecordStreamData(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             WITH insert_categories AS (
                 INSERT INTO beckett.categories (name, updated_at)

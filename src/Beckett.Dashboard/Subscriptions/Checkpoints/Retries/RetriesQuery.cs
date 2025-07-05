@@ -12,6 +12,7 @@ public class RetriesQuery(
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
             FROM beckett.checkpoints

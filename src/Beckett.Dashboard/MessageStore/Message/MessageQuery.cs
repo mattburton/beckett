@@ -10,6 +10,7 @@ public class MessageQuery(Guid id) : IPostgresDatabaseQuery<MessageResult?>
 {
     public async Task<MessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT beckett.stream_category(m.stream_name) AS category,
                    m.stream_name,

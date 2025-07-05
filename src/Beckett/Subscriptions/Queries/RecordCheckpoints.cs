@@ -8,6 +8,7 @@ public class RecordCheckpoints(CheckpointType[] checkpoints) : IPostgresDatabase
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             INSERT INTO beckett.checkpoints (stream_version, stream_position, group_name, name, stream_name)
             SELECT c.stream_version, c.stream_position, c.group_name, c.name, c.stream_name

@@ -11,6 +11,7 @@ public class MessageByStreamPositionQuery(string streamName, long streamPosition
 {
     public async Task<MessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT id::text,
                    beckett.stream_category(m.stream_name) AS category,

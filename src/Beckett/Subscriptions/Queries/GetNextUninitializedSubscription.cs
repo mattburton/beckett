@@ -8,6 +8,7 @@ public class GetNextUninitializedSubscription(string groupName) : IPostgresDatab
 {
     public async Task<string?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT name
             FROM beckett.subscriptions

@@ -11,6 +11,7 @@ public class ReplayQuery(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = "SELECT beckett.replay_subscription($1, $2);";
 
         command.CommandText = Query.Build(nameof(ReplayQuery), sql, out var prepare);

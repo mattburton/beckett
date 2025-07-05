@@ -12,6 +12,7 @@ public class ScheduleMessage(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             INSERT INTO beckett.scheduled_messages (
               id,

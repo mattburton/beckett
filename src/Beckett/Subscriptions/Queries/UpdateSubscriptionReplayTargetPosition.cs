@@ -12,6 +12,7 @@ public class UpdateSubscriptionReplayTargetPosition(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             UPDATE beckett.subscriptions
             SET replay_target_position = $3

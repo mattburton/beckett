@@ -12,6 +12,7 @@ public class CategoriesQuery(
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
            SELECT name,
                   updated_at,

@@ -15,6 +15,7 @@ public class ReadStream(
         CancellationToken cancellationToken
     )
     {
+        //language=sql
         const string sql = """
             WITH stream_version AS (
                 SELECT max(stream_position) AS stream_version

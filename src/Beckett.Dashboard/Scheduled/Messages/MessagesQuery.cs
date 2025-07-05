@@ -12,6 +12,7 @@ public class MessagesQuery(
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT id, stream_name, type, deliver_at, count(*) over() AS total_results
             FROM beckett.scheduled_messages

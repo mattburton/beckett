@@ -11,6 +11,7 @@ public class ScheduleCheckpoints(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             UPDATE beckett.checkpoints
             SET process_at = $2

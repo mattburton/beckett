@@ -11,6 +11,7 @@ public class LaggingQuery(
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT c.group_name,
                    c.name,

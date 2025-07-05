@@ -8,6 +8,7 @@ public class CancelScheduledMessage(Guid id) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = "DELETE FROM beckett.scheduled_messages WHERE id = $1;";
 
         command.CommandText = Query.Build(nameof(CancelScheduledMessage), sql, out var prepare);

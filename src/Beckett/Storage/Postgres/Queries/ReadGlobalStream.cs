@@ -10,6 +10,7 @@ public class ReadGlobalStream(
 {
     public async Task<IReadOnlyList<Result>> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             WITH transaction_id AS (
                 SELECT m.transaction_id

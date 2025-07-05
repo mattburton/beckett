@@ -12,6 +12,7 @@ public class ReserveNextAvailableCheckpoint(
 {
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             UPDATE beckett.checkpoints c
             SET reserved_until = now() + $2

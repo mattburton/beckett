@@ -12,6 +12,7 @@ public class LockCheckpoint(
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT id, stream_position
             FROM beckett.checkpoints

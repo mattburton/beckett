@@ -10,6 +10,7 @@ public class MessageQuery(Guid id) : IPostgresDatabaseQuery<Message.ViewModel?>
 {
     public async Task<Message.ViewModel?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT stream_name,
                    type,

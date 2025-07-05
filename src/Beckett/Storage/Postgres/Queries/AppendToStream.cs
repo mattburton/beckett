@@ -15,6 +15,7 @@ public class AppendToStream(
     {
         try
         {
+            //language=sql
             const string sql = "select beckett.append_to_stream($1, $2, $3);";
 
             command.CommandText = Query.Build(nameof(AppendToStream), sql, out var prepare);

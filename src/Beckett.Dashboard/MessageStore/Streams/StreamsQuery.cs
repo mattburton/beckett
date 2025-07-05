@@ -14,6 +14,7 @@ public class StreamsQuery(
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
            SELECT stream_name,
                   max(timestamp) AS last_updated,

@@ -13,6 +13,7 @@ public class SetSubscriptionStatus(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             UPDATE beckett.subscriptions
             SET status = $3

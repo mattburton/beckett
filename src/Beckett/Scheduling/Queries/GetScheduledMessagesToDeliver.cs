@@ -14,6 +14,7 @@ public class GetScheduledMessagesToDeliver(
         CancellationToken cancellationToken
     )
     {
+        //language=sql
         const string sql = """
             WITH messages_to_deliver AS (
                 DELETE FROM beckett.scheduled_messages

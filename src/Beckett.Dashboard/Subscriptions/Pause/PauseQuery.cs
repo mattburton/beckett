@@ -11,6 +11,7 @@ public class PauseQuery(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             UPDATE beckett.subscriptions
             SET status = 'paused'

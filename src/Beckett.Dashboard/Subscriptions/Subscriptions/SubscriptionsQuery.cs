@@ -14,6 +14,7 @@ public class SubscriptionsQuery(
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT name, status, count(*) over() as total_results
             FROM beckett.subscriptions

@@ -7,6 +7,7 @@ public class TenantsQuery : IPostgresDatabaseQuery<TenantsQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = "SELECT tenant FROM beckett.tenants ORDER BY tenant;";
 
         command.CommandText = Query.Build(nameof(TenantsQuery), sql, out var prepare);

@@ -11,6 +11,7 @@ public class ResumeQuery(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             WITH notify AS (
                 SELECT pg_notify('beckett:checkpoints', $1)

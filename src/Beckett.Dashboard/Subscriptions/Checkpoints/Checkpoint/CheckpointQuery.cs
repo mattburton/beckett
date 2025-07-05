@@ -10,6 +10,7 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT c.id,
                    c.group_name,

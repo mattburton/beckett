@@ -12,6 +12,7 @@ public class GroupsQuery(
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT group_name, count(*) over() as total_results
             FROM beckett.subscriptions

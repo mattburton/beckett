@@ -11,6 +11,7 @@ public class SetSubscriptionToActive(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             WITH delete_initialization_checkpoint AS (
                 DELETE FROM beckett.checkpoints

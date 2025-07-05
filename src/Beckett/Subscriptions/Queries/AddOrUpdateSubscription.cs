@@ -11,6 +11,7 @@ public class AddOrUpdateSubscription(
 {
     public async Task<SubscriptionStatus> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             WITH insert_subscription AS (
                 INSERT INTO beckett.subscriptions (group_name, name)

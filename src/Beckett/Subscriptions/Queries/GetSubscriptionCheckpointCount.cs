@@ -11,6 +11,7 @@ public class GetSubscriptionCheckpointCount(
 {
     public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT count(*)
             FROM beckett.checkpoints

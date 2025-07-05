@@ -8,6 +8,7 @@ public class AdvanceLaggingSubscriptionCheckpoints(string groupName, string name
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             UPDATE beckett.checkpoints
             SET stream_position = stream_version,

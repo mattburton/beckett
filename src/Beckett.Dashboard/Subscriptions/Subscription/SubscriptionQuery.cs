@@ -11,6 +11,7 @@ public class SubscriptionQuery(
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT group_name, name, status
             FROM beckett.subscriptions

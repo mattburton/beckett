@@ -7,6 +7,7 @@ public class MetricsQuery : IPostgresDatabaseQuery<MetricsQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             SELECT l.lagging, r.retries, f.failed
             FROM (

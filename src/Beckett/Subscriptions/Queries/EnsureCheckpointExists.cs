@@ -12,6 +12,7 @@ public class EnsureCheckpointExists(
 {
     public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
+        //language=sql
         const string sql = """
             WITH new_checkpoint AS (
                 INSERT INTO beckett.checkpoints (group_name, name, stream_name)
