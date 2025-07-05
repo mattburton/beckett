@@ -125,14 +125,27 @@ public class CheckpointProcessor(
         {
             if (batch.Messages.Count == 0)
             {
-                return NoMessages.Instance;
+                if (batch.StreamVersion == 0 || checkpoint.StreamPosition >= checkpoint.StreamVersion)
+                {
+                    return NoMessages.Instance;
+                }
+
+                // when processing batches within streams we could have a scenario where we read the next batch of
+                // messages but then after filters were applied no actual messages were returned. in that case we need
+                // to advance the checkpoint position, so we do that by returning the lesser value of either the next
+                // position based on batch size or the stream version
+                var nextPositionBasedOnBatchSize = checkpoint.StreamPosition + subscription.Group.SubscriptionBatchSize;
+
+                var nextPosition = Math.Min(nextPositionBasedOnBatchSize, checkpoint.StreamVersion);
+
+                return new Success(nextPosition, batch.EndingGlobalPosition);
             }
 
             var subscriptionContext = BuildSubscriptionContext(checkpoint, subscription);
 
             if (subscription.SkipDuringReplay && subscriptionContext.IsReplay)
             {
-                return new Success(batch.StreamPosition, batch.GlobalPosition);
+                return new Success(batch.EndingStreamPosition, batch.EndingGlobalPosition);
             }
 
             if (subscription.Handler.IsBatchHandler)
@@ -182,7 +195,7 @@ public class CheckpointProcessor(
                 }
             }
 
-            return new Success(batch.StreamPosition, batch.GlobalPosition);
+            return new Success(batch.EndingStreamPosition, batch.EndingGlobalPosition);
         }
         catch (Exception e)
         {
@@ -258,7 +271,7 @@ public class CheckpointProcessor(
                 cts.Token
             );
 
-            return new Success(batch.StreamPosition, batch.GlobalPosition);
+            return new Success(batch.EndingStreamPosition, batch.EndingGlobalPosition);
         }
         //special handling for HttpClient timeouts - see https://github.com/dotnet/runtime/issues/21965
         catch (TaskCanceledException e) when (e.InnerException is TimeoutException timeoutException)
@@ -309,27 +322,23 @@ public class CheckpointProcessor(
 
         logger.FoundMessagesToProcessForCheckpoint(stream.StreamMessages.Count, checkpoint.Id);
 
-        var streamPosition = 0L;
-        var globalPosition = 0L;
-
         if (stream.StreamMessages.Count <= 0)
         {
             return new ReadMessageBatchResult(
                 stream.StreamMessages.Select(MessageContext.From).ToList(),
-                streamPosition,
-                globalPosition
+                stream.StreamVersion,
+                0,
+                0
             );
         }
 
         var lastStreamMessage = stream.StreamMessages[^1];
 
-        streamPosition = lastStreamMessage.StreamPosition;
-        globalPosition = lastStreamMessage.GlobalPosition;
-
         return new ReadMessageBatchResult(
             stream.StreamMessages.Select(MessageContext.From).ToList(),
-            streamPosition,
-            globalPosition
+            stream.StreamVersion,
+            lastStreamMessage.StreamPosition,
+            lastStreamMessage.GlobalPosition
         );
     }
 
@@ -474,8 +483,9 @@ public class CheckpointProcessor(
 
     private record ReadMessageBatchResult(
         IReadOnlyList<IMessageContext> Messages,
-        long StreamPosition,
-        long GlobalPosition
+        long StreamVersion,
+        long EndingStreamPosition,
+        long EndingGlobalPosition
     );
 
     private readonly record struct NoMessages : IMessageBatchResult

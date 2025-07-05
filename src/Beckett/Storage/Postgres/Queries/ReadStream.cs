@@ -1,6 +1,5 @@
 using Beckett.Database;
 using Beckett.Database.Models;
-using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -10,44 +9,59 @@ public class ReadStream(
     string streamName,
     ReadStreamOptions readOptions,
     PostgresOptions postgresOptions
-) : IPostgresDatabaseQuery<IReadOnlyList<PostgresStreamMessage>>
+) : IPostgresDatabaseQuery<ReadStream.Result>
 {
-    public async Task<IReadOnlyList<PostgresStreamMessage>> Execute(
+    public async Task<Result> Execute(
         NpgsqlCommand command,
         CancellationToken cancellationToken
     )
     {
         command.CommandText = $"""
             WITH stream_version AS (
-                SELECT max(m.stream_position) AS stream_version
-                FROM {postgresOptions.Schema}.messages m
-                WHERE m.stream_name = $1
-                AND m.archived = false
+                SELECT max(stream_position) AS stream_version
+                FROM {postgresOptions.Schema}.messages
+                WHERE stream_name = $1
+                AND archived = false
             ),
-            stream_version_or_default AS (
-                SELECT coalesce(stream_version, 0) AS stream_version
-                FROM stream_version
+            results AS (
+                SELECT id,
+                       stream_name,
+                       stream_position,
+                       global_position,
+                       type,
+                       data,
+                       metadata,
+                       timestamp
+                FROM {postgresOptions.Schema}.messages
+                WHERE stream_name = $1
+                AND ($2 IS NULL OR stream_position >= $2)
+                AND ($3 IS NULL OR stream_position <= $3)
+                AND archived = false
+                AND ($4 IS NULL OR global_position >= $4)
+                AND ($5 IS NULL OR global_position <= $5)
+                AND ($6 IS NULL OR type = ANY($6))
+                LIMIT $8
             )
-            SELECT m.id,
-                   m.stream_name,
-                   (SELECT stream_version FROM stream_version_or_default) AS stream_version,
-                   m.stream_position,
-                   m.global_position,
-                   m.type,
-                   m.data,
-                   m.metadata,
-                   m.timestamp
-            FROM {postgresOptions.Schema}.messages m
-            WHERE m.stream_name = $1
-            AND ($2 IS NULL OR m.stream_position >= $2)
-            AND ($3 IS NULL OR m.stream_position <= $3)
-            AND m.archived = false
-            AND ($4 IS NULL OR m.global_position >= $4)
-            AND ($5 IS NULL OR m.global_position <= $5)
-            AND ($6 IS NULL OR m.type = ANY($6))
-            ORDER BY CASE WHEN $7 = true THEN m.stream_position END,
-                     CASE WHEN $7 = false THEN m.stream_position END DESC
-            LIMIT $8;
+            SELECT coalesce((SELECT stream_version FROM stream_version), 0) AS stream_version,
+                   null AS id,
+                   null AS stream_name,
+                   null AS stream_position,
+                   null AS global_position,
+                   null AS type,
+                   null AS data,
+                   null AS metadata,
+                   null AS timestamp
+            UNION ALL
+            SELECT null,
+                   id,
+                   stream_name,
+                   stream_position,
+                   global_position,
+                   type,
+                   data,
+                   metadata,
+                   timestamp
+            FROM results;
         """;
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -87,11 +101,20 @@ public class ReadStream(
 
         var results = new List<PostgresStreamMessage>();
 
+        var streamVersion = 0L;
+
+        if (await reader.ReadAsync(cancellationToken))
+        {
+            streamVersion = reader.GetInt64(0);
+        }
+
         while (await reader.ReadAsync(cancellationToken))
         {
             results.Add(PostgresStreamMessage.From(reader));
         }
 
-        return results;
+        return new Result(streamVersion, results);
     }
+
+    public record Result(long StreamVersion, List<PostgresStreamMessage> StreamMessages);
 }

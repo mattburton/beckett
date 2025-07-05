@@ -7,7 +7,6 @@ public class PostgresStreamMessage
 {
     public required Guid Id { get; init; }
     public required string StreamName { get; init; }
-    public required long StreamVersion { get; init; }
     public required long StreamPosition { get; init; }
     public required long GlobalPosition { get; init; }
     public required string Type { get; init; }
@@ -22,9 +21,8 @@ public class PostgresStreamMessage
 
         return new PostgresStreamMessage
         {
-            Id = reader.GetFieldValue<Guid>(0),
-            StreamName = reader.GetFieldValue<string>(1),
-            StreamVersion = reader.GetFieldValue<long>(2),
+            Id = reader.GetFieldValue<Guid>(1),
+            StreamName = reader.GetFieldValue<string>(2),
             StreamPosition = reader.GetFieldValue<long>(3),
             GlobalPosition = reader.GetFieldValue<long>(4),
             Type = reader.GetFieldValue<string>(5),
