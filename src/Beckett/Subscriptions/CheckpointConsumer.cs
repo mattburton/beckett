@@ -32,8 +32,7 @@ public class CheckpointConsumer(
                     new ReserveNextAvailableCheckpoint(
                         group.Name,
                         group.ReservationTimeout,
-                        options.Subscriptions.ReplayMode,
-                        options.Postgres
+                        options.Subscriptions.ReplayMode
                     ),
                     stoppingToken
                 );
@@ -50,7 +49,7 @@ public class CheckpointConsumer(
                     logger.CheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance, group.Name);
 
                     await database.Execute(
-                        new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
+                        new ReleaseCheckpointReservation(checkpoint.Id),
                         CancellationToken.None
                     );
 
@@ -70,7 +69,7 @@ public class CheckpointConsumer(
                     );
 
                     await database.Execute(
-                        new ReleaseCheckpointReservation(checkpoint.Id, options.Postgres),
+                        new ReleaseCheckpointReservation(checkpoint.Id),
                         CancellationToken.None
                     );
 

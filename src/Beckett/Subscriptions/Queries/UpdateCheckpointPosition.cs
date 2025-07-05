@@ -7,14 +7,13 @@ namespace Beckett.Subscriptions.Queries;
 public class UpdateCheckpointPosition(
     long id,
     long streamPosition,
-    DateTimeOffset? processAt,
-    PostgresOptions options
+    DateTimeOffset? processAt
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.checkpoints
+        const string sql = """
+            UPDATE beckett.checkpoints
             SET stream_position = $2,
                 process_at = $3,
                 reserved_until = NULL,
@@ -23,11 +22,13 @@ public class UpdateCheckpointPosition(
             WHERE id = $1;
         """;
 
+        command.CommandText = Query.Build(nameof(UpdateCheckpointPosition), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.TimestampTz, IsNullable = true });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

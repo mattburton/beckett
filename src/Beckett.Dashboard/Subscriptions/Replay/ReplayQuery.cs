@@ -6,18 +6,19 @@ namespace Beckett.Dashboard.Subscriptions.Replay;
 
 public class ReplayQuery(
     string groupName,
-    string name,
-    PostgresOptions options
+    string name
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = @$"SELECT {options.Schema}.replay_subscription($1, $2);";
+        const string sql = "SELECT beckett.replay_subscription($1, $2);";
+
+        command.CommandText = Query.Build(nameof(ReplayQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

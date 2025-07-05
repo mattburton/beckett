@@ -6,18 +6,18 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.MessageStore.Message;
 
-public class MessageQuery(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<MessageResult?>
+public class MessageQuery(Guid id) : IPostgresDatabaseQuery<MessageResult?>
 {
     public async Task<MessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
-            SELECT {options.Schema}.stream_category(m.stream_name) AS category,
+        const string sql = """
+            SELECT beckett.stream_category(m.stream_name) AS category,
                    m.stream_name,
                    m.global_position,
                    m.stream_position,
                    (
                         SELECT MAX(stream_position) as stream_version
-                        FROM {options.Schema}.messages
+                        FROM beckett.messages
                         WHERE stream_name = m.stream_name
                         AND archived = false
                    ) as stream_version,
@@ -25,14 +25,16 @@ public class MessageQuery(Guid id, PostgresOptions options) : IPostgresDatabaseQ
                    m.timestamp,
                    m.data,
                    m.metadata
-            FROM {options.Schema}.messages AS m
+            FROM beckett.messages AS m
             WHERE m.id = $1
             AND m.archived = false;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(MessageQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

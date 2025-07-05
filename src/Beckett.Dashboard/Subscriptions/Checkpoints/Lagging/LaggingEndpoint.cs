@@ -17,7 +17,7 @@ public static class LaggingEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new LaggingQuery(offset, pageSizeParameter, options),
+            new LaggingQuery(offset, pageSizeParameter),
             cancellationToken
         );
 

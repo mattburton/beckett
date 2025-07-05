@@ -8,21 +8,22 @@ namespace Beckett.Storage.Postgres.Queries;
 public class AppendToStream(
     string streamName,
     long expectedVersion,
-    MessageType[] messages,
-    PostgresOptions options
+    MessageType[] messages
 ) : IPostgresDatabaseQuery<long>
 {
     public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         try
         {
-            command.CommandText = $"select {options.Schema}.append_to_stream($1, $2, $3);";
+            const string sql = "select beckett.append_to_stream($1, $2, $3);";
+
+            command.CommandText = Query.Build(nameof(AppendToStream), sql, out var prepare);
 
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-            command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageArray(options.Schema) });
+            command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageArray("beckett") });
 
-            if (options.PrepareStatements)
+            if (prepare)
             {
                 await command.PrepareAsync(cancellationToken);
             }

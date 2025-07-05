@@ -7,27 +7,28 @@ namespace Beckett.Dashboard.Subscriptions.Checkpoints.Failed;
 public class FailedQuery(
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<FailedQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        const string sql = """
             SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
-            FROM {options.Schema}.checkpoints
+            FROM beckett.checkpoints
             WHERE status = 'failed'
             AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
             ORDER BY updated_at desc, group_name, name, stream_name, stream_position
             OFFSET $2
             LIMIT $3;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(FailedQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

@@ -5,16 +5,15 @@ using NpgsqlTypes;
 namespace Beckett.Storage.Postgres.Queries;
 
 public class ReadGlobalStream(
-    ReadGlobalStreamOptions readOptions,
-    PostgresOptions options
+    ReadGlobalStreamOptions readOptions
 ) : IPostgresDatabaseQuery<IReadOnlyList<ReadGlobalStream.Result>>
 {
     public async Task<IReadOnlyList<Result>> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        const string sql = """
             WITH transaction_id AS (
                 SELECT m.transaction_id
-                FROM {options.Schema}.messages m
+                FROM beckett.messages m
                 WHERE m.global_position = $1
                 AND m.archived = false
                 UNION ALL
@@ -27,7 +26,7 @@ public class ReadGlobalStream(
                    m.type,
                    m.metadata ->> '$tenant',
                    m.timestamp
-            FROM {options.Schema}.messages m
+            FROM beckett.messages m
             WHERE (m.transaction_id, m.global_position) > ((SELECT transaction_id FROM transaction_id), $1)
             AND m.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
             AND m.archived = false
@@ -35,10 +34,12 @@ public class ReadGlobalStream(
             LIMIT $2;
         """;
 
+        command.CommandText = Query.Build(nameof(ReadGlobalStream), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

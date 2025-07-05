@@ -10,7 +10,7 @@ public static class MetricsEndpoint
         CancellationToken cancellationToken
     )
     {
-        var result = await database.Execute(new MetricsQuery(options), cancellationToken);
+        var result = await database.Execute(new MetricsQuery(), cancellationToken);
 
         return Results.Extensions.Render<Metrics>(
             new Metrics.ViewModel(result.Lagging, result.Retries, result.Failed, false)

@@ -7,24 +7,25 @@ namespace Beckett.Subscriptions.Queries;
 public class UpdateSubscriptionReplayTargetPosition(
     string groupName,
     string name,
-    long position,
-    PostgresOptions options
+    long position
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.subscriptions
+        const string sql = """
+            UPDATE beckett.subscriptions
             SET replay_target_position = $3
             WHERE group_name = $1
             AND name = $2;
         """;
 
+        command.CommandText = Query.Build(nameof(UpdateSubscriptionReplayTargetPosition), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

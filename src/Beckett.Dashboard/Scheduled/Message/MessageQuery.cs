@@ -6,24 +6,26 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.Scheduled.Message;
 
-public class MessageQuery(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<Message.ViewModel?>
+public class MessageQuery(Guid id) : IPostgresDatabaseQuery<Message.ViewModel?>
 {
     public async Task<Message.ViewModel?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        const string sql = """
             SELECT stream_name,
                    type,
                    deliver_at,
                    timestamp,
                    data,
                    metadata
-            FROM {options.Schema}.scheduled_messages
+            FROM beckett.scheduled_messages
             WHERE id = $1;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(MessageQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

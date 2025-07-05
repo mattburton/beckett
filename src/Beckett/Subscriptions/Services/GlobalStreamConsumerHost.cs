@@ -31,7 +31,6 @@ public class GlobalStreamConsumerHost(
             dataSource,
             database,
             messageStorage,
-            options.Postgres,
             loggerFactory.CreateLogger<GlobalStreamConsumer>()
         );
     }

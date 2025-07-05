@@ -13,7 +13,7 @@ public static class RetryEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new ScheduleCheckpoints([id], DateTimeOffset.UtcNow, options), cancellationToken);
+        await database.Execute(new ScheduleCheckpoints([id], DateTimeOffset.UtcNow), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
         context.Response.Headers.Append("HX-Trigger", new StringValues("retry_requested"));

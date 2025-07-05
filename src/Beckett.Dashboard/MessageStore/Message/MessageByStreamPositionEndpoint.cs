@@ -15,7 +15,7 @@ public static class MessageByStreamPositionEndpoint
         var decodedStreamName = HttpUtility.UrlDecode(streamName);
 
         var result = await database.Execute(
-            new MessageByStreamPositionQuery(decodedStreamName, streamPosition, options),
+            new MessageByStreamPositionQuery(decodedStreamName, streamPosition),
             cancellationToken
         );
 

@@ -11,7 +11,7 @@ public static class CheckpointEndpoint
         CancellationToken cancellationToken
     )
     {
-        var result = await database.Execute(new CheckpointQuery(id, options), cancellationToken);
+        var result = await database.Execute(new CheckpointQuery(id), cancellationToken);
 
         return result == null
             ? Results.NotFound()

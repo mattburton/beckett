@@ -6,8 +6,7 @@ using NpgsqlTypes;
 namespace Beckett.Scheduling.Queries;
 
 public class GetScheduledMessagesToDeliver(
-    int batchSize,
-    PostgresOptions options
+    int batchSize
 ) : IPostgresDatabaseQuery<IReadOnlyList<PostgresScheduledMessage>>
 {
     public async Task<IReadOnlyList<PostgresScheduledMessage>> Execute(
@@ -15,12 +14,12 @@ public class GetScheduledMessagesToDeliver(
         CancellationToken cancellationToken
     )
     {
-        command.CommandText = $"""
+        const string sql = """
             WITH messages_to_deliver AS (
-                DELETE FROM {options.Schema}.scheduled_messages
+                DELETE FROM beckett.scheduled_messages
                 WHERE id IN (
                   SELECT id
-                  FROM {options.Schema}.scheduled_messages
+                  FROM beckett.scheduled_messages
                   WHERE deliver_at <= CURRENT_TIMESTAMP
                   FOR UPDATE
                   SKIP LOCKED
@@ -38,9 +37,11 @@ public class GetScheduledMessagesToDeliver(
             FROM messages_to_deliver;
         """;
 
+        command.CommandText = Query.Build(nameof(GetScheduledMessagesToDeliver), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

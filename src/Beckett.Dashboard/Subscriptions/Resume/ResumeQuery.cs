@@ -6,26 +6,27 @@ namespace Beckett.Dashboard.Subscriptions.Resume;
 
 public class ResumeQuery(
     string groupName,
-    string name,
-    PostgresOptions options
+    string name
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        const string sql = """
             WITH notify AS (
                 SELECT pg_notify('beckett:checkpoints', $1)
             )
-            UPDATE {options.Schema}.subscriptions
+            UPDATE beckett.subscriptions
             SET status = 'active'
             WHERE group_name = $1
             AND name = $2;
         """;
 
+        command.CommandText = Query.Build(nameof(ResumeQuery), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

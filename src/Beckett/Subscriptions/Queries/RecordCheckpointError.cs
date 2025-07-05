@@ -12,33 +12,34 @@ public record RecordCheckpointError(
     CheckpointStatus Status,
     int Attempt,
     JsonDocument Error,
-    DateTimeOffset? ProcessAt,
-    PostgresOptions Options
+    DateTimeOffset? ProcessAt
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {Options.Schema}.checkpoints
+        const string sql = """
+            UPDATE beckett.checkpoints
             SET stream_position = $2,
             process_at = $6,
             reserved_until = NULL,
             status = $3,
             retries = array_append(
-                coalesce(retries, array[]::{Options.Schema}.retry[]),
-                row($4, $5, now())::{Options.Schema}.retry
+                coalesce(retries, array[]::beckett.retry[]),
+                row($4, $5, now())::beckett.retry
             )
             WHERE id = $1;
         """;
 
+        command.CommandText = Query.Build(nameof(RecordCheckpointError), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointStatus(Options.Schema) });
+        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointStatus("beckett") });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.TimestampTz, IsNullable = true });
 
-        if (Options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

@@ -18,7 +18,7 @@ public static class FailedEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new FailedQuery(query, offset, pageSizeParameter, options),
+            new FailedQuery(query, offset, pageSizeParameter),
             cancellationToken
         );
 

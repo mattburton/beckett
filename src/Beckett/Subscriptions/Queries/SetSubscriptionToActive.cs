@@ -6,30 +6,31 @@ namespace Beckett.Subscriptions.Queries;
 
 public class SetSubscriptionToActive(
     string groupName,
-    string name,
-    PostgresOptions options
+    string name
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        const string sql = """
             WITH delete_initialization_checkpoint AS (
-                DELETE FROM {options.Schema}.checkpoints
+                DELETE FROM beckett.checkpoints
                 WHERE group_name = $1
                 AND name = $2
                 AND stream_name = '$initializing'
             )
-            UPDATE {options.Schema}.subscriptions
+            UPDATE beckett.subscriptions
             SET status = 'active',
                 replay_target_position = NULL
             WHERE group_name = $1
             AND name = $2;
         """;
 
+        command.CommandText = Query.Build(nameof(SetSubscriptionToActive), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

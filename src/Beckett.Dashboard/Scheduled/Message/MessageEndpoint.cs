@@ -12,7 +12,7 @@ public static class MessageEndpoint
         CancellationToken cancellationToken
     )
     {
-        var viewModel = await database.Execute(new MessageQuery(id, options), cancellationToken);
+        var viewModel = await database.Execute(new MessageQuery(id), cancellationToken);
 
         if (viewModel is not null)
         {

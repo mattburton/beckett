@@ -6,20 +6,20 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.MessageStore.Message;
 
-public class MessageByStreamPositionQuery(string streamName, long streamPosition, PostgresOptions options)
+public class MessageByStreamPositionQuery(string streamName, long streamPosition)
     : IPostgresDatabaseQuery<MessageResult?>
 {
     public async Task<MessageResult?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        const string sql = """
             SELECT id::text,
-                   {options.Schema}.stream_category(m.stream_name) AS category,
+                   beckett.stream_category(m.stream_name) AS category,
                    m.stream_name,
                    m.global_position,
                    m.stream_position,
                    (
                         SELECT MAX(stream_position) as stream_version
-                        FROM {options.Schema}.messages
+                        FROM beckett.messages
                         WHERE stream_name = m.stream_name
                         AND archived = false
                    ) as stream_version,
@@ -27,16 +27,18 @@ public class MessageByStreamPositionQuery(string streamName, long streamPosition
                    m.timestamp,
                    m.data,
                    m.metadata
-            FROM {options.Schema}.messages AS m
+            FROM beckett.messages AS m
             WHERE m.stream_name = $1
             AND m.stream_position = $2
             AND m.archived = false;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(MessageByStreamPositionQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

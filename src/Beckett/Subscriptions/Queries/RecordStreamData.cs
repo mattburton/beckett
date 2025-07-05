@@ -7,31 +7,32 @@ namespace Beckett.Subscriptions.Queries;
 public class RecordStreamData(
     string[] categories,
     DateTimeOffset[] categoryTimestamps,
-    string[] tenants,
-    PostgresOptions options
+    string[] tenants
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        const string sql = """
             WITH insert_categories AS (
-                INSERT INTO {options.Schema}.categories (name, updated_at)
+                INSERT INTO beckett.categories (name, updated_at)
                 SELECT d.name, d.timestamp
                 FROM unnest($1, $2) AS d (name, timestamp)
                 ON CONFLICT (name) DO UPDATE
                 SET updated_at = excluded.updated_at
             )
-            INSERT INTO {options.Schema}.tenants (tenant)
+            INSERT INTO beckett.tenants (tenant)
             SELECT d.tenant
             FROM unnest($3) AS d (tenant)
             ON CONFLICT (tenant) DO NOTHING;
         """;
 
+        command.CommandText = Query.Build(nameof(RecordStreamData), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.TimestampTz });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

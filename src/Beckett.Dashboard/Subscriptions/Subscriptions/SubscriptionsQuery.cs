@@ -9,28 +9,29 @@ public class SubscriptionsQuery(
     string groupName,
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<SubscriptionsQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        const string sql = """
             SELECT name, status, count(*) over() as total_results
-            FROM {options.Schema}.subscriptions
+            FROM beckett.subscriptions
             WHERE group_name = $1
             AND ($2 IS NULL or name ILIKE '%' || $2 || '%')
             ORDER BY name
             OFFSET $3
             LIMIT $4;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(SubscriptionsQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

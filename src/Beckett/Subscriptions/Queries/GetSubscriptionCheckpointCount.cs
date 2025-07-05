@@ -6,24 +6,25 @@ namespace Beckett.Subscriptions.Queries;
 
 public class GetSubscriptionCheckpointCount(
     string groupName,
-    string name,
-    PostgresOptions options
+    string name
 ) : IPostgresDatabaseQuery<long>
 {
     public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        const string sql = """
             SELECT count(*)
-            FROM {options.Schema}.checkpoints
+            FROM beckett.checkpoints
             WHERE group_name = $1
             AND name = $2
             AND stream_name != '$initializing';
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(GetSubscriptionCheckpointCount), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

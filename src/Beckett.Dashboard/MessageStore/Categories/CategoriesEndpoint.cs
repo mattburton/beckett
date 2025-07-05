@@ -19,7 +19,7 @@ public static class CategoriesEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new CategoriesQuery(query, offset, pageSizeParameter, options),
+            new CategoriesQuery(query, offset, pageSizeParameter),
             cancellationToken
         );
 

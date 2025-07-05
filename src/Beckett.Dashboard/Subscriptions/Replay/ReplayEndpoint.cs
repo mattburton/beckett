@@ -13,7 +13,7 @@ public static class ReplayEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new ReplayQuery(groupName, name, options), cancellationToken);
+        await database.Execute(new ReplayQuery(groupName, name), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
         context.Response.Headers.Append("HX-Trigger", new StringValues("subscription_replay_started"));

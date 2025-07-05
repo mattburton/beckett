@@ -7,19 +7,18 @@ namespace Beckett.Subscriptions.Queries;
 public class ReserveNextAvailableCheckpoint(
     string groupName,
     TimeSpan reservationTimeout,
-    ReplayMode replayMode,
-    PostgresOptions options
+    ReplayMode replayMode
 ) : IPostgresDatabaseQuery<Checkpoint?>
 {
     public async Task<Checkpoint?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.checkpoints c
+        const string sql = """
+            UPDATE beckett.checkpoints c
             SET reserved_until = now() + $2
             FROM (
                 SELECT c.id, s.replay_target_position
-                FROM {options.Schema}.checkpoints c
-                INNER JOIN {options.Schema}.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+                FROM beckett.checkpoints c
+                INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
                 WHERE c.group_name = $1
                 AND c.process_at <= now()
                 AND c.reserved_until IS NULL
@@ -44,13 +43,15 @@ public class ReserveNextAvailableCheckpoint(
                 d.replay_target_position;
         """;
 
+        command.CommandText = Query.Build(nameof(ReserveNextAvailableCheckpoint), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Interval });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

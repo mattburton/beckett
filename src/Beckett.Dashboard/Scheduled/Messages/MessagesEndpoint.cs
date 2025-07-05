@@ -18,7 +18,7 @@ public static class MessagesEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new Query(query, offset, pageSizeParameter, options),
+            new MessagesQuery(query, offset, pageSizeParameter),
             cancellationToken
         );
 

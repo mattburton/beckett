@@ -13,7 +13,7 @@ public static class BulkRetryEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new ScheduleCheckpoints(ids, DateTimeOffset.UtcNow, options), cancellationToken);
+        await database.Execute(new ScheduleCheckpoints(ids, DateTimeOffset.UtcNow), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
         context.Response.Headers.Append("HX-Trigger", new StringValues("bulk_retry_requested"));

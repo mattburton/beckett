@@ -1,7 +1,6 @@
 @using Beckett.Database
 @inherits Component<Metrics.ViewModel>
 @inject IPostgresDatabase Database
-@inject PostgresOptions PostgresOptions
 
 <a href="@Dashboard.Prefix/subscriptions/checkpoints/lagging"
    class="badge text-bg-info text-decoration-none"
@@ -30,7 +29,7 @@
       return;
     }
 
-    var result = await Database.Execute(new MetricsQuery(PostgresOptions), CancellationToken.None);
+    var result = await Database.Execute(new MetricsQuery(), CancellationToken.None);
 
     Model = new ViewModel(result.Lagging, result.Retries, result.Failed, false);
   }

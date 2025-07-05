@@ -4,15 +4,17 @@ using NpgsqlTypes;
 
 namespace Beckett.Scheduling.Queries;
 
-public class CancelScheduledMessage(Guid id, PostgresOptions options) : IPostgresDatabaseQuery<int>
+public class CancelScheduledMessage(Guid id) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"DELETE FROM {options.Schema}.scheduled_messages WHERE id = $1;";
+        const string sql = "DELETE FROM beckett.scheduled_messages WHERE id = $1;";
+
+        command.CommandText = Query.Build(nameof(CancelScheduledMessage), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

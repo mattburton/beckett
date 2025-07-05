@@ -6,15 +6,14 @@ namespace Beckett.Subscriptions.Queries;
 
 public class AddOrUpdateSubscription(
     string groupName,
-    string name,
-    PostgresOptions options
+    string name
 ) : IPostgresDatabaseQuery<SubscriptionStatus>
 {
     public async Task<SubscriptionStatus> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        const string sql = """
             WITH insert_subscription AS (
-                INSERT INTO {options.Schema}.subscriptions (group_name, name)
+                INSERT INTO beckett.subscriptions (group_name, name)
                 VALUES ($1, $2)
                 ON CONFLICT (group_name, name) DO NOTHING
                 RETURNING status
@@ -23,15 +22,17 @@ public class AddOrUpdateSubscription(
             FROM insert_subscription
             UNION
             SELECT status
-            FROM {options.Schema}.subscriptions
+            FROM beckett.subscriptions
             WHERE group_name = $1
             AND name = $2;
         """;
 
+        command.CommandText = Query.Build(nameof(AddOrUpdateSubscription), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

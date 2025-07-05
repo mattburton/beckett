@@ -6,23 +6,24 @@ namespace Beckett.Dashboard.Subscriptions.Pause;
 
 public class PauseQuery(
     string groupName,
-    string name,
-    PostgresOptions options
+    string name
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.subscriptions
+        const string sql = """
+            UPDATE beckett.subscriptions
             SET status = 'paused'
             WHERE group_name = $1
             AND name = $2;
         """;
 
+        command.CommandText = Query.Build(nameof(PauseQuery), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

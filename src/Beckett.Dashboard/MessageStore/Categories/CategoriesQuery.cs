@@ -7,28 +7,29 @@ namespace Beckett.Dashboard.MessageStore.Categories;
 public class CategoriesQuery(
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<CategoriesQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        const string sql = """
            SELECT name,
                   updated_at,
                   count(*) over() AS total_results
-           FROM {options.Schema}.categories
+           FROM beckett.categories
            WHERE ($1 IS NULL OR name ILIKE '%' || $1 || '%')
            ORDER BY name
            OFFSET $2
            LIMIT $3;
         """;
 
+        command.CommandText = Query.Build(nameof(CategoriesQuery), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

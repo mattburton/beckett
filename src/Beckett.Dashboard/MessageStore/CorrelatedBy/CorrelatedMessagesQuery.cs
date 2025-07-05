@@ -8,15 +8,14 @@ public class CorrelatedMessagesQuery(
     string correlationId,
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<CorrelatedMessagesQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        const string sql = """
            SELECT id, stream_name, stream_position, type, timestamp, count(*) over() AS total_results
-           FROM {options.Schema}.messages
+           FROM beckett.messages
            WHERE metadata->>'$correlation_id' = $1
            AND ($2 IS NULL OR (id::text ILIKE '%' || $2 || '%' OR stream_name ILIKE '%' || $2 || '%' OR type ILIKE '%' || $2 || '%'))
            AND archived = false
@@ -25,12 +24,14 @@ public class CorrelatedMessagesQuery(
            LIMIT $4;
         """;
 
+        command.CommandText = Query.Build(nameof(CorrelatedMessagesQuery), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

@@ -19,7 +19,7 @@ public static class CorrelatedByEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new CorrelatedMessagesQuery(correlationId, query, offset, pageSizeParameter, options),
+            new CorrelatedMessagesQuery(correlationId, query, offset, pageSizeParameter),
             cancellationToken
         );
 

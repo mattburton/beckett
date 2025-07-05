@@ -5,14 +5,13 @@ using NpgsqlTypes;
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.Skip;
 
 public class SkipQuery(
-    long id,
-    PostgresOptions options
+    long id
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.checkpoints
+        const string sql = """
+            UPDATE beckett.checkpoints
             SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
                 process_at = NULL,
                 reserved_until = NULL,
@@ -21,9 +20,11 @@ public class SkipQuery(
             WHERE id = $1;
         """;
 
+        command.CommandText = Query.Build(nameof(SkipQuery), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }
