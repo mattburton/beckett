@@ -69,23 +69,6 @@ public class SubscriptionHandlerTests
     }
 
     [Fact]
-    public async Task supports_typed_message_context_handler()
-    {
-        _subscription.RegisterMessageType<TestMessage>();
-        var handler = new SubscriptionHandler(_subscription, TypedMessageContextHandler.Handle);
-        var message = new TestMessage(Guid.NewGuid());
-        var context = BuildMessageContext(message);
-        var typedContext = new MessageContext<TestMessage>(context);
-        var subscriptionContext = BuildSubscriptionContext();
-
-        await handler.Invoke(typedContext, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
-
-        Assert.False(handler.IsBatchHandler);
-        Assert.NotNull(TypedMessageContextHandler.ReceivedMessage);
-        Assert.Equal(message, TypedMessageContextHandler.ReceivedMessage);
-    }
-
-    [Fact]
     public async Task supports_message_and_context_handler()
     {
         _subscription.RegisterMessageType<TestMessage>();
@@ -132,22 +115,6 @@ public class SubscriptionHandlerTests
         Assert.True(handler.IsBatchHandler);
         Assert.NotNull(BatchHandler.ReceivedBatch);
         Assert.Equal(batch, BatchHandler.ReceivedBatch);
-    }
-
-    [Fact]
-    public async Task supports_typed_batch_handler()
-    {
-        _subscription.RegisterMessageType<TestMessage>();
-        var handler = new SubscriptionHandler(_subscription, TypedBatchHandler.Handle);
-        var batch = BuildMessageBatch();
-        var subscriptionContext = BuildSubscriptionContext();
-        var expectedBatch = batch.Select(x => new MessageContext<TestMessage>(x)).ToList();
-
-        await handler.Invoke(batch, subscriptionContext, _serviceProvider, _logger, CancellationToken.None);
-
-        Assert.True(handler.IsBatchHandler);
-        Assert.NotNull(TypedBatchHandler.ReceivedBatch);
-        Assert.Equal(expectedBatch, TypedBatchHandler.ReceivedBatch);
     }
 
     [Fact]
@@ -288,19 +255,6 @@ public class SubscriptionHandlerTests
     }
 
     [Fact]
-    public void typed_batch_handlers_cannot_accept_multiple_message_types()
-    {
-        _subscription.RegisterMessageType<TestMessage>();
-        _subscription.RegisterMessageType<AnotherTestMessage>();
-
-        Assert.Throws<InvalidOperationException>(() => new SubscriptionHandler(
-                _subscription,
-                TypedBatchHandler.Handle
-            )
-        );
-    }
-
-    [Fact]
     public void batch_handlers_cannot_also_handle_messages()
     {
         _subscription.RegisterMessageType<TestMessage>();
@@ -428,18 +382,6 @@ public class SubscriptionHandlerTests
         }
     }
 
-    private static class TypedMessageContextHandler
-    {
-        public static TestMessage? ReceivedMessage { get; private set; }
-
-        public static Task Handle(IMessageContext<TestMessage> context, CancellationToken cancellationToken)
-        {
-            ReceivedMessage = context.Message;
-
-            return Task.CompletedTask;
-        }
-    }
-
     private static class MessageAndContextHandler
     {
         public static TestMessage? ReceivedMessage { get; private set; }
@@ -459,21 +401,6 @@ public class SubscriptionHandlerTests
         public static IReadOnlyList<IMessageContext>? ReceivedBatch { get; private set; }
 
         public static Task Handle(IReadOnlyList<IMessageContext> batch, CancellationToken cancellationToken)
-        {
-            ReceivedBatch = batch;
-
-            return Task.CompletedTask;
-        }
-    }
-
-    private static class TypedBatchHandler
-    {
-        public static IReadOnlyList<IMessageContext<TestMessage>>? ReceivedBatch { get; private set; }
-
-        public static Task Handle(
-            IReadOnlyList<IMessageContext<TestMessage>> batch,
-            CancellationToken cancellationToken
-        )
         {
             ReceivedBatch = batch;
 

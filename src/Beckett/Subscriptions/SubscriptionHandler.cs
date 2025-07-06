@@ -9,12 +9,7 @@ namespace Beckett.Subscriptions;
 public class SubscriptionHandler
 {
     private static readonly Type MessageContextType = typeof(IMessageContext);
-    private static readonly Type TypedMessageContextType = typeof(IMessageContext<>);
-    private static readonly Type ConcreteTypedMessageContextType = typeof(MessageContext<>);
-    private static readonly Type ReadOnlyListType = typeof(IReadOnlyList<>);
     private static readonly Type BatchType = typeof(IReadOnlyList<IMessageContext>);
-    private static readonly Type ListType = typeof(List<>);
-    private static readonly Type TypedListConverterType = typeof(TypedListConverter<>);
     private static readonly Type SubscriptionContextType = typeof(ISubscriptionContext);
     private static readonly Type CancellationTokenType = typeof(CancellationToken);
     private static readonly Type ResultHandlerType = typeof(IResultHandler<>);
@@ -53,13 +48,6 @@ public class SubscriptionHandler
             if (_parameters[i].ParameterType == MessageContextType)
             {
                 arguments[i] = context;
-            }
-            else if (IsTypedMessageContext(_parameters[i]))
-            {
-                var messageType = _parameters[i].ParameterType.GetGenericArguments()[0];
-                var contextType = ConcreteTypedMessageContextType.MakeGenericType(messageType);
-
-                arguments[i] = Activator.CreateInstance(contextType, context)!;
             }
             else if (_parameters[i].ParameterType == context.MessageType)
             {
@@ -116,23 +104,6 @@ public class SubscriptionHandler
             {
                 arguments[i] = batch;
             }
-            else if (IsTypedBatch(_parameters[i]))
-            {
-                var messageContextType = _parameters[i].ParameterType.GenericTypeArguments[0];
-                var messageType = messageContextType.GenericTypeArguments[0];
-                var contextType = ConcreteTypedMessageContextType.MakeGenericType(messageType);
-                var listConverterType = TypedListConverterType.MakeGenericType(messageContextType);
-                var listType = ListType.MakeGenericType(messageContextType);
-
-                var filteredBatch = batch.Where(x => x.MessageType != null).Where(x => x.MessageType == messageType)
-                    .Select(x => Activator.CreateInstance(contextType, x))
-                    .ToList();
-
-                var listEnumerable = Activator.CreateInstance(listConverterType, filteredBatch)!;
-                var list = Activator.CreateInstance(listType, listEnumerable)!;
-
-                arguments[i] = list;
-            }
             else if (_parameters[i].ParameterType == SubscriptionContextType)
             {
                 arguments[i] = subscriptionContext;
@@ -184,9 +155,8 @@ public class SubscriptionHandler
     private void ValidateHandler()
     {
         var messageContextHandler = false;
-        var batchHandler = false;
         var typedMessageHandler = false;
-        var typedBatchHandler = false;
+        var batchHandler = false;
 
         foreach (var parameter in _parameters)
         {
@@ -195,24 +165,16 @@ public class SubscriptionHandler
                 messageContextHandler = true;
             }
 
-            if (parameter.ParameterType == BatchType || IsTypedBatch(parameter))
+            if (_subscription.MessageTypes.Contains(parameter.ParameterType))
+            {
+                typedMessageHandler = true;
+            }
+
+            if (parameter.ParameterType == BatchType)
             {
                 IsBatchHandler = true;
 
                 batchHandler = true;
-
-                typedBatchHandler = IsTypedBatch(parameter);
-            }
-
-            if (parameter.ParameterType.IsGenericType &&
-                parameter.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType)
-            {
-                typedMessageHandler = true;
-            }
-
-            if (_subscription.MessageTypes.Contains(parameter.ParameterType))
-            {
-                typedMessageHandler = true;
             }
         }
 
@@ -237,14 +199,7 @@ public class SubscriptionHandler
             );
         }
 
-        if (typedBatchHandler && _subscription.MessageTypes.Count > 1)
-        {
-            throw new InvalidOperationException(
-                $"Typed batch handlers can only subscribe to one message type [Subscription: {_subscription.Name}]"
-            );
-        }
-
-        if (!messageContextHandler && !batchHandler && !typedMessageHandler && !typedBatchHandler)
+        if (!messageContextHandler && !batchHandler && !typedMessageHandler)
         {
             throw new InvalidOperationException(
                 $"Subscription handlers must handle either a message or a message batch [Subscription: {_subscription.Name}]"
@@ -268,35 +223,9 @@ public class SubscriptionHandler
     }
 
     private static bool IsWellKnownType(ParameterInfo x) => x.ParameterType == MessageContextType ||
-                                                            IsTypedMessageContext(x) ||
                                                             x.ParameterType == BatchType ||
-                                                            IsTypedBatch(x) ||
                                                             x.ParameterType == SubscriptionContextType ||
                                                             x.ParameterType == CancellationTokenType;
-
-
-    private static bool IsTypedMessageContext(ParameterInfo parameter) =>
-        parameter.ParameterType.IsGenericType &&
-        parameter.ParameterType.GetGenericTypeDefinition() == TypedMessageContextType;
-
-    private static bool IsTypedBatch(ParameterInfo parameter)
-    {
-        if (!parameter.ParameterType.IsGenericType)
-        {
-            return false;
-        }
-
-        var genericTypeDefinition = parameter.ParameterType.GetGenericTypeDefinition();
-
-        if (genericTypeDefinition != ReadOnlyListType)
-        {
-            return false;
-        }
-
-        var listType = parameter.ParameterType.GenericTypeArguments[0];
-
-        return listType.IsGenericType && listType.GetGenericTypeDefinition() == TypedMessageContextType;
-    }
 
     private static Func<object[], Task<object>> BuildInvoker(Delegate handler)
     {

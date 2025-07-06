@@ -65,15 +65,6 @@ public interface IMessageContext
     Dictionary<string, string> MessageMetadata { get; }
 }
 
-public interface IMessageContext<out T> : IMessageContext where T : class
-{
-    /// <summary>
-    /// The message data deserialized as an instance of the resolved .NET type, or null if the type is not mapped. This
-    /// property is lazy loaded in order to defer deserialization until requested.
-    /// </summary>
-    new T? Message { get; }
-}
-
 public record MessageContext(
     string Id,
     string StreamName,
@@ -125,23 +116,4 @@ public record MessageContext(
         message.GetType(),
         message
     );
-}
-
-public record MessageContext<T>(IMessageContext context) : IMessageContext<T> where T : class
-{
-    public string Id => context.Id;
-    public string StreamName => context.StreamName;
-    public long StreamPosition => context.StreamPosition;
-    public long GlobalPosition => context.GlobalPosition;
-    public string Type => context.Type;
-    public JsonElement Data => context.Data;
-    public JsonElement Metadata => context.Metadata;
-    public DateTimeOffset Timestamp => context.Timestamp;
-    public Type? MessageType => context.MessageType;
-    public T? Message => context.Message as T;
-    public Dictionary<string, string> MessageMetadata => context.MessageMetadata;
-
-    object? IMessageContext.Message => Message;
-
-    public static IMessageContext<T> From(T message) => new MessageContext<T>(MessageContext.From(message));
 }
