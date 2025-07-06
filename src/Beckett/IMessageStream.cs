@@ -123,8 +123,8 @@ public class MessageStream(
     public IReadOnlyList<object> Messages =>
         StreamMessages.Where(x => x.Message != null).Select(x => x.Message!).ToList();
 
-    public bool IsEmpty => StreamMessages.Count == 0;
-    public bool IsNotEmpty => StreamMessages.Count > 0;
+    public bool IsEmpty => StreamVersion == 0;
+    public bool IsNotEmpty => StreamVersion > 0;
 
     public Task<IAppendResult> Append(
         IEnumerable<Message> messages,

@@ -74,16 +74,14 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
 
         await connection.OpenAsync(cancellationToken);
 
-        var streamMessages = await database.Execute(
+        var result = await database.Execute(
             new ReadStream(streamName, readOptions, options),
             cancellationToken
         );
 
-        var streamVersion = streamMessages.Count == 0 ? 0 : streamMessages[0].StreamVersion;
-
         var messages = new List<StreamMessage>();
 
-        foreach (var streamMessage in streamMessages)
+        foreach (var streamMessage in result.StreamMessages)
         {
             messages.Add(
                 new StreamMessage(
@@ -99,6 +97,6 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
             );
         }
 
-        return new ReadStreamResult(streamName, streamVersion, messages);
+        return new ReadStreamResult(streamName, result.StreamVersion, messages);
     }
 }
