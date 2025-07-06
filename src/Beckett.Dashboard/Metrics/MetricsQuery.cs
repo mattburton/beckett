@@ -3,11 +3,12 @@ using Npgsql;
 
 namespace Beckett.Dashboard.Metrics;
 
-public class MetricsQuery(PostgresOptions options) : IPostgresDatabaseQuery<MetricsQuery.Result>
+public class MetricsQuery : IPostgresDatabaseQuery<MetricsQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT l.lagging, r.retries, f.failed
             FROM (
                 WITH lagging_subscriptions AS (
@@ -36,9 +37,11 @@ public class MetricsQuery(PostgresOptions options) : IPostgresDatabaseQuery<Metr
                 WHERE s.status != 'uninitialized'
                 AND c.status = 'failed'
             ) AS f;
-        ";
+        """;
 
-        if (options.PrepareStatements)
+        command.CommandText = Query.Build(nameof(MetricsQuery), sql, out var prepare);
+
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

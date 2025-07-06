@@ -8,29 +8,31 @@ public class MessagesQuery(
     string streamName,
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<MessagesQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT id, stream_position, type, timestamp, count(*) over() AS total_results
-            FROM {options.Schema}.messages
+            FROM beckett.messages
             WHERE stream_name = $1
             AND ($2 IS NULL OR (id::text ILIKE '%' || $2 || '%' OR type ILIKE '%' || $2 || '%'))
             AND archived = false
             ORDER BY stream_position
             OFFSET $3
             LIMIT $4;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(MessagesQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

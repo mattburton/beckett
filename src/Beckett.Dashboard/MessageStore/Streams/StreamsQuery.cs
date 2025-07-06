@@ -9,19 +9,19 @@ public class StreamsQuery(
     string category,
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<StreamsQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        //language=sql
+        const string sql = """
            SELECT stream_name,
                   max(timestamp) AS last_updated,
                   count(*) over() AS total_results
-           FROM {options.Schema}.messages_active
+           FROM beckett.messages_active
            WHERE metadata ->> '$tenant' = $1
-           AND {options.Schema}.stream_category(stream_name) = $2
+           AND beckett.stream_category(stream_name) = $2
            AND ($3 IS NULL OR stream_name ILIKE '%' || $3 || '%')
            GROUP BY stream_name
            ORDER BY max(timestamp) DESC
@@ -29,13 +29,15 @@ public class StreamsQuery(
            LIMIT $5;
         """;
 
+        command.CommandText = Query.Build(nameof(StreamsQuery), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

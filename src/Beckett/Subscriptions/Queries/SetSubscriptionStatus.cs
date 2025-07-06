@@ -8,24 +8,26 @@ namespace Beckett.Subscriptions.Queries;
 public class SetSubscriptionStatus(
     string groupName,
     string name,
-    SubscriptionStatus status,
-    PostgresOptions options
+    SubscriptionStatus status
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.subscriptions
+        //language=sql
+        const string sql = """
+            UPDATE beckett.subscriptions
             SET status = $3
             WHERE group_name = $1
             AND name = $2;
         """;
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.SubscriptionStatus(options.Schema) });
+        command.CommandText = Query.Build(nameof(SetSubscriptionStatus), sql, out var prepare);
 
-        if (options.PrepareStatements)
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.SubscriptionStatus("beckett") });
+
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

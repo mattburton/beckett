@@ -6,22 +6,24 @@ namespace Beckett.Dashboard.Subscriptions.Checkpoints.Shared.Queries;
 
 public class ScheduleCheckpoints(
     long[] ids,
-    DateTimeOffset processAt,
-    PostgresOptions options
+    DateTimeOffset processAt
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.checkpoints
+        //language=sql
+        const string sql = """
+            UPDATE beckett.checkpoints
             SET process_at = $2
             WHERE id = ANY($1);
         """;
 
+        command.CommandText = Query.Build(nameof(ScheduleCheckpoints), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.TimestampTz });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

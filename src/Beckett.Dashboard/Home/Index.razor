@@ -2,7 +2,6 @@
 @using Beckett.Database
 @layout Layout
 @inject IPostgresDatabase Database
-@inject PostgresOptions PostgresOptions
 
 <div id="metrics" class="row mt-4 mx-2" hx-get="@Dashboard.Prefix/" hx-trigger="every 10s" hx-select="#metrics"
      hx-swap="outerHTML">
@@ -46,7 +45,7 @@
 
   protected override async Task OnInitializedAsync()
   {
-    var result = await Database.Execute(new MetricsQuery(PostgresOptions), CancellationToken.None);
+    var result = await Database.Execute(new MetricsQuery(), CancellationToken.None);
 
     Model = new ViewModel(result.Lagging, result.Retries, result.Failed);
   }

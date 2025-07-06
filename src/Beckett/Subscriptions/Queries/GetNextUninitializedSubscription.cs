@@ -4,24 +4,24 @@ using NpgsqlTypes;
 
 namespace Beckett.Subscriptions.Queries;
 
-public class GetNextUninitializedSubscription(
-    string groupName,
-    PostgresOptions options
-) : IPostgresDatabaseQuery<string?>
+public class GetNextUninitializedSubscription(string groupName) : IPostgresDatabaseQuery<string?>
 {
     public async Task<string?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
+        //language=sql
+        const string sql = """
             SELECT name
-            FROM {options.Schema}.subscriptions
+            FROM beckett.subscriptions
             WHERE group_name = $1
             AND status in ('uninitialized', 'backfill')
             LIMIT 1;
         """;
 
+        command.CommandText = Query.Build(nameof(GetNextUninitializedSubscription), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

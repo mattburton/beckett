@@ -7,22 +7,24 @@ namespace Beckett.Dashboard.Subscriptions.Subscription;
 
 public class SubscriptionQuery(
     string groupName,
-    string name,
-    PostgresOptions options) : IPostgresDatabaseQuery<SubscriptionQuery.Result?>
+    string name) : IPostgresDatabaseQuery<SubscriptionQuery.Result?>
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT group_name, name, status
-            FROM {options.Schema}.subscriptions
+            FROM beckett.subscriptions
             WHERE group_name = $1
             AND name = $2;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(SubscriptionQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

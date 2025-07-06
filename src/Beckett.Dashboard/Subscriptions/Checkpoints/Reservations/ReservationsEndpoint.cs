@@ -18,7 +18,7 @@ public static class ReservationsEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new ReservationsQuery(query, offset, pageSizeParameter, options),
+            new ReservationsQuery(query, offset, pageSizeParameter),
             cancellationToken
         );
 

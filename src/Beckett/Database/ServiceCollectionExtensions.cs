@@ -12,6 +12,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton(options.Postgres);
 
+        Query.Initialize(options.Postgres);
+
         services.AddSingleton<IPostgresDataSource, PostgresDataSource>();
 
         services.AddSingleton<IPostgresDatabase, PostgresDatabase>();

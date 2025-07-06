@@ -32,7 +32,7 @@ public class CheckpointProcessorTests
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
                 var messageStorage = Substitute.For<IMessageStorage>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
+                var checkpointProcessor = BuildCheckpointProcessor(messageStorage);
 
                 await checkpointProcessor.Process(1, checkpoint, subscription);
 
@@ -62,7 +62,7 @@ public class CheckpointProcessorTests
                 subscription.RegisterMessageType<TestMessage>();
                 subscription.BuildHandler();
                 var messageStorage = Substitute.For<IMessageStorage>();
-                var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
+                var checkpointProcessor = BuildCheckpointProcessor(messageStorage);
 
                 await checkpointProcessor.Process(1, checkpoint, subscription);
 
@@ -97,7 +97,7 @@ public class CheckpointProcessorTests
             subscription.BuildHandler();
             var messageStorage = Substitute.For<IMessageStorage>();
             var database = Substitute.For<IPostgresDatabase>();
-            var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+            var checkpointProcessor = BuildCheckpointProcessor(messageStorage, database);
             messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
                 .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
             RecordCheckpointError? error = null;
@@ -133,7 +133,7 @@ public class CheckpointProcessorTests
             subscription.BuildHandler();
             var messageStorage = Substitute.For<IMessageStorage>();
             var database = Substitute.For<IPostgresDatabase>();
-            var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage, database);
+            var checkpointProcessor = BuildCheckpointProcessor(messageStorage, database);
             messageStorage.ReadStream("test", Arg.Any<ReadStreamOptions>(), CancellationToken.None)
                 .Returns(new ReadStreamResult("test", 2, [BuildStreamMessage()]));
             RecordCheckpointError? error = null;
@@ -165,7 +165,7 @@ public class CheckpointProcessorTests
             subscription.RegisterMessageType<TestMessage>();
             subscription.BuildHandler();
             var messageStorage = Substitute.For<IMessageStorage>();
-            var checkpointProcessor = BuildCheckpointProcessor(options, messageStorage);
+            var checkpointProcessor = BuildCheckpointProcessor(messageStorage);
 
             await checkpointProcessor.Process(1, checkpoint, subscription);
 
@@ -199,7 +199,6 @@ public class CheckpointProcessorTests
     }
 
     private static CheckpointProcessor BuildCheckpointProcessor(
-        BeckettOptions options,
         IMessageStorage messageStorage,
         IPostgresDatabase? database = null
     )
@@ -215,7 +214,6 @@ public class CheckpointProcessorTests
             dataSource,
             database,
             serviceProvider,
-            options,
             instrumentation,
             logger
         );

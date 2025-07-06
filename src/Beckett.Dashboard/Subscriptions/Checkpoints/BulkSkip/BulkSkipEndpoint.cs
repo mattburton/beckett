@@ -12,7 +12,7 @@ public static class BulkSkipEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new BulkSkipQuery(ids, options), cancellationToken);
+        await database.Execute(new BulkSkipQuery(ids), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
         context.Response.Headers.Append("HX-Trigger", new StringValues("bulk_skip_requested"));

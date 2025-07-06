@@ -12,7 +12,7 @@ public static class SkipEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new SkipQuery(id, options), cancellationToken);
+        await database.Execute(new SkipQuery(id), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
         context.Response.Headers.Append("HX-Trigger", new StringValues("checkpoint_skipped"));

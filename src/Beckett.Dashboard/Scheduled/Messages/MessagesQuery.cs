@@ -4,29 +4,31 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.Scheduled.Messages;
 
-public class Query(
+public class MessagesQuery(
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
-) : IPostgresDatabaseQuery<Query.Result>
+    int limit
+) : IPostgresDatabaseQuery<MessagesQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT id, stream_name, type, deliver_at, count(*) over() AS total_results
-            FROM {options.Schema}.scheduled_messages
+            FROM beckett.scheduled_messages
             WHERE ($1 IS NULL OR (stream_name ILIKE '%' || $1 || '%' OR type ILIKE '%' || $1 || '%'))
             ORDER BY deliver_at
             OFFSET $2
             LIMIT $3;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(Query), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

@@ -4,7 +4,7 @@ using Beckett.Storage.Postgres.Queries;
 
 namespace Beckett.Storage.Postgres;
 
-public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDatabase database, PostgresOptions options)
+public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDatabase database)
     : IMessageStorage
 {
     public async Task<AppendToStreamResult> AppendToStream(
@@ -21,7 +21,7 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
         await connection.OpenAsync(cancellationToken);
 
         var streamVersion = await database.Execute(
-            new AppendToStream(streamName, expectedVersion.Value, newMessages, options),
+            new AppendToStream(streamName, expectedVersion.Value, newMessages),
             connection,
             cancellationToken
         );
@@ -38,7 +38,7 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
 
         await connection.OpenAsync(cancellationToken);
 
-        var results = await database.Execute(new ReadGlobalStream(readOptions, options), connection, cancellationToken);
+        var results = await database.Execute(new ReadGlobalStream(readOptions), connection, cancellationToken);
 
         var items = new List<GlobalStreamMessage>();
 
@@ -75,7 +75,7 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
         await connection.OpenAsync(cancellationToken);
 
         var result = await database.Execute(
-            new ReadStream(streamName, readOptions, options),
+            new ReadStream(streamName, readOptions),
             cancellationToken
         );
 

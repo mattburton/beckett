@@ -6,19 +6,19 @@ namespace Beckett.Dashboard.Subscriptions.Checkpoints.Lagging;
 
 public class LaggingQuery(
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<LaggingQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT c.group_name,
                    c.name,
                    sum(greatest(0, c.stream_version - c.stream_position)) AS total_lag,
                    count(*) over() as total_results
-            FROM {options.Schema}.subscriptions s
-            INNER JOIN {options.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+            FROM beckett.subscriptions s
+            INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
             WHERE s.status in ('active', 'replay')
             AND c.status = 'active'
             AND c.lagging = true
@@ -26,12 +26,14 @@ public class LaggingQuery(
             ORDER BY c.group_name, sum(greatest(0, c.stream_version - c.stream_position)) DESC, name
             OFFSET $1
             LIMIT $2;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(LaggingQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

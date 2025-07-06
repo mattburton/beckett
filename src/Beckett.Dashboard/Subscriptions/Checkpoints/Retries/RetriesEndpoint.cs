@@ -18,7 +18,7 @@ public static class RetriesEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new RetriesQuery(query, offset, pageSizeParameter, options),
+            new RetriesQuery(query, offset, pageSizeParameter),
             cancellationToken
         );
 

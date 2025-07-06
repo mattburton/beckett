@@ -3,11 +3,19 @@ using Npgsql;
 
 namespace Beckett.Dashboard.MessageStore.Components.Queries;
 
-public class TenantsQuery(PostgresOptions options) : IPostgresDatabaseQuery<TenantsQuery.Result>
+public class TenantsQuery : IPostgresDatabaseQuery<TenantsQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"SELECT tenant FROM {options.Schema}.tenants ORDER BY tenant;";
+        //language=sql
+        const string sql = "SELECT tenant FROM beckett.tenants ORDER BY tenant;";
+
+        command.CommandText = Query.Build(nameof(TenantsQuery), sql, out var prepare);
+
+        if (prepare)
+        {
+            await command.PrepareAsync(cancellationToken);
+        }
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 

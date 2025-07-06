@@ -19,7 +19,7 @@ public static class SubscriptionsEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new SubscriptionsQuery(groupName, query, offset, pageSizeParameter, options),
+            new SubscriptionsQuery(groupName, query, offset, pageSizeParameter),
             cancellationToken
         );
 

@@ -7,7 +7,6 @@ namespace Beckett.Subscriptions.Services;
 
 public class StreamDataRecordingService(
     IPostgresDatabase database,
-    BeckettOptions options,
     ILogger<StreamDataRecordingService> logger
 ) : BackgroundService
 {
@@ -43,8 +42,7 @@ public class StreamDataRecordingService(
                     new RecordStreamData(
                         categories.Keys.ToArray(),
                         categories.Values.ToArray(),
-                        tenants.ToArray(),
-                        options.Postgres
+                        tenants.ToArray()
                     ),
                     CancellationToken.None
                 );

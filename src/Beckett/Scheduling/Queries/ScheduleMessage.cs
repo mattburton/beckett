@@ -7,14 +7,14 @@ namespace Beckett.Scheduling.Queries;
 
 public class ScheduleMessage(
     string streamName,
-    ScheduledMessageType scheduledMessage,
-    PostgresOptions options
+    ScheduledMessageType scheduledMessage
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            INSERT INTO {options.Schema}.scheduled_messages (
+        //language=sql
+        const string sql = """
+            INSERT INTO beckett.scheduled_messages (
               id,
               stream_name,
               type,
@@ -33,6 +33,8 @@ public class ScheduleMessage(
             ON CONFLICT (id) DO NOTHING;
         """;
 
+        command.CommandText = Query.Build(nameof(ScheduleMessage), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -40,7 +42,7 @@ public class ScheduleMessage(
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.TimestampTz });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

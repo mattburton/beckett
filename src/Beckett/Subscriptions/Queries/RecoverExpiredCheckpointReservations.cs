@@ -6,18 +6,18 @@ namespace Beckett.Subscriptions.Queries;
 
 public class RecoverExpiredCheckpointReservations(
     string groupName,
-    int batchSize,
-    PostgresOptions options
+    int batchSize
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.checkpoints c
+        //language=sql
+        const string sql = """
+            UPDATE beckett.checkpoints c
             SET reserved_until = NULL
             FROM (
                 SELECT id
-                FROM {options.Schema}.checkpoints
+                FROM beckett.checkpoints
                 WHERE group_name = $1
                 AND reserved_until <= now()
                 FOR UPDATE SKIP LOCKED
@@ -26,10 +26,12 @@ public class RecoverExpiredCheckpointReservations(
             WHERE c.id = d.id;
         """;
 
+        command.CommandText = Query.Build(nameof(RecoverExpiredCheckpointReservations), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

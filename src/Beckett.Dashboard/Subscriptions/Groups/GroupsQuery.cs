@@ -7,27 +7,29 @@ namespace Beckett.Dashboard.Subscriptions.Groups;
 public class GroupsQuery(
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<GroupsQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT group_name, count(*) over() as total_results
-            FROM {options.Schema}.subscriptions
+            FROM beckett.subscriptions
             WHERE ($1 IS NULL or name ILIKE '%' || $1 || '%')
             GROUP BY group_name
             ORDER BY group_name
             OFFSET $2
             LIMIT $3;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(GroupsQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

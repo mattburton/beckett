@@ -7,8 +7,7 @@ namespace Beckett.Storage.Postgres.Queries;
 
 public class ReadStream(
     string streamName,
-    ReadStreamOptions readOptions,
-    PostgresOptions postgresOptions
+    ReadStreamOptions readOptions
 ) : IPostgresDatabaseQuery<ReadStream.Result>
 {
     public async Task<Result> Execute(
@@ -16,10 +15,11 @@ public class ReadStream(
         CancellationToken cancellationToken
     )
     {
-        command.CommandText = $"""
+        //language=sql
+        const string sql = """
             WITH stream_version AS (
                 SELECT max(stream_position) AS stream_version
-                FROM {postgresOptions.Schema}.messages
+                FROM beckett.messages
                 WHERE stream_name = $1
                 AND archived = false
             ),
@@ -32,7 +32,7 @@ public class ReadStream(
                        data,
                        metadata,
                        timestamp
-                FROM {postgresOptions.Schema}.messages
+                FROM beckett.messages
                 WHERE stream_name = $1
                 AND ($2 IS NULL OR stream_position >= $2)
                 AND ($3 IS NULL OR stream_position <= $3)
@@ -64,6 +64,8 @@ public class ReadStream(
             FROM results;
         """;
 
+        command.CommandText = Query.Build(nameof(ReadStream), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, IsNullable = true });
@@ -75,7 +77,7 @@ public class ReadStream(
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, IsNullable = true });
 
-        if (postgresOptions.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

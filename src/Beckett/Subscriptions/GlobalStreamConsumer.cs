@@ -13,7 +13,6 @@ public class GlobalStreamConsumer(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
-    PostgresOptions postgresOptions,
     ILogger<GlobalStreamConsumer> logger
 )
 {
@@ -37,8 +36,7 @@ public class GlobalStreamConsumer(
                     new LockCheckpoint(
                         group.Name,
                         GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName,
-                        postgresOptions
+                        GlobalCheckpoint.StreamName
                     ),
                     connection,
                     transaction,
@@ -105,7 +103,7 @@ public class GlobalStreamConsumer(
                 if (checkpoints.Count > 0)
                 {
                     await database.Execute(
-                        new RecordCheckpoints(checkpoints.ToArray(), postgresOptions),
+                        new RecordCheckpoints(checkpoints.ToArray()),
                         connection,
                         transaction,
                         stoppingToken
@@ -121,7 +119,7 @@ public class GlobalStreamConsumer(
                 var newGlobalPosition = batch.StreamMessages.Max(x => x.GlobalPosition);
 
                 await database.Execute(
-                    new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition, postgresOptions),
+                    new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition),
                     connection,
                     transaction,
                     stoppingToken

@@ -23,7 +23,7 @@ public static class StreamsEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new StreamsQuery(tenant, decodedCategory, query, offset, pageSizeParameter, options),
+            new StreamsQuery(tenant, decodedCategory, query, offset, pageSizeParameter),
             cancellationToken
         );
 

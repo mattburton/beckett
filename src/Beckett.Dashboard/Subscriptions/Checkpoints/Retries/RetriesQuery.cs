@@ -7,27 +7,29 @@ namespace Beckett.Dashboard.Subscriptions.Checkpoints.Retries;
 public class RetriesQuery(
     string? query,
     int offset,
-    int limit,
-    PostgresOptions options
+    int limit
 ) : IPostgresDatabaseQuery<RetriesQuery.Result>
 {
     public async Task<Result> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
-            FROM {options.Schema}.checkpoints
+            FROM beckett.checkpoints
             WHERE status = 'retry'
             AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
             ORDER BY updated_at desc, group_name, name, stream_name, stream_position
             OFFSET $2
             LIMIT $3;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(RetriesQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

@@ -13,7 +13,7 @@ public static class ResumeEndpoint
         CancellationToken cancellationToken
     )
     {
-        await database.Execute(new ResumeQuery(groupName, name, options), cancellationToken);
+        await database.Execute(new ResumeQuery(groupName, name), cancellationToken);
 
         context.Response.Headers.Append("HX-Refresh", new StringValues("true"));
 

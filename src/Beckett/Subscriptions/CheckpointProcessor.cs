@@ -13,7 +13,6 @@ public class CheckpointProcessor(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
-    BeckettOptions options,
     IInstrumentation instrumentation,
     ILogger<CheckpointProcessor> logger
 ) : ICheckpointProcessor
@@ -37,7 +36,7 @@ public class CheckpointProcessor(
                 await using var transaction = await connection.BeginTransactionAsync(CancellationToken.None);
 
                 await database.Execute(
-                    new UpdateCheckpointPosition(checkpoint.Id, success.StreamPosition, null, options.Postgres),
+                    new UpdateCheckpointPosition(checkpoint.Id, success.StreamPosition, null),
                     connection,
                     transaction,
                     CancellationToken.None
@@ -48,7 +47,7 @@ public class CheckpointProcessor(
                     if (success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value)
                     {
                         await database.Execute(
-                            new SetSubscriptionToActive(subscription.Group.Name, subscription.Name, options.Postgres),
+                            new SetSubscriptionToActive(subscription.Group.Name, subscription.Name),
                             connection,
                             transaction,
                             CancellationToken.None
@@ -87,8 +86,7 @@ public class CheckpointProcessor(
                         status,
                         attempt,
                         ExceptionData.From(error.Exception).ToJson(),
-                        processAt,
-                        options.Postgres
+                        processAt
                     ),
                     CancellationToken.None
                 );

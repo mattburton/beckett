@@ -31,7 +31,7 @@ public class SubscriptionInitializer(
             await connection.OpenAsync(cancellationToken);
 
             var subscriptionName = await database.Execute(
-                new GetNextUninitializedSubscription(group.Name, options.Postgres),
+                new GetNextUninitializedSubscription(group.Name),
                 connection,
                 cancellationToken
             );
@@ -54,8 +54,7 @@ public class SubscriptionInitializer(
                     new SetSubscriptionStatus(
                         group.Name,
                         subscriptionName,
-                        SubscriptionStatus.Unknown,
-                        options.Postgres
+                        SubscriptionStatus.Unknown
                     ),
                     connection,
                     cancellationToken
@@ -84,8 +83,7 @@ public class SubscriptionInitializer(
                 new LockCheckpoint(
                     subscription.Group.Name,
                     subscription.Name,
-                    InitializationConstants.StreamName,
-                    options.Postgres
+                    InitializationConstants.StreamName
                 ),
                 connection,
                 transaction,
@@ -114,8 +112,7 @@ public class SubscriptionInitializer(
                     new LockCheckpoint(
                         subscription.Group.Name,
                         GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName,
-                        options.Postgres
+                        GlobalCheckpoint.StreamName
                     ),
                     connection,
                     transaction,
@@ -164,8 +161,7 @@ public class SubscriptionInitializer(
                     var checkpointCount = await database.Execute(
                         new GetSubscriptionCheckpointCount(
                             subscription.Group.Name,
-                            subscription.Name,
-                            options.Postgres
+                            subscription.Name
                         ),
                         cancellationToken
                     );
@@ -178,8 +174,7 @@ public class SubscriptionInitializer(
                     await database.Execute(
                         new SetSubscriptionToReplay(
                             subscription.Group.Name,
-                            subscription.Name,
-                            options.Postgres
+                            subscription.Name
                         ),
                         connection,
                         transaction,
@@ -197,8 +192,7 @@ public class SubscriptionInitializer(
                             count = await database.Execute(
                                 new AdvanceLaggingSubscriptionCheckpoints(
                                     subscription.Group.Name,
-                                    subscription.Name,
-                                    options.Postgres
+                                    subscription.Name
                                 ),
                                 connection,
                                 transaction,
@@ -210,8 +204,7 @@ public class SubscriptionInitializer(
                     await database.Execute(
                         new SetSubscriptionToActive(
                             subscription.Group.Name,
-                            subscription.Name,
-                            options.Postgres
+                            subscription.Name
                         ),
                         connection,
                         transaction,
@@ -263,7 +256,7 @@ public class SubscriptionInitializer(
             }
 
             await database.Execute(
-                new RecordCheckpoints(checkpoints.ToArray(), options.Postgres),
+                new RecordCheckpoints(checkpoints.ToArray()),
                 connection,
                 transaction,
                 cancellationToken
@@ -274,8 +267,7 @@ public class SubscriptionInitializer(
             await database.Execute(
                 new UpdateSystemCheckpointPosition(
                     checkpoint.Id,
-                    newGlobalPosition,
-                    options.Postgres
+                    newGlobalPosition
                 ),
                 connection,
                 transaction,
@@ -286,8 +278,7 @@ public class SubscriptionInitializer(
                 new UpdateSubscriptionReplayTargetPosition(
                     subscription.Group.Name,
                     subscription.Name,
-                    replayTargetPosition.GetValueOrDefault(),
-                    options.Postgres
+                    replayTargetPosition.GetValueOrDefault()
                 ),
                 connection,
                 transaction,

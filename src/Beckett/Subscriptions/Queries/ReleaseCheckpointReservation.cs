@@ -5,22 +5,24 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class ReleaseCheckpointReservation(
-    long id,
-    PostgresOptions options
+    long id
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.checkpoints
+        //language=sql
+        const string sql = """
+            UPDATE beckett.checkpoints
             SET process_at = NULL,
                 reserved_until = NULL
             WHERE id = $1;
         """;
 
+        command.CommandText = Query.Build(nameof(ReleaseCheckpointReservation), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

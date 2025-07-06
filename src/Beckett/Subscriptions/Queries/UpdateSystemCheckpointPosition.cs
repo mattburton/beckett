@@ -6,23 +6,25 @@ namespace Beckett.Subscriptions.Queries;
 
 public class UpdateSystemCheckpointPosition(
     long id,
-    long position,
-    PostgresOptions options
+    long position
 ) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $"""
-            UPDATE {options.Schema}.checkpoints
+        //language=sql
+        const string sql = """
+            UPDATE beckett.checkpoints
             SET stream_version = $2,
                 stream_position = $2
             WHERE id = $1;
         """;
 
+        command.CommandText = Query.Build(nameof(UpdateSystemCheckpointPosition), sql, out var prepare);
+
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

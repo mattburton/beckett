@@ -6,11 +6,12 @@ using NpgsqlTypes;
 
 namespace Beckett.Dashboard.Subscriptions.Checkpoints.Checkpoint;
 
-public class CheckpointQuery(long id, PostgresOptions options) : IPostgresDatabaseQuery<CheckpointQuery.Result?>
+public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.Result?>
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        command.CommandText = $@"
+        //language=sql
+        const string sql = """
             SELECT c.id,
                    c.group_name,
                    c.name,
@@ -23,14 +24,16 @@ public class CheckpointQuery(long id, PostgresOptions options) : IPostgresDataba
                    c.retries,
                    m.stream_name as actual_stream_name,
                    m.stream_position as actual_stream_position
-            FROM {options.Schema}.checkpoints c
-            LEFT JOIN {options.Schema}.messages m on c.stream_name = '$global' and c.stream_position = m.global_position
+            FROM beckett.checkpoints c
+            LEFT JOIN beckett.messages m on c.stream_name = '$global' and c.stream_position = m.global_position
             WHERE c.id = $1;
-        ";
+        """;
+
+        command.CommandText = Query.Build(nameof(CheckpointQuery), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
-        if (options.PrepareStatements)
+        if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }

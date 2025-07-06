@@ -18,7 +18,7 @@ public static class GroupsEndpoint
         var offset = Pagination.ToOffset(pageParameter, pageSizeParameter);
 
         var result = await database.Execute(
-            new GroupsQuery(query, offset, pageSizeParameter, options),
+            new GroupsQuery(query, offset, pageSizeParameter),
             cancellationToken
         );
 

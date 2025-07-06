@@ -16,7 +16,7 @@ public static class MessageByIdEndpoint
             throw new InvalidOperationException("Invalid message ID");
         }
 
-        var result = await database.Execute(new MessageQuery(guid, options), cancellationToken);
+        var result = await database.Execute(new MessageQuery(guid), cancellationToken);
 
         return result is null ? Results.NotFound() : Results.Extensions.Render<Message>(new Message.ViewModel(result));
     }

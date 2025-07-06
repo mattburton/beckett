@@ -9,13 +9,12 @@ namespace Beckett.Scheduling;
 public class MessageScheduler(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
-    IInstrumentation instrumentation,
-    PostgresOptions options
+    IInstrumentation instrumentation
 ) : IMessageScheduler
 {
     public Task CancelScheduledMessage(Guid id, CancellationToken cancellationToken)
     {
-        return database.Execute(new CancelScheduledMessage(id, options), cancellationToken);
+        return database.Execute(new CancelScheduledMessage(id), cancellationToken);
     }
 
     public async Task<Guid> ScheduleMessage(
@@ -44,7 +43,7 @@ public class MessageScheduler(
         );
 
         await database.Execute(
-            new ScheduleMessage(streamName, scheduledMessage, options),
+            new ScheduleMessage(streamName, scheduledMessage),
             connection,
             cancellationToken
         );
