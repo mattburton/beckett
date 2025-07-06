@@ -223,12 +223,14 @@ public class SubscriptionInitializer(
 
             foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
             {
-                if (stream.All(x => !x.AppliesTo(subscription)))
+                var filteredStream = stream.Where(x => x.AppliesTo(subscription)).ToArray();
+
+                if (filteredStream.Length == 0)
                 {
                     continue;
                 }
 
-                var streamVersion = stream.Max(x => x.StreamPosition);
+                var streamVersion = filteredStream.Max(x => x.StreamPosition);
 
                 // if the subscription is set to skip during replay or is being backfilled automatically advance the stream position
                 var streamPosition = subscription.SkipDuringReplay || subscription.Status == SubscriptionStatus.Backfill
@@ -236,7 +238,7 @@ public class SubscriptionInitializer(
                     : 0;
 
                 // track the replay target position
-                var globalPosition = stream.Max(x => x.GlobalPosition);
+                var globalPosition = filteredStream.Max(x => x.GlobalPosition);
 
                 if (globalPosition > replayTargetPosition.GetValueOrDefault())
                 {
