@@ -5,7 +5,6 @@ public class CheckpointType
     public string GroupName { get; init; } = null!;
     public string Name { get; init; } = null!;
     public string StreamName { get; set; } = null!;
-    public long StreamVersion { get; set; }
     public long StreamPosition { get; set; }
 
     private sealed class CheckpointTypeEqualityComparer : IEqualityComparer<CheckpointType>

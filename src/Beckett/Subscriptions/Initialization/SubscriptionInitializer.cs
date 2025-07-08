@@ -183,24 +183,6 @@ public class SubscriptionInitializer(
                 }
                 else
                 {
-                    if (subscription.Status == SubscriptionStatus.Backfill)
-                    {
-                        var count = -1;
-
-                        while (count != 0)
-                        {
-                            count = await database.Execute(
-                                new AdvanceLaggingSubscriptionCheckpoints(
-                                    subscription.Group.Name,
-                                    subscription.Name
-                                ),
-                                connection,
-                                transaction,
-                                cancellationToken
-                            );
-                        }
-                    }
-
                     await database.Execute(
                         new SetSubscriptionToActive(
                             subscription.Group.Name,
@@ -251,8 +233,7 @@ public class SubscriptionInitializer(
                         GroupName = subscription.Group.Name,
                         Name = subscription.Name,
                         StreamName = stream.Key,
-                        StreamPosition = streamPosition,
-                        StreamVersion = streamVersion
+                        StreamPosition = streamPosition
                     }
                 );
             }

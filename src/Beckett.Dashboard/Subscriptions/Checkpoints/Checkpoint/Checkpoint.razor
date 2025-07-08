@@ -112,10 +112,6 @@
           @Model.Details.StreamPosition
         }
       </li>
-      <li class="list-group-item">
-        <span class="fw-bolder">Stream Version:</span>
-        @Model.Details.StreamVersion
-      </li>
       @if (Model.Details.Status != CheckpointStatus.Active)
       {
         <li class="list-group-item">

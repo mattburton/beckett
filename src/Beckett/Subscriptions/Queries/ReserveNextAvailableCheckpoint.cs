@@ -14,34 +14,57 @@ public class ReserveNextAvailableCheckpoint(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.checkpoints c
-            SET reserved_until = now() + $2
-            FROM (
-                SELECT c.id, s.replay_target_position
-                FROM beckett.checkpoints c
+            WITH reservation_candidate AS (
+                SELECT c.id,
+                       c.group_name,
+                       c.name,
+                       c.stream_name,
+                       c.stream_position,
+                       c.retry_attempts,
+                       c.status,
+                       s.replay_target_position
+                FROM beckett.checkpoints_ready r
+                INNER JOIN beckett.checkpoints c ON r.id = c.id
                 INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
                 WHERE c.group_name = $1
-                AND c.process_at <= now()
-                AND c.reserved_until IS NULL
                 AND ($3 = false OR (s.status = 'active' OR s.status = 'replay'))
                 AND ($4 = false OR s.status = 'active')
                 AND ($5 = false OR s.status = 'replay')
-                ORDER BY c.process_at
+                ORDER BY r.process_at
                 LIMIT 1
                 FOR UPDATE
                 SKIP LOCKED
-            ) as d
-            WHERE c.id = d.id
-            RETURNING
-                c.id,
-                c.group_name,
-                c.name,
-                c.stream_name,
-                c.stream_position,
-                c.stream_version,
-                coalesce(array_length(c.retries, 1), 0) as retry_attempts,
-                c.status,
-                d.replay_target_position;
+            ),
+            reserve_checkpoint AS (
+                INSERT INTO beckett.checkpoints_reserved (id, group_name, reserved_until)
+                SELECT r.id, r.group_name, now() + $2
+                FROM reservation_candidate r
+                ON CONFLICT (id) DO NOTHING
+                RETURNING id
+            ),
+            reserved_checkpoint_id AS (
+                SELECT id
+                FROM reserve_checkpoint
+                UNION ALL
+                SELECT NULL
+                LIMIT 1
+            ),
+            delete_ready AS (
+                DELETE FROM beckett.checkpoints_ready r
+                USING reserved_checkpoint_id i
+                WHERE r.id = i.id
+                AND i.id IS NOT NULL
+            )
+            SELECT r.id,
+                   r.group_name,
+                   r.name,
+                   r.stream_name,
+                   r.stream_position,
+                   r.retry_attempts,
+                   r.status,
+                   r.replay_target_position
+            FROM reservation_candidate r
+            INNER JOIN reserved_checkpoint_id i on r.id = i.id;
         """;
 
         command.CommandText = Query.Build(nameof(ReserveNextAvailableCheckpoint), sql, out var prepare);

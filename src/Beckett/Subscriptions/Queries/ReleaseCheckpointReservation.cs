@@ -12,9 +12,13 @@ public class ReleaseCheckpointReservation(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.checkpoints
-            SET process_at = NULL,
-                reserved_until = NULL
+            WITH insert_ready AS (
+                INSERT INTO beckett.checkpoints_ready (id, group_name, process_at)
+                SELECT c.id, c.group_name, now()
+                FROM beckett.checkpoints AS c
+                ON CONFLICT (id) DO NOTHING
+            )
+            DELETE FROM beckett.checkpoints_reserved
             WHERE id = $1;
         """;
 

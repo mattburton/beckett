@@ -11,19 +11,11 @@ public class MetricsQuery : IPostgresDatabaseQuery<MetricsQuery.Result>
         const string sql = """
             SELECT l.lagging, r.retries, f.failed
             FROM (
-                WITH lagging_subscriptions AS (
-                    SELECT COUNT(*) AS lagging
-                    FROM beckett.subscriptions s
-                    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
-                    WHERE s.status in ('active', 'replay')
-                    AND c.status = 'active'
-                    AND c.lagging = TRUE
-                    GROUP BY c.group_name, c.name
-                )
-                SELECT count(1) as lagging FROM lagging_subscriptions
-                UNION ALL
-                SELECT 0
-                LIMIT 1
+                SELECT count(s.*) as lagging
+                FROM beckett.checkpoints_ready r
+                INNER JOIN beckett.checkpoints c ON r.id = c.id
+                inner join beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+                WHERE s.status IN ('active', 'replay')
             ) AS l, (
                 SELECT count(1) as retries
                 FROM beckett.subscriptions s

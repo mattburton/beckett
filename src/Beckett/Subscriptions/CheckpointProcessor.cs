@@ -21,7 +21,7 @@ public class CheckpointProcessor(
     {
         using var checkpointLoggingScope = CheckpointLoggingScope(instance, checkpoint);
 
-        logger.ProcessingCheckpoint(checkpoint.Id, checkpoint.StreamPosition, checkpoint.StreamVersion);
+        logger.ProcessingCheckpoint(checkpoint.Id, checkpoint.StreamPosition);
 
         var result = await HandleMessageBatch(checkpoint, subscription);
 
@@ -123,7 +123,7 @@ public class CheckpointProcessor(
         {
             if (batch.Messages.Count == 0)
             {
-                if (batch.StreamVersion == 0 || checkpoint.StreamPosition >= checkpoint.StreamVersion)
+                if (batch.StreamVersion == 0)
                 {
                     return NoMessages.Instance;
                 }
@@ -134,7 +134,7 @@ public class CheckpointProcessor(
                 // position based on batch size or the stream version
                 var nextPositionBasedOnBatchSize = checkpoint.StreamPosition + subscription.Group.SubscriptionBatchSize;
 
-                var nextPosition = Math.Min(nextPositionBasedOnBatchSize, checkpoint.StreamVersion);
+                var nextPosition = Math.Min(nextPositionBasedOnBatchSize, batch.StreamVersion);
 
                 return new Success(nextPosition, batch.EndingGlobalPosition);
             }
@@ -288,23 +288,13 @@ public class CheckpointProcessor(
     private async Task<ReadMessageBatchResult> ReadMessageBatch(Checkpoint checkpoint, Subscription subscription)
     {
         var startingStreamPosition = checkpoint.StreamPosition + 1;
-        var endingStreamPosition = checkpoint.StreamVersion;
-        var batchSize = subscription.BatchSize ?? subscription.Group.SubscriptionBatchSize;
+        var count = subscription.BatchSize ?? subscription.Group.SubscriptionBatchSize;
 
         if (checkpoint.IsRetryOrFailure)
         {
             startingStreamPosition = checkpoint.StreamPosition;
 
-            endingStreamPosition = startingStreamPosition + 1;
-        }
-        else
-        {
-            var count = endingStreamPosition - checkpoint.StreamPosition;
-
-            if (count > batchSize)
-            {
-                endingStreamPosition = checkpoint.StreamPosition + batchSize;
-            }
+            count = 1;
         }
 
         var stream = await messageStorage.ReadStream(
@@ -312,7 +302,7 @@ public class CheckpointProcessor(
             new ReadStreamOptions
             {
                 StartingStreamPosition = startingStreamPosition,
-                EndingStreamPosition = endingStreamPosition,
+                Count = count,
                 Types = subscription.MessageTypeNames.ToArray()
             },
             CancellationToken.None
@@ -420,7 +410,6 @@ public class CheckpointProcessor(
         const string name = "beckett.checkpoint.name";
         const string streamName = "beckett.checkpoint.stream_name";
         const string streamPosition = "beckett.checkpoint.stream_position";
-        const string streamVersion = "beckett.checkpoint.stream_version";
         const string consumer = "beckett.checkpoint.consumer";
 
         if (!logger.IsEnabled(LogLevel.Information))
@@ -442,7 +431,6 @@ public class CheckpointProcessor(
         state.Add(name, checkpoint.Name);
         state.Add(streamName, checkpoint.StreamName);
         state.Add(streamPosition, checkpoint.StreamPosition);
-        state.Add(streamVersion, checkpoint.StreamVersion);
         state.Add(consumer, instance);
 
         return logger.BeginScope(state);
@@ -511,13 +499,12 @@ public static partial class Log
     [LoggerMessage(
         0,
         LogLevel.Trace,
-        "Processing checkpoint {CheckpointId} at position {StreamPosition} and version {StreamVersion}"
+        "Processing checkpoint {CheckpointId} at position {StreamPosition}"
     )]
     public static partial void ProcessingCheckpoint(
         this ILogger logger,
         long checkpointId,
-        long streamPosition,
-        long streamVersion
+        long streamPosition
     );
 
     [LoggerMessage(0, LogLevel.Trace, "Handling message {MessageId} for checkpoint {CheckpointId}")]

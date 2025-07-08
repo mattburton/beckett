@@ -19,15 +19,26 @@ public record RecordCheckpointError(
     {
         //language=sql
         const string sql = """
+            WITH release_reservation AS (
+                DELETE FROM beckett.checkpoints_reserved
+                WHERE id = $1
+            ),
+            insert_ready AS (
+                INSERT INTO beckett.checkpoints_ready (id, group_name, process_at)
+                SELECT c.id, c.group_name, $6
+                FROM beckett.checkpoints AS c
+                WHERE c.id = $1
+                AND $6 IS NOT NULL
+                ON CONFLICT (id) DO NOTHING
+            )
             UPDATE beckett.checkpoints
             SET stream_position = $2,
-            process_at = $6,
-            reserved_until = NULL,
-            status = $3,
-            retries = array_append(
-                coalesce(retries, array[]::beckett.retry[]),
-                row($4, $5, now())::beckett.retry
-            )
+                status = $3,
+                retries = array_append(
+                    coalesce(retries, array[]::beckett.retry[]),
+                    row($4, $5, now())::beckett.retry
+                ),
+                updated_at = now()
             WHERE id = $1;
         """;
 

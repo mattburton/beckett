@@ -14,7 +14,13 @@ public class RetriesQuery(
     {
         //language=sql
         const string sql = """
-            SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
+            SELECT id,
+                   group_name,
+                   name,
+                   stream_name,
+                   stream_position,
+                   updated_at,
+                   count(*) over() as total_results
             FROM beckett.checkpoints
             WHERE status = 'retry'
             AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))

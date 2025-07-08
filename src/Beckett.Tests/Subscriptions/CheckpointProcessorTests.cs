@@ -14,17 +14,17 @@ public class CheckpointProcessorTests
 {
     public class when_checkpoint_is_active
     {
-        public class when_messages_to_process_is_less_than_batch_size
+        public class when_there_are_messages_to_process
         {
             [Fact]
-            public async Task only_reads_messages_up_to_stream_version()
+            public async Task reads_messages_up_to_batch_size()
             {
                 var options = new BeckettOptions();
                 var group = options.WithSubscriptionGroup(
                     Guid.NewGuid().ToString(),
                     x => x.SubscriptionBatchSize = 10
                 );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 10, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 0, CheckpointStatus.Active);
                 var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
@@ -38,37 +38,7 @@ public class CheckpointProcessorTests
 
                 await messageStorage.Received().ReadStream(
                     "test",
-                    Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
-                    CancellationToken.None
-                );
-            }
-        }
-
-        public class when_messages_to_process_exceeds_batch_size
-        {
-            [Fact]
-            public async Task only_reads_messages_up_to_batch_size()
-            {
-                var options = new BeckettOptions();
-                var group = options.WithSubscriptionGroup(
-                    Guid.NewGuid().ToString(),
-                    x => x.SubscriptionBatchSize = 10
-                );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 20, 0, CheckpointStatus.Active);
-                var subscription = new Subscription(group, "test")
-                {
-                    HandlerDelegate = (IMessageContext _) => { }
-                };
-                subscription.RegisterMessageType<TestMessage>();
-                subscription.BuildHandler();
-                var messageStorage = Substitute.For<IMessageStorage>();
-                var checkpointProcessor = BuildCheckpointProcessor(messageStorage);
-
-                await checkpointProcessor.Process(1, checkpoint, subscription);
-
-                await messageStorage.Received().ReadStream(
-                    "test",
-                    Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 10),
+                    Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.Count == 10),
                     CancellationToken.None
                 );
             }
@@ -85,7 +55,7 @@ public class CheckpointProcessorTests
                 Guid.NewGuid().ToString(),
                 x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
             );
-            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 0, CheckpointStatus.Active);
             var subscription = new Subscription(group, "test")
             {
                 HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
@@ -121,7 +91,7 @@ public class CheckpointProcessorTests
                 Guid.NewGuid().ToString(),
                 x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
             );
-            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 0, CheckpointStatus.Active);
             var subscription = new Subscription(group, "test")
             {
                 HandlerDelegate = (IMessageContext _, CancellationToken ct) =>
@@ -157,7 +127,7 @@ public class CheckpointProcessorTests
                 Guid.NewGuid().ToString(),
                 x => x.SubscriptionBatchSize = 10
             );
-            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
+            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 0, CheckpointStatus.Retry);
             var subscription = new Subscription(group, "test")
             {
                 HandlerDelegate = (IMessageContext _) => { }
@@ -171,7 +141,7 @@ public class CheckpointProcessorTests
 
             await messageStorage.Received().ReadStream(
                 "test",
-                Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.EndingStreamPosition == 2),
+                Arg.Is<ReadStreamOptions>(x => x.StartingStreamPosition == 1 && x.Count == 1),
                 CancellationToken.None
             );
         }

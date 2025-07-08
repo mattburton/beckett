@@ -14,12 +14,23 @@ public class UpdateCheckpointPosition(
     {
         //language=sql
         const string sql = """
+            WITH release_reservation AS (
+                DELETE FROM beckett.checkpoints_reserved
+                WHERE id = $1
+            ),
+            insert_ready AS (
+                INSERT INTO beckett.checkpoints_ready (id, group_name, process_at)
+                SELECT c.id, c.group_name, $3
+                FROM beckett.checkpoints c
+                WHERE c.id = $1
+                AND $3 IS NOT NULL
+                ON CONFLICT (id) DO NOTHING
+            )
             UPDATE beckett.checkpoints
             SET stream_position = $2,
-                process_at = $3,
-                reserved_until = NULL,
                 status = 'active',
-                retries = NULL
+                retries = NULL,
+                updated_at = now()
             WHERE id = $1;
         """;
 

@@ -8,26 +8,15 @@ public class EnsureCheckpointExists(
     string groupName,
     string name,
     string streamName
-) : IPostgresDatabaseQuery<long>
+) : IPostgresDatabaseQuery<int>
 {
-    public async Task<long> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         //language=sql
         const string sql = """
-            WITH new_checkpoint AS (
-                INSERT INTO beckett.checkpoints (group_name, name, stream_name)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (group_name, name, stream_name) DO NOTHING
-                RETURNING 0 as stream_version
-            )
-            SELECT stream_version
-            FROM beckett.checkpoints
-            WHERE group_name = $1
-            AND name = $2
-            AND stream_name = $3
-            UNION ALL
-            SELECT stream_version
-            FROM new_checkpoint;
+            INSERT INTO beckett.checkpoints (group_name, name, stream_name)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (group_name, name, stream_name) DO NOTHING;
         """;
 
         command.CommandText = Query.Build(nameof(EnsureCheckpointExists), sql, out var prepare);
@@ -45,12 +34,6 @@ public class EnsureCheckpointExists(
         command.Parameters[1].Value = name;
         command.Parameters[2].Value = streamName;
 
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-
-        return result switch
-        {
-            long id => id,
-            _ => throw new Exception($"Unexpected result from ensure_checkpoint_exists function: {result}")
-        };
+        return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }

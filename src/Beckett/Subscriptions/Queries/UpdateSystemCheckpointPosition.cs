@@ -14,8 +14,8 @@ public class UpdateSystemCheckpointPosition(
         //language=sql
         const string sql = """
             UPDATE beckett.checkpoints
-            SET stream_version = $2,
-                stream_position = $2
+            SET stream_position = $2,
+                updated_at = now()
             WHERE id = $1;
         """;
 

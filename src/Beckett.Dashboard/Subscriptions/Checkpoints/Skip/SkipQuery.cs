@@ -12,12 +12,19 @@ public class SkipQuery(
     {
         //language=sql
         const string sql = """
+            WITH release_reservation AS (
+                DELETE FROM beckett.checkpoints_reserved
+                WHERE id = $1
+            ),
+            clear_ready AS (
+                DELETE FROM beckett.checkpoints_ready
+                WHERE id = $1
+            )
             UPDATE beckett.checkpoints
-            SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
-                process_at = NULL,
-                reserved_until = NULL,
+            SET stream_position = stream_position + 1,
                 status = 'active',
-                retries = NULL
+                retries = NULL,
+                updated_at = now()
             WHERE id = $1;
         """;
 

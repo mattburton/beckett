@@ -91,8 +91,7 @@ public class GlobalStreamConsumer(
                             {
                                 GroupName = group.Name,
                                 Name = subscription.Name,
-                                StreamName = stream.Key,
-                                StreamVersion = stream.Max(x => x.StreamPosition)
+                                StreamName = stream.Key
                             }
                         );
                     }

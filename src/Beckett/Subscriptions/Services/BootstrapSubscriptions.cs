@@ -134,8 +134,7 @@ public class BootstrapSubscriptions(
                 {
                     GroupName = group.Name,
                     Name = subscription.Name,
-                    StreamName = InitializationConstants.StreamName,
-                    StreamVersion = 0
+                    StreamName = InitializationConstants.StreamName
                 }
             );
         }
