@@ -12,12 +12,12 @@ public class RecordCheckpoints(CheckpointType[] checkpoints) : IPostgresDatabase
         //language=sql
         const string sql = """
             WITH checkpoints_to_record AS (
-                SELECT c.stream_position, c.group_name, c.name, c.stream_name
+                SELECT c.group_name, c.name, c.stream_name, c.stream_position
                 FROM unnest($1) AS c
             ),
             record_checkpoints AS (
-                INSERT INTO beckett.checkpoints (stream_position, group_name, name, stream_name)
-                SELECT c.stream_position, c.group_name, c.name, c.stream_name
+                INSERT INTO beckett.checkpoints (group_name, name, stream_name, stream_position)
+                SELECT c.group_name, c.name, c.stream_name, c.stream_position
                 FROM checkpoints_to_record c
                 ON CONFLICT (group_name, name, stream_name) DO NOTHING
                 RETURNING id
@@ -38,9 +38,10 @@ public class RecordCheckpoints(CheckpointType[] checkpoints) : IPostgresDatabase
                 FROM beckett.checkpoints AS c
                 INNER JOIN checkpoint_ids AS ci on c.id = ci.id
                 ON CONFLICT (id) DO NOTHING
+                RETURNING group_name
             )
             SELECT pg_notify('beckett:checkpoints', group_name)
-            FROM checkpoints_to_record;
+            FROM insert_ready;
         """;
 
         command.CommandText = Query.Build(nameof(RecordCheckpoints), sql, out var prepare);

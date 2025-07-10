@@ -24,8 +24,8 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
                    m.stream_name as actual_stream_name,
                    m.stream_position as actual_stream_position
             FROM beckett.checkpoints c
-            INNER JOIN beckett.checkpoints_ready r ON c.id = r.id
-            INNER JOIN beckett.checkpoints_reserved res ON c.id = res.id
+            LEFT JOIN beckett.checkpoints_ready r ON c.id = r.id
+            LEFT JOIN beckett.checkpoints_reserved res ON c.id = res.id
             LEFT JOIN beckett.messages m on c.stream_name = '$global' and c.stream_position = m.global_position
             WHERE c.id = $1;
         """;

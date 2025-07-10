@@ -16,6 +16,7 @@ public class MetricsQuery : IPostgresDatabaseQuery<MetricsQuery.Result>
                 INNER JOIN beckett.checkpoints c ON r.id = c.id
                 inner join beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
                 WHERE s.status IN ('active', 'replay')
+                AND r.process_at > now()
             ) AS l, (
                 SELECT count(1) as retries
                 FROM beckett.subscriptions s

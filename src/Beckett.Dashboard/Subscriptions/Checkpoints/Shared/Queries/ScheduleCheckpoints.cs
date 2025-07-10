@@ -13,11 +13,17 @@ public class ScheduleCheckpoints(
     {
         //language=sql
         const string sql = """
-            INSERT INTO beckett.checkpoints_ready (id, group_name, process_at)
-            SELECT id, group_name, $2
-            FROM beckett.checkpoints
-            WHERE id = ANY($1)
-            ON CONFLICT (id) DO NOTHING;
+            WITH insert_ready AS (
+                INSERT INTO beckett.checkpoints_ready (id, group_name, process_at)
+                SELECT id, group_name, $2
+                FROM beckett.checkpoints
+                WHERE id = ANY($1)
+                ON CONFLICT (id) DO UPDATE
+                    SET process_at = $2
+                RETURNING group_name
+            )
+            SELECT pg_notify('beckett:checkpoints', group_name)
+            FROM insert_ready;
         """;
 
         command.CommandText = Query.Build(nameof(ScheduleCheckpoints), sql, out var prepare);

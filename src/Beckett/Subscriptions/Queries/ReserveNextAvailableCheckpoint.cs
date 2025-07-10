@@ -27,13 +27,14 @@ public class ReserveNextAvailableCheckpoint(
                 INNER JOIN beckett.checkpoints c ON r.id = c.id
                 INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
                 WHERE c.group_name = $1
+                AND r.process_at <= now()
                 AND ($3 = false OR (s.status = 'active' OR s.status = 'replay'))
                 AND ($4 = false OR s.status = 'active')
                 AND ($5 = false OR s.status = 'replay')
                 ORDER BY r.process_at
-                LIMIT 1
                 FOR UPDATE
                 SKIP LOCKED
+                LIMIT 1
             ),
             reserve_checkpoint AS (
                 INSERT INTO beckett.checkpoints_reserved (id, group_name, reserved_until)
