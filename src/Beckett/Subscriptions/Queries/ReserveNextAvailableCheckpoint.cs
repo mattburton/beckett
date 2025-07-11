@@ -39,7 +39,7 @@ public class ReserveNextAvailableCheckpoint(
                 c.stream_name,
                 c.stream_position,
                 c.stream_version,
-                coalesce(array_length(c.retries, 1), 0) as retry_attempts,
+                c.retry_attempts,
                 c.status,
                 d.replay_target_position;
         """;

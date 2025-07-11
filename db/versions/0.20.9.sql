@@ -34,3 +34,6 @@ DROP FUNCTION IF EXISTS beckett.rename_subscription(text, text, text);
 DROP FUNCTION IF EXISTS beckett.reset_subscription(text, text);
 
 DROP TYPE IF EXISTS beckett.scheduled_message;
+
+ALTER TABLE beckett.checkpoints
+  ADD COLUMN retry_attempts int GENERATED ALWAYS AS (coalesce(array_length(retries, 1), 0)) STORED;
