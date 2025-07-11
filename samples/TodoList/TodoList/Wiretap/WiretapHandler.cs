@@ -18,6 +18,11 @@ public class WiretapHandler
                 logger.LogInformation("List created [Id: {TodoListId}, Lag: {Lag}ms]", e.TodoListId, lag);
                 break;
             case TodoListItemAdded e:
+                if (e.Item.Contains("error"))
+                {
+                    throw new Exception("error");
+                }
+
                 logger.LogInformation("Item added: {Item} [List: {TodoListId}, Lag: {Lag}ms]", e.Item, e.TodoListId, lag);
                 break;
             case TodoListItemCompleted e:

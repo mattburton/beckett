@@ -19,7 +19,7 @@ POST {{base_url}}/{{id}}
 Content-Type: application/json
 
 {
-  "item": "{{$random.uuid}}"
+  "item": "error - {{$random.uuid}}"
 }
 > {%
   client.global.set("item", response.body.item)
