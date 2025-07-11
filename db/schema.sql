@@ -225,6 +225,7 @@ CREATE TABLE beckett.checkpoints (
     updated_at timestamp with time zone DEFAULT now(),
     process_at timestamp with time zone,
     reserved_until timestamp with time zone,
+    retry_attempts integer GENERATED ALWAYS AS (COALESCE(array_length(retries, 1), 0)) STORED,
     lagging boolean GENERATED ALWAYS AS ((stream_version > stream_position)) STORED,
     status beckett.checkpoint_status DEFAULT 'active'::beckett.checkpoint_status NOT NULL,
     group_name text NOT NULL,
