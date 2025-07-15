@@ -18,7 +18,7 @@ public class GlobalStreamConsumerHost(
     {
         var consumers = options.Subscriptions.Groups.Select(BuildConsumerForSubscriptionGroup);
 
-        var tasks = consumers.Select(x => x.Poll(stoppingToken)).ToArray();
+        var tasks = consumers.Select(x => Task.Run(() => x.Poll(stoppingToken), stoppingToken)).ToArray();
 
         await Task.WhenAll(tasks);
     }
