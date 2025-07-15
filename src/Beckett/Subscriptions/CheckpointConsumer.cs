@@ -18,75 +18,83 @@ public class CheckpointConsumer(
     {
         logger.StartingCheckpointPolling(instance, group.Name);
 
-        await foreach (var _ in channel.Reader.ReadAllAsync(stoppingToken))
+        while (await channel.Reader.WaitToReadAsync(stoppingToken))
         {
-            try
+            while (channel.Reader.TryRead(out _))
             {
-                stoppingToken.ThrowIfCancellationRequested();
-
-                logger.AttemptingToReserveCheckpoint(instance, group.Name);
-
-                //once we reserve a checkpoint the stopping token is ignored so the checkpoint can be processed prior
-                //to shutting down the host - reservation timeout applies
-                var checkpoint = await database.Execute(
-                    new ReserveNextAvailableCheckpoint(
-                        group.Name,
-                        group.ReservationTimeout,
-                        options.Subscriptions.ReplayMode
-                    ),
-                    stoppingToken
-                );
-
-                if (checkpoint == null)
+                try
                 {
-                    logger.NoAvailableCheckpoints(instance, group.Name);
+                    stoppingToken.ThrowIfCancellationRequested();
 
-                    continue;
-                }
+                    logger.AttemptingToReserveCheckpoint(instance, group.Name);
 
-                if (!checkpoint.IsRetryOrFailure && checkpoint.StreamPosition >= checkpoint.StreamVersion)
-                {
-                    logger.CheckpointAlreadyCaughtUp(checkpoint.Id, checkpoint.StreamPosition, instance, group.Name);
-
-                    await database.Execute(
-                        new ReleaseCheckpointReservation(checkpoint.Id),
-                        CancellationToken.None
+                    //once we reserve a checkpoint the stopping token is ignored so the checkpoint can be processed prior
+                    //to shutting down the host - reservation timeout applies
+                    var checkpoint = await database.Execute(
+                        new ReserveNextAvailableCheckpoint(
+                            group.Name,
+                            group.ReservationTimeout,
+                            options.Subscriptions.ReplayMode
+                        ),
+                        stoppingToken
                     );
 
-                    continue;
+                    if (checkpoint == null)
+                    {
+                        logger.NoAvailableCheckpoints(instance, group.Name);
+
+                        continue;
+                    }
+
+                    if (!checkpoint.IsRetryOrFailure && checkpoint.StreamPosition >= checkpoint.StreamVersion)
+                    {
+                        logger.CheckpointAlreadyCaughtUp(
+                            checkpoint.Id,
+                            checkpoint.StreamPosition,
+                            instance,
+                            group.Name
+                        );
+
+                        await database.Execute(
+                            new ReleaseCheckpointReservation(checkpoint.Id),
+                            CancellationToken.None
+                        );
+
+                        continue;
+                    }
+
+                    var subscription = group.GetSubscription(checkpoint.Name);
+
+                    if (subscription == null)
+                    {
+                        logger.SubscriptionNotRegistered(
+                            checkpoint.Name,
+                            group.Name,
+                            checkpoint.Id,
+                            instance,
+                            group.Name
+                        );
+
+                        await database.Execute(
+                            new ReleaseCheckpointReservation(checkpoint.Id),
+                            CancellationToken.None
+                        );
+
+                        continue;
+                    }
+
+                    await checkpointProcessor.Process(instance, checkpoint, subscription);
+
+                    channel.Writer.TryWrite(CheckpointAvailable.Instance);
                 }
-
-                var subscription = group.GetSubscription(checkpoint.Name);
-
-                if (subscription == null)
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    logger.SubscriptionNotRegistered(
-                        checkpoint.Name,
-                        group.Name,
-                        checkpoint.Id,
-                        instance,
-                        group.Name
-                    );
-
-                    await database.Execute(
-                        new ReleaseCheckpointReservation(checkpoint.Id),
-                        CancellationToken.None
-                    );
-
-                    continue;
+                    throw;
                 }
-
-                await checkpointProcessor.Process(instance, checkpoint, subscription);
-
-                channel.Writer.TryWrite(CheckpointAvailable.Instance);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Error processing checkpoint [Consumer: {Consumer}]", instance);
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Error processing checkpoint [Consumer: {Consumer}]", instance);
+                }
             }
         }
     }

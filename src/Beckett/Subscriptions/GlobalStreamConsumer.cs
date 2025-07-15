@@ -20,128 +20,133 @@ public class GlobalStreamConsumer(
     {
         var registeredSubscriptions = group.GetSubscriptions().ToArray();
 
-        await foreach (var _ in channel.Reader.ReadAllAsync(stoppingToken))
+        while (await channel.Reader.WaitToReadAsync(stoppingToken))
         {
-            try
+            while (channel.Reader.TryRead(out _))
             {
-                logger.StartingGlobalStreamPolling();
-
-                await using var connection = dataSource.CreateConnection();
-
-                await connection.OpenAsync(stoppingToken);
-
-                await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
-
-                var checkpoint = await database.Execute(
-                    new LockCheckpoint(
-                        group.Name,
-                        GlobalCheckpoint.Name,
-                        GlobalCheckpoint.StreamName
-                    ),
-                    connection,
-                    transaction,
-                    stoppingToken
-                );
-
-                if (checkpoint == null)
+                try
                 {
-                    logger.NoNewGlobalStreamMessagesFound();
+                    stoppingToken.ThrowIfCancellationRequested();
 
-                    continue;
-                }
+                    logger.StartingGlobalStreamPolling();
 
-                stoppingToken.ThrowIfCancellationRequested();
+                    await using var connection = dataSource.CreateConnection();
 
-                var batch = await messageStorage.ReadGlobalStream(
-                    new ReadGlobalStreamOptions
-                    {
-                        LastGlobalPosition = checkpoint.StreamPosition,
-                        BatchSize = group.GlobalStreamBatchSize
-                    },
-                    stoppingToken
-                );
+                    await connection.OpenAsync(stoppingToken);
 
-                if (batch.StreamMessages.Count == 0)
-                {
-                    logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
+                    await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
-                    continue;
-                }
-
-                logger.NewGlobalStreamMessagesToProcess(batch.StreamMessages.Count, checkpoint.StreamPosition);
-
-                var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
-
-                foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
-                {
-                    var subscriptions = registeredSubscriptions
-                        .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
-                        .OrderBy(subscription => subscription.Priority).ToArray();
-
-                    foreach (var subscription in subscriptions)
-                    {
-                        logger.NewMessagesFoundForSubscription(
-                            subscription.Name,
+                    var checkpoint = await database.Execute(
+                        new LockCheckpoint(
                             group.Name,
-                            stream.Key
-                        );
-
-                        checkpoints.Add(
-                            new CheckpointType
-                            {
-                                GroupName = group.Name,
-                                Name = subscription.Name,
-                                StreamName = stream.Key,
-                                StreamVersion = stream.Max(x => x.StreamPosition)
-                            }
-                        );
-                    }
-                }
-
-                stoppingToken.ThrowIfCancellationRequested();
-
-                if (checkpoints.Count > 0)
-                {
-                    await database.Execute(
-                        new RecordCheckpoints(checkpoints.ToArray()),
+                            GlobalCheckpoint.Name,
+                            GlobalCheckpoint.StreamName
+                        ),
                         connection,
                         transaction,
                         stoppingToken
                     );
 
-                    logger.RecordingUpdatedStreamVersionsForCheckpoints(checkpoints.Count);
+                    if (checkpoint == null)
+                    {
+                        logger.NoNewGlobalStreamMessagesFound();
+
+                        continue;
+                    }
+
+                    stoppingToken.ThrowIfCancellationRequested();
+
+                    var batch = await messageStorage.ReadGlobalStream(
+                        new ReadGlobalStreamOptions
+                        {
+                            LastGlobalPosition = checkpoint.StreamPosition,
+                            BatchSize = group.GlobalStreamBatchSize
+                        },
+                        stoppingToken
+                    );
+
+                    if (batch.StreamMessages.Count == 0)
+                    {
+                        logger.NoNewGlobalStreamMessagesFoundAfterPosition(checkpoint.StreamPosition);
+
+                        continue;
+                    }
+
+                    logger.NewGlobalStreamMessagesToProcess(batch.StreamMessages.Count, checkpoint.StreamPosition);
+
+                    var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
+
+                    foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
+                    {
+                        var subscriptions = registeredSubscriptions
+                            .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
+                            .OrderBy(subscription => subscription.Priority).ToArray();
+
+                        foreach (var subscription in subscriptions)
+                        {
+                            logger.NewMessagesFoundForSubscription(
+                                subscription.Name,
+                                group.Name,
+                                stream.Key
+                            );
+
+                            checkpoints.Add(
+                                new CheckpointType
+                                {
+                                    GroupName = group.Name,
+                                    Name = subscription.Name,
+                                    StreamName = stream.Key,
+                                    StreamVersion = stream.Max(x => x.StreamPosition)
+                                }
+                            );
+                        }
+                    }
+
+                    stoppingToken.ThrowIfCancellationRequested();
+
+                    if (checkpoints.Count > 0)
+                    {
+                        await database.Execute(
+                            new RecordCheckpoints(checkpoints.ToArray()),
+                            connection,
+                            transaction,
+                            stoppingToken
+                        );
+
+                        logger.RecordingUpdatedStreamVersionsForCheckpoints(checkpoints.Count);
+                    }
+                    else
+                    {
+                        logger.NoNewCheckpointsToRecord();
+                    }
+
+                    var newGlobalPosition = batch.StreamMessages.Max(x => x.GlobalPosition);
+
+                    await database.Execute(
+                        new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition),
+                        connection,
+                        transaction,
+                        stoppingToken
+                    );
+
+                    RecordStreamData(batch);
+
+                    await transaction.CommitAsync(stoppingToken);
+
+                    logger.UpdatedGlobalStreamPosition(newGlobalPosition);
+
+                    channel.Writer.TryWrite(MessagesAvailable.Instance);
                 }
-                else
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    logger.NoNewCheckpointsToRecord();
+                    throw;
                 }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Error reading global stream");
 
-                var newGlobalPosition = batch.StreamMessages.Max(x => x.GlobalPosition);
-
-                await database.Execute(
-                    new UpdateSystemCheckpointPosition(checkpoint.Id, newGlobalPosition),
-                    connection,
-                    transaction,
-                    stoppingToken
-                );
-
-                RecordStreamData(batch);
-
-                await transaction.CommitAsync(stoppingToken);
-
-                logger.UpdatedGlobalStreamPosition(newGlobalPosition);
-
-                channel.Writer.TryWrite(MessagesAvailable.Instance);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Error reading global stream");
-
-                throw;
+                    throw;
+                }
             }
         }
     }
