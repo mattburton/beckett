@@ -16,14 +16,14 @@ public class CheckpointConsumerGroup(
     public async Task Poll(CancellationToken stoppingToken)
     {
         var tasks = Enumerable.Range(1, group.GetConcurrency()).Select(
-            x => Task.Run(() => new CheckpointConsumer(
+            x => new CheckpointConsumer(
                 group,
                 channel,
                 database,
                 checkpointProcessor,
                 options,
                 loggerFactory.CreateLogger<CheckpointConsumer>()
-            ).Poll(x, stoppingToken), stoppingToken)
+            ).Poll(x, stoppingToken)
         ).ToArray();
 
         await Task.WhenAll(tasks);
