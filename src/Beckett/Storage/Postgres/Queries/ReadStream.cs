@@ -40,6 +40,8 @@ public class ReadStream(
                 AND ($4 IS NULL OR global_position >= $4)
                 AND ($5 IS NULL OR global_position <= $5)
                 AND ($6 IS NULL OR type = ANY($6))
+                ORDER BY CASE WHEN $7 = true THEN stream_position END,
+                         CASE WHEN $7 = false THEN stream_position END DESC
                 LIMIT $8
             )
             SELECT coalesce((SELECT stream_version FROM stream_version), 0) AS stream_version,
