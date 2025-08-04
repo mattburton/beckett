@@ -2,17 +2,21 @@ namespace Beckett.Database.Types;
 
 public static class DataTypeNames
 {
-    public static string CheckpointStatus(string schema) => $"{schema}.checkpoint_status";
+    private static string Schema = PostgresOptions.DefaultSchema;
 
-    public static string Checkpoint(string schema) => $"{schema}.checkpoint";
+    public static void Initialize(PostgresOptions options) => Schema = options.Schema;
 
-    public static string CheckpointArray(string schema) => $"{schema}.checkpoint[]";
+    public static string CheckpointStatus(string? schema = null) => $"{schema ?? Schema}.checkpoint_status";
 
-    public static string Message(string schema) => $"{schema}.message";
+    public static string Checkpoint(string? schema = null) => $"{schema ?? Schema}.checkpoint";
 
-    public static string MessageArray(string schema) => $"{schema}.message[]";
+    public static string CheckpointArray(string? schema = null) => $"{schema ?? Schema}.checkpoint[]";
 
-    public static string Retry(string schema) => $"{schema}.retry";
+    public static string Message(string? schema = null) => $"{schema ?? Schema}.message";
 
-    public static string SubscriptionStatus(string schema) => $"{schema}.subscription_status";
+    public static string MessageArray(string? schema = null) => $"{schema ?? Schema}.message[]";
+
+    public static string Retry(string? schema = null) => $"{schema ?? Schema}.retry";
+
+    public static string SubscriptionStatus(string? schema = null) => $"{schema ?? Schema}.subscription_status";
 }

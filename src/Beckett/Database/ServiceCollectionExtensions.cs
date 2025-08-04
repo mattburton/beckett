@@ -1,5 +1,6 @@
 using Beckett.Database.Notifications;
 using Beckett.Database.Notifications.Services;
+using Beckett.Database.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -13,6 +14,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options.Postgres);
 
         Query.Initialize(options.Postgres);
+
+        DataTypeNames.Initialize(options.Postgres);
 
         services.AddSingleton<IPostgresDataSource, PostgresDataSource>();
 
