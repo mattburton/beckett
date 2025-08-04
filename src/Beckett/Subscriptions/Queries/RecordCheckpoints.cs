@@ -19,7 +19,7 @@ public class RecordCheckpoints(CheckpointType[] checkpoints) : IPostgresDatabase
 
         command.CommandText = Query.Build(nameof(RecordCheckpoints), sql, out var prepare);
 
-        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointArray("beckett") });
+        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointArray() });
 
         if (prepare)
         {
