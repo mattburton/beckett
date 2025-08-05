@@ -73,7 +73,7 @@ CREATE INDEX IF NOT EXISTS ix_messages_active_global_read_stream ON __schema__.m
 CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema__.messages_active ((metadata ->> '$tenant'), beckett.stream_category(stream_name))
   WHERE metadata ->> '$tenant' IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id ON __schema__.messages_active ((metadata ->> '$correlation_id'))
+CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id_global_position ON __schema__.messages_active ((metadata ->> '$correlation_id'), global_position)
   WHERE metadata ->> '$correlation_id' IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION __schema__.stream_hash(
