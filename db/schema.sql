@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.2
--- Dumped by pg_dump version 16.2
+-- Dumped from database version 16.9
+-- Dumped by pg_dump version 16.9
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -478,10 +478,10 @@ CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints USING btree (group
 
 
 --
--- Name: ix_messages_active_correlation_id; Type: INDEX; Schema: beckett; Owner: -
+-- Name: ix_messages_active_correlation_id_global_position; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_messages_active_correlation_id ON beckett.messages_active USING btree (((metadata ->> '$correlation_id'::text))) WHERE ((metadata ->> '$correlation_id'::text) IS NOT NULL);
+CREATE INDEX ix_messages_active_correlation_id_global_position ON beckett.messages_active USING btree (((metadata ->> '$correlation_id'::text)), global_position) WHERE ((metadata ->> '$correlation_id'::text) IS NOT NULL);
 
 
 --
