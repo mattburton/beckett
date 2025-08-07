@@ -17,17 +17,13 @@ public class AppendToStream(
         {
             //language=sql
             const string sql = """
-                WITH acquire_lock AS (
-                    SELECT pg_advisory_xact_lock(beckett.stream_hash($1)) AS lock_acquired
-                ),
-                current_version AS (
+                WITH current_version AS (
                     SELECT coalesce(max(m.stream_position), 0) AS version
                     FROM beckett.messages m
-                    CROSS JOIN acquire_lock
                     WHERE m.stream_name = $1
                     AND m.archived = false
                 ),
-                validated_version AS (
+                validate_expected_version AS (
                     SELECT
                         cv.version,
                         beckett.assert_condition(
@@ -58,23 +54,18 @@ public class AppendToStream(
                         metadata
                     )
                     SELECT m.id,
-                        vv.version + (row_number() over())::bigint,
+                        v.version + (row_number() over())::bigint,
                         $1,
                         m.type,
                         m.data,
                         m.metadata
                     FROM unnest($3) AS m
-                    CROSS JOIN validated_version vv
-                    WHERE vv.valid
+                    CROSS JOIN validate_expected_version v
+                    WHERE v.valid
                     RETURNING stream_position
-                ),
-                notify AS (
-                    SELECT pg_notify('beckett:messages', NULL)
-                    FROM append_messages
                 )
-                SELECT max(stream_position)
-                FROM append_messages
-                CROSS JOIN notify;
+                SELECT max(stream_position), pg_notify('beckett:messages', NULL)
+                FROM append_messages;
             """;
 
             command.CommandText = Query.Build(nameof(AppendToStream), sql, out var prepare);
