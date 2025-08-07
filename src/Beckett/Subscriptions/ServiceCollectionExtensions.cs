@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
             return;
         }
 
-        services.AddSingleton<ISubscriptionInitializer, SubscriptionInitializer>();
+        services.AddSingleton<ISubscriptionInitializerChannel, SubscriptionInitializerChannel>();
 
         services.AddSingleton<IGlobalStreamNotificationChannel, GlobalStreamNotificationChannel>();
 
@@ -29,7 +29,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPostgresNotificationHandler, GlobalStreamNotificationHandler>();
 
+        services.AddSingleton<IPostgresNotificationHandler, SubscriptionResetNotificationHandler>();
+
         services.AddHostedService<BootstrapSubscriptions>();
+
+        services.AddHostedService<GroupSubscriptionInitializerHost>();
 
         services.AddHostedService<GlobalStreamConsumerHost>();
 

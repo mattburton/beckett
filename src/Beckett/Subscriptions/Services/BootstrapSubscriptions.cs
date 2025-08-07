@@ -11,30 +11,18 @@ public class BootstrapSubscriptions(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     BeckettOptions options,
-    ISubscriptionInitializer subscriptionInitializer,
+    ISubscriptionInitializerChannel subscriptionInitializerChannel,
     ILogger<BootstrapSubscriptions> logger
 ) : IHostedService
 {
     public async Task StartAsync(CancellationToken stoppingToken)
     {
-        var tasks = options.Subscriptions.Groups.Select(x => ExecuteForSubscriptionGroup(x, stoppingToken)).ToArray();
+        var tasks = options.Subscriptions.Groups.Select(x => BootstrapGroup(x, stoppingToken)).ToArray();
 
         await Task.WhenAll(tasks);
-
-        if (options.Subscriptions.InitializationConcurrency <= 0)
-        {
-            return;
-        }
-
-        await Task.Yield();
-
-        var initializationTasks = Enumerable.Range(1, options.Subscriptions.InitializationConcurrency)
-            .Select(_ => subscriptionInitializer.Initialize(stoppingToken)).ToArray();
-
-        await Task.WhenAll(initializationTasks);
     }
 
-    private async Task ExecuteForSubscriptionGroup(SubscriptionGroup group, CancellationToken stoppingToken)
+    private async Task BootstrapGroup(SubscriptionGroup group, CancellationToken stoppingToken)
     {
         await using var connection = dataSource.CreateConnection();
 
@@ -151,6 +139,11 @@ public class BootstrapSubscriptions(
         }
 
         await transaction.CommitAsync(stoppingToken);
+
+        for (var i = 0; i < checkpoints.Count; i++)
+        {
+            subscriptionInitializerChannel.Notify(group);
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

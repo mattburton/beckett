@@ -32,6 +32,20 @@ public class SubscriptionGroup(string groupName)
     public TimeSpan GlobalStreamPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
+    /// Configure the batch size used when initializing subscriptions. This is the number of messages to read per batch
+    /// from the global stream while discovering streams and creating checkpoints for them. Setting this to a higher
+    /// number allows initialization to proceed more quickly for a large message store, at the expense of additional
+    /// overhead reading from it that could affect the performance of the application otherwise. Defaults to 1000.
+    /// </summary>
+    public int InitializationBatchSize { get; set; } = 1000;
+
+    /// <summary>
+    /// Configure the number of concurrent subscriptions Beckett can initialize at one time per host process.
+    /// Defaults to 5.
+    /// </summary>
+    public int InitializationConcurrency { get; set; } = 5;
+
+    /// <summary>
     /// Configure the timeout for checkpoint and retry reservations that occur while processing them. When a checkpoint
     /// or retry is available for processing, Beckett reserves it for the requesting consumer. The consumer processes it
     /// and no matter the outcome once complete releases the reservation. If the consumer fails to release the
