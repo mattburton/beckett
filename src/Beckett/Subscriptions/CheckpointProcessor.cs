@@ -66,7 +66,7 @@ public class CheckpointProcessor(
 
                 var maxRetryCount = subscription.GetMaxRetryCount(exceptionType);
 
-                var attempt = checkpoint.IsRetryOrFailure ? checkpoint.RetryAttempts : 0;
+                var attempt = checkpoint.IsRetryOrFailure ? checkpoint.RetryAttempts + 1 : 0;
 
                 var status = attempt >= maxRetryCount ? CheckpointStatus.Failed : CheckpointStatus.Retry;
 

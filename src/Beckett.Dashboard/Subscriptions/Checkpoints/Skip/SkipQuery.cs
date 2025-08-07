@@ -17,6 +17,7 @@ public class SkipQuery(
                 process_at = NULL,
                 reserved_until = NULL,
                 status = 'active',
+                retry_attempts = 0,
                 retries = NULL
             WHERE id = $1;
         """;

@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.9
--- Dumped by pg_dump version 16.9
+-- Dumped from database version 16.2
+-- Dumped by pg_dump version 16.2
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -175,7 +175,7 @@ CREATE TABLE beckett.checkpoints (
     updated_at timestamp with time zone DEFAULT now(),
     process_at timestamp with time zone,
     reserved_until timestamp with time zone,
-    retry_attempts integer GENERATED ALWAYS AS (COALESCE(array_length(retries, 1), 0)) STORED,
+    retry_attempts integer DEFAULT 0 NOT NULL,
     lagging boolean GENERATED ALWAYS AS ((stream_version > stream_position)) STORED,
     status beckett.checkpoint_status DEFAULT 'active'::beckett.checkpoint_status NOT NULL,
     group_name text NOT NULL,
