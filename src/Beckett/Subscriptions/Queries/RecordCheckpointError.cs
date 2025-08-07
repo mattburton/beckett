@@ -21,13 +21,14 @@ public record RecordCheckpointError(
         const string sql = """
             UPDATE beckett.checkpoints
             SET stream_position = $2,
-            process_at = $6,
-            reserved_until = NULL,
-            status = $3,
-            retries = array_append(
-                coalesce(retries, array[]::beckett.retry[]),
-                row($4, $5, now())::beckett.retry
-            )
+                process_at = $6,
+                reserved_until = NULL,
+                status = $3,
+                retry_attempts = $4,
+                retries = array_append(
+                    coalesce(retries, array[]::beckett.retry[]),
+                    row($4, $5, now())::beckett.retry
+                )
             WHERE id = $1;
         """;
 

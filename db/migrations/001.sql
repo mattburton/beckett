@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   updated_at timestamp with time zone DEFAULT now(),
   process_at timestamp with time zone NULL,
   reserved_until timestamp with time zone NULL,
-  retry_attempts int GENERATED ALWAYS AS (coalesce(array_length(retries, 1), 0)) STORED,
+  retry_attempts int NOT NULL DEFAULT 0,
   lagging boolean GENERATED ALWAYS AS (stream_version > stream_position) STORED,
   status __schema__.checkpoint_status NOT NULL DEFAULT 'active',
   group_name text NOT NULL,

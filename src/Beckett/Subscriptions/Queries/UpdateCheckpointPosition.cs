@@ -19,6 +19,7 @@ public class UpdateCheckpointPosition(
                 process_at = $3,
                 reserved_until = NULL,
                 status = 'active',
+                retry_attempts = 0,
                 retries = NULL
             WHERE id = $1;
         """;
