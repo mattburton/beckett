@@ -140,10 +140,7 @@ public class BootstrapSubscriptions(
 
         await transaction.CommitAsync(stoppingToken);
 
-        for (var i = 0; i < checkpoints.Count; i++)
-        {
-            subscriptionInitializerChannel.Notify(group);
-        }
+        subscriptionInitializerChannel.Notify(group);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
