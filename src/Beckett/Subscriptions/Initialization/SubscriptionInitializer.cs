@@ -22,44 +22,59 @@ public class SubscriptionInitializer(
         {
             while (channel.Reader.TryRead(out _))
             {
-                await using var connection = dataSource.CreateConnection();
-
-                await connection.OpenAsync(cancellationToken);
-
-                var subscriptionName = await database.Execute(
-                    new GetNextUninitializedSubscription(group.Name),
-                    connection,
-                    cancellationToken
-                );
-
-                if (subscriptionName == null)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    continue;
+                    try
+                    {
+                        await using var connection = dataSource.CreateConnection();
+
+                        await connection.OpenAsync(cancellationToken);
+
+                        var subscriptionName = await database.Execute(
+                            new GetNextUninitializedSubscription(group.Name),
+                            connection,
+                            cancellationToken
+                        );
+
+                        if (subscriptionName == null)
+                        {
+                            break;
+                        }
+
+                        var subscription = group.GetSubscription(subscriptionName);
+
+                        if (subscription == null)
+                        {
+                            logger.LogWarning(
+                                "Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'",
+                                subscriptionName
+                            );
+
+                            await database.Execute(
+                                new SetSubscriptionStatus(
+                                    group.Name,
+                                    subscriptionName,
+                                    SubscriptionStatus.Unknown
+                                ),
+                                connection,
+                                cancellationToken
+                            );
+
+                            continue;
+                        }
+
+                        await InitializeSubscription(subscription, cancellationToken);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(
+                            e,
+                            "Unhandled exception while initializing subscriptions - will try again in 10 seconds"
+                        );
+
+                        await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                    }
                 }
-
-                var subscription = group.GetSubscription(subscriptionName);
-
-                if (subscription == null)
-                {
-                    logger.LogWarning(
-                        "Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'",
-                        subscriptionName
-                    );
-
-                    await database.Execute(
-                        new SetSubscriptionStatus(
-                            group.Name,
-                            subscriptionName,
-                            SubscriptionStatus.Unknown
-                        ),
-                        connection,
-                        cancellationToken
-                    );
-
-                    continue;
-                }
-
-                await InitializeSubscription(subscription, cancellationToken);
             }
         }
     }

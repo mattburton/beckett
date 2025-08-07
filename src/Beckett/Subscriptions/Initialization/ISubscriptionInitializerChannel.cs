@@ -21,7 +21,10 @@ public class SubscriptionInitializerChannel(BeckettOptions options)
             return;
         }
 
-        channel.Writer.TryWrite(UninitializedSubscriptionAvailable.Instance);
+        for (var i = 0; i < group.InitializationConcurrency; i++)
+        {
+            channel.Writer.TryWrite(UninitializedSubscriptionAvailable.Instance);
+        }
     }
 
     public Channel<UninitializedSubscriptionAvailable> For(SubscriptionGroup group) => _channels[group.Name];
@@ -30,7 +33,7 @@ public class SubscriptionInitializerChannel(BeckettOptions options)
     {
         return options.Subscriptions.Groups.ToDictionary(
             group => group.Name,
-            group => Channel.CreateBounded<UninitializedSubscriptionAvailable>(group.InitializationConcurrency * 2)
+            group => Channel.CreateBounded<UninitializedSubscriptionAvailable>(group.InitializationConcurrency)
         );
     }
 }
