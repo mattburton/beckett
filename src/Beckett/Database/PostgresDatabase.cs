@@ -66,7 +66,8 @@ public class PostgresDatabase(IPostgresDataSource dataSource) : IPostgresDatabas
     private static readonly ResiliencePipeline Pipeline = new ResiliencePipelineBuilder().AddRetry(
         new RetryStrategyOptions
         {
-            ShouldHandle = new PredicateBuilder().Handle<NpgsqlException>(e => e.IsTransient),
+            ShouldHandle = new PredicateBuilder().Handle<StreamConcurrentWriteException>()
+                .Handle<NpgsqlException>(e => e.IsTransient),
             MaxRetryAttempts = 3,
             Delay = TimeSpan.FromMilliseconds(50),
             BackoffType = DelayBackoffType.Exponential,
