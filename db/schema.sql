@@ -128,6 +128,184 @@ $$;
 
 
 --
+-- Name: delete_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.delete_subscription(_group_name text, _name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  _rows_deleted integer;
+BEGIN
+  LOOP
+    DELETE FROM beckett.checkpoints
+    WHERE id IN (
+      SELECT id
+      FROM beckett.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
+    EXIT WHEN _rows_deleted = 0;
+  END LOOP;
+
+  DELETE FROM beckett.subscriptions
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+
+--
+-- Name: move_subscription(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.move_subscription(_group_name text, _name text, _new_group_name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  _rows_updated integer;
+BEGIN
+  UPDATE beckett.subscriptions
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  LOOP
+    UPDATE beckett.checkpoints
+    SET group_name = _new_group_name
+    WHERE id IN (
+      SELECT id
+      FROM beckett.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
+    EXIT WHEN _rows_updated = 0;
+  END LOOP;
+END;
+$$;
+
+
+--
+-- Name: rename_subscription(text, text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.rename_subscription(_group_name text, _name text, _new_name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  _rows_updated integer;
+BEGIN
+  UPDATE beckett.subscriptions
+  SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  LOOP
+    UPDATE beckett.checkpoints
+    SET name = _new_name
+    WHERE id IN (
+      SELECT id
+      FROM beckett.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
+    EXIT WHEN _rows_updated = 0;
+  END LOOP;
+END;
+$$;
+
+
+--
+-- Name: replay_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.replay_subscription(_group_name text, _name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  _replay_target_position bigint;
+  _rows_updated integer;
+BEGIN
+  SELECT coalesce(max(m.global_position), 0)
+  INTO _replay_target_position
+  FROM beckett.checkpoints c
+  INNER JOIN beckett.messages_active m ON c.stream_name = m.stream_name AND c.stream_version = m.stream_position
+  WHERE c.group_name = _group_name
+  AND c.name = _name;
+
+  LOOP
+    UPDATE beckett.checkpoints
+    SET stream_position = 0
+    WHERE id IN (
+      SELECT id
+      FROM beckett.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      AND stream_position > 0
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
+    EXIT WHEN _rows_updated = 0;
+  END LOOP;
+
+  UPDATE beckett.subscriptions
+  SET status = 'replay',
+      replay_target_position = _replay_target_position
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+
+--
+-- Name: reset_subscription(text, text); Type: FUNCTION; Schema: beckett; Owner: -
+--
+
+CREATE FUNCTION beckett.reset_subscription(_group_name text, _name text) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+  _rows_deleted integer;
+BEGIN
+  LOOP
+    DELETE FROM beckett.checkpoints
+    WHERE group_name = _group_name AND name = _name
+    AND id IN (
+      SELECT id FROM beckett.checkpoints
+      WHERE group_name = _group_name AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
+    EXIT WHEN _rows_deleted = 0;
+  END LOOP;
+
+  UPDATE beckett.subscriptions
+  SET status = 'uninitialized',
+      replay_target_position = NULL
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  INSERT INTO beckett.checkpoints (group_name, name, stream_name)
+  VALUES (_group_name, _name, '$initializing')
+  ON CONFLICT (group_name, name, stream_name) DO UPDATE
+    SET stream_version = 0,
+        stream_position = 0;
+END;
+$_$;
+
+
+--
 -- Name: stream_category(text); Type: FUNCTION; Schema: beckett; Owner: -
 --
 

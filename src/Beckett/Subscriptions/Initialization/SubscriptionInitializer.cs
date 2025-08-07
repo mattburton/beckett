@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Storage;
@@ -7,63 +8,59 @@ using Microsoft.Extensions.Logging;
 namespace Beckett.Subscriptions.Initialization;
 
 public class SubscriptionInitializer(
+    SubscriptionGroup group,
+    Channel<UninitializedSubscriptionAvailable> channel,
     IPostgresDatabase database,
     IPostgresDataSource dataSource,
-    BeckettOptions options,
     IMessageStorage messageStorage,
     ILogger<SubscriptionInitializer> logger
-) : ISubscriptionInitializer
+)
 {
     public async Task Initialize(CancellationToken cancellationToken)
     {
-        var tasks = options.Subscriptions.Groups.Select(x => InitializeSubscriptionsForGroup(x, cancellationToken))
-            .ToArray();
-
-        await Task.WhenAll(tasks);
-    }
-
-    private async Task InitializeSubscriptionsForGroup(SubscriptionGroup group, CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
+        while (await channel.Reader.WaitToReadAsync(cancellationToken))
         {
-            await using var connection = dataSource.CreateConnection();
-
-            await connection.OpenAsync(cancellationToken);
-
-            var subscriptionName = await database.Execute(
-                new GetNextUninitializedSubscription(group.Name),
-                connection,
-                cancellationToken
-            );
-
-            if (subscriptionName == null)
+            while (channel.Reader.TryRead(out _))
             {
-                break;
-            }
+                await using var connection = dataSource.CreateConnection();
 
-            var subscription = group.GetSubscription(subscriptionName);
+                await connection.OpenAsync(cancellationToken);
 
-            if (subscription == null)
-            {
-                logger.LogWarning(
-                    "Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'",
-                    subscriptionName
-                );
-
-                await database.Execute(
-                    new SetSubscriptionStatus(
-                        group.Name,
-                        subscriptionName,
-                        SubscriptionStatus.Unknown
-                    ),
+                var subscriptionName = await database.Execute(
+                    new GetNextUninitializedSubscription(group.Name),
                     connection,
                     cancellationToken
                 );
 
-                continue;
-            }
+                if (subscriptionName == null)
+                {
+                    continue;
+                }
 
-            await InitializeSubscription(subscription, cancellationToken);
+                var subscription = group.GetSubscription(subscriptionName);
+
+                if (subscription == null)
+                {
+                    logger.LogWarning(
+                        "Uninitialized subscription {SubscriptionName} does not exist - setting status to 'unknown'",
+                        subscriptionName
+                    );
+
+                    await database.Execute(
+                        new SetSubscriptionStatus(
+                            group.Name,
+                            subscriptionName,
+                            SubscriptionStatus.Unknown
+                        ),
+                        connection,
+                        cancellationToken
+                    );
+
+                    continue;
+                }
+
+                await InitializeSubscription(subscription, cancellationToken);
+            }
         }
     }
 
@@ -101,7 +98,7 @@ public class SubscriptionInitializer(
                 new ReadGlobalStreamOptions
                 {
                     LastGlobalPosition = checkpoint.StreamPosition,
-                    BatchSize = options.Subscriptions.InitializationBatchSize
+                    BatchSize = subscription.Group.InitializationBatchSize
                 },
                 cancellationToken
             );

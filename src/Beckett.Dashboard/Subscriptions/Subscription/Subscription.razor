@@ -8,6 +8,9 @@
   document.body.addEventListener("subscription_replay_started", function () {
     alert('Subscription replay started successfully');
   });
+  document.body.addEventListener("subscription_reset", function () {
+    alert('Subscription reset successfully');
+  });
 </script>
 
 <nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary mt-2" aria-label="breadcrumb">
@@ -82,6 +85,16 @@
                     hx-confirm="Are you sure you want to replay this subscription?"
                     hx-on::response-error="alert('Unable to replay subscription at this time - please try again later')">
               Replay
+            </button>
+          }
+          @if (Model.Details.Status != SubscriptionStatus.Uninitialized)
+          {
+            <button class="btn btn-danger ms-2"
+                    title="Reset Subscription"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/reset"
+                    hx-confirm="Are you sure you want to reset this subscription?"
+                    hx-on::response-error="alert('Unable to reset subscription at this time - please try again later')">
+              Reset
             </button>
           }
         </div>

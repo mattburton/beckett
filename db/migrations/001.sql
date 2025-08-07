@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS __schema__.messages_archived PARTITION OF __schema__.
 
 CREATE INDEX IF NOT EXISTS ix_messages_active_global_read_stream ON __schema__.messages_active (transaction_id, global_position, archived);
 
-CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema__.messages_active ((metadata ->> '$tenant'), beckett.stream_category(stream_name))
+CREATE INDEX IF NOT EXISTS ix_messages_active_tenant_stream_category on __schema__.messages_active ((metadata ->> '$tenant'), __schema__.stream_category(stream_name))
   WHERE metadata ->> '$tenant' IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS ix_messages_active_correlation_id_global_position ON __schema__.messages_active ((metadata ->> '$correlation_id'), global_position)
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS __schema__.subscriptions
   PRIMARY KEY (group_name, name)
 );
 
-CREATE INDEX ix_subscriptions_reservation_candidates ON beckett.subscriptions (group_name, name, status) WHERE status = 'active' OR status = 'replay';
+CREATE INDEX ix_subscriptions_reservation_candidates ON __schema__.subscriptions (group_name, name, status) WHERE status = 'active' OR status = 'replay';
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
@@ -245,3 +245,186 @@ GRANT UPDATE, DELETE ON __schema__.tenants TO beckett;
 
 -- insert default record
 INSERT INTO __schema__.tenants (tenant) VALUES ('default');
+
+-------------------------------------------------
+-- SUBSCRIPTION UTILITY FUNCTIONS
+-------------------------------------------------
+CREATE OR REPLACE FUNCTION __schema__.delete_subscription(
+  _group_name text,
+  _name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+DECLARE
+  _rows_deleted integer;
+BEGIN
+  LOOP
+    DELETE FROM __schema__.checkpoints
+    WHERE id IN (
+      SELECT id
+      FROM __schema__.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
+    EXIT WHEN _rows_deleted = 0;
+  END LOOP;
+
+  DELETE FROM __schema__.subscriptions
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.move_subscription(
+  _group_name text,
+  _name text,
+  _new_group_name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+DECLARE
+  _rows_updated integer;
+BEGIN
+  UPDATE __schema__.subscriptions
+  SET group_name = _new_group_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  LOOP
+    UPDATE __schema__.checkpoints
+    SET group_name = _new_group_name
+    WHERE id IN (
+      SELECT id
+      FROM __schema__.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
+    EXIT WHEN _rows_updated = 0;
+  END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.rename_subscription(
+  _group_name text,
+  _name text,
+  _new_name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+DECLARE
+  _rows_updated integer;
+BEGIN
+  UPDATE __schema__.subscriptions
+  SET name = _new_name
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  LOOP
+    UPDATE __schema__.checkpoints
+    SET name = _new_name
+    WHERE id IN (
+      SELECT id
+      FROM __schema__.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
+    EXIT WHEN _rows_updated = 0;
+  END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.replay_subscription(
+  _group_name text,
+  _name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+DECLARE
+  _replay_target_position bigint;
+  _rows_updated integer;
+BEGIN
+  SELECT coalesce(max(m.global_position), 0)
+  INTO _replay_target_position
+  FROM beckett.checkpoints c
+  INNER JOIN beckett.messages_active m ON c.stream_name = m.stream_name AND c.stream_version = m.stream_position
+  WHERE c.group_name = _group_name
+  AND c.name = _name;
+
+  LOOP
+    UPDATE __schema__.checkpoints
+    SET stream_position = 0
+    WHERE id IN (
+      SELECT id
+      FROM __schema__.checkpoints
+      WHERE group_name = _group_name
+      AND name = _name
+      AND stream_position > 0
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
+    EXIT WHEN _rows_updated = 0;
+  END LOOP;
+
+  UPDATE __schema__.subscriptions
+  SET status = 'replay',
+      replay_target_position = _replay_target_position
+  WHERE group_name = _group_name
+  AND name = _name;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION __schema__.reset_subscription(
+  _group_name text,
+  _name text
+)
+  RETURNS void
+  LANGUAGE plpgsql
+AS
+$$
+DECLARE
+  _rows_deleted integer;
+BEGIN
+  LOOP
+    DELETE FROM __schema__.checkpoints
+    WHERE group_name = _group_name AND name = _name
+    AND id IN (
+      SELECT id FROM __schema__.checkpoints
+      WHERE group_name = _group_name AND name = _name
+      LIMIT 500
+    );
+
+    GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
+    EXIT WHEN _rows_deleted = 0;
+  END LOOP;
+
+  UPDATE __schema__.subscriptions
+  SET status = 'uninitialized',
+      replay_target_position = NULL
+  WHERE group_name = _group_name
+  AND name = _name;
+
+  INSERT INTO __schema__.checkpoints (group_name, name, stream_name)
+  VALUES (_group_name, _name, '$initializing')
+  ON CONFLICT (group_name, name, stream_name) DO UPDATE
+    SET stream_version = 0,
+        stream_position = 0;
+END;
+$$;

@@ -11,18 +11,9 @@ public class SubscriptionOptions
     public bool Enabled { get; set; }
 
     /// <summary>
-    /// Configure the batch size used when initializing subscriptions. This is the number of messages to read per batch
-    /// from the global stream while discovering streams and creating checkpoints for them. Setting this to a higher
-    /// number allows initialization to proceed more quickly for a large message store, at the expense of additional
-    /// overhead reading from it that could affect the performance of the application otherwise. Defaults to 1000.
+    /// Configure whether subscription initialization is enabled on this host.
     /// </summary>
-    public int InitializationBatchSize { get; set; } = 1000;
-
-    /// <summary>
-    /// Configure the number of concurrent subscriptions Beckett can initialize at one time per host process.
-    /// Defaults to 5.
-    /// </summary>
-    public int InitializationConcurrency { get; set; } = 5;
+    public bool InitializationEnabled { get; set; } = true;
 
     /// <summary>
     /// Control whether this host processes all subscriptions, active-only, or replay-only. An example of where this
