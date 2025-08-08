@@ -463,6 +463,7 @@ CREATE TABLE beckett.migrations (
 CREATE TABLE beckett.recurring_messages (
     name text NOT NULL,
     cron_expression text NOT NULL,
+    time_zone_id text NOT NULL,
     stream_name text NOT NULL,
     type text NOT NULL,
     data jsonb NOT NULL,

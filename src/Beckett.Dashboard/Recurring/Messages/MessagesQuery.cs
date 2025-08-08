@@ -27,6 +27,7 @@ public class MessagesQuery(string? query = null, int? page = null, int? pageSize
             SELECT
                 name,
                 cron_expression,
+                time_zone_id,
                 stream_name,
                 type,
                 data,
@@ -69,7 +70,7 @@ public class MessagesQuery(string? query = null, int? page = null, int? pageSize
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            totalResults ??= reader.GetFieldValue<int>(8);
+            totalResults ??= reader.GetFieldValue<int>(9);
 
             recurringMessages.Add(PostgresRecurringMessage.From(reader));
         }

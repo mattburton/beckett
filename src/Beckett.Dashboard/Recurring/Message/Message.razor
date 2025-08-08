@@ -63,6 +63,10 @@
         <code>@Model.CronExpression</code>
       </li>
       <li class="list-group-item">
+        <span class="fw-bolder">Time Zone:</span>
+        @TimeZoneInfo.FindSystemTimeZoneById(Model.TimeZoneId).DisplayName
+      </li>
+      <li class="list-group-item">
         <span class="fw-bolder">
           Next Occurrence:
         </span>
@@ -193,6 +197,7 @@
     public string StreamName => RecurringMessage.StreamName;
     public string Type => RecurringMessage.Type;
     public string CronExpression => RecurringMessage.CronExpression;
+    public string TimeZoneId => RecurringMessage.TimeZoneId;
     public DateTimeOffset? NextOccurrence => RecurringMessage.NextOccurrence;
     public DateTimeOffset Timestamp => RecurringMessage.Timestamp;
     public string Data => JsonSerializer.Serialize(RecurringMessage.Data, new JsonSerializerOptions { WriteIndented = true });

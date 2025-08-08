@@ -36,7 +36,13 @@ public static class Configuration
             .Category(TodoList.Category)
             .Handler(WiretapHandler.Handle);
 
-        builder.ScheduleRecurringMessage(nameof(HelloWorld), "* * * * *", nameof(HelloWorld), new HelloWorld());
+        builder.ScheduleRecurringMessage(
+            nameof(HelloWorld),
+            "* * * * *",
+            TimeZoneInfo.Local,
+            nameof(HelloWorld),
+            new HelloWorld()
+        );
 
         builder.AddSubscription("HelloWorld")
             .Message<HelloWorld>()
