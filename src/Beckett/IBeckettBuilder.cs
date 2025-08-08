@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Beckett.Messages;
+using Beckett.Scheduling;
 using Beckett.Subscriptions.Configuration;
 
 namespace Beckett;
@@ -54,6 +55,39 @@ public interface IBeckettBuilder
     /// <param name="name"></param>
     /// <returns></returns>
     ISubscriptionConfigurationBuilder AddSubscription(string name);
+
+    /// <summary>
+    /// <para>
+    /// Schedule a recurring message. This is useful for scheduled tasks or other activities that occur on a regular
+    /// interval. Recurring messages have a cron expression that configures the schedule. When the next occurrence
+    /// comes due the supplied message will be appended to the specified stream. By subscribing to the message type you
+    /// can then support scheduled tasks / jobs within your application using the same stream-based processing you are
+    /// using elsewhere, including retries.
+    /// </para>
+    /// <para>
+    /// Note that recurring messages will be written to the message store based on the interval specified by the cron
+    /// expression you supply. If your application has not handled the previous message before the next occurrence comes
+    /// due then they might overlap. If this is a concern we recommend using the <see cref="IMessageScheduler"/>
+    /// instead to implement scheduled tasks where a subscription handler is responsible for scheduling the next
+    /// occurrence manually once the current one succeeds.
+    /// </para>
+    /// <para>
+    /// The cron expression will be parsed and validated to ensure it is a valid expression. Please see the Cronos
+    /// <see href="https://github.com/HangfireIO/Cronos#cron-format">documentation</see> for specific cron expression
+    /// feature support.
+    /// </para>
+    /// </summary>
+    /// <param name="name">The name of the recurring message</param>
+    /// <param name="cronExpression">The cron expression for the recurring message</param>
+    /// <param name="streamName">The stream to append the message to</param>
+    /// <param name="message">The message to send</param>
+    /// <typeparam name="TMessage"></typeparam>
+    void ScheduleRecurringMessage<TMessage>(
+        string name,
+        string cronExpression,
+        string streamName,
+        TMessage message
+    ) where TMessage : class;
 }
 
 public class BeckettBuilder(BeckettOptions options) : IBeckettBuilder
@@ -71,7 +105,9 @@ public class BeckettBuilder(BeckettOptions options) : IBeckettBuilder
 
         if (group == null)
         {
-            throw new InvalidOperationException($"There is no subscription group named {groupName} configured for this host.");
+            throw new InvalidOperationException(
+                $"There is no subscription group named {groupName} configured for this host."
+            );
         }
 
         return new SubscriptionGroupBuilder(group);
@@ -82,18 +118,46 @@ public class BeckettBuilder(BeckettOptions options) : IBeckettBuilder
         switch (options.Subscriptions.Groups.Count)
         {
             case 0:
-                throw new InvalidOperationException("You must configure at least one subscription group before configuring subscriptions.");
+                throw new InvalidOperationException(
+                    "You must configure at least one subscription group before configuring subscriptions."
+                );
             case > 1:
-                throw new InvalidOperationException("There is more than one subscription group configured for this host - you must use builder.MapGroup to configure subscriptions per group.");
+                throw new InvalidOperationException(
+                    "There is more than one subscription group configured for this host - you must use builder.MapGroup to configure subscriptions per group."
+                );
         }
 
         var group = options.Subscriptions.Groups[0];
 
         if (!group.TryAddSubscription(name, out var subscription))
         {
-            throw new InvalidOperationException($"There is already a subscription with the name {name} in the group {group.Name}");
+            throw new InvalidOperationException(
+                $"There is already a subscription with the name {name} in the group {group.Name}"
+            );
         }
 
         return new SubscriptionConfigurationBuilder(subscription);
+    }
+
+    public void ScheduleRecurringMessage<TMessage>(
+        string name,
+        string cronExpression,
+        string streamName,
+        TMessage message
+    ) where TMessage : class
+    {
+        if (!RecurringMessageRegistry.TryAdd(name, out var recurringMessage))
+        {
+            throw new InvalidOperationException($"There is already a recurring message with the name {name}");
+        }
+
+        if (message is not Message envelope)
+        {
+            envelope = new Message(message);
+        }
+
+        recurringMessage.CronExpression = cronExpression;
+        recurringMessage.StreamName = streamName;
+        recurringMessage.Message = envelope;
     }
 }

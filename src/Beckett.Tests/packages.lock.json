@@ -347,11 +347,18 @@
       "beckett": {
         "type": "Project",
         "dependencies": {
+          "Cronos": "[0.11.0, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[9.0.5, )",
           "Npgsql": "[9.0.3, )",
           "OpenTelemetry": "[1.12.0, )",
           "Polly": "[8.5.2, )"
         }
+      },
+      "Cronos": {
+        "type": "CentralTransitive",
+        "requested": "[0.11.0, )",
+        "resolved": "0.11.0",
+        "contentHash": "ovNrFIuKTbeNYx+1Tne8DkY/nJ+bRoS0/bTrCBzeAuMvLbX2nJprwcdRqZIwwLRsaghqBU932QvJ6mryTycc/A=="
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",

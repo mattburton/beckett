@@ -457,6 +457,22 @@ CREATE TABLE beckett.migrations (
 
 
 --
+-- Name: recurring_messages; Type: TABLE; Schema: beckett; Owner: -
+--
+
+CREATE TABLE beckett.recurring_messages (
+    name text NOT NULL,
+    cron_expression text NOT NULL,
+    stream_name text NOT NULL,
+    type text NOT NULL,
+    data jsonb NOT NULL,
+    metadata jsonb NOT NULL,
+    next_occurrence timestamp with time zone,
+    "timestamp" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: scheduled_messages; Type: TABLE; Schema: beckett; Owner: -
 --
 
@@ -611,6 +627,14 @@ ALTER TABLE ONLY beckett.migrations
 
 
 --
+-- Name: recurring_messages recurring_messages_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.recurring_messages
+    ADD CONSTRAINT recurring_messages_pkey PRIMARY KEY (name);
+
+
+--
 -- Name: scheduled_messages scheduled_messages_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
@@ -674,6 +698,13 @@ CREATE INDEX ix_messages_active_global_read_stream ON beckett.messages_active US
 --
 
 CREATE INDEX ix_messages_active_tenant_stream_category ON beckett.messages_active USING btree (((metadata ->> '$tenant'::text)), beckett.stream_category(stream_name)) WHERE ((metadata ->> '$tenant'::text) IS NOT NULL);
+
+
+--
+-- Name: ix_recurring_messages_next_occurrence; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE INDEX ix_recurring_messages_next_occurrence ON beckett.recurring_messages USING btree (next_occurrence) WHERE (next_occurrence IS NOT NULL);
 
 
 --
