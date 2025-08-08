@@ -25,7 +25,9 @@ public class MessagesQuery(
             LIMIT $4;
         """;
 
-        command.CommandText = Query.Build(nameof(MessagesQuery), sql, out var prepare);
+        const string key = "MessageStore.Messages.Query";
+
+        command.CommandText = Query.Build(key, sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });

@@ -1,3 +1,4 @@
+@using Beckett.Database.Models
 @inherits Component<Messages.ViewModel>
 @layout Layout
 
@@ -5,7 +6,7 @@
   <div class="d-flex justify-content-between">
     <ol class="breadcrumb p-3 mb-0 rounded-3">
       <li class="breadcrumb-item active" aria-current="page">
-        Scheduled Messages
+        Recurring Messages
       </li>
     </ol>
     <Paging ViewModel="Model"></Paging>
@@ -20,31 +21,40 @@
   <table id="list-view" class="table table-striped">
     <thead>
     <tr>
-      <th style="width: 22em;">Message ID</th>
-      <th>Stream Name</th>
+      <th>Name</th>
       <th>Type</th>
-      <th style="width: 16em;">Deliver At</th>
+      <th>Stream Name</th>
+      <th>Cron Expression</th>
+      <th style="width: 16em;">Next Occurrence</th>
     </tr>
     </thead>
     <tbody>
-    @foreach (var message in Model.Messages)
+    @foreach (var message in Model.RecurringMessages)
     {
       <tr>
         <td>
-          <a href="@Dashboard.Prefix/scheduled/@message.Id">@message.Id</a>
+          <a href="@Dashboard.Prefix/recurring/@HttpUtility.UrlEncode(message.Name)">@message.Name</a>
         </td>
-        <td>@message.StreamName</td>
         <td>@message.Type</td>
+        <td>@message.StreamName</td>
+        <td><code>@message.CronExpression</code></td>
         <td>
-          <div class="timestamp">@message.DeliverAt.ToString("O")</div>
+          @if (message.NextOccurrence.HasValue)
+          {
+            <span class="timestamp">@message.NextOccurrence.Value.ToString("O")</span>
+          }
+          else
+          {
+            <span class="text-muted">-</span>
+          }
         </td>
       </tr>
     }
-    @if (Model.Messages.Count == 0)
+    @if (Model.RecurringMessages.Count == 0)
     {
       <tr>
-        <td colspan="4">
-          No scheduled messages found.
+        <td colspan="5">
+          No recurring messages found.
         </td>
       </tr>
     }
@@ -55,16 +65,14 @@
 @code {
 
   public record ViewModel(
-    IReadOnlyList<ViewModel.Message> Messages,
+    IReadOnlyList<PostgresRecurringMessage> RecurringMessages,
     string? Query,
     int Page,
     int PageSize,
     int TotalResults
   ) : IPagedViewModel
   {
-    public string UrlTemplate => $"{Dashboard.Prefix}/scheduled?page={{0}}&pageSize={{1}}&query={{2}}";
-
-    public record Message(Guid Id, string StreamName, string Type, DateTimeOffset DeliverAt);
+    public string UrlTemplate => $"{Dashboard.Prefix}/recurring?page={{0}}&pageSize={{1}}&query={{2}}";
   }
 
 }

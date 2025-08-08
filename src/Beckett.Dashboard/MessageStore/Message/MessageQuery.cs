@@ -31,7 +31,9 @@ public class MessageQuery(Guid id) : IPostgresDatabaseQuery<MessageResult?>
             AND m.archived = false;
         """;
 
-        command.CommandText = Query.Build(nameof(MessageQuery), sql, out var prepare);
+        const string key = "MessageStore.Message.Query";
+
+        command.CommandText = Query.Build(key, sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
 

@@ -22,7 +22,9 @@ public class MessagesQuery(
             LIMIT $3;
         """;
 
-        command.CommandText = Query.Build(nameof(Query), sql, out var prepare);
+        const string key = "Scheduled.Message.Query";
+
+        command.CommandText = Query.Build(key, sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, IsNullable = true });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
