@@ -22,7 +22,9 @@ public class MessageQuery(Guid id) : IPostgresDatabaseQuery<Message.ViewModel?>
             WHERE id = $1;
         """;
 
-        command.CommandText = Query.Build(nameof(MessageQuery), sql, out var prepare);
+        const string key = "Scheduled.Message.Query";
+
+        command.CommandText = Query.Build(key, sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid });
 

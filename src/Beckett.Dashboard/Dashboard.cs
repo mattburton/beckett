@@ -69,6 +69,7 @@ public enum Area
 {
     Home,
     MessageStore,
+    Recurring,
     Scheduled,
     Subscriptions
 }

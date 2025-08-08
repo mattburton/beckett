@@ -1,0 +1,25 @@
+@layout Layout
+
+<nav style="--bs-breadcrumb-divider: '>';" class="bg-body-tertiary" aria-label="breadcrumb">
+  <div class="d-flex justify-content-between">
+    <ol class="breadcrumb p-3 mb-0 rounded-3">
+      <li class="breadcrumb-item">
+        <a class="link-body-emphasis fw-semibold" href="@Dashboard.Prefix/recurring">
+          Recurring Messages
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        Not Found
+      </li>
+    </ol>
+  </div>
+</nav>
+
+<div class="alert alert-warning m-4" role="alert">
+  <h4 class="alert-heading">Recurring Message Not Found</h4>
+  <p>The recurring message you're looking for could not be found.</p>
+  <hr>
+  <p class="mb-0">
+    <a href="@Dashboard.Prefix/recurring" class="btn btn-outline-warning">Back to Recurring Messages</a>
+  </p>
+</div>
