@@ -33,16 +33,18 @@ public interface IMessageScheduler
     /// <summary>
     /// Schedule a recurring message
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="cronExpression"></param>
-    /// <param name="streamName"></param>
-    /// <param name="message"></param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="name">The name of the recurring message</param>
+    /// <param name="cronExpression">The cron expression for the recurring message</param>
+    /// <param name="timeZone">The time zone used to evaluate the cron schedule</param>
+    /// <param name="streamName">The stream to append the message to</param>
+    /// <param name="message">The message to send</param>
+    /// <param name="cancellationToken">TCancellation token</param>
     /// <typeparam name="TMessage"></typeparam>
     /// <returns></returns>
     Task ScheduleRecurringMessage<TMessage>(
         string name,
         string cronExpression,
+        TimeZoneInfo timeZone,
         string streamName,
         TMessage message,
         CancellationToken cancellationToken

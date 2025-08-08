@@ -19,6 +19,7 @@ public class GetRecurringMessagesToDeliver(
             SELECT
                 name,
                 cron_expression,
+                time_zone_id,
                 stream_name,
                 type,
                 data,

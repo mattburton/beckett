@@ -60,6 +60,7 @@ public class MessageScheduler(
     public async Task ScheduleRecurringMessage<TMessage>(
         string name,
         string cronExpression,
+        TimeZoneInfo timeZone,
         string streamName,
         TMessage message,
         CancellationToken cancellationToken
@@ -70,7 +71,7 @@ public class MessageScheduler(
             throw new InvalidOperationException("Invalid cron expression");
         }
 
-        var nextOccurrence = parsedCronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, TimeZoneInfo.Utc);
+        var nextOccurrence = parsedCronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, timeZone);
 
         if (nextOccurrence == null)
         {
@@ -86,9 +87,10 @@ public class MessageScheduler(
             new AddOrUpdateRecurringMessage(
                 name,
                 cronExpression,
+                timeZone.Id,
                 streamName,
                 envelope,
-                nextOccurrence.Value
+                nextOccurrence.Value.ToUniversalTime()
             ),
             cancellationToken
         );

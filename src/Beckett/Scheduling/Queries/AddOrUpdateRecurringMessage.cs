@@ -7,6 +7,7 @@ namespace Beckett.Scheduling.Queries;
 public class AddOrUpdateRecurringMessage(
     string name,
     string cronExpression,
+    string timeZoneId,
     string streamName,
     Message message,
     DateTimeOffset nextOccurrence
@@ -19,15 +20,17 @@ public class AddOrUpdateRecurringMessage(
             INSERT INTO beckett.recurring_messages (
                 name,
                 cron_expression,
+                time_zone_id,
                 stream_name,
                 type,
                 data,
                 metadata,
                 next_occurrence
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (name) DO UPDATE
               SET cron_expression = excluded.cron_expression,
+                  time_zone_id = excluded.time_zone_id,
                   stream_name = excluded.stream_name,
                   data = excluded.data,
                   metadata = excluded.metadata,
@@ -36,6 +39,7 @@ public class AddOrUpdateRecurringMessage(
 
         command.CommandText = Query.Build(nameof(AddOrUpdateRecurringMessage), sql, out var prepare);
 
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
@@ -51,11 +55,12 @@ public class AddOrUpdateRecurringMessage(
 
         command.Parameters[0].Value = name;
         command.Parameters[1].Value = cronExpression;
-        command.Parameters[2].Value = streamName;
-        command.Parameters[3].Value = message.Type;
-        command.Parameters[4].Value = message.Data;
-        command.Parameters[5].Value = message.SerializedMetadata;
-        command.Parameters[6].Value = nextOccurrence;
+        command.Parameters[2].Value = timeZoneId;
+        command.Parameters[3].Value = streamName;
+        command.Parameters[4].Value = message.Type;
+        command.Parameters[5].Value = message.Data;
+        command.Parameters[6].Value = message.SerializedMetadata;
+        command.Parameters[7].Value = nextOccurrence;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

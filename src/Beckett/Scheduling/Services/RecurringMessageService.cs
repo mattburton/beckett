@@ -126,11 +126,11 @@ public class RecurringMessageService(
         command.CommandText = Query.Build(nameof(UpdateRecurringMessageNextOccurrence), sql, out _);
 
         var cronExpression = CronExpression.Parse(recurringMessage.CronExpression);
-
-        var nextOccurrence = cronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, TimeZoneInfo.Utc);
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(recurringMessage.TimeZoneId);
+        var nextOccurrence = cronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, timeZone);
 
         command.Parameters.Add(new NpgsqlParameter<string> { Value = recurringMessage.Name });
-        command.Parameters.Add(new NpgsqlParameter<DateTimeOffset> { Value = nextOccurrence, IsNullable = true });
+        command.Parameters.Add(new NpgsqlParameter<DateTimeOffset> { Value = nextOccurrence?.ToUniversalTime(), IsNullable = true });
 
         batch.BatchCommands.Add(command);
     }

@@ -14,7 +14,16 @@ public class MessageQuery(string name) : IPostgresDatabaseQuery<PostgresRecurrin
     {
         //language=sql
         const string sql = """
-            SELECT name, cron_expression, stream_name, type, data, metadata, next_occurrence, timestamp
+            SELECT
+                name,
+                cron_expression,
+                time_zone_id,
+                stream_name,
+                type,
+                data,
+                metadata,
+                next_occurrence,
+                timestamp
             FROM beckett.recurring_messages
             WHERE name = $1;
         """;

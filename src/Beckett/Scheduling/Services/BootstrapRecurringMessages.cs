@@ -11,6 +11,7 @@ public class BootstrapRecurringMessages(IMessageScheduler messageScheduler) : IH
             await messageScheduler.ScheduleRecurringMessage(
                 recurringMessage.Name,
                 recurringMessage.CronExpression,
+                TimeZoneInfo.FindSystemTimeZoneById(recurringMessage.TimeZoneId),
                 recurringMessage.StreamName,
                 recurringMessage.Message,
                 cancellationToken

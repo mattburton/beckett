@@ -8,6 +8,7 @@ public class PostgresRecurringMessage
 {
     public required string Name { get; init; }
     public required string CronExpression { get; init; }
+    public required string TimeZoneId { get; init; }
     public required string StreamName { get; init; }
     public required string Type { get; init; }
     public required JsonElement Data { get; init; }
@@ -17,19 +18,20 @@ public class PostgresRecurringMessage
 
     public static PostgresRecurringMessage From(NpgsqlDataReader reader)
     {
-        using var data = reader.GetFieldValue<JsonDocument>(4);
-        using var metadata = reader.GetFieldValue<JsonDocument>(5);
+        using var data = reader.GetFieldValue<JsonDocument>(5);
+        using var metadata = reader.GetFieldValue<JsonDocument>(6);
 
         return new PostgresRecurringMessage
         {
             Name = reader.GetFieldValue<string>(0),
             CronExpression = reader.GetFieldValue<string>(1),
-            StreamName = reader.GetFieldValue<string>(2),
-            Type = reader.GetFieldValue<string>(3),
+            TimeZoneId = reader.GetFieldValue<string>(2),
+            StreamName = reader.GetFieldValue<string>(3),
+            Type = reader.GetFieldValue<string>(4),
             Data = data.RootElement.Clone(),
             Metadata = metadata.RootElement.Clone(),
-            NextOccurrence = reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset?>(6),
-            Timestamp = reader.GetFieldValue<DateTimeOffset>(7)
+            NextOccurrence = reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset?>(7),
+            Timestamp = reader.GetFieldValue<DateTimeOffset>(8)
         };
     }
 

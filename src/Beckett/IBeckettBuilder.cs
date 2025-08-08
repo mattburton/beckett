@@ -79,12 +79,14 @@ public interface IBeckettBuilder
     /// </summary>
     /// <param name="name">The name of the recurring message</param>
     /// <param name="cronExpression">The cron expression for the recurring message</param>
+    /// <param name="timeZone">The time zone used to evaluate the cron schedule</param>
     /// <param name="streamName">The stream to append the message to</param>
     /// <param name="message">The message to send</param>
     /// <typeparam name="TMessage"></typeparam>
     void ScheduleRecurringMessage<TMessage>(
         string name,
         string cronExpression,
+        TimeZoneInfo timeZone,
         string streamName,
         TMessage message
     ) where TMessage : class;
@@ -142,6 +144,7 @@ public class BeckettBuilder(BeckettOptions options) : IBeckettBuilder
     public void ScheduleRecurringMessage<TMessage>(
         string name,
         string cronExpression,
+        TimeZoneInfo timeZone,
         string streamName,
         TMessage message
     ) where TMessage : class
@@ -157,6 +160,7 @@ public class BeckettBuilder(BeckettOptions options) : IBeckettBuilder
         }
 
         recurringMessage.CronExpression = cronExpression;
+        recurringMessage.TimeZoneId = timeZone.Id;
         recurringMessage.StreamName = streamName;
         recurringMessage.Message = envelope;
     }
