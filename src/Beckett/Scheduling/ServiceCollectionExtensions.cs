@@ -16,6 +16,10 @@ public static class ServiceCollectionExtensions
             return;
         }
 
+        services.AddHostedService<BootstrapRecurringMessages>();
+
+        services.AddHostedService<RecurringMessageService>();
+
         services.AddHostedService<ScheduledMessageService>();
     }
 }

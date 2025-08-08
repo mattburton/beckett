@@ -124,6 +124,28 @@ CREATE INDEX ix_scheduled_messages_deliver_at ON __schema__.scheduled_messages (
 GRANT UPDATE, DELETE ON __schema__.scheduled_messages TO beckett;
 
 -------------------------------------------------
+-- RECURRING MESSAGE SUPPORT
+-------------------------------------------------
+
+CREATE TABLE __schema__.recurring_messages
+(
+  name text NOT NULL,
+  cron_expression text NOT NULL,
+  stream_name text NOT NULL,
+  type text NOT NULL,
+  data jsonb NOT NULL,
+  metadata jsonb NOT NULL,
+  next_occurrence timestamp with time zone NULL,
+  timestamp timestamp with time zone DEFAULT now() NOT NULL,
+  PRIMARY KEY (name)
+);
+
+CREATE INDEX ix_recurring_messages_next_occurrence ON __schema__.recurring_messages (next_occurrence ASC)
+  WHERE next_occurrence IS NOT NULL;
+
+GRANT UPDATE, DELETE ON __schema__.recurring_messages TO beckett;
+
+-------------------------------------------------
 -- SUBSCRIPTION SUPPORT
 -------------------------------------------------
 

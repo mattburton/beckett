@@ -3,6 +3,7 @@ using Beckett.Database.Types;
 using Beckett.Messages;
 using Beckett.OpenTelemetry;
 using Beckett.Scheduling.Queries;
+using Cronos;
 
 namespace Beckett.Scheduling;
 
@@ -17,12 +18,12 @@ public class MessageScheduler(
         return database.Execute(new CancelScheduledMessage(id), cancellationToken);
     }
 
-    public async Task<Guid> ScheduleMessage(
+    public async Task<Guid> ScheduleMessage<TMessage>(
         string streamName,
-        Message message,
-        DateTimeOffset deliverAt,
+        TMessage message,
+        TimeSpan delay,
         CancellationToken cancellationToken
-    )
+    ) where TMessage : class
     {
         await using var connection = dataSource.CreateConnection();
 
@@ -34,12 +35,17 @@ public class MessageScheduler(
 
         var id = MessageId.New();
 
-        message.Metadata.Prepend(activityMetadata);
+        if (message is not Message envelope)
+        {
+            envelope = new Message(message);
+        }
+
+        envelope.Metadata.Prepend(activityMetadata);
 
         var scheduledMessage = ScheduledMessageType.From(
             id,
-            message,
-            deliverAt
+            envelope,
+            DateTimeOffset.UtcNow.Add(delay)
         );
 
         await database.Execute(
@@ -49,5 +55,42 @@ public class MessageScheduler(
         );
 
         return id;
+    }
+
+    public async Task ScheduleRecurringMessage<TMessage>(
+        string name,
+        string cronExpression,
+        string streamName,
+        TMessage message,
+        CancellationToken cancellationToken
+    ) where TMessage : class
+    {
+        if (!CronExpression.TryParse(cronExpression, out var parsedCronExpression))
+        {
+            throw new InvalidOperationException("Invalid cron expression");
+        }
+
+        var nextOccurrence = parsedCronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, TimeZoneInfo.Utc);
+
+        if (nextOccurrence == null)
+        {
+            throw new InvalidOperationException("Unable to calculate next occurrence for cron expression");
+        }
+
+        if (message is not Message envelope)
+        {
+            envelope = new Message(message);
+        }
+
+        await database.Execute(
+            new AddOrUpdateRecurringMessage(
+                name,
+                cronExpression,
+                streamName,
+                envelope,
+                nextOccurrence.Value
+            ),
+            cancellationToken
+        );
     }
 }

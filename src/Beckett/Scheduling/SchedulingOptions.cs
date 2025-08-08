@@ -12,4 +12,15 @@ public class SchedulingOptions
     /// 10 seconds.
     /// </summary>
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Configure the batch size to use when reading recurring messages that are due to send. Defaults to 500.
+    /// </summary>
+    public int RecurringBatchSize { get; set; } = 500;
+
+    /// <summary>
+    /// Configure the polling interval for how often to check for recurring messages that are due to send. Defaults to
+    /// 10 seconds.
+    /// </summary>
+    public TimeSpan RecurringPollingInterval { get; set; } = TimeSpan.FromSeconds(10);
 }
