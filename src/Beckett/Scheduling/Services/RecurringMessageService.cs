@@ -54,8 +54,7 @@ public class RecurringMessageService(
                 foreach (var streamGroup in results.GroupBy(x => x.StreamName))
                 {
                     recurringMessages.AddRange(
-                        streamGroup.Select(
-                            recurringMessage => new ScheduledMessageContext(
+                        streamGroup.Select(recurringMessage => new ScheduledMessageContext(
                                 recurringMessage.StreamName,
                                 recurringMessage.ToMessage()
                             )
@@ -67,10 +66,12 @@ public class RecurringMessageService(
 
                 foreach (var recurringMessagesForStream in recurringMessages.GroupBy(x => x.StreamName))
                 {
+                    var correlationId = Guid.NewGuid().ToString();
+
                     await messageStore.AppendToStream(
                         recurringMessagesForStream.Key,
                         ExpectedVersion.Any,
-                        recurringMessagesForStream.Select(x => x.Message),
+                        recurringMessagesForStream.Select(x => x.Message.WithCorrelationId(correlationId)),
                         stoppingToken
                     );
                 }
@@ -130,7 +131,9 @@ public class RecurringMessageService(
         var nextOccurrence = cronExpression.GetNextOccurrence(DateTimeOffset.UtcNow, timeZone);
 
         command.Parameters.Add(new NpgsqlParameter<string> { Value = recurringMessage.Name });
-        command.Parameters.Add(new NpgsqlParameter<DateTimeOffset> { Value = nextOccurrence?.ToUniversalTime(), IsNullable = true });
+        command.Parameters.Add(
+            new NpgsqlParameter<DateTimeOffset> { Value = nextOccurrence?.ToUniversalTime(), IsNullable = true }
+        );
 
         batch.BatchCommands.Add(command);
     }
