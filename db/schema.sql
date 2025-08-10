@@ -101,29 +101,8 @@ END;
 $$;
 
 
---
--- Name: checkpoint_preprocessor(); Type: FUNCTION; Schema: beckett; Owner: -
---
-
-CREATE FUNCTION beckett.checkpoint_preprocessor() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  IF (TG_OP = 'UPDATE') THEN
-    NEW.updated_at = now();
-  END IF;
-
-  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
-    NEW.process_at = now();
-  END IF;
-
-  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
-    PERFORM pg_notify('beckett:checkpoints', NEW.subscription_id::text);
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
+-- Checkpoint preprocessor function removed in v0.23.1
+-- Checkpoint management is now handled entirely by application queries
 
 
 --
@@ -371,6 +350,26 @@ CREATE TABLE beckett.checkpoints (
 
 
 --
+-- Name: checkpoints_ready; Type: TABLE; Schema: beckett; Owner: -
+--
+
+CREATE TABLE beckett.checkpoints_ready (
+    id bigint NOT NULL,
+    process_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: checkpoints_reserved; Type: TABLE; Schema: beckett; Owner: -
+--
+
+CREATE TABLE beckett.checkpoints_reserved (
+    id bigint NOT NULL,
+    reserved_until timestamp with time zone NOT NULL
+);
+
+
+--
 -- Name: checkpoints_id_seq; Type: SEQUENCE; Schema: beckett; Owner: -
 --
 
@@ -594,6 +593,22 @@ ALTER TABLE ONLY beckett.checkpoints
 
 
 --
+-- Name: checkpoints_ready checkpoints_ready_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.checkpoints_ready
+    ADD CONSTRAINT checkpoints_ready_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: checkpoints_reserved checkpoints_reserved_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.checkpoints_reserved
+    ADD CONSTRAINT checkpoints_reserved_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: messages messages_id_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
@@ -758,6 +773,20 @@ CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints USING btree (subsc
 
 
 --
+-- Name: ix_checkpoints_ready_process_at; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE INDEX ix_checkpoints_ready_process_at ON beckett.checkpoints_ready USING btree (process_at);
+
+
+--
+-- Name: ix_checkpoints_reserved_reserved_until; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE INDEX ix_checkpoints_reserved_reserved_until ON beckett.checkpoints_reserved USING btree (reserved_until);
+
+
+--
 -- Name: ix_messages_active_correlation_id_global_position; Type: INDEX; Schema: beckett; Owner: -
 --
 
@@ -841,11 +870,8 @@ ALTER INDEX beckett.messages_pkey ATTACH PARTITION beckett.messages_archived_pke
 ALTER INDEX beckett.messages_stream_name_stream_position_archived_key ATTACH PARTITION beckett.messages_archived_stream_name_stream_position_archived_key;
 
 
---
--- Name: checkpoints checkpoint_preprocessor; Type: TRIGGER; Schema: beckett; Owner: -
---
-
-CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkpoints FOR EACH ROW EXECUTE FUNCTION beckett.checkpoint_preprocessor();
+-- Checkpoint preprocessor trigger removed in v0.23.1
+-- Checkpoint management is now handled entirely by application queries
 
 
 --
@@ -862,6 +888,22 @@ ALTER TABLE ONLY beckett.checkpoints
 
 ALTER TABLE ONLY beckett.subscriptions
     ADD CONSTRAINT subscriptions_subscription_group_id_fkey FOREIGN KEY (subscription_group_id) REFERENCES beckett.subscription_groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: checkpoints_ready checkpoints_ready_id_fkey; Type: FK CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.checkpoints_ready
+    ADD CONSTRAINT checkpoints_ready_id_fkey FOREIGN KEY (id) REFERENCES beckett.checkpoints(id) ON DELETE CASCADE;
+
+
+--
+-- Name: checkpoints_reserved checkpoints_reserved_id_fkey; Type: FK CONSTRAINT; Schema: beckett; Owner: -
+--
+
+ALTER TABLE ONLY beckett.checkpoints_reserved
+    ADD CONSTRAINT checkpoints_reserved_id_fkey FOREIGN KEY (id) REFERENCES beckett.checkpoints(id) ON DELETE CASCADE;
 
 
 --

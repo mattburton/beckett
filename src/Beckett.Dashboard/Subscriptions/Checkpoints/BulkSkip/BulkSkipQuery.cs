@@ -21,7 +21,8 @@ public class BulkSkipQuery(
                 reserved_until = NULL,
                 status = 'active',
                 retry_attempts = 0,
-                retries = NULL
+                retries = NULL,
+                updated_at = now()
             WHERE id = ANY($1);
         """;
 

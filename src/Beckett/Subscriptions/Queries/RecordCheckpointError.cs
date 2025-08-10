@@ -26,22 +26,29 @@ public record RecordCheckpointError(
                     reserved_until = NULL,
                     status = $3,
                     retry_attempts = $4,
+                    updated_at = now(),
                     retries = array_append(
                         coalesce(retries, array[]::beckett.retry[]),
                         row($4, $5, now())::beckett.retry
                     )
                 WHERE id = $1
-                RETURNING id, stream_version, stream_position, status
+                RETURNING id, stream_version, stream_position, status, subscription_id
             ),
             deleted_reservation AS (
                 DELETE FROM beckett.checkpoints_reserved WHERE id = $1
                 RETURNING id
+            ),
+            inserted_ready AS (
+                INSERT INTO beckett.checkpoints_ready (id, process_at)
+                SELECT uc.id, $6
+                FROM updated_checkpoint uc
+                WHERE $6 IS NOT NULL AND uc.status = 'retry'
+                ON CONFLICT (id) DO UPDATE SET process_at = EXCLUDED.process_at
+                RETURNING id
             )
-            INSERT INTO beckett.checkpoints_ready (id, process_at)
-            SELECT uc.id, $6
+            SELECT pg_notify('beckett:checkpoints', uc.subscription_id::text)
             FROM updated_checkpoint uc
-            WHERE $6 IS NOT NULL AND uc.status = 'retry'
-            ON CONFLICT DO NOTHING;
+            WHERE EXISTS (SELECT 1 FROM inserted_ready ir WHERE ir.id = uc.id);
         """;
 
         command.CommandText = Query.Build(nameof(RecordCheckpointError), sql, out var prepare);

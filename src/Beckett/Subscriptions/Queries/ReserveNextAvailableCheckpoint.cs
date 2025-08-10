@@ -37,7 +37,8 @@ public class ReserveNextAvailableCheckpoint(
             ),
             updated_checkpoint AS (
                 UPDATE beckett.checkpoints c
-                SET reserved_until = now() + $2
+                SET reserved_until = now() + $2,
+                    updated_at = now()
                 FROM reserved_checkpoint rc
                 WHERE c.id = rc.id
                 RETURNING c.id, c.subscription_id, c.stream_name, c.stream_position, 
