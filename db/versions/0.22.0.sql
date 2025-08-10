@@ -16,29 +16,25 @@ FROM beckett.subscriptions
 WHERE group_name IS NOT NULL
 ON CONFLICT (name) DO NOTHING;
 
--- Step 3: Add new columns to subscriptions table
-ALTER TABLE beckett.subscriptions
-ADD COLUMN IF NOT EXISTS id bigint GENERATED ALWAYS AS IDENTITY,
-ADD COLUMN IF NOT EXISTS subscription_group_id bigint;
+-- Step 3: Create new subscriptions table with optimal column ordering
+CREATE TABLE beckett.subscriptions_new
+(
+  id bigint GENERATED ALWAYS AS IDENTITY,
+  subscription_group_id bigint NOT NULL,
+  name text NOT NULL,
+  status beckett.subscription_status DEFAULT 'uninitialized' NOT NULL,
+  replay_target_position bigint NULL
+);
 
--- Step 4: Populate subscription_group_id foreign keys
-UPDATE beckett.subscriptions
-SET subscription_group_id = sg.id
-FROM beckett.subscription_groups sg
-WHERE beckett.subscriptions.group_name = sg.name;
+-- Step 4: Populate new subscriptions table
+INSERT INTO beckett.subscriptions_new (subscription_group_id, name, status, replay_target_position)
+SELECT sg.id, s.name, s.status, s.replay_target_position
+FROM beckett.subscriptions s
+INNER JOIN beckett.subscription_groups sg ON s.group_name = sg.name;
 
--- Step 5: Add foreign key constraint
-ALTER TABLE beckett.subscriptions
-ADD CONSTRAINT fk_subscriptions_subscription_group_id
-FOREIGN KEY (subscription_group_id) REFERENCES beckett.subscription_groups(id) ON DELETE CASCADE;
-
--- Step 5a: Update unique constraints for subscriptions table
-ALTER TABLE beckett.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_group_name_name_key;
-ALTER TABLE beckett.subscriptions ADD CONSTRAINT subscriptions_subscription_group_id_name_key UNIQUE (subscription_group_id, name);
-
--- Step 5b: Ensure $global subscriptions exist for all groups that have checkpoints with name = '$global'
-INSERT INTO beckett.subscriptions (subscription_group_id, group_name, name, status)
-SELECT DISTINCT sg.id, sg.name, '$global', 'active'::beckett.subscription_status
+-- Step 5: Ensure $global subscriptions exist for all groups that have checkpoints with name = '$global'
+INSERT INTO beckett.subscriptions_new (subscription_group_id, name, status)
+SELECT DISTINCT sg.id, '$global', 'active'::beckett.subscription_status
 FROM beckett.subscription_groups sg
 WHERE EXISTS (
     SELECT 1
@@ -46,122 +42,150 @@ WHERE EXISTS (
     WHERE c.group_name = sg.name
     AND c.name = '$global'
 )
-ON CONFLICT (subscription_group_id, name) DO UPDATE SET status = 'active';
+ON CONFLICT DO NOTHING;
 
--- Step 6: Add new subscription_id column to checkpoints
-ALTER TABLE beckett.checkpoints
-ADD COLUMN IF NOT EXISTS subscription_id bigint;
+-- Step 6: Add constraints to new subscriptions table
+ALTER TABLE beckett.subscriptions_new ADD CONSTRAINT subscriptions_new_pkey PRIMARY KEY (id);
+ALTER TABLE beckett.subscriptions_new ADD CONSTRAINT subscriptions_new_subscription_group_id_name_key UNIQUE (subscription_group_id, name);
+ALTER TABLE beckett.subscriptions_new ADD CONSTRAINT subscriptions_new_subscription_group_id_fkey 
+    FOREIGN KEY (subscription_group_id) REFERENCES beckett.subscription_groups(id) ON DELETE CASCADE;
 
--- Step 7: Populate subscription_id foreign keys in batches
+-- Step 7: Drop old subscriptions table and rename new one
+DROP TABLE beckett.subscriptions CASCADE;
+ALTER TABLE beckett.subscriptions_new RENAME TO subscriptions;
+
+-- Rename constraints to remove "new" suffix
+ALTER TABLE beckett.subscriptions RENAME CONSTRAINT subscriptions_new_pkey TO subscriptions_pkey;
+ALTER TABLE beckett.subscriptions RENAME CONSTRAINT subscriptions_new_subscription_group_id_name_key TO subscriptions_subscription_group_id_name_key;
+ALTER TABLE beckett.subscriptions RENAME CONSTRAINT subscriptions_new_subscription_group_id_fkey TO subscriptions_subscription_group_id_fkey;
+
+GRANT UPDATE, DELETE ON beckett.subscriptions TO beckett;
+
+-- Step 8: Create new checkpoints table with optimal column ordering
+CREATE TABLE beckett.checkpoints_new
+(
+  id bigint GENERATED ALWAYS AS IDENTITY,
+  subscription_id bigint NOT NULL,
+  stream_version bigint NOT NULL DEFAULT 0,
+  stream_position bigint NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  process_at timestamp with time zone NULL,
+  reserved_until timestamp with time zone NULL,
+  retry_attempts int NOT NULL DEFAULT 0,
+  lagging boolean GENERATED ALWAYS AS (stream_version > stream_position) STORED,
+  status beckett.checkpoint_status NOT NULL DEFAULT 'active',
+  stream_name text NOT NULL,
+  retries beckett.retry[] NULL
+);
+
+-- Step 9: Populate new checkpoints table in batches
 DO $$
 DECLARE
     batch_size INT := 10000;
     affected_rows INT;
-    total_updated BIGINT := 0;
+    total_migrated BIGINT := 0;
     start_time TIMESTAMP;
     last_id BIGINT := 0;
 BEGIN
     start_time := clock_timestamp();
-    RAISE NOTICE 'Starting subscription_id population at %', start_time;
+    RAISE NOTICE 'Starting checkpoints migration at %', start_time;
 
-    -- First check if we have any rows to update
+    -- First check total rows to migrate
     SELECT count(*) INTO affected_rows
-    FROM beckett.checkpoints
-    WHERE subscription_id IS NULL;
+    FROM beckett.checkpoints;
 
-    RAISE NOTICE 'Found % checkpoints needing subscription_id population', affected_rows;
+    RAISE NOTICE 'Found % checkpoints to migrate', affected_rows;
 
     IF affected_rows = 0 THEN
-        RAISE NOTICE 'No checkpoints need subscription_id population';
+        RAISE NOTICE 'No checkpoints to migrate';
         RETURN;
     END IF;
 
-    -- Report on $global checkpoints specifically
-    SELECT count(*) INTO affected_rows
-    FROM beckett.checkpoints
-    WHERE subscription_id IS NULL
-    AND name = '$global';
-
-    RAISE NOTICE 'Found % $global checkpoints that will be migrated', affected_rows;
-
     LOOP
-        -- Update in batches using ID range to avoid re-scanning
-        UPDATE beckett.checkpoints c
-        SET subscription_id = s.id
-        FROM beckett.subscriptions s
-        WHERE c.subscription_id IS NULL
-        AND c.id > last_id
-        AND c.group_name = s.group_name
-        AND c.name = s.name
+        -- Migrate in batches using ID range to avoid re-scanning
+        INSERT INTO beckett.checkpoints_new (
+            subscription_id, stream_version, stream_position, created_at, updated_at,
+            process_at, reserved_until, retry_attempts, status, stream_name, retries
+        )
+        SELECT 
+            s.id as subscription_id,
+            c.stream_version, c.stream_position, c.created_at, c.updated_at,
+            c.process_at, c.reserved_until, c.retry_attempts, c.status, c.stream_name, c.retries
+        FROM beckett.checkpoints c
+        INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+        INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id AND sg.name = c.group_name
+        WHERE c.id > last_id
         AND c.id IN (
             SELECT c2.id
             FROM beckett.checkpoints c2
-            WHERE c2.subscription_id IS NULL
-            AND c2.id > last_id
+            WHERE c2.id > last_id
             ORDER BY c2.id
             LIMIT batch_size
         );
 
         GET DIAGNOSTICS affected_rows = ROW_COUNT;
-        total_updated := total_updated + affected_rows;
+        total_migrated := total_migrated + affected_rows;
 
         -- Get the highest ID we just processed
         SELECT max(c.id) INTO last_id
         FROM beckett.checkpoints c
-        WHERE c.subscription_id IS NOT NULL
-        AND c.id > last_id;
+        WHERE c.id > last_id
+        AND EXISTS (
+            SELECT 1 FROM beckett.checkpoints_new cn 
+            WHERE cn.stream_name = c.stream_name
+        );
 
-        RAISE NOTICE 'Batch completed: % rows updated (total: %, last_id: %, elapsed: %)',
-            affected_rows, total_updated, last_id, clock_timestamp() - start_time;
+        RAISE NOTICE 'Batch completed: % rows migrated (total: %, last_id: %, elapsed: %)',
+            affected_rows, total_migrated, last_id, clock_timestamp() - start_time;
 
-        -- Exit when no more rows to update
+        -- Exit when no more rows to migrate
         EXIT WHEN affected_rows = 0;
 
         -- Small pause to avoid overwhelming the database
         PERFORM pg_sleep(0.1);
     END LOOP;
 
-    RAISE NOTICE 'Completed subscription_id population. Total updated: %, elapsed: %',
-        total_updated, clock_timestamp() - start_time;
+    RAISE NOTICE 'Completed checkpoints migration. Total migrated: %, elapsed: %',
+        total_migrated, clock_timestamp() - start_time;
 END $$;
 
--- Step 8: Add primary key to subscriptions table first
-ALTER TABLE beckett.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pkey;
-ALTER TABLE beckett.subscriptions ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
+-- Step 10: Add constraints to new checkpoints table
+ALTER TABLE beckett.checkpoints_new ADD CONSTRAINT checkpoints_new_pkey PRIMARY KEY (id);
+ALTER TABLE beckett.checkpoints_new ADD CONSTRAINT checkpoints_new_subscription_id_stream_name_key UNIQUE (subscription_id, stream_name);
+ALTER TABLE beckett.checkpoints_new ADD CONSTRAINT checkpoints_new_subscription_id_fkey
+    FOREIGN KEY (subscription_id) REFERENCES beckett.subscriptions(id) ON DELETE CASCADE;
 
--- Step 8a: Make subscription_id NOT NULL now that all values are populated
-ALTER TABLE beckett.checkpoints
-ALTER COLUMN subscription_id SET NOT NULL;
+-- Step 11: Drop old checkpoints table and rename new one
+DROP TABLE beckett.checkpoints CASCADE;
+ALTER TABLE beckett.checkpoints_new RENAME TO checkpoints;
 
--- Step 8b: Add foreign key constraint for checkpoints
-ALTER TABLE beckett.checkpoints
-ADD CONSTRAINT fk_checkpoints_subscription_id
-FOREIGN KEY (subscription_id) REFERENCES beckett.subscriptions(id) ON DELETE CASCADE;
+-- Rename constraints to remove "new" suffix
+ALTER TABLE beckett.checkpoints RENAME CONSTRAINT checkpoints_new_pkey TO checkpoints_pkey;
+ALTER TABLE beckett.checkpoints RENAME CONSTRAINT checkpoints_new_subscription_id_stream_name_key TO checkpoints_subscription_id_stream_name_key;
+ALTER TABLE beckett.checkpoints RENAME CONSTRAINT checkpoints_new_subscription_id_fkey TO checkpoints_subscription_id_fkey;
 
--- Step 9: Update indexes (drop old ones, create new ones)
-DROP INDEX IF EXISTS beckett.ix_subscriptions_reservation_candidates;
-DROP INDEX IF EXISTS beckett.ix_checkpoints_to_process;
-DROP INDEX IF EXISTS beckett.ix_checkpoints_reserved;
-DROP INDEX IF EXISTS beckett.ix_checkpoints_metrics;
+GRANT UPDATE, DELETE ON beckett.checkpoints TO beckett;
 
+-- Step 12: Create indexes on new tables
 CREATE INDEX ix_subscriptions_reservation_candidates ON beckett.subscriptions (subscription_group_id, name, status)
 WHERE status = 'active' OR status = 'replay';
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON beckett.checkpoints (subscription_id, process_at, reserved_until)
+CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints (subscription_id, process_at, reserved_until)
 WHERE process_at IS NOT NULL AND reserved_until IS NULL;
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON beckett.checkpoints (subscription_id, reserved_until)
-WHERE reserved_until IS NULL;
+CREATE INDEX ix_checkpoints_reserved ON beckett.checkpoints (subscription_id, reserved_until)
+WHERE reserved_until IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON beckett.checkpoints (status, lagging, subscription_id);
+CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints (status, lagging, subscription_id);
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON beckett.checkpoints (subscription_id);
+CREATE INDEX ix_checkpoints_subscription_id ON beckett.checkpoints (subscription_id);
 
--- Step 10: Update unique constraints
-ALTER TABLE beckett.checkpoints DROP CONSTRAINT IF EXISTS checkpoints_group_name_name_stream_name_key;
-ALTER TABLE beckett.checkpoints ADD CONSTRAINT checkpoints_subscription_id_stream_name_key UNIQUE (subscription_id, stream_name);
+-- Step 13: Add checkpoint preprocessor trigger
+CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkpoints
+  FOR EACH ROW EXECUTE FUNCTION beckett.checkpoint_preprocessor();
 
--- Step 11: Update checkpoint type definition
+-- Step 14: Update checkpoint type definition
 DROP TYPE IF EXISTS beckett.checkpoint CASCADE;
 CREATE TYPE beckett.checkpoint AS
 (
@@ -384,7 +408,7 @@ BEGIN
 END;
 $$;
 
--- Step 14: Clean up - remove old columns after verifying data integrity
-ALTER TABLE beckett.subscriptions DROP COLUMN IF EXISTS group_name;
-ALTER TABLE beckett.checkpoints DROP COLUMN IF EXISTS group_name;
-ALTER TABLE beckett.checkpoints DROP COLUMN IF EXISTS name;
+-- Step 15: Data migration complete - new tables with optimal column ordering are now in place
+-- subscription_groups: uses existing table with id, name
+-- subscriptions: replaced with optimal ordering - id, subscription_group_id, name, status, replay_target_position
+-- checkpoints: replaced with optimal ordering - id, subscription_id, stream_version, stream_position, created_at, updated_at, process_at, reserved_until, retry_attempts, lagging, status, stream_name, retries
