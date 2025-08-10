@@ -5,7 +5,6 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class RecoverExpiredCheckpointReservations(
-    string groupName,
     int batchSize
 ) : IPostgresDatabaseQuery<int>
 {
@@ -17,12 +16,9 @@ public class RecoverExpiredCheckpointReservations(
                 SELECT cr.id, c.stream_version, c.stream_position, c.status
                 FROM beckett.checkpoints_reserved cr
                 INNER JOIN beckett.checkpoints c ON cr.id = c.id
-                INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
-                INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-                WHERE sg.name = $1
-                AND cr.reserved_until <= now()
+                WHERE cr.reserved_until <= now()
                 FOR UPDATE OF cr SKIP LOCKED
-                LIMIT $2
+                LIMIT $1
             ),
             deleted_reservations AS (
                 DELETE FROM beckett.checkpoints_reserved cr
@@ -45,7 +41,6 @@ public class RecoverExpiredCheckpointReservations(
 
         command.CommandText = Query.Build(nameof(RecoverExpiredCheckpointReservations), sql, out var prepare);
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer });
 
         if (prepare)
@@ -53,8 +48,7 @@ public class RecoverExpiredCheckpointReservations(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = batchSize;
+        command.Parameters[0].Value = batchSize;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

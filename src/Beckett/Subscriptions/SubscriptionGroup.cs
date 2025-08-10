@@ -50,20 +50,9 @@ public class SubscriptionGroup(string groupName)
     /// or retry is available for processing, Beckett reserves it for the requesting consumer. The consumer processes it
     /// and no matter the outcome once complete releases the reservation. If the consumer fails to release the
     /// reservation prior to its reservation timeout (process killed due to scaling in, etc...) then a secondary process
-    /// checks for expired reservations on a regular interval - see <see cref="ReservationRecoveryInterval"/> - and
-    /// recovers them.
+    /// checks for expired reservations on a regular interval and recovers them.
     /// </summary>
     public TimeSpan ReservationTimeout { get; set; } = TimeSpan.FromMinutes(5);
-
-    /// <summary>
-    /// Configure the batch size used when recovering expired reservations. Defaults to 100.
-    /// </summary>
-    public int ReservationRecoveryBatchSize { get; set; } = 100;
-
-    /// <summary>
-    /// Configure the interval to check for expired reservations and recover them. Defaults to 1 minute.
-    /// </summary>
-    public TimeSpan ReservationRecoveryInterval { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Configure the batch size used when reading new messages from a stream for subscription processing. Ideally

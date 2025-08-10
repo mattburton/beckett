@@ -22,6 +22,16 @@ public class SubscriptionOptions
     /// </summary>
     public ReplayMode ReplayMode { get; set; } = ReplayMode.All;
 
+    /// <summary>
+    /// Configure the batch size used when recovering expired reservations. Defaults to 100.
+    /// </summary>
+    public int ReservationRecoveryBatchSize { get; set; } = 100;
+
+    /// <summary>
+    /// Configure the interval to check for expired reservations and recover them. Defaults to 1 minute.
+    /// </summary>
+    public TimeSpan ReservationRecoveryInterval { get; set; } = TimeSpan.FromMinutes(1);
+
     public IReadOnlyList<SubscriptionGroup> Groups => _groups.Values.ToArray();
 
     public SubscriptionGroup WithSubscriptionGroup(string name, Action<SubscriptionGroup>? configure)
