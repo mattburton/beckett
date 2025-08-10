@@ -10,16 +10,21 @@ public class AdvanceLaggingSubscriptionCheckpoints(long subscriptionId) : IPostg
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.checkpoints
-            SET stream_position = stream_version,
-                process_at = null
-            WHERE id IN (
-                SELECT id
-                FROM beckett.checkpoints
-                WHERE subscription_id = $1
-                AND lagging = true
-                LIMIT 500
-            );
+            WITH updated_checkpoints AS (
+                UPDATE beckett.checkpoints
+                SET stream_position = stream_version,
+                    process_at = null
+                WHERE id IN (
+                    SELECT id
+                    FROM beckett.checkpoints
+                    WHERE subscription_id = $1
+                    AND lagging = true
+                    LIMIT 500
+                )
+                RETURNING id
+            )
+            DELETE FROM beckett.checkpoints_ready
+            WHERE id IN (SELECT id FROM updated_checkpoints);
         """;
 
         command.CommandText = Query.Build(nameof(AdvanceLaggingSubscriptionCheckpoints), sql, out var prepare);

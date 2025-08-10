@@ -16,6 +16,8 @@ public class ReleaseCheckpointReservation(
             SET process_at = NULL,
                 reserved_until = NULL
             WHERE id = $1;
+            
+            DELETE FROM beckett.checkpoints_reserved WHERE id = $1;
         """;
 
         command.CommandText = Query.Build(nameof(ReleaseCheckpointReservation), sql, out var prepare);

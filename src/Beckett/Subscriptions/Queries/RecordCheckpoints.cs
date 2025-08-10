@@ -10,11 +10,19 @@ public class RecordCheckpoints(CheckpointType[] checkpoints) : IPostgresDatabase
     {
         //language=sql
         const string sql = """
-            INSERT INTO beckett.checkpoints (stream_version, stream_position, subscription_id, stream_name)
-            SELECT c.stream_version, c.stream_position, c.subscription_id, c.stream_name
-            FROM unnest($1) c
-            ON CONFLICT (subscription_id, stream_name) DO UPDATE
-                SET stream_version = excluded.stream_version;
+            WITH updated_checkpoints AS (
+                INSERT INTO beckett.checkpoints (stream_version, stream_position, subscription_id, stream_name)
+                SELECT c.stream_version, c.stream_position, c.subscription_id, c.stream_name
+                FROM unnest($1) c
+                ON CONFLICT (subscription_id, stream_name) DO UPDATE
+                    SET stream_version = excluded.stream_version
+                RETURNING id, stream_version, stream_position, status
+            )
+            INSERT INTO beckett.checkpoints_ready (id, process_at)
+            SELECT uc.id, now()
+            FROM updated_checkpoints uc
+            WHERE uc.status = 'active' AND uc.stream_version > uc.stream_position
+            ON CONFLICT DO NOTHING;
         """;
 
         command.CommandText = Query.Build(nameof(RecordCheckpoints), sql, out var prepare);

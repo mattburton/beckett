@@ -12,6 +12,9 @@ public class BulkSkipQuery(
     {
         //language=sql
         const string sql = """
+            DELETE FROM beckett.checkpoints_reserved WHERE id = ANY($1);
+            DELETE FROM beckett.checkpoints_ready WHERE id = ANY($1);
+            
             UPDATE beckett.checkpoints
             SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
                 process_at = NULL,
