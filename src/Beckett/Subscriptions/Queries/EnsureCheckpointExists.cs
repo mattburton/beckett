@@ -14,8 +14,8 @@ public class EnsureCheckpointExists(
         //language=sql
         const string sql = """
             WITH new_checkpoint AS (
-                INSERT INTO beckett.checkpoints (subscription_id, stream_name, created_at, updated_at)
-                VALUES ($1, $2, now(), now())
+                INSERT INTO beckett.checkpoints (subscription_id, stream_name)
+                VALUES ($1, $2)
                 ON CONFLICT (subscription_id, stream_name) DO NOTHING
                 RETURNING 0 as stream_version
             )

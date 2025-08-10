@@ -28,8 +28,10 @@ public class ReleaseCheckpointReservation(
                 INSERT INTO beckett.checkpoints_ready (id, process_at)
                 SELECT uc.id, now()
                 FROM updated_checkpoint uc
-                WHERE uc.status = 'active' AND uc.stream_version > uc.stream_position
-                ON CONFLICT (id) DO UPDATE SET process_at = now()
+                WHERE uc.status = 'active'
+                AND uc.stream_version > uc.stream_position
+                ON CONFLICT (id) DO UPDATE
+                    SET process_at = now()
                 RETURNING id
             )
             SELECT pg_notify('beckett:checkpoints', uc.subscription_id::text)

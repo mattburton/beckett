@@ -34,8 +34,10 @@ public class UpdateCheckpointPosition(
                 INSERT INTO beckett.checkpoints_ready (id, process_at)
                 SELECT uc.id, $3
                 FROM updated_checkpoint uc
-                WHERE $3 IS NOT NULL AND uc.stream_version > uc.stream_position
-                ON CONFLICT (id) DO UPDATE SET process_at = EXCLUDED.process_at
+                WHERE $3 IS NOT NULL
+                AND uc.stream_version > uc.stream_position
+                ON CONFLICT (id) DO UPDATE
+                    SET process_at = EXCLUDED.process_at
                 RETURNING id, process_at
             )
             SELECT pg_notify('beckett:checkpoints', uc.subscription_id::text)
