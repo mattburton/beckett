@@ -220,6 +220,8 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   UNIQUE (subscription_id, stream_name)
 );
 
+CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON beckett.checkpoints (subscription_id);
+
 CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (subscription_id, process_at, reserved_until)
   WHERE process_at IS NOT NULL AND reserved_until IS NULL;
 
