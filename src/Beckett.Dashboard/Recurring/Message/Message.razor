@@ -52,7 +52,19 @@
       </li>
       <li class="list-group-item">
         <span class="fw-bolder">Stream Name:</span>
-        @Model.StreamName
+        <span>
+          @if (Dashboard.Options.MessageStoreEnabled)
+          {
+            <a
+              href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.StreamCategory)/@HttpUtility.UrlEncode(Model.StreamName)">
+              @Model.StreamName
+            </a>
+          }
+          else
+          {
+            @Model.StreamName
+          }
+        </span>
       </li>
       <li class="list-group-item">
         <span class="fw-bolder">Type:</span>
@@ -202,6 +214,16 @@
     public DateTimeOffset Timestamp => RecurringMessage.Timestamp;
     public string Data => JsonSerializer.Serialize(RecurringMessage.Data, new JsonSerializerOptions { WriteIndented = true });
     public Dictionary<string, string> Metadata => RecurringMessage.Metadata.ToMetadataDictionary();
+
+    public string StreamCategory
+    {
+      get
+      {
+        var firstHyphen = StreamName.IndexOf('-');
+
+        return firstHyphen < 0 ? StreamName : StreamName[..firstHyphen];
+      }
+    }
   }
 
 }

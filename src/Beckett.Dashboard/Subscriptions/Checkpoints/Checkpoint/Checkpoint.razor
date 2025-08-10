@@ -86,31 +86,35 @@
       </li>
       <li class="list-group-item">
         <span class="fw-bolder">Stream Name:</span>
-        @if (Dashboard.Options.MessageStoreEnabled)
-        {
-          <a
-            href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamNameForLink)">
+        <span>
+          @if (Dashboard.Options.MessageStoreEnabled)
+          {
+            <a
+              href="@Dashboard.Prefix/message-store/categories/@HttpUtility.UrlEncode(Model.Details.StreamCategory)/@HttpUtility.UrlEncode(Model.Details.StreamNameForLink)">
+              @Model.Details.StreamName
+            </a>
+          }
+          else
+          {
             @Model.Details.StreamName
-          </a>
-        }
-        else
-        {
-          @Model.Details.StreamName
-        }
+          }
+        </span>
       </li>
       <li class="list-group-item">
         <span class="fw-bolder">Stream Position:</span>
-        @if (Dashboard.Options.MessageStoreEnabled)
-        {
-          <a
-            href="@Dashboard.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamNameForLink)/@Model.Details.StreamPositionForLink">
+        <span>
+          @if (Dashboard.Options.MessageStoreEnabled)
+          {
+            <a
+              href="@Dashboard.Prefix/message-store/streams/@HttpUtility.UrlEncode(Model.Details.StreamNameForLink)/@Model.Details.StreamPositionForLink">
+              @Model.Details.StreamPosition
+            </a>
+          }
+          else
+          {
             @Model.Details.StreamPosition
-          </a>
-        }
-        else
-        {
-          @Model.Details.StreamPosition
-        }
+          }
+        </span>
       </li>
       <li class="list-group-item">
         <span class="fw-bolder">Stream Version:</span>
