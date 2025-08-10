@@ -233,31 +233,104 @@ CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (sta
 CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON __schema__.checkpoints (subscription_id);
 
 CREATE FUNCTION __schema__.checkpoint_preprocessor()
-  RETURNS trigger
-  LANGUAGE plpgsql
+    RETURNS trigger
+    LANGUAGE plpgsql
 AS
 $$
 BEGIN
-  IF (TG_OP = 'UPDATE') THEN
-    NEW.updated_at = now();
-  END IF;
+    IF (TG_OP = 'UPDATE') THEN
+        NEW.updated_at = now();
+    END IF;
 
-  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
-    NEW.process_at = now();
-  END IF;
+    -- Handle transition to ready state
+    IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
+        NEW.process_at = now();
+    END IF;
 
-  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
-    PERFORM pg_notify('beckett:checkpoints', NEW.subscription_id::text);
-  END IF;
+    IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+        PERFORM pg_notify('beckett:checkpoints', NEW.subscription_id::text);
+    END IF;
 
-  RETURN NEW;
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION __schema__.checkpoint_postprocessor()
+    RETURNS trigger
+    LANGUAGE plpgsql
+AS
+$$
+BEGIN
+    -- Handle ready state changes
+    IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+        IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL AND NEW.status = 'active' AND NEW.stream_version > NEW.stream_position) THEN
+            -- Insert or update in ready table
+            INSERT INTO __schema__.checkpoints_ready (id, process_at)
+            VALUES (NEW.id, NEW.process_at)
+            ON CONFLICT (id) DO UPDATE SET process_at = EXCLUDED.process_at;
+        ELSE
+            -- Remove from ready table if not ready
+            DELETE FROM __schema__.checkpoints_ready WHERE id = NEW.id;
+        END IF;
+    END IF;
+
+    -- Handle reservation changes (only on UPDATE)
+    IF (TG_OP = 'UPDATE') THEN
+        IF (OLD.reserved_until IS NULL AND NEW.reserved_until IS NOT NULL) THEN
+            -- Checkpoint being reserved - insert into reserved table and remove from ready
+            INSERT INTO __schema__.checkpoints_reserved (id, reserved_until)
+            VALUES (NEW.id, NEW.reserved_until)
+            ON CONFLICT DO NOTHING;
+            DELETE FROM __schema__.checkpoints_ready WHERE id = NEW.id;
+        ELSIF (OLD.reserved_until IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+            -- Checkpoint being unreserved - remove from reserved table
+            DELETE FROM __schema__.checkpoints_reserved WHERE id = NEW.id;
+        ELSIF (OLD.reserved_until IS NOT NULL AND NEW.reserved_until IS NOT NULL AND OLD.reserved_until != NEW.reserved_until) THEN
+            -- Update reservation time
+            UPDATE __schema__.checkpoints_reserved SET reserved_until = NEW.reserved_until WHERE id = NEW.id;
+        END IF;
+    END IF;
+
+    -- Handle deletion
+    IF (TG_OP = 'DELETE') THEN
+        DELETE FROM __schema__.checkpoints_ready WHERE id = OLD.id;
+        DELETE FROM __schema__.checkpoints_reserved WHERE id = OLD.id;
+        RETURN OLD;
+    END IF;
+
+    RETURN NEW;
 END;
 $$;
 
 CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON __schema__.checkpoints
   FOR EACH ROW EXECUTE FUNCTION __schema__.checkpoint_preprocessor();
 
+CREATE TRIGGER checkpoint_postprocessor AFTER INSERT OR UPDATE OR DELETE ON __schema__.checkpoints
+  FOR EACH ROW EXECUTE FUNCTION __schema__.checkpoint_postprocessor();
+
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.checkpoints_ready
+(
+    id bigint NOT NULL REFERENCES __schema__.checkpoints(id) ON DELETE CASCADE,
+    process_at timestamp with time zone NOT NULL DEFAULT now(),
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX ix_checkpoints_ready_process_at ON __schema__.checkpoints_ready (process_at);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON __schema__.checkpoints_ready TO beckett;
+
+CREATE TABLE IF NOT EXISTS __schema__.checkpoints_reserved
+(
+    id bigint NOT NULL REFERENCES __schema__.checkpoints(id) ON DELETE CASCADE,
+    reserved_until timestamp with time zone NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX ix_checkpoints_reserved_reserved_until ON __schema__.checkpoints_reserved (reserved_until);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON __schema__.checkpoints_reserved TO beckett;
 
 -------------------------------------------------
 -- DASHBOARD SUPPORT
