@@ -16,11 +16,12 @@ public class SubscriptionsQuery(
     {
         //language=sql
         const string sql = """
-            SELECT name, status, count(*) over() as total_results
-            FROM beckett.subscriptions
-            WHERE group_name = $1
-            AND ($2 IS NULL or name ILIKE '%' || $2 || '%')
-            ORDER BY name
+            SELECT s.name, s.status, count(*) over() as total_results
+            FROM beckett.subscriptions s
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            WHERE sg.name = $1
+            AND ($2 IS NULL or s.name ILIKE '%' || $2 || '%')
+            ORDER BY s.name
             OFFSET $3
             LIMIT $4;
         """;

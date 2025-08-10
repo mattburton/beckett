@@ -14,11 +14,11 @@ public class MetricsQuery : IPostgresDatabaseQuery<MetricsQuery.Result>
                 WITH lagging_subscriptions AS (
                     SELECT COUNT(*) AS lagging
                     FROM beckett.subscriptions s
-                    INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                    INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
                     WHERE s.status in ('active', 'replay')
                     AND c.status = 'active'
                     AND c.lagging = TRUE
-                    GROUP BY c.group_name, c.name
+                    GROUP BY s.id
                 )
                 SELECT count(1) as lagging FROM lagging_subscriptions
                 UNION ALL
@@ -27,13 +27,13 @@ public class MetricsQuery : IPostgresDatabaseQuery<MetricsQuery.Result>
             ) AS l, (
                 SELECT count(1) as retries
                 FROM beckett.subscriptions s
-                INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status != 'uninitialized'
                 AND c.status = 'retry'
             ) AS r, (
                 SELECT count(1) as failed
                 FROM beckett.subscriptions s
-                INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status != 'uninitialized'
                 AND c.status = 'failed'
             ) AS f;

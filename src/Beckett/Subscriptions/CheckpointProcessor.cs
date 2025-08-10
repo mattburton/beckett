@@ -3,6 +3,7 @@ using Beckett.OpenTelemetry;
 using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
 using Beckett.Subscriptions.Retries;
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +14,7 @@ public class CheckpointProcessor(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IServiceProvider serviceProvider,
+    ISubscriptionRegistry registry,
     IInstrumentation instrumentation,
     ILogger<CheckpointProcessor> logger
 ) : ICheckpointProcessor
@@ -47,7 +49,7 @@ public class CheckpointProcessor(
                     if (success.GlobalPosition >= checkpoint.ReplayTargetPosition.Value)
                     {
                         await database.Execute(
-                            new SetSubscriptionToActive(subscription.Group.Name, subscription.Name),
+                            new SetSubscriptionToActive(checkpoint.SubscriptionId),
                             connection,
                             transaction,
                             CancellationToken.None
@@ -438,8 +440,12 @@ public class CheckpointProcessor(
             return logger.BeginScope(state);
         }
 
-        state.Add(groupName, checkpoint.GroupName);
-        state.Add(name, checkpoint.Name);
+        var names = registry.GetSubscription(checkpoint.SubscriptionId);
+        if (names.HasValue)
+        {
+            state.Add(groupName, names.Value.GroupName);
+            state.Add(name, names.Value.SubscriptionName);
+        }
         state.Add(streamName, checkpoint.StreamName);
         state.Add(streamPosition, checkpoint.StreamPosition);
         state.Add(streamVersion, checkpoint.StreamVersion);

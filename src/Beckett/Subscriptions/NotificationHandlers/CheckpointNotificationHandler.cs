@@ -1,10 +1,12 @@
 using Beckett.Database.Notifications;
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.NotificationHandlers;
 
 public class CheckpointNotificationHandler(
     ICheckpointNotificationChannel channel,
+    ISubscriptionRegistry registry,
     ILogger<CheckpointNotificationHandler> logger
 ) : IPostgresNotificationHandler
 {
@@ -14,9 +16,24 @@ public class CheckpointNotificationHandler(
     {
         try
         {
+            // Payload is now subscription_id, convert to group name
+            if (!long.TryParse(payload, out var subscriptionId))
+            {
+                logger.LogWarning("Invalid subscription_id in checkpoint notification payload: {Payload}", payload);
+                return;
+            }
+
+            var subscription = registry.GetSubscription(subscriptionId);
+
+            if (subscription == null)
+            {
+                logger.LogWarning("Unknown subscription_id in checkpoint notification: {SubscriptionId}", subscriptionId);
+                return;
+            }
+
             logger.StartingCheckpointNotificationPolling();
 
-            channel.Notify(payload);
+            channel.Notify(subscription.Value.GroupName);
         }
         catch (Exception e)
         {

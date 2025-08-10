@@ -152,8 +152,7 @@ GRANT UPDATE, DELETE ON __schema__.recurring_messages TO beckett;
 
 CREATE TYPE __schema__.checkpoint AS
 (
-  group_name text,
-  name text,
+  subscription_id bigint,
   stream_name text,
   stream_version bigint,
   stream_position bigint
@@ -181,22 +180,32 @@ CREATE TYPE __schema__.checkpoint_status AS ENUM (
   'failed'
 );
 
+CREATE TABLE IF NOT EXISTS __schema__.subscription_groups
+(
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL UNIQUE
+);
+
+GRANT UPDATE, DELETE ON __schema__.subscription_groups TO beckett;
+
 CREATE TABLE IF NOT EXISTS __schema__.subscriptions
 (
-  group_name text NOT NULL,
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  subscription_group_id bigint NOT NULL REFERENCES __schema__.subscription_groups(id) ON DELETE CASCADE,
   name text NOT NULL,
   status __schema__.subscription_status DEFAULT 'uninitialized' NOT NULL,
   replay_target_position bigint NULL,
-  PRIMARY KEY (group_name, name)
+  UNIQUE (subscription_group_id, name)
 );
 
-CREATE INDEX ix_subscriptions_reservation_candidates ON __schema__.subscriptions (group_name, name, status) WHERE status = 'active' OR status = 'replay';
+CREATE INDEX ix_subscriptions_reservation_candidates ON __schema__.subscriptions (subscription_group_id, name, status) WHERE status = 'active' OR status = 'replay';
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 (
   id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  subscription_id bigint NOT NULL REFERENCES __schema__.subscriptions(id) ON DELETE CASCADE,
   stream_version bigint NOT NULL DEFAULT 0,
   stream_position bigint NOT NULL DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
@@ -206,20 +215,20 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   retry_attempts int NOT NULL DEFAULT 0,
   lagging boolean GENERATED ALWAYS AS (stream_version > stream_position) STORED,
   status __schema__.checkpoint_status NOT NULL DEFAULT 'active',
-  group_name text NOT NULL,
-  name text NOT NULL,
   stream_name text NOT NULL,
   retries __schema__.retry[] NULL,
-  UNIQUE (group_name, name, stream_name)
+  UNIQUE (subscription_id, stream_name)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (group_name, process_at, reserved_until)
+CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (subscription_id, process_at, reserved_until)
   WHERE process_at IS NOT NULL AND reserved_until IS NULL;
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (group_name, reserved_until)
+CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (subscription_id, reserved_until)
   WHERE reserved_until IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, lagging, group_name, name);
+CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, lagging, subscription_id);
+
+CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON __schema__.checkpoints (subscription_id);
 
 CREATE FUNCTION __schema__.checkpoint_preprocessor()
   RETURNS trigger
@@ -236,7 +245,7 @@ BEGIN
   END IF;
 
   IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
-    PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
+    PERFORM pg_notify('beckett:checkpoints', NEW.subscription_id::text);
   END IF;
 
   RETURN NEW;
@@ -281,25 +290,31 @@ CREATE OR REPLACE FUNCTION __schema__.delete_subscription(
 AS
 $$
 DECLARE
+  _subscription_id bigint;
   _rows_deleted integer;
 BEGIN
-  LOOP
-    DELETE FROM __schema__.checkpoints
-    WHERE id IN (
-      SELECT id
-      FROM __schema__.checkpoints
-      WHERE group_name = _group_name
-      AND name = _name
-      LIMIT 500
-    );
+  SELECT s.id INTO _subscription_id
+  FROM __schema__.subscriptions s
+  INNER JOIN __schema__.subscription_groups sg ON s.subscription_group_id = sg.id
+  WHERE sg.name = _group_name
+  AND s.name = _name;
 
-    GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
-    EXIT WHEN _rows_deleted = 0;
-  END LOOP;
+  IF _subscription_id IS NOT NULL THEN
+    LOOP
+      DELETE FROM __schema__.checkpoints
+      WHERE id IN (
+        SELECT id
+        FROM __schema__.checkpoints
+        WHERE subscription_id = _subscription_id
+        LIMIT 500
+      );
 
-  DELETE FROM __schema__.subscriptions
-  WHERE group_name = _group_name
-  AND name = _name;
+      GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
+      EXIT WHEN _rows_deleted = 0;
+    END LOOP;
+
+    DELETE FROM __schema__.subscriptions WHERE id = _subscription_id;
+  END IF;
 END;
 $$;
 
@@ -313,27 +328,24 @@ CREATE OR REPLACE FUNCTION __schema__.move_subscription(
 AS
 $$
 DECLARE
-  _rows_updated integer;
+  _subscription_id bigint;
+  _new_subscription_group_id bigint;
 BEGIN
-  UPDATE __schema__.subscriptions
-  SET group_name = _new_group_name
-  WHERE group_name = _group_name
-  AND name = _name;
+  SELECT s.id INTO _subscription_id
+  FROM __schema__.subscriptions s
+  INNER JOIN __schema__.subscription_groups sg ON s.subscription_group_id = sg.id
+  WHERE sg.name = _group_name
+  AND s.name = _name;
 
-  LOOP
-    UPDATE __schema__.checkpoints
-    SET group_name = _new_group_name
-    WHERE id IN (
-      SELECT id
-      FROM __schema__.checkpoints
-      WHERE group_name = _group_name
-      AND name = _name
-      LIMIT 500
-    );
+  SELECT id INTO _new_subscription_group_id
+  FROM __schema__.subscription_groups
+  WHERE name = _new_group_name;
 
-    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
-    EXIT WHEN _rows_updated = 0;
-  END LOOP;
+  IF _subscription_id IS NOT NULL AND _new_subscription_group_id IS NOT NULL THEN
+    UPDATE __schema__.subscriptions
+    SET subscription_group_id = _new_subscription_group_id
+    WHERE id = _subscription_id;
+  END IF;
 END;
 $$;
 
@@ -347,27 +359,19 @@ CREATE OR REPLACE FUNCTION __schema__.rename_subscription(
 AS
 $$
 DECLARE
-  _rows_updated integer;
+  _subscription_id bigint;
 BEGIN
-  UPDATE __schema__.subscriptions
-  SET name = _new_name
-  WHERE group_name = _group_name
-  AND name = _name;
+  SELECT s.id INTO _subscription_id
+  FROM __schema__.subscriptions s
+  INNER JOIN __schema__.subscription_groups sg ON s.subscription_group_id = sg.id
+  WHERE sg.name = _group_name
+  AND s.name = _name;
 
-  LOOP
-    UPDATE __schema__.checkpoints
+  IF _subscription_id IS NOT NULL THEN
+    UPDATE __schema__.subscriptions
     SET name = _new_name
-    WHERE id IN (
-      SELECT id
-      FROM __schema__.checkpoints
-      WHERE group_name = _group_name
-      AND name = _name
-      LIMIT 500
-    );
-
-    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
-    EXIT WHEN _rows_updated = 0;
-  END LOOP;
+    WHERE id = _subscription_id;
+  END IF;
 END;
 $$;
 
@@ -380,37 +384,43 @@ CREATE OR REPLACE FUNCTION __schema__.replay_subscription(
 AS
 $$
 DECLARE
+  _subscription_id bigint;
   _replay_target_position bigint;
   _rows_updated integer;
 BEGIN
-  SELECT coalesce(max(m.global_position), 0)
-  INTO _replay_target_position
-  FROM beckett.checkpoints c
-  INNER JOIN beckett.messages_active m ON c.stream_name = m.stream_name AND c.stream_version = m.stream_position
-  WHERE c.group_name = _group_name
-  AND c.name = _name;
+  SELECT s.id INTO _subscription_id
+  FROM __schema__.subscriptions s
+  INNER JOIN __schema__.subscription_groups sg ON s.subscription_group_id = sg.id
+  WHERE sg.name = _group_name
+  AND s.name = _name;
 
-  LOOP
-    UPDATE __schema__.checkpoints
-    SET stream_position = 0
-    WHERE id IN (
-      SELECT id
-      FROM __schema__.checkpoints
-      WHERE group_name = _group_name
-      AND name = _name
-      AND stream_position > 0
-      LIMIT 500
-    );
+  IF _subscription_id IS NOT NULL THEN
+    SELECT coalesce(max(m.global_position), 0)
+    INTO _replay_target_position
+    FROM __schema__.checkpoints c
+    INNER JOIN __schema__.messages_active m ON c.stream_name = m.stream_name AND c.stream_version = m.stream_position
+    WHERE c.subscription_id = _subscription_id;
 
-    GET DIAGNOSTICS _rows_updated = ROW_COUNT;
-    EXIT WHEN _rows_updated = 0;
-  END LOOP;
+    LOOP
+      UPDATE __schema__.checkpoints
+      SET stream_position = 0
+      WHERE id IN (
+        SELECT id
+        FROM __schema__.checkpoints
+        WHERE subscription_id = _subscription_id
+        AND stream_position > 0
+        LIMIT 500
+      );
 
-  UPDATE __schema__.subscriptions
-  SET status = 'replay',
-      replay_target_position = _replay_target_position
-  WHERE group_name = _group_name
-  AND name = _name;
+      GET DIAGNOSTICS _rows_updated = ROW_COUNT;
+      EXIT WHEN _rows_updated = 0;
+    END LOOP;
+
+    UPDATE __schema__.subscriptions
+    SET status = 'replay',
+        replay_target_position = _replay_target_position
+    WHERE id = _subscription_id;
+  END IF;
 END;
 $$;
 
@@ -423,31 +433,39 @@ CREATE OR REPLACE FUNCTION __schema__.reset_subscription(
 AS
 $$
 DECLARE
+  _subscription_id bigint;
   _rows_deleted integer;
 BEGIN
-  LOOP
-    DELETE FROM __schema__.checkpoints
-    WHERE group_name = _group_name AND name = _name
-    AND id IN (
-      SELECT id FROM __schema__.checkpoints
-      WHERE group_name = _group_name AND name = _name
-      LIMIT 500
-    );
+  SELECT s.id INTO _subscription_id
+  FROM __schema__.subscriptions s
+  INNER JOIN __schema__.subscription_groups sg ON s.subscription_group_id = sg.id
+  WHERE sg.name = _group_name
+  AND s.name = _name;
 
-    GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
-    EXIT WHEN _rows_deleted = 0;
-  END LOOP;
+  IF _subscription_id IS NOT NULL THEN
+    LOOP
+      DELETE FROM __schema__.checkpoints
+      WHERE subscription_id = _subscription_id
+      AND id IN (
+        SELECT id FROM __schema__.checkpoints
+        WHERE subscription_id = _subscription_id
+        LIMIT 500
+      );
 
-  UPDATE __schema__.subscriptions
-  SET status = 'uninitialized',
-      replay_target_position = NULL
-  WHERE group_name = _group_name
-  AND name = _name;
+      GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
+      EXIT WHEN _rows_deleted = 0;
+    END LOOP;
 
-  INSERT INTO __schema__.checkpoints (group_name, name, stream_name)
-  VALUES (_group_name, _name, '$initializing')
-  ON CONFLICT (group_name, name, stream_name) DO UPDATE
-    SET stream_version = 0,
-        stream_position = 0;
+    UPDATE __schema__.subscriptions
+    SET status = 'uninitialized',
+        replay_target_position = NULL
+    WHERE id = _subscription_id;
+
+    INSERT INTO __schema__.checkpoints (subscription_id, stream_name)
+    VALUES (_subscription_id, '$initializing')
+    ON CONFLICT (subscription_id, stream_name) DO UPDATE
+      SET stream_version = 0,
+          stream_position = 0;
+  END IF;
 END;
 $$;

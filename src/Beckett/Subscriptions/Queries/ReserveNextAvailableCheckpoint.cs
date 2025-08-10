@@ -19,8 +19,9 @@ public class ReserveNextAvailableCheckpoint(
             FROM (
                 SELECT c.id, s.replay_target_position
                 FROM beckett.checkpoints c
-                INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-                WHERE c.group_name = $1
+                INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
+                INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+                WHERE sg.name = $1
                 AND c.process_at <= now()
                 AND c.reserved_until IS NULL
                 AND ($3 = false OR (s.status = 'active' OR s.status = 'replay'))
@@ -34,8 +35,7 @@ public class ReserveNextAvailableCheckpoint(
             WHERE c.id = d.id
             RETURNING
                 c.id,
-                c.group_name,
-                c.name,
+                c.subscription_id,
                 c.stream_name,
                 c.stream_position,
                 c.stream_version,

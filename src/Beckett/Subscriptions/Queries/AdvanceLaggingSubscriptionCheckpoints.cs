@@ -4,7 +4,7 @@ using NpgsqlTypes;
 
 namespace Beckett.Subscriptions.Queries;
 
-public class AdvanceLaggingSubscriptionCheckpoints(string groupName, string name) : IPostgresDatabaseQuery<int>
+public class AdvanceLaggingSubscriptionCheckpoints(long subscriptionId) : IPostgresDatabaseQuery<int>
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
@@ -16,8 +16,7 @@ public class AdvanceLaggingSubscriptionCheckpoints(string groupName, string name
             WHERE id IN (
                 SELECT id
                 FROM beckett.checkpoints
-                WHERE group_name = $1
-                AND name = $2
+                WHERE subscription_id = $1
                 AND lagging = true
                 LIMIT 500
             );
@@ -25,16 +24,14 @@ public class AdvanceLaggingSubscriptionCheckpoints(string groupName, string name
 
         command.CommandText = Query.Build(nameof(AdvanceLaggingSubscriptionCheckpoints), sql, out var prepare);
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
         if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
+        command.Parameters[0].Value = subscriptionId;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

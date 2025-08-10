@@ -13,13 +13,18 @@ public class ResumeQuery(
     {
         //language=sql
         const string sql = """
-            WITH notify AS (
-                SELECT pg_notify('beckett:checkpoints', $1)
-            )
-            UPDATE beckett.subscriptions
+            UPDATE beckett.subscriptions s
             SET status = 'active'
-            WHERE group_name = $1
-            AND name = $2;
+            FROM beckett.subscription_groups sg
+            WHERE s.subscription_group_id = sg.id
+            AND sg.name = $1
+            AND s.name = $2;
+            
+            SELECT pg_notify('beckett:checkpoints', s.id::text)
+            FROM beckett.subscriptions s
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            WHERE sg.name = $1
+            AND s.name = $2;
         """;
 
         command.CommandText = Query.Build(nameof(ResumeQuery), sql, out var prepare);

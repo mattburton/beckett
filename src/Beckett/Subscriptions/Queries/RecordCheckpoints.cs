@@ -10,10 +10,10 @@ public class RecordCheckpoints(CheckpointType[] checkpoints) : IPostgresDatabase
     {
         //language=sql
         const string sql = """
-            INSERT INTO beckett.checkpoints (stream_version, stream_position, group_name, name, stream_name)
-            SELECT c.stream_version, c.stream_position, c.group_name, c.name, c.stream_name
+            INSERT INTO beckett.checkpoints (stream_version, stream_position, subscription_id, stream_name)
+            SELECT c.stream_version, c.stream_position, c.subscription_id, c.stream_name
             FROM unnest($1) c
-            ON CONFLICT (group_name, name, stream_name) DO UPDATE
+            ON CONFLICT (subscription_id, stream_name) DO UPDATE
                 SET stream_version = excluded.stream_version;
         """;
 

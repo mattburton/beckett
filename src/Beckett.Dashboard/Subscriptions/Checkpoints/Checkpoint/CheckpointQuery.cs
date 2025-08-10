@@ -13,8 +13,8 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
         //language=sql
         const string sql = """
             SELECT c.id,
-                   c.group_name,
-                   c.name,
+                   sg.name as group_name,
+                   s.name,
                    c.stream_name,
                    c.stream_version,
                    c.stream_position,
@@ -25,6 +25,8 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
                    m.stream_name as actual_stream_name,
                    m.stream_position as actual_stream_position
             FROM beckett.checkpoints c
+            INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
             LEFT JOIN beckett.messages m on c.stream_name = '$global' and c.stream_position = m.global_position
             WHERE c.id = $1;
         """;

@@ -11,6 +11,7 @@ public class GlobalStreamConsumerHost(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
+    ISubscriptionRegistry registry,
     ILoggerFactory loggerFactory
 ) : BackgroundService
 {
@@ -31,6 +32,7 @@ public class GlobalStreamConsumerHost(
             dataSource,
             database,
             messageStorage,
+            registry,
             loggerFactory.CreateLogger<GlobalStreamConsumer>()
         );
     }

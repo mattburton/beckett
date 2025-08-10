@@ -16,10 +16,12 @@ public class RecoverExpiredCheckpointReservations(
             UPDATE beckett.checkpoints c
             SET reserved_until = NULL
             FROM (
-                SELECT id
-                FROM beckett.checkpoints
-                WHERE group_name = $1
-                AND reserved_until <= now()
+                SELECT c2.id
+                FROM beckett.checkpoints c2
+                INNER JOIN beckett.subscriptions s ON c2.subscription_id = s.id
+                INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+                WHERE sg.name = $1
+                AND c2.reserved_until <= now()
                 FOR UPDATE SKIP LOCKED
                 LIMIT $2
             ) as d

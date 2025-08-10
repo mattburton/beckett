@@ -5,8 +5,7 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class EnsureCheckpointExists(
-    string groupName,
-    string name,
+    long subscriptionId,
     string streamName
 ) : IPostgresDatabaseQuery<long>
 {
@@ -15,16 +14,15 @@ public class EnsureCheckpointExists(
         //language=sql
         const string sql = """
             WITH new_checkpoint AS (
-                INSERT INTO beckett.checkpoints (group_name, name, stream_name)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (group_name, name, stream_name) DO NOTHING
+                INSERT INTO beckett.checkpoints (subscription_id, stream_name)
+                VALUES ($1, $2)
+                ON CONFLICT (subscription_id, stream_name) DO NOTHING
                 RETURNING 0 as stream_version
             )
             SELECT stream_version
             FROM beckett.checkpoints
-            WHERE group_name = $1
-            AND name = $2
-            AND stream_name = $3
+            WHERE subscription_id = $1
+            AND stream_name = $2
             UNION ALL
             SELECT stream_version
             FROM new_checkpoint;
@@ -32,8 +30,7 @@ public class EnsureCheckpointExists(
 
         command.CommandText = Query.Build(nameof(EnsureCheckpointExists), sql, out var prepare);
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
 
         if (prepare)
@@ -41,9 +38,8 @@ public class EnsureCheckpointExists(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
-        command.Parameters[2].Value = streamName;
+        command.Parameters[0].Value = subscriptionId;
+        command.Parameters[1].Value = streamName;
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 

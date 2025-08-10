@@ -4,6 +4,7 @@ using Beckett.OpenTelemetry;
 using Beckett.Storage;
 using Beckett.Subscriptions;
 using Beckett.Subscriptions.Queries;
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -24,7 +25,7 @@ public class CheckpointProcessorTests
                     Guid.NewGuid().ToString(),
                     x => x.SubscriptionBatchSize = 10
                 );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 10, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, 100, "test", 0, 10, 0, CheckpointStatus.Active);
                 var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
@@ -54,7 +55,7 @@ public class CheckpointProcessorTests
                     Guid.NewGuid().ToString(),
                     x => x.SubscriptionBatchSize = 10
                 );
-                var checkpoint = new Checkpoint(1, group.Name, "test", "test", 0, 20, 0, CheckpointStatus.Active);
+                var checkpoint = new Checkpoint(1, 100, "test", 0, 20, 0, CheckpointStatus.Active);
                 var subscription = new Subscription(group, "test")
                 {
                     HandlerDelegate = (IMessageContext _) => { }
@@ -85,7 +86,7 @@ public class CheckpointProcessorTests
                 Guid.NewGuid().ToString(),
                 x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
             );
-            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+            var checkpoint = new Checkpoint(1, 100, "test", 1, 2, 0, CheckpointStatus.Active);
             var subscription = new Subscription(group, "test")
             {
                 HandlerDelegate = async (IMessageContext _, CancellationToken ct) =>
@@ -121,7 +122,7 @@ public class CheckpointProcessorTests
                 Guid.NewGuid().ToString(),
                 x => x.ReservationTimeout = TimeSpan.FromMilliseconds(1)
             );
-            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 2, 0, CheckpointStatus.Active);
+            var checkpoint = new Checkpoint(1, 100, "test", 1, 2, 0, CheckpointStatus.Active);
             var subscription = new Subscription(group, "test")
             {
                 HandlerDelegate = (IMessageContext _, CancellationToken ct) =>
@@ -157,7 +158,7 @@ public class CheckpointProcessorTests
                 Guid.NewGuid().ToString(),
                 x => x.SubscriptionBatchSize = 10
             );
-            var checkpoint = new Checkpoint(1, group.Name, "test", "test", 1, 20, 0, CheckpointStatus.Retry);
+            var checkpoint = new Checkpoint(1, 100, "test", 1, 20, 0, CheckpointStatus.Retry);
             var subscription = new Subscription(group, "test")
             {
                 HandlerDelegate = (IMessageContext _) => { }
@@ -209,11 +210,14 @@ public class CheckpointProcessorTests
         var instrumentation = Substitute.For<IInstrumentation>();
         var logger = Substitute.For<ILogger<CheckpointProcessor>>();
 
+        var mappingService = Substitute.For<ISubscriptionRegistry>();
+
         return new CheckpointProcessor(
             messageStorage,
             dataSource,
             database,
             serviceProvider,
+            mappingService,
             instrumentation,
             logger
         );

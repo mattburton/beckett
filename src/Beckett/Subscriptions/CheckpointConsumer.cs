@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Subscriptions.Queries;
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
@@ -10,6 +11,7 @@ public class CheckpointConsumer(
     Channel<CheckpointAvailable> channel,
     IPostgresDatabase database,
     ICheckpointProcessor checkpointProcessor,
+    ISubscriptionRegistry registry,
     BeckettOptions options,
     ILogger<CheckpointConsumer> logger
 )
@@ -63,12 +65,31 @@ public class CheckpointConsumer(
                         continue;
                     }
 
-                    var subscription = group.GetSubscription(checkpoint.Name);
+                    var names = registry.GetSubscription(checkpoint.SubscriptionId);
+                    if (names == null)
+                    {
+                        logger.SubscriptionNotRegistered(
+                            "unknown",
+                            group.Name,
+                            checkpoint.Id,
+                            instance,
+                            group.Name
+                        );
+
+                        await database.Execute(
+                            new ReleaseCheckpointReservation(checkpoint.Id),
+                            CancellationToken.None
+                        );
+
+                        continue;
+                    }
+
+                    var subscription = group.GetSubscription(names.Value.SubscriptionName);
 
                     if (subscription == null)
                     {
                         logger.SubscriptionNotRegistered(
-                            checkpoint.Name,
+                            names.Value.SubscriptionName,
                             group.Name,
                             checkpoint.Id,
                             instance,

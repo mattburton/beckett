@@ -3,6 +3,7 @@ using Beckett.Database;
 using Beckett.Database.Types;
 using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
@@ -13,6 +14,7 @@ public class GlobalStreamConsumer(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
+    ISubscriptionRegistry registry,
     ILogger<GlobalStreamConsumer> logger
 )
 {
@@ -36,10 +38,16 @@ public class GlobalStreamConsumer(
 
                     await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
+                    var globalSubscriptionId = registry.GetSubscriptionId(group.Name, GlobalCheckpoint.Name);
+                    if (globalSubscriptionId == null)
+                    {
+                        logger.LogWarning("Global subscription not found for group {GroupName}", group.Name);
+                        continue;
+                    }
+
                     var checkpoint = await database.Execute(
                         new LockCheckpoint(
-                            group.Name,
-                            GlobalCheckpoint.Name,
+                            globalSubscriptionId.Value,
                             GlobalCheckpoint.StreamName
                         ),
                         connection,
@@ -90,15 +98,18 @@ public class GlobalStreamConsumer(
                                 stream.Key
                             );
 
-                            checkpoints.Add(
-                                new CheckpointType
-                                {
-                                    GroupName = group.Name,
-                                    Name = subscription.Name,
-                                    StreamName = stream.Key,
-                                    StreamVersion = stream.Max(x => x.StreamPosition)
-                                }
-                            );
+                            var subscriptionId = registry.GetSubscriptionId(group.Name, subscription.Name);
+                            if (subscriptionId.HasValue)
+                            {
+                                checkpoints.Add(
+                                    new CheckpointType
+                                    {
+                                        SubscriptionId = subscriptionId.Value,
+                                        StreamName = stream.Key,
+                                        StreamVersion = stream.Max(x => x.StreamPosition)
+                                    }
+                                );
+                            }
                         }
                     }
 

@@ -5,8 +5,7 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class UpdateSubscriptionReplayTargetPosition(
-    string groupName,
-    string name,
+    long subscriptionId,
     long position
 ) : IPostgresDatabaseQuery<int>
 {
@@ -15,15 +14,13 @@ public class UpdateSubscriptionReplayTargetPosition(
         //language=sql
         const string sql = """
             UPDATE beckett.subscriptions
-            SET replay_target_position = $3
-            WHERE group_name = $1
-            AND name = $2;
+            SET replay_target_position = $2
+            WHERE id = $1;
         """;
 
         command.CommandText = Query.Build(nameof(UpdateSubscriptionReplayTargetPosition), sql, out var prepare);
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
 
         if (prepare)
@@ -31,9 +28,8 @@ public class UpdateSubscriptionReplayTargetPosition(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
-        command.Parameters[2].Value = position;
+        command.Parameters[0].Value = subscriptionId;
+        command.Parameters[1].Value = position;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

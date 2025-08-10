@@ -6,8 +6,7 @@ using NpgsqlTypes;
 namespace Beckett.Subscriptions.Queries;
 
 public class SetSubscriptionStatus(
-    string groupName,
-    string name,
+    long subscriptionId,
     SubscriptionStatus status
 ) : IPostgresDatabaseQuery<int>
 {
@@ -16,15 +15,13 @@ public class SetSubscriptionStatus(
         //language=sql
         const string sql = """
             UPDATE beckett.subscriptions
-            SET status = $3
-            WHERE group_name = $1
-            AND name = $2;
+            SET status = $2
+            WHERE id = $1;
         """;
 
         command.CommandText = Query.Build(nameof(SetSubscriptionStatus), sql, out var prepare);
 
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint });
         command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.SubscriptionStatus() });
 
         if (prepare)
@@ -32,9 +29,8 @@ public class SetSubscriptionStatus(
             await command.PrepareAsync(cancellationToken);
         }
 
-        command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
-        command.Parameters[2].Value = status;
+        command.Parameters[0].Value = subscriptionId;
+        command.Parameters[1].Value = status;
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

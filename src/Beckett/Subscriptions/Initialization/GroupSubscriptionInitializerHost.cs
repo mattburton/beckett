@@ -1,5 +1,6 @@
 using Beckett.Database;
 using Beckett.Storage;
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,7 @@ public class GroupSubscriptionInitializerHost(
     IPostgresDatabase database,
     IPostgresDataSource dataSource,
     IMessageStorage messageStorage,
+    ISubscriptionRegistry registry,
     ILoggerFactory loggerFactory
 ) : BackgroundService
 {
@@ -36,6 +38,7 @@ public class GroupSubscriptionInitializerHost(
             database,
             dataSource,
             messageStorage,
+            registry,
             loggerFactory
         );
     }

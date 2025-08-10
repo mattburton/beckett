@@ -9,6 +9,7 @@ public class CheckpointConsumerGroupHost(
     ICheckpointNotificationChannel channel,
     IPostgresDatabase database,
     ICheckpointProcessor processor,
+    ISubscriptionRegistry registry,
     ILoggerFactory loggerFactory
 ) : BackgroundService
 {
@@ -23,6 +24,6 @@ public class CheckpointConsumerGroupHost(
 
     private CheckpointConsumerGroup BuildConsumerGroupForSubscriptionGroup(SubscriptionGroup group)
     {
-        return new CheckpointConsumerGroup(group, options, channel.For(group.Name), database, processor, loggerFactory);
+        return new CheckpointConsumerGroup(group, options, channel.For(group.Name), database, processor, registry, loggerFactory);
     }
 }

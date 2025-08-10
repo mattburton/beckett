@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Beckett.Database;
+using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions;
@@ -10,6 +11,7 @@ public class CheckpointConsumerGroup(
     Channel<CheckpointAvailable> channel,
     IPostgresDatabase database,
     ICheckpointProcessor checkpointProcessor,
+    ISubscriptionRegistry registry,
     ILoggerFactory loggerFactory
 )
 {
@@ -21,6 +23,7 @@ public class CheckpointConsumerGroup(
                 channel,
                 database,
                 checkpointProcessor,
+                registry,
                 options,
                 loggerFactory.CreateLogger<CheckpointConsumer>()
             ).Poll(x, stoppingToken)

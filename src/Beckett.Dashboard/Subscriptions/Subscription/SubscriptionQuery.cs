@@ -13,10 +13,11 @@ public class SubscriptionQuery(
     {
         //language=sql
         const string sql = """
-            SELECT group_name, name, status
-            FROM beckett.subscriptions
-            WHERE group_name = $1
-            AND name = $2;
+            SELECT sg.name, s.name, s.status
+            FROM beckett.subscriptions s
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            WHERE sg.name = $1
+            AND s.name = $2;
         """;
 
         command.CommandText = Query.Build(nameof(SubscriptionQuery), sql, out var prepare);

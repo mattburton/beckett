@@ -12,14 +12,19 @@ public class BootstrapSubscriptions(
     IPostgresDatabase database,
     BeckettOptions options,
     ISubscriptionInitializerChannel subscriptionInitializerChannel,
+    ISubscriptionRegistry registry,
     ILogger<BootstrapSubscriptions> logger
 ) : IHostedService
 {
     public async Task StartAsync(CancellationToken stoppingToken)
     {
+        await registry.Initialize(stoppingToken);
+
         var tasks = options.Subscriptions.Groups.Select(x => BootstrapGroup(x, stoppingToken)).ToArray();
 
         await Task.WhenAll(tasks);
+
+        await registry.Initialize(stoppingToken);
     }
 
     private async Task BootstrapGroup(SubscriptionGroup group, CancellationToken stoppingToken)
@@ -30,10 +35,19 @@ public class BootstrapSubscriptions(
 
         await using var transaction = await connection.BeginTransactionAsync(stoppingToken);
 
+        var globalSubscription = await database.Execute(
+            new AddOrUpdateSubscription(
+                group.Name,
+                GlobalCheckpoint.Name
+            ),
+            connection,
+            transaction,
+            stoppingToken
+        );
+
         await database.Execute(
             new EnsureCheckpointExists(
-                group.Name,
-                GlobalCheckpoint.Name,
+                globalSubscription.SubscriptionId,
                 GlobalCheckpoint.StreamName
             ),
             connection,
@@ -53,7 +67,7 @@ public class BootstrapSubscriptions(
                 group.Name
             );
 
-            var status = await database.Execute(
+            var subscriptionResult = await database.Execute(
                 new AddOrUpdateSubscription(
                     group.Name,
                     subscription.Name
@@ -62,6 +76,8 @@ public class BootstrapSubscriptions(
                 transaction,
                 stoppingToken
             );
+
+            var (subscriptionId, status) = subscriptionResult;
 
             if (status == SubscriptionStatus.Active)
             {
@@ -98,10 +114,7 @@ public class BootstrapSubscriptions(
                 );
 
                 await database.Execute(
-                    new SetSubscriptionToActive(
-                        group.Name,
-                        subscription.Name
-                    ),
+                    new SetSubscriptionToActive(subscriptionId),
                     connection,
                     transaction,
                     stoppingToken
@@ -120,8 +133,7 @@ public class BootstrapSubscriptions(
             checkpoints.Add(
                 new CheckpointType
                 {
-                    GroupName = group.Name,
-                    Name = subscription.Name,
+                    SubscriptionId = subscriptionId,
                     StreamName = InitializationConstants.StreamName,
                     StreamVersion = 0
                 }

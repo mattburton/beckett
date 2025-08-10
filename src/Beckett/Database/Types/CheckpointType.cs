@@ -2,8 +2,7 @@ namespace Beckett.Database.Types;
 
 public class CheckpointType
 {
-    public string GroupName { get; init; } = null!;
-    public string Name { get; init; } = null!;
+    public long SubscriptionId { get; init; }
     public string StreamName { get; set; } = null!;
     public long StreamVersion { get; set; }
     public long StreamPosition { get; set; }
@@ -32,12 +31,12 @@ public class CheckpointType
                 return false;
             }
 
-            return x.GroupName == y.GroupName && x.Name == y.Name && x.StreamName == y.StreamName;
+            return x.SubscriptionId == y.SubscriptionId && x.StreamName == y.StreamName;
         }
 
         public int GetHashCode(CheckpointType obj)
         {
-            return HashCode.Combine(obj.GroupName, obj.Name, obj.StreamName);
+            return HashCode.Combine(obj.SubscriptionId, obj.StreamName);
         }
     }
 

@@ -14,11 +14,13 @@ public class RetriesQuery(
     {
         //language=sql
         const string sql = """
-            SELECT id, group_name, name, stream_name, stream_position, updated_at, count(*) over() as total_results
-            FROM beckett.checkpoints
-            WHERE status = 'retry'
-            AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
-            ORDER BY updated_at desc, group_name, name, stream_name, stream_position
+            SELECT c.id, sg.name as group_name, s.name, c.stream_name, c.stream_position, c.updated_at, count(*) over() as total_results
+            FROM beckett.checkpoints c
+            INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            WHERE c.status = 'retry'
+            AND ($1 is null or (sg.name ILIKE '%' || $1 || '%' OR s.name ILIKE '%' || $1 || '%' OR c.stream_name ILIKE '%' || $1 || '%'))
+            ORDER BY c.updated_at desc, sg.name, s.name, c.stream_name, c.stream_position
             OFFSET $2
             LIMIT $3;
         """;

@@ -225,13 +225,13 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         command.CommandText = $"""
             WITH metric AS (
-                SELECT
+                SELECT s.id
                 FROM {_options.Postgres.Schema}.subscriptions s
-                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status in ('active', 'replay')
                 AND c.status = 'active'
                 AND c.lagging = true
-                GROUP BY c.group_name, c.name
+                GROUP BY s.id
             )
             SELECT count(*)
             FROM metric;
@@ -254,7 +254,7 @@ public class Instrumentation : IInstrumentation, IDisposable
             WITH metric AS (
                 SELECT count(*) as value
                 FROM {_options.Postgres.Schema}.subscriptions s
-                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status != 'uninitialized'
                 AND c.status = 'retry'
                 UNION ALL
@@ -282,7 +282,7 @@ public class Instrumentation : IInstrumentation, IDisposable
             WITH metric AS (
                 SELECT count(*) as value
                 FROM {_options.Postgres.Schema}.subscriptions s
-                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status != 'uninitialized'
                 AND c.status = 'failed'
                 UNION ALL

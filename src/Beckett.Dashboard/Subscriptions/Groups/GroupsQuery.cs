@@ -14,11 +14,10 @@ public class GroupsQuery(
     {
         //language=sql
         const string sql = """
-            SELECT group_name, count(*) over() as total_results
-            FROM beckett.subscriptions
-            WHERE ($1 IS NULL or name ILIKE '%' || $1 || '%')
-            GROUP BY group_name
-            ORDER BY group_name
+            SELECT sg.name, count(*) over() as total_results
+            FROM beckett.subscription_groups sg
+            WHERE ($1 IS NULL or sg.name ILIKE '%' || $1 || '%')
+            ORDER BY sg.name
             OFFSET $2
             LIMIT $3;
         """;

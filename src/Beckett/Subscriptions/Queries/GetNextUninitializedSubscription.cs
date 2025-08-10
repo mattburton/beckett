@@ -10,10 +10,11 @@ public class GetNextUninitializedSubscription(string groupName) : IPostgresDatab
     {
         //language=sql
         const string sql = """
-            SELECT name
-            FROM beckett.subscriptions
-            WHERE group_name = $1
-            AND status in ('uninitialized', 'backfill')
+            SELECT s.name
+            FROM beckett.subscriptions s
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            WHERE sg.name = $1
+            AND s.status in ('uninitialized', 'backfill')
             LIMIT 1;
         """;
 

@@ -13,10 +13,12 @@ public class PauseQuery(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.subscriptions
+            UPDATE beckett.subscriptions s
             SET status = 'paused'
-            WHERE group_name = $1
-            AND name = $2;
+            FROM beckett.subscription_groups sg
+            WHERE s.subscription_group_id = sg.id
+            AND sg.name = $1
+            AND s.name = $2;
         """;
 
         command.CommandText = Query.Build(nameof(PauseQuery), sql, out var prepare);

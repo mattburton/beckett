@@ -13,17 +13,18 @@ public class LaggingQuery(
     {
         //language=sql
         const string sql = """
-            SELECT c.group_name,
-                   c.name,
+            SELECT sg.name as group_name,
+                   s.name,
                    sum(greatest(0, c.stream_version - c.stream_position)) AS total_lag,
                    count(*) over() as total_results
             FROM beckett.subscriptions s
-            INNER JOIN beckett.checkpoints c ON s.group_name = c.group_name AND s.name = c.name
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
             WHERE s.status in ('active', 'replay')
             AND c.status = 'active'
             AND c.lagging = true
-            GROUP BY c.group_name, c.name
-            ORDER BY c.group_name, sum(greatest(0, c.stream_version - c.stream_position)) DESC, name
+            GROUP BY sg.name, s.name
+            ORDER BY sg.name, sum(greatest(0, c.stream_version - c.stream_position)) DESC, s.name
             OFFSET $1
             LIMIT $2;
         """;

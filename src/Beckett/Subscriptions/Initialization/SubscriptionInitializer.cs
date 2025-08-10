@@ -13,6 +13,7 @@ public class SubscriptionInitializer(
     IPostgresDatabase database,
     IPostgresDataSource dataSource,
     IMessageStorage messageStorage,
+    ISubscriptionRegistry registry,
     ILogger<SubscriptionInitializer> logger
 )
 {
@@ -50,15 +51,19 @@ public class SubscriptionInitializer(
                                 subscriptionName
                             );
 
-                            await database.Execute(
-                                new SetSubscriptionStatus(
-                                    group.Name,
-                                    subscriptionName,
-                                    SubscriptionStatus.Unknown
-                                ),
+                            var subscriptionId = registry.GetSubscriptionId(group.Name, subscriptionName);
+
+                            if (subscriptionId.HasValue)
+                            {
+                                await database.Execute(
+                                    new SetSubscriptionStatus(
+                                        subscriptionId.Value,
+                                        SubscriptionStatus.Unknown
+                                    ),
                                 connection,
                                 cancellationToken
-                            );
+                                );
+                            }
 
                             continue;
                         }
@@ -91,10 +96,18 @@ public class SubscriptionInitializer(
 
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
+            var subscriptionId = registry.GetSubscriptionId(subscription.Group.Name, subscription.Name);
+
+            if (subscriptionId == null)
+            {
+                logger.LogWarning("Subscription {SubscriptionName} in group {GroupName} not found in mapping",
+                    subscription.Name, subscription.Group.Name);
+                continue;
+            }
+
             var checkpoint = await database.Execute(
                 new LockCheckpoint(
-                    subscription.Group.Name,
-                    subscription.Name,
+                    subscriptionId.Value,
                     InitializationConstants.StreamName
                 ),
                 connection,
@@ -120,10 +133,16 @@ public class SubscriptionInitializer(
 
             if (batch.StreamMessages.Count == 0)
             {
+                var globalSubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, GlobalCheckpoint.Name);
+                if (globalSubscriptionId == null)
+                {
+                    logger.LogWarning("Global subscription for group {GroupName} not found in mapping", subscription.Group.Name);
+                    break;
+                }
+
                 var globalCheckpoint = await database.Execute(
                     new LockCheckpoint(
-                        subscription.Group.Name,
-                        GlobalCheckpoint.Name,
+                        globalSubscriptionId.Value,
                         GlobalCheckpoint.StreamName
                     ),
                     connection,
@@ -172,8 +191,7 @@ public class SubscriptionInitializer(
                     // if there's no work to catch up on the subscription can be activated immediately
                     var checkpointCount = await database.Execute(
                         new GetSubscriptionCheckpointCount(
-                            subscription.Group.Name,
-                            subscription.Name
+                            subscriptionId.Value
                         ),
                         cancellationToken
                     );
@@ -183,10 +201,10 @@ public class SubscriptionInitializer(
 
                 if (setSubscriptionToReplay)
                 {
+                    var replaySubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, subscription.Name)!.Value;
                     await database.Execute(
                         new SetSubscriptionToReplay(
-                            subscription.Group.Name,
-                            subscription.Name
+                            replaySubscriptionId
                         ),
                         connection,
                         transaction,
@@ -201,10 +219,10 @@ public class SubscriptionInitializer(
 
                         while (count != 0)
                         {
+                            var advanceSubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, subscription.Name)!.Value;
                             count = await database.Execute(
                                 new AdvanceLaggingSubscriptionCheckpoints(
-                                    subscription.Group.Name,
-                                    subscription.Name
+                                    advanceSubscriptionId
                                 ),
                                 connection,
                                 transaction,
@@ -215,8 +233,7 @@ public class SubscriptionInitializer(
 
                     await database.Execute(
                         new SetSubscriptionToActive(
-                            subscription.Group.Name,
-                            subscription.Name
+                            subscriptionId.Value
                         ),
                         connection,
                         transaction,
@@ -260,8 +277,7 @@ public class SubscriptionInitializer(
                 checkpoints.Add(
                     new CheckpointType
                     {
-                        GroupName = subscription.Group.Name,
-                        Name = subscription.Name,
+                        SubscriptionId = subscriptionId.Value,
                         StreamName = stream.Key,
                         StreamPosition = streamPosition,
                         StreamVersion = streamVersion
@@ -288,10 +304,10 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
+            var updateSubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, subscription.Name)!.Value;
             await database.Execute(
                 new UpdateSubscriptionReplayTargetPosition(
-                    subscription.Group.Name,
-                    subscription.Name,
+                    updateSubscriptionId,
                     replayTargetPosition.GetValueOrDefault()
                 ),
                 connection,
