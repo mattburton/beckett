@@ -19,7 +19,7 @@ public class EnhancedSubscriptionQuery(
                    s.status,
                    s.category,
                    s.stream_name,
-                   s.message_types,
+                   array_agg(mt.name ORDER BY mt.name) FILTER (WHERE mt.name IS NOT NULL) as message_types,
                    s.priority,
                    s.skip_during_replay,
                    s.replay_target_position,
@@ -29,6 +29,8 @@ public class EnhancedSubscriptionQuery(
                    coalesce(retry.retry_count, 0) as retry_checkpoints
             FROM beckett.subscriptions s
             INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            LEFT JOIN beckett.subscription_message_types smt ON s.id = smt.subscription_id
+            LEFT JOIN beckett.message_types mt ON smt.message_type_id = mt.id
             LEFT JOIN (
                 SELECT subscription_id, count(*) as active_count
                 FROM beckett.checkpoints

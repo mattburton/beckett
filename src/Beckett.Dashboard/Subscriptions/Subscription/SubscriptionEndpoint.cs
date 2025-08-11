@@ -12,7 +12,7 @@ public static class SubscriptionEndpoint
         CancellationToken cancellationToken
     )
     {
-        var result = await database.Execute(new SubscriptionQuery(groupName, name), cancellationToken);
+        var result = await database.Execute(new EnhancedSubscriptionQuery(groupName, name), cancellationToken);
 
         return result == null
             ? Results.NotFound()

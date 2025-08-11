@@ -27,14 +27,14 @@
         </a>
       </li>
       <li class="breadcrumb-item active" aria-current="page">
-        @Model.Details.Name
+        @Model.Details.SubscriptionName
       </li>
     </ol>
   </div>
 </nav>
 
 <div id="subscription-details"
-     hx-get="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name"
+     hx-get="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.SubscriptionName"
      hx-trigger="every 10s"
      hx-select="#subscription-details"
      hx-swap="outerHTML">
@@ -45,12 +45,11 @@
           @{
             var statusIndicator = Model.Details.Status switch
             {
-              SubscriptionStatus.Active => "text-bg-success",
-              SubscriptionStatus.Paused => "text-bg-secondary",
-              SubscriptionStatus.Replay => "text-bg-danger",
-              SubscriptionStatus.Uninitialized => "text-bg-warning",
-              SubscriptionStatus.Unknown => "text-bg-warning",
-              _ => throw new ArgumentOutOfRangeException()
+              "active" => "text-bg-success",
+              "paused" => "text-bg-secondary", 
+              "replay" => "text-bg-danger",
+              "uninitialized" => "text-bg-warning",
+              _ => "text-bg-warning"
             };
           }
           <span class="badge rounded-pill @statusIndicator p-2 me-1">
@@ -59,39 +58,39 @@
           Subscription
         </div>
         <div>
-          @if (Model.Details.Status == SubscriptionStatus.Active)
+          @if (Model.Details.Status == "active")
           {
             <button class="btn btn-primary"
                     title="Pause Subscription"
-                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/pause"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.SubscriptionName/pause"
                     hx-on::response-error="alert('Unable to pause subscription at this time - please try again later')">
               Pause
             </button>
           }
-          @if (Model.Details.Status == SubscriptionStatus.Paused)
+          @if (Model.Details.Status == "paused")
           {
             <button class="btn btn-primary"
                     title="Resume Subscription"
-                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/resume"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.SubscriptionName/resume"
                     hx-on::response-error="alert('Unable to resume subscription at this time - please try again later')">
               Resume
             </button>
           }
-          @if (Model.Details.Status != SubscriptionStatus.Replay)
+          @if (Model.Details.Status != "replay")
           {
             <button class="btn btn-danger ms-2"
                     title="Replay Subscription"
-                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/replay"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.SubscriptionName/replay"
                     hx-confirm="Are you sure you want to replay this subscription?"
                     hx-on::response-error="alert('Unable to replay subscription at this time - please try again later')">
               Replay
             </button>
           }
-          @if (Model.Details.Status != SubscriptionStatus.Uninitialized)
+          @if (Model.Details.Status != "uninitialized")
           {
             <button class="btn btn-danger ms-2"
                     title="Reset Subscription"
-                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.Name/reset"
+                    hx-post="@Dashboard.Prefix/subscriptions/@Model.Details.GroupName/@Model.Details.SubscriptionName/reset"
                     hx-confirm="Are you sure you want to reset this subscription?"
                     hx-on::response-error="alert('Unable to reset subscription at this time - please try again later')">
               Reset
@@ -102,14 +101,54 @@
     </div>
     <ul class="list-group list-group-flush">
       <li class="list-group-item"><span class="fw-bolder">Group Name:</span> @Model.Details.GroupName</li>
-      <li class="list-group-item"><span class="fw-bolder">Name:</span> @Model.Details.Name</li>
+      <li class="list-group-item"><span class="fw-bolder">Name:</span> @Model.Details.SubscriptionName</li>
       <li class="list-group-item"><span class="fw-bolder">Status:</span> @Model.Details.Status</li>
+      <li class="list-group-item"><span class="fw-bolder">Priority:</span> @Model.Details.Priority</li>
+      <li class="list-group-item"><span class="fw-bolder">Skip During Replay:</span> @(Model.Details.SkipDuringReplay ? "Yes" : "No")</li>
+      
+      @if (!string.IsNullOrEmpty(Model.Details.Category))
+      {
+        <li class="list-group-item"><span class="fw-bolder">Category:</span> @Model.Details.Category</li>
+      }
+      
+      @if (!string.IsNullOrEmpty(Model.Details.StreamName))
+      {
+        <li class="list-group-item"><span class="fw-bolder">Stream Name:</span> @Model.Details.StreamName</li>
+      }
+      
+      @if (Model.Details.MessageTypes.Length > 0)
+      {
+        <li class="list-group-item">
+          <span class="fw-bolder">Message Types:</span>
+          <ul class="list-unstyled ms-3 mt-1 mb-0">
+            @foreach (var messageType in Model.Details.MessageTypes)
+            {
+              <li><code>@messageType</code></li>
+            }
+          </ul>
+        </li>
+      }
+      
+      @if (Model.Details.ReplayTargetPosition.HasValue)
+      {
+        <li class="list-group-item"><span class="fw-bolder">Replay Target Position:</span> @Model.Details.ReplayTargetPosition.Value</li>
+      }
+      
+      <li class="list-group-item">
+        <span class="fw-bolder">Checkpoints:</span>
+        <ul class="list-unstyled ms-3 mt-1 mb-0">
+          <li><span class="badge text-bg-success">@Model.Details.ActiveCheckpoints</span> Active</li>
+          <li><span class="badge text-bg-warning">@Model.Details.LaggingCheckpoints</span> Lagging</li>
+          <li><span class="badge text-bg-danger">@Model.Details.FailedCheckpoints</span> Failed</li>
+          <li><span class="badge text-bg-info">@Model.Details.RetryCheckpoints</span> Retry</li>
+        </ul>
+      </li>
     </ul>
   </div>
 </div>
 
 @code {
 
-  public record ViewModel(SubscriptionQuery.Result Details);
+  public record ViewModel(EnhancedSubscriptionQuery.Result Details);
 
 }
