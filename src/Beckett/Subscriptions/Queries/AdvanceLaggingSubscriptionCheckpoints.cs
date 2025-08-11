@@ -13,7 +13,7 @@ public class AdvanceLaggingSubscriptionCheckpoints(long subscriptionId) : IPostg
             WITH updated_checkpoints AS (
                 UPDATE beckett.checkpoints
                 SET stream_position = stream_version,
-                    process_at = null
+                    updated_at = now()
                 WHERE id IN (
                     SELECT id
                     FROM beckett.checkpoints

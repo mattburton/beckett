@@ -14,9 +14,7 @@ public class ReleaseCheckpointReservation(
         const string sql = """
             WITH updated_checkpoint AS (
                 UPDATE beckett.checkpoints
-                SET process_at = NULL,
-                    reserved_until = NULL,
-                    updated_at = now()
+                SET updated_at = now()
                 WHERE id = $1
                 RETURNING id, stream_version, stream_position, status, subscription_id
             ),

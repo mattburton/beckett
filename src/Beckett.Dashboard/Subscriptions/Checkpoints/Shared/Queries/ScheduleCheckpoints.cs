@@ -15,7 +15,7 @@ public class ScheduleCheckpoints(
         const string sql = """
             WITH updated_checkpoints AS (
                 UPDATE beckett.checkpoints
-                SET process_at = $2
+                SET updated_at = now()
                 WHERE id = ANY($1)
                 RETURNING id, stream_version, stream_position, status
             )

@@ -210,8 +210,6 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   stream_position bigint NOT NULL DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  process_at timestamp with time zone NULL,
-  reserved_until timestamp with time zone NULL,
   retry_attempts int NOT NULL DEFAULT 0,
   lagging boolean GENERATED ALWAYS AS (stream_version > stream_position) STORED,
   status __schema__.checkpoint_status NOT NULL DEFAULT 'active',
@@ -222,11 +220,8 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON beckett.checkpoints (subscription_id);
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (subscription_id, process_at, reserved_until)
-  WHERE process_at IS NOT NULL AND reserved_until IS NULL;
-
-CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (subscription_id, reserved_until)
-  WHERE reserved_until IS NOT NULL;
+-- ix_checkpoints_to_process and ix_checkpoints_reserved removed in v0.23.3
+-- Scheduling and reservations now handled by dedicated tables
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, lagging, subscription_id);
 

@@ -19,14 +19,16 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
                    c.stream_version,
                    c.stream_position,
                    c.status,
-                   c.process_at,
-                   c.reserved_until,
+                   cr.process_at,
+                   cres.reserved_until,
                    c.retries,
                    m.stream_name as actual_stream_name,
                    m.stream_position as actual_stream_position
             FROM beckett.checkpoints c
             INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
             INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+            LEFT JOIN beckett.checkpoints_ready cr ON c.id = cr.id
+            LEFT JOIN beckett.checkpoints_reserved cres ON c.id = cres.id
             LEFT JOIN beckett.messages m on c.stream_name = '$global' and c.stream_position = m.global_position
             WHERE c.id = $1;
         """;

@@ -339,8 +339,6 @@ CREATE TABLE beckett.checkpoints (
     stream_position bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
-    process_at timestamp with time zone,
-    reserved_until timestamp with time zone,
     retry_attempts integer DEFAULT 0 NOT NULL,
     lagging boolean GENERATED ALWAYS AS ((stream_version > stream_position)) STORED,
     status beckett.checkpoint_status DEFAULT 'active'::beckett.checkpoint_status NOT NULL,
@@ -752,11 +750,7 @@ ALTER TABLE ONLY beckett.tenants
 CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints USING btree (status, lagging, subscription_id);
 
 
---
--- Name: ix_checkpoints_reserved; Type: INDEX; Schema: beckett; Owner: -
---
-
-CREATE INDEX ix_checkpoints_reserved ON beckett.checkpoints USING btree (subscription_id, reserved_until) WHERE (reserved_until IS NOT NULL);
+-- ix_checkpoints_reserved removed in v0.23.3 - reservations now handled by checkpoints_reserved table
 
 
 --
@@ -766,11 +760,7 @@ CREATE INDEX ix_checkpoints_reserved ON beckett.checkpoints USING btree (subscri
 CREATE INDEX ix_checkpoints_subscription_id ON beckett.checkpoints USING btree (subscription_id);
 
 
---
--- Name: ix_checkpoints_to_process; Type: INDEX; Schema: beckett; Owner: -
---
-
-CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints USING btree (subscription_id, process_at, reserved_until) WHERE ((process_at IS NOT NULL) AND (reserved_until IS NULL));
+-- ix_checkpoints_to_process removed in v0.23.3 - scheduling now handled by checkpoints_ready table
 
 
 --

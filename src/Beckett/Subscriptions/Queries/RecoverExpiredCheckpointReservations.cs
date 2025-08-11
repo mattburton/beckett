@@ -27,16 +27,24 @@ public class RecoverExpiredCheckpointReservations(
             ),
             updated_checkpoints AS (
                 UPDATE beckett.checkpoints c
-                SET reserved_until = NULL
+                SET updated_at = now()
                 FROM expired_reservations er
                 WHERE c.id = er.id
                 RETURNING c.id
+            ),
+            inserted_ready AS (
+                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name)
+                SELECT er.id, now(), sg.name
+                FROM expired_reservations er
+                INNER JOIN beckett.checkpoints c ON er.id = c.id
+                INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
+                INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
+                WHERE er.status = 'active' AND er.stream_version > er.stream_position
+                ON CONFLICT (id) DO UPDATE
+                    SET process_at = now()
+                RETURNING id
             )
-            INSERT INTO beckett.checkpoints_ready (id, process_at)
-            SELECT er.id, now()
-            FROM expired_reservations er
-            WHERE er.status = 'active' AND er.stream_version > er.stream_position
-            ON CONFLICT DO NOTHING;
+            SELECT count(*) FROM inserted_ready;
         """;
 
         command.CommandText = Query.Build(nameof(RecoverExpiredCheckpointReservations), sql, out var prepare);

@@ -17,8 +17,6 @@ public class UpdateCheckpointPosition(
             WITH updated_checkpoint AS (
                 UPDATE beckett.checkpoints
                 SET stream_position = $2,
-                    process_at = $3,
-                    reserved_until = NULL,
                     status = 'active',
                     retry_attempts = 0,
                     retries = NULL,

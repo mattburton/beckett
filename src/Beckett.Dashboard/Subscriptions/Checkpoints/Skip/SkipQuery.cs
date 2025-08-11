@@ -17,8 +17,6 @@ public class SkipQuery(
             
             UPDATE beckett.checkpoints
             SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
-                process_at = NULL,
-                reserved_until = NULL,
                 status = 'active',
                 retry_attempts = 0,
                 retries = NULL,

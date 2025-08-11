@@ -22,8 +22,6 @@ public record RecordCheckpointError(
             WITH updated_checkpoint AS (
                 UPDATE beckett.checkpoints
                 SET stream_position = $2,
-                    process_at = $6,
-                    reserved_until = NULL,
                     status = $3,
                     retry_attempts = $4,
                     updated_at = now(),
@@ -44,7 +42,8 @@ public record RecordCheckpointError(
                 FROM updated_checkpoint uc
                 INNER JOIN beckett.subscriptions s ON uc.subscription_id = s.id
                 INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-                WHERE $6 IS NOT NULL AND uc.status = 'retry'
+                WHERE $6 IS NOT NULL
+                AND uc.status = 'retry'
                 ON CONFLICT (id) DO UPDATE
                     SET process_at = EXCLUDED.process_at
                 RETURNING id
