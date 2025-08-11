@@ -244,14 +244,8 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   UNIQUE (subscription_id, stream_name)
 );
 
--- ix_checkpoints_to_process and ix_checkpoints_reserved removed in v0.23.3
--- Scheduling and reservations now handled by dedicated tables
-
 CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, subscription_id);
 CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON __schema__.checkpoints (subscription_id);
-
--- Checkpoint trigger functions and triggers removed in v0.23.1
--- All checkpoint state management is now handled manually in application queries
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 
