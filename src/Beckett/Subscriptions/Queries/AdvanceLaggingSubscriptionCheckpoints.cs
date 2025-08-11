@@ -18,7 +18,7 @@ public class AdvanceLaggingSubscriptionCheckpoints(long subscriptionId) : IPostg
                     SELECT id
                     FROM beckett.checkpoints
                     WHERE subscription_id = $1
-                    AND lagging = true
+                    AND stream_version > stream_position
                     LIMIT 500
                 )
                 RETURNING id

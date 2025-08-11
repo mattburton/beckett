@@ -230,7 +230,7 @@ public class Instrumentation : IInstrumentation, IDisposable
                 INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status in ('active', 'replay')
                 AND c.status = 'active'
-                AND c.lagging = true
+                AND c.stream_version > c.stream_position
                 GROUP BY s.id
             )
             SELECT count(*)

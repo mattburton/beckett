@@ -340,7 +340,6 @@ CREATE TABLE beckett.checkpoints (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     retry_attempts integer DEFAULT 0 NOT NULL,
-    lagging boolean GENERATED ALWAYS AS ((stream_version > stream_position)) STORED,
     status beckett.checkpoint_status DEFAULT 'active'::beckett.checkpoint_status NOT NULL,
     stream_name text NOT NULL,
     retries beckett.retry[]
@@ -747,7 +746,7 @@ ALTER TABLE ONLY beckett.tenants
 -- Name: ix_checkpoints_metrics; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints USING btree (status, lagging, subscription_id);
+CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints USING btree (status, subscription_id);
 
 
 -- ix_checkpoints_reserved removed in v0.23.3 - reservations now handled by checkpoints_reserved table

@@ -22,7 +22,7 @@ public class LaggingQuery(
             INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
             WHERE s.status in ('active', 'replay')
             AND c.status = 'active'
-            AND c.lagging = true
+            AND c.stream_version > c.stream_position
             GROUP BY sg.name, s.name
             ORDER BY sg.name, sum(greatest(0, c.stream_version - c.stream_position)) DESC, s.name
             OFFSET $1
