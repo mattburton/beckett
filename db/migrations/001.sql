@@ -165,7 +165,7 @@ CREATE TYPE __schema__.retry AS
   timestamp timestamp with time zone
 );
 
-CREATE TYPE __schema__.stream_metadata AS
+CREATE TYPE __schema__.stream_metadata_type AS
 (
   stream_name text,
   category text,
@@ -174,7 +174,7 @@ CREATE TYPE __schema__.stream_metadata AS
   message_count bigint
 );
 
-CREATE TYPE __schema__.message_metadata AS
+CREATE TYPE __schema__.message_metadata_type AS
 (
   id uuid,
   global_position bigint,
@@ -217,10 +217,16 @@ CREATE TABLE IF NOT EXISTS __schema__.subscriptions
   name text NOT NULL,
   status __schema__.subscription_status DEFAULT 'uninitialized' NOT NULL,
   replay_target_position bigint NULL,
+  category text NULL,
+  stream_name text NULL,
+  message_types text[] NULL,
+  priority integer NOT NULL DEFAULT 2147483647,
+  skip_during_replay boolean NOT NULL DEFAULT false,
   UNIQUE (subscription_group_id, name)
 );
 
 CREATE INDEX ix_subscriptions_reservation_candidates ON __schema__.subscriptions (subscription_group_id, name, status) WHERE status = 'active' OR status = 'replay';
+CREATE INDEX IF NOT EXISTS ix_subscriptions_category ON __schema__.subscriptions (category) WHERE category IS NOT NULL;
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
@@ -238,13 +244,10 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   UNIQUE (subscription_id, stream_name)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON beckett.checkpoints (subscription_id);
-
 -- ix_checkpoints_to_process and ix_checkpoints_reserved removed in v0.23.3
 -- Scheduling and reservations now handled by dedicated tables
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, subscription_id);
-
 CREATE INDEX IF NOT EXISTS ix_checkpoints_subscription_id ON __schema__.checkpoints (subscription_id);
 
 -- Checkpoint trigger functions and triggers removed in v0.23.1
@@ -522,13 +525,22 @@ CREATE INDEX IF NOT EXISTS ix_stream_metadata_last_updated ON __schema__.stream_
 
 GRANT UPDATE, DELETE ON __schema__.stream_metadata TO beckett;
 
+-- Normalized message_types table
+CREATE TABLE IF NOT EXISTS __schema__.message_types (
+    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name text NOT NULL UNIQUE,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+GRANT UPDATE, DELETE ON __schema__.message_types TO beckett;
+
 -- Message metadata table (without data)
 CREATE TABLE IF NOT EXISTS __schema__.message_metadata (
     id uuid NOT NULL,
     global_position bigint NOT NULL,
     stream_name text NOT NULL,
     stream_position bigint NOT NULL,
-    type text NOT NULL,
+    message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id),
     category text NOT NULL,
     correlation_id text NULL,
     tenant text NULL,
@@ -541,11 +553,12 @@ CREATE TABLE IF NOT EXISTS __schema__.message_metadata_active PARTITION OF __sch
     FOR VALUES FROM (0) TO (MAXVALUE);
 
 -- Create indexes on the partition
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_stream_type ON __schema__.message_metadata_active (stream_name, type);
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_category_type ON __schema__.message_metadata_active (category, type);
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_correlation_id ON __schema__.message_metadata_active (correlation_id) 
+CREATE INDEX IF NOT EXISTS ix_message_metadata_active_stream_type ON __schema__.message_metadata_active (stream_name, message_type_id);
+CREATE INDEX IF NOT EXISTS ix_message_metadata_active_category_type ON __schema__.message_metadata_active (category, message_type_id);
+CREATE INDEX IF NOT EXISTS ix_message_metadata_message_type_id ON __schema__.message_metadata (message_type_id);
+CREATE INDEX IF NOT EXISTS ix_message_metadata_active_correlation_id ON __schema__.message_metadata_active (correlation_id)
     WHERE correlation_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_tenant ON __schema__.message_metadata_active (tenant) 
+CREATE INDEX IF NOT EXISTS ix_message_metadata_active_tenant ON __schema__.message_metadata_active (tenant)
     WHERE tenant IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_message_metadata_active_timestamp ON __schema__.message_metadata_active (timestamp DESC);
 
@@ -555,70 +568,22 @@ GRANT UPDATE, DELETE ON __schema__.message_metadata_active TO beckett;
 -- Stream types lookup table for fast initialization
 CREATE TABLE IF NOT EXISTS __schema__.stream_types (
     stream_name text NOT NULL,
-    message_type text NOT NULL,
+    message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id),
     first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
     last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
     message_count bigint NOT NULL DEFAULT 1,
-    PRIMARY KEY (stream_name, message_type)
+    PRIMARY KEY (stream_name, message_type_id)
 );
 
-CREATE INDEX IF NOT EXISTS ix_stream_types_message_type ON __schema__.stream_types (message_type);
+CREATE INDEX IF NOT EXISTS ix_stream_types_message_type_id ON __schema__.stream_types (message_type_id);
 
 GRANT UPDATE, DELETE ON __schema__.stream_types TO beckett;
 
--- Add subscription configuration columns for global reader support
-ALTER TABLE __schema__.subscriptions 
-ADD COLUMN IF NOT EXISTS category text NULL,
-ADD COLUMN IF NOT EXISTS stream_name text NULL,
-ADD COLUMN IF NOT EXISTS message_types text[] NULL,
-ADD COLUMN IF NOT EXISTS priority integer NOT NULL DEFAULT 2147483647,
-ADD COLUMN IF NOT EXISTS skip_during_replay boolean NOT NULL DEFAULT false;
-
--- Add indexes for the new columns
-CREATE INDEX IF NOT EXISTS ix_subscriptions_category ON __schema__.subscriptions (category) WHERE category IS NOT NULL;
-
--- Normalized message_types table
-CREATE TABLE IF NOT EXISTS __schema__.message_types (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name text NOT NULL UNIQUE,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-GRANT UPDATE, DELETE ON __schema__.message_types TO beckett;
-
 -- Subscription message types junction table
 CREATE TABLE IF NOT EXISTS __schema__.subscription_message_types (
-    subscription_id bigint NOT NULL,
-    message_type_id bigint NOT NULL,
-    PRIMARY KEY (subscription_id, message_type_id),
-    FOREIGN KEY (subscription_id) REFERENCES __schema__.subscriptions(id) ON DELETE CASCADE,
-    FOREIGN KEY (message_type_id) REFERENCES __schema__.message_types(id) ON DELETE CASCADE
+    subscription_id bigint NOT NULL REFERENCES __schema__.subscriptions(id) ON DELETE CASCADE,
+    message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id) ON DELETE CASCADE,
+    PRIMARY KEY (subscription_id, message_type_id)
 );
 
 GRANT UPDATE, DELETE ON __schema__.subscription_message_types TO beckett;
-
--- Update message_metadata to use normalized message types
-ALTER TABLE __schema__.message_metadata 
-DROP COLUMN IF EXISTS type,
-ADD COLUMN IF NOT EXISTS message_type_id bigint;
-
-ALTER TABLE __schema__.message_metadata 
-ADD CONSTRAINT IF NOT EXISTS fk_message_metadata_message_type 
-FOREIGN KEY (message_type_id) REFERENCES __schema__.message_types(id);
-
-CREATE INDEX IF NOT EXISTS ix_message_metadata_message_type_id ON __schema__.message_metadata (message_type_id);
-
--- Update stream_types to use normalized message types
-ALTER TABLE __schema__.stream_types
-DROP COLUMN IF EXISTS message_type,
-ADD COLUMN IF NOT EXISTS message_type_id bigint;
-
-ALTER TABLE __schema__.stream_types 
-ADD CONSTRAINT IF NOT EXISTS fk_stream_types_message_type 
-FOREIGN KEY (message_type_id) REFERENCES __schema__.message_types(id);
-
--- Update primary key
-ALTER TABLE __schema__.stream_types DROP CONSTRAINT IF EXISTS stream_types_pkey;
-ALTER TABLE __schema__.stream_types ADD PRIMARY KEY (stream_name, message_type_id);
-
-CREATE INDEX IF NOT EXISTS ix_stream_types_message_type_id ON __schema__.stream_types (message_type_id);

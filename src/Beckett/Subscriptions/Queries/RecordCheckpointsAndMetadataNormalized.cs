@@ -52,7 +52,7 @@ public class RecordCheckpointsAndMetadataNormalized(
             ),
             inserted_ready AS (
                 INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name, target_stream_version)
-                SELECT ac.id, now(), sg.name, ac.stream_version
+                SELECT DISTINCT ac.id, now(), sg.name, ac.stream_version
                 FROM all_checkpoints ac
                 INNER JOIN beckett.subscriptions s ON ac.subscription_id = s.id
                 INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
@@ -74,10 +74,18 @@ public class RecordCheckpointsAndMetadataNormalized(
         if (streamMetadata.Length > 0)
         {
             var streamMetadataCommand = new NpgsqlBatchCommand("""
+                WITH stream_data AS (
+                    SELECT sm.stream_name, sm.category, 
+                           MAX(sm.latest_position) as latest_position,
+                           MAX(sm.latest_global_position) as latest_global_position,
+                           SUM(sm.message_count) as message_count
+                    FROM unnest($1) sm
+                    GROUP BY sm.stream_name, sm.category
+                )
                 INSERT INTO beckett.stream_metadata 
                     (stream_name, category, latest_position, latest_global_position, message_count, last_updated_at)
-                SELECT sm.stream_name, sm.category, sm.latest_position, sm.latest_global_position, sm.message_count, now()
-                FROM unnest($1) sm
+                SELECT sd.stream_name, sd.category, sd.latest_position, sd.latest_global_position, sd.message_count, now()
+                FROM stream_data sd
                 ON CONFLICT (stream_name) DO UPDATE SET
                     latest_position = GREATEST(beckett.stream_metadata.latest_position, EXCLUDED.latest_position),
                     latest_global_position = GREATEST(beckett.stream_metadata.latest_global_position, EXCLUDED.latest_global_position),
@@ -124,16 +132,19 @@ public class RecordCheckpointsAndMetadataNormalized(
                     FROM unnest($1) mm
                 ),
                 stream_type_data AS (
-                    SELECT md.stream_name, mt.id as message_type_id, md.timestamp
+                    SELECT md.stream_name, mt.id as message_type_id, 
+                           MAX(md.timestamp) as timestamp,
+                           COUNT(*) as message_count
                     FROM message_data md
                     INNER JOIN beckett.message_types mt ON md.message_type_name = mt.name
+                    GROUP BY md.stream_name, mt.id
                 )
                 INSERT INTO beckett.stream_types (stream_name, message_type_id, last_seen_at, message_count)
-                SELECT std.stream_name, std.message_type_id, std.timestamp, 1
+                SELECT std.stream_name, std.message_type_id, std.timestamp, std.message_count
                 FROM stream_type_data std
                 ON CONFLICT (stream_name, message_type_id) DO UPDATE SET
                     last_seen_at = GREATEST(beckett.stream_types.last_seen_at, EXCLUDED.last_seen_at),
-                    message_count = beckett.stream_types.message_count + 1;
+                    message_count = beckett.stream_types.message_count + EXCLUDED.message_count;
                 """);
             streamTypesCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageMetadataArray() });
             batch.BatchCommands.Add(streamTypesCommand);

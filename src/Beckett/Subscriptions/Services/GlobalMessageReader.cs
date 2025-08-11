@@ -193,8 +193,14 @@ public class GlobalMessageReader(
         }
 
         // Category with message types
-        return CategoryMatches(streamName, subscription.Category!) &&
-               subscription.MessageTypes.Any(messageTypes.Contains);
+        if (subscription.Category != null && subscription.MessageTypes.Length > 0)
+        {
+            return CategoryMatches(streamName, subscription.Category) &&
+                   subscription.MessageTypes.Any(messageTypes.Contains);
+        }
+
+        // No valid configuration - subscription doesn't apply
+        return false;
     }
 
     private static bool CategoryMatches(string streamName, string category) => streamName.StartsWith(category);

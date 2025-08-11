@@ -14,6 +14,8 @@ public static class NpgsqlDataSourceBuilderExtensions
         builder.MapComposite<CheckpointType>(DataTypeNames.Checkpoint(schema));
         builder.MapComposite<MessageType>(DataTypeNames.Message(schema));
         builder.MapComposite<RetryType>(DataTypeNames.Retry(schema));
+        builder.MapComposite<StreamMetadataType>(DataTypeNames.StreamMetadata(schema));
+        builder.MapComposite<MessageMetadataType>(DataTypeNames.MessageMetadata(schema));
 
         builder.MapEnum<CheckpointStatus>(DataTypeNames.CheckpointStatus(schema));
         builder.MapEnum<SubscriptionStatus>(DataTypeNames.SubscriptionStatus(schema));
