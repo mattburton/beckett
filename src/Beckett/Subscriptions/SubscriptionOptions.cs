@@ -32,6 +32,11 @@ public class SubscriptionOptions
     /// </summary>
     public TimeSpan ReservationRecoveryInterval { get; set; } = TimeSpan.FromMinutes(1);
 
+    /// <summary>
+    /// Configure the batch size when the global message reader reads from the message store. Defaults to 500.
+    /// </summary>
+    public int GlobalStreamBatchSize { get; set; } = 500;
+
     public IReadOnlyList<SubscriptionGroup> Groups => _groups.Values.ToArray();
 
     public SubscriptionGroup WithSubscriptionGroup(string name, Action<SubscriptionGroup>? configure)

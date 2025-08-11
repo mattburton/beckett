@@ -37,7 +37,8 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<GroupSubscriptionInitializerHost>();
 
-        services.AddHostedService<GlobalStreamConsumerHost>();
+        // Use new GlobalMessageReader for single global processing
+        services.AddHostedService<GlobalMessageReaderHost>();
 
         services.AddHostedService<GlobalStreamPollingService>();
 
