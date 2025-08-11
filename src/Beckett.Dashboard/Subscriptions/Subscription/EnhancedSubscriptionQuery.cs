@@ -40,10 +40,9 @@ public class EnhancedSubscriptionQuery(
             LEFT JOIN (
                 SELECT c.subscription_id, count(*) as lagging_count
                 FROM beckett.checkpoints c
-                LEFT JOIN beckett.checkpoints_ready cr ON c.id = cr.id
+                INNER JOIN beckett.checkpoints_ready cr ON c.id = cr.id
                 WHERE c.status = 'active' 
-                AND c.stream_version > c.stream_position
-                AND cr.id IS NOT NULL
+                AND cr.target_stream_version > c.stream_position
                 GROUP BY c.subscription_id
             ) lagging ON s.id = lagging.subscription_id
             LEFT JOIN (
@@ -58,7 +57,9 @@ public class EnhancedSubscriptionQuery(
                 WHERE status = 'retry'
                 GROUP BY subscription_id
             ) retry ON s.id = retry.subscription_id
-            WHERE sg.name = $1 AND s.name = $2;
+            WHERE sg.name = $1 AND s.name = $2
+            GROUP BY s.id, sg.name, s.name, s.status, s.category, s.stream_name, s.priority, s.skip_during_replay, s.replay_target_position,
+                     active.active_count, lagging.lagging_count, failed.failed_count, retry.retry_count;
         """;
 
         command.CommandText = Query.Build(nameof(EnhancedSubscriptionQuery), sql, out var prepare);
