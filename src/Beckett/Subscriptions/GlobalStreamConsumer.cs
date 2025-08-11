@@ -210,7 +210,7 @@ public class GlobalStreamConsumer(
                 GlobalPosition = message.GlobalPosition,
                 StreamName = message.StreamName,
                 StreamPosition = message.StreamPosition,
-                Type = message.MessageType,
+                MessageTypeName = message.MessageType,
                 Category = StreamCategoryParser.Parse(message.StreamName),
                 CorrelationId = message.CorrelationId,
                 Tenant = message.Tenant,

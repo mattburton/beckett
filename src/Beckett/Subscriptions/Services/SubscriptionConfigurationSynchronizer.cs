@@ -24,7 +24,7 @@ public class SubscriptionConfigurationSynchronizer(
                 try
                 {
                     await database.Execute(
-                        new UpsertSubscriptionConfiguration(
+                        new UpsertSubscriptionConfigurationNormalized(
                             group.Name,
                             subscription.Name,
                             subscription.Category,

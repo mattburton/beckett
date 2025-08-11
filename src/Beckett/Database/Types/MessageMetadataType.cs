@@ -6,7 +6,7 @@ public class MessageMetadataType
     public long GlobalPosition { get; set; }
     public string StreamName { get; set; } = null!;
     public long StreamPosition { get; set; }
-    public string Type { get; set; } = null!;
+    public string MessageTypeName { get; set; } = null!;
     public string Category { get; set; } = null!;
     public string? CorrelationId { get; set; }
     public string? Tenant { get; set; }

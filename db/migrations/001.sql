@@ -180,7 +180,7 @@ CREATE TYPE __schema__.message_metadata AS
   global_position bigint,
   stream_name text,
   stream_position bigint,
-  type text,
+  message_type_name text,
   category text,
   correlation_id text,
   tenant text,
@@ -576,3 +576,49 @@ ADD COLUMN IF NOT EXISTS skip_during_replay boolean NOT NULL DEFAULT false;
 
 -- Add indexes for the new columns
 CREATE INDEX IF NOT EXISTS ix_subscriptions_category ON __schema__.subscriptions (category) WHERE category IS NOT NULL;
+
+-- Normalized message_types table
+CREATE TABLE IF NOT EXISTS __schema__.message_types (
+    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name text NOT NULL UNIQUE,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+GRANT UPDATE, DELETE ON __schema__.message_types TO beckett;
+
+-- Subscription message types junction table
+CREATE TABLE IF NOT EXISTS __schema__.subscription_message_types (
+    subscription_id bigint NOT NULL,
+    message_type_id bigint NOT NULL,
+    PRIMARY KEY (subscription_id, message_type_id),
+    FOREIGN KEY (subscription_id) REFERENCES __schema__.subscriptions(id) ON DELETE CASCADE,
+    FOREIGN KEY (message_type_id) REFERENCES __schema__.message_types(id) ON DELETE CASCADE
+);
+
+GRANT UPDATE, DELETE ON __schema__.subscription_message_types TO beckett;
+
+-- Update message_metadata to use normalized message types
+ALTER TABLE __schema__.message_metadata 
+DROP COLUMN IF EXISTS type,
+ADD COLUMN IF NOT EXISTS message_type_id bigint;
+
+ALTER TABLE __schema__.message_metadata 
+ADD CONSTRAINT IF NOT EXISTS fk_message_metadata_message_type 
+FOREIGN KEY (message_type_id) REFERENCES __schema__.message_types(id);
+
+CREATE INDEX IF NOT EXISTS ix_message_metadata_message_type_id ON __schema__.message_metadata (message_type_id);
+
+-- Update stream_types to use normalized message types
+ALTER TABLE __schema__.stream_types
+DROP COLUMN IF EXISTS message_type,
+ADD COLUMN IF NOT EXISTS message_type_id bigint;
+
+ALTER TABLE __schema__.stream_types 
+ADD CONSTRAINT IF NOT EXISTS fk_stream_types_message_type 
+FOREIGN KEY (message_type_id) REFERENCES __schema__.message_types(id);
+
+-- Update primary key
+ALTER TABLE __schema__.stream_types DROP CONSTRAINT IF EXISTS stream_types_pkey;
+ALTER TABLE __schema__.stream_types ADD PRIMARY KEY (stream_name, message_type_id);
+
+CREATE INDEX IF NOT EXISTS ix_stream_types_message_type_id ON __schema__.stream_types (message_type_id);

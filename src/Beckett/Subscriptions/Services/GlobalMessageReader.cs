@@ -69,7 +69,7 @@ public class GlobalMessageReader(
                     if (allCheckpoints.Count > 0 || streamMetadata.Length > 0)
                     {
                         await database.Execute(
-                            new RecordCheckpointsAndMetadata(
+                            new RecordCheckpointsAndMetadataNormalized(
                                 allCheckpoints.ToArray(),
                                 streamMetadata,
                                 messageMetadata
@@ -124,7 +124,7 @@ public class GlobalMessageReader(
 
         // Get all active subscription configurations from database
         var subscriptionConfigs = await database.Execute(
-            new GetAllSubscriptionConfigurations(),
+            new GetAllSubscriptionConfigurationsNormalized(),
             connection,
             transaction,
             cancellationToken
@@ -159,7 +159,7 @@ public class GlobalMessageReader(
         return checkpoints;
     }
 
-    private static bool DoesSubscriptionApplyToStream(GetAllSubscriptionConfigurations.Result config, string streamName, HashSet<string> messageTypes)
+    private static bool DoesSubscriptionApplyToStream(GetAllSubscriptionConfigurationsNormalized.Result config, string streamName, HashSet<string> messageTypes)
     {
         var isCategoryOnly = config.Category != null && (config.MessageTypes == null || config.MessageTypes.Length == 0);
         var isStreamNameOnly = !string.IsNullOrWhiteSpace(config.StreamName) && (config.MessageTypes == null || config.MessageTypes.Length == 0);
@@ -231,7 +231,7 @@ public class GlobalMessageReader(
                 GlobalPosition = message.GlobalPosition,
                 StreamName = message.StreamName,
                 StreamPosition = message.StreamPosition,
-                Type = message.MessageType,
+                MessageTypeName = message.MessageType,
                 Category = StreamCategoryParser.Parse(message.StreamName),
                 CorrelationId = message.CorrelationId,
                 Tenant = message.Tenant,
