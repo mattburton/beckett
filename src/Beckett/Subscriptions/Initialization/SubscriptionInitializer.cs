@@ -1,7 +1,6 @@
 using System.Threading.Channels;
 using Beckett.Database;
 using Beckett.Database.Types;
-using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +11,6 @@ public class SubscriptionInitializer(
     Channel<UninitializedSubscriptionAvailable> channel,
     IPostgresDatabase database,
     IPostgresDataSource dataSource,
-    IMessageStorage messageStorage,
     ISubscriptionRegistry registry,
     ILogger<SubscriptionInitializer> logger
 )
@@ -60,8 +58,8 @@ public class SubscriptionInitializer(
                                         subscriptionId.Value,
                                         SubscriptionStatus.Unknown
                                     ),
-                                connection,
-                                cancellationToken
+                                    connection,
+                                    cancellationToken
                                 );
                             }
 
@@ -100,12 +98,15 @@ public class SubscriptionInitializer(
 
             if (subscriptionId == null)
             {
-                logger.LogWarning("Subscription {SubscriptionName} in group {GroupName} not found in mapping",
-                    subscription.Name, subscription.Group.Name);
+                logger.LogWarning(
+                    "Subscription {SubscriptionName} in group {GroupName} not found in mapping",
+                    subscription.Name,
+                    subscription.Group.Name
+                );
                 continue;
             }
 
-            var checkpoint = await database.Execute(
+            var initializationCheckpoint = await database.Execute(
                 new LockCheckpoint(
                     subscriptionId.Value,
                     InitializationConstants.StreamName
@@ -115,28 +116,47 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            if (checkpoint == null)
+            if (initializationCheckpoint == null)
             {
                 break;
             }
 
             logger.InitializingSubscription(subscription.Name);
 
-            var batch = await messageStorage.ReadGlobalStream(
-                new ReadGlobalStreamOptions
-                {
-                    LastGlobalPosition = checkpoint.StreamPosition,
-                    BatchSize = subscription.Group.InitializationBatchSize
-                },
+            var subscriptionStreams = await database.Execute(
+                new GetSubscriptionStreams(
+                    subscription.Category,
+                    subscription.StreamName,
+                    subscription.MessageTypeNames.ToArray(),
+                    initializationCheckpoint.StreamPosition,
+                    subscription.Group.InitializationBatchSize
+                ),
+                connection,
                 cancellationToken
             );
 
-            if (batch.StreamMessages.Count == 0)
+            var lastStreamId = subscriptionStreams.Select(stream => stream.StreamIndexId)
+                .Prepend(initializationCheckpoint.StreamPosition).Max();
+
+            var batchMessages = await database.Execute(
+                new GetStreamMessages(
+                    subscriptionStreams.Select(s => s.StreamIndexId).ToArray(),
+                    subscription.Group.InitializationBatchSize
+                ),
+                connection,
+                cancellationToken
+            );
+
+            if (batchMessages.Count == 0)
             {
                 var globalSubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, GlobalCheckpoint.Name);
+
                 if (globalSubscriptionId == null)
                 {
-                    logger.LogWarning("Global subscription for group {GroupName} not found in mapping", subscription.Group.Name);
+                    logger.LogWarning(
+                        "Global subscription for group {GroupName} not found in mapping",
+                        subscription.Group.Name
+                    );
                     break;
                 }
 
@@ -155,16 +175,20 @@ public class SubscriptionInitializer(
                     continue;
                 }
 
-                var nextBatch = await messageStorage.ReadGlobalStream(
-                    new ReadGlobalStreamOptions
-                    {
-                        LastGlobalPosition = checkpoint.StreamPosition,
-                        BatchSize = 1
-                    },
+                // any more streams to process?
+                var streams = await database.Execute(
+                    new GetSubscriptionStreams(
+                        subscription.Category,
+                        subscription.StreamName,
+                        subscription.MessageTypeNames.ToArray(),
+                        initializationCheckpoint.StreamPosition,
+                        1
+                    ),
+                    connection,
                     cancellationToken
                 );
 
-                if (nextBatch.StreamMessages.Any())
+                if (streams.Count > 0)
                 {
                     continue;
                 }
@@ -201,7 +225,8 @@ public class SubscriptionInitializer(
 
                 if (setSubscriptionToReplay)
                 {
-                    var replaySubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, subscription.Name)!.Value;
+                    var replaySubscriptionId =
+                        registry.GetSubscriptionId(subscription.Group.Name, subscription.Name)!.Value;
                     await database.Execute(
                         new SetSubscriptionToReplay(
                             replaySubscriptionId
@@ -219,7 +244,10 @@ public class SubscriptionInitializer(
 
                         while (count != 0)
                         {
-                            var advanceSubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, subscription.Name)!.Value;
+                            var advanceSubscriptionId = registry.GetSubscriptionId(
+                                subscription.Group.Name,
+                                subscription.Name
+                            )!.Value;
                             count = await database.Execute(
                                 new AdvanceLaggingSubscriptionCheckpoints(
                                     advanceSubscriptionId
@@ -250,16 +278,12 @@ public class SubscriptionInitializer(
 
             var checkpoints = new List<CheckpointType>();
 
-            foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
+            foreach (var stream in batchMessages.GroupBy(x => x.StreamName))
             {
-                var filteredStream = stream.Where(x => x.AppliesTo(subscription)).ToArray();
+                // Messages are already filtered by the indexed query, no need for AppliesTo check
+                var streamMessages = stream.ToArray();
 
-                if (filteredStream.Length == 0)
-                {
-                    continue;
-                }
-
-                var streamVersion = filteredStream.Max(x => x.StreamPosition);
+                var streamVersion = streamMessages.Max(x => x.StreamPosition);
 
                 // if the subscription is set to skip during replay or is being backfilled automatically advance the stream position
                 var streamPosition = subscription.SkipDuringReplay || subscription.Status == SubscriptionStatus.Backfill
@@ -267,7 +291,7 @@ public class SubscriptionInitializer(
                     : 0;
 
                 // track the replay target position
-                var globalPosition = filteredStream.Max(x => x.GlobalPosition);
+                var globalPosition = streamMessages.Max(x => x.GlobalPosition);
 
                 if (globalPosition > replayTargetPosition.GetValueOrDefault())
                 {
@@ -292,19 +316,17 @@ public class SubscriptionInitializer(
                 cancellationToken
             );
 
-            var newGlobalPosition = batch.StreamMessages.Max(x => x.GlobalPosition);
-
             await database.Execute(
-                new UpdateSystemCheckpointPosition(
-                    checkpoint.Id,
-                    newGlobalPosition
-                ),
+                new UpdateSystemCheckpointPosition(initializationCheckpoint.Id, lastStreamId),
                 connection,
                 transaction,
                 cancellationToken
             );
 
+            var newGlobalPosition = batchMessages.Max(x => x.GlobalPosition);
+
             var updateSubscriptionId = registry.GetSubscriptionId(subscription.Group.Name, subscription.Name)!.Value;
+
             await database.Execute(
                 new UpdateSubscriptionReplayTargetPosition(
                     updateSubscriptionId,

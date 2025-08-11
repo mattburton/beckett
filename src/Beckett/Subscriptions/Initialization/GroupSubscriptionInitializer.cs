@@ -1,7 +1,5 @@
 using System.Threading.Channels;
 using Beckett.Database;
-using Beckett.Storage;
-using Beckett.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Initialization;
@@ -11,7 +9,6 @@ public class GroupSubscriptionInitializer(
     Channel<UninitializedSubscriptionAvailable> channel,
     IPostgresDatabase database,
     IPostgresDataSource dataSource,
-    IMessageStorage messageStorage,
     ISubscriptionRegistry registry,
     ILoggerFactory loggerFactory
 )
@@ -24,7 +21,6 @@ public class GroupSubscriptionInitializer(
                 channel,
                 database,
                 dataSource,
-                messageStorage,
                 registry,
                 loggerFactory.CreateLogger<SubscriptionInitializer>()
             ).Initialize(stoppingToken)
