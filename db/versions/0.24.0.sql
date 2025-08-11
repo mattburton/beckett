@@ -23,17 +23,16 @@ CREATE TYPE beckett.message_metadata AS
   timestamp timestamp with time zone
 );
 
--- Step 1: Create global reader checkpoint table
-CREATE TABLE IF NOT EXISTS beckett.global_reader_checkpoint (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+-- Step 1: Create global reader position table
+CREATE TABLE IF NOT EXISTS beckett.global_reader_position (
     position bigint NOT NULL DEFAULT 0,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
-GRANT UPDATE ON beckett.global_reader_checkpoint TO beckett;
+GRANT UPDATE ON beckett.global_reader_position TO beckett;
 
 -- Insert initial record
-INSERT INTO beckett.global_reader_checkpoint (position) VALUES (0);
+INSERT INTO beckett.global_reader_position (position) VALUES (0);
 
 -- Step 2: Create stream metadata table
 CREATE TABLE IF NOT EXISTS beckett.stream_metadata (

@@ -146,15 +146,16 @@ public class RecordCheckpointsAndMetadata(
                 message_with_type_and_stream_ids AS (
                     SELECT md.id, md.global_position, md.stream_name, md.stream_position,
                            mt.id as message_type_id, si.id as stream_index_id,
-                           md.correlation_id, md.tenant, md.timestamp
+                           md.correlation_id, t.id as tenant_id, md.timestamp
                     FROM message_data md
                     INNER JOIN beckett.message_types mt ON md.message_type_name = mt.name
                     INNER JOIN beckett.stream_index si ON md.stream_name = si.stream_name
+                    LEFT JOIN beckett.tenants t ON md.tenant = t.name
                 )
                 INSERT INTO beckett.message_index
-                    (id, global_position, stream_position, stream_index_id, message_type_id, correlation_id, tenant, timestamp)
+                    (id, global_position, stream_position, stream_index_id, message_type_id, tenant_id, correlation_id, timestamp)
                 SELECT mwts.id, mwts.global_position, mwts.stream_position,
-                       mwts.stream_index_id, mwts.message_type_id, mwts.correlation_id, mwts.tenant, mwts.timestamp
+                       mwts.stream_index_id, mwts.message_type_id, mwts.tenant_id, mwts.correlation_id, mwts.timestamp
                 FROM message_with_type_and_stream_ids mwts
                 ON CONFLICT (global_position, id) DO NOTHING;
                 """
@@ -208,10 +209,10 @@ public class RecordCheckpointsAndMetadata(
                     WHERE mm.tenant IS NOT NULL
                     GROUP BY mm.tenant
                 )
-                INSERT INTO beckett.tenants (tenant)
+                INSERT INTO beckett.tenants (name)
                 SELECT td.tenant
                 FROM tenants_data td
-                ON CONFLICT (tenant) DO NOTHING;
+                ON CONFLICT (name) DO NOTHING;
                 """
             );
             tenantsCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageIndexArray() });

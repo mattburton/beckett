@@ -24,7 +24,7 @@ public class StreamStatsQuery : IPostgresDatabaseQuery<StreamStatsQuery.Result>
                 INNER JOIN beckett.message_types mt ON smt.message_type_id = mt.id
             ),
             tenant_stats AS (
-                SELECT count(DISTINCT t.tenant) as total_tenants
+                SELECT count(DISTINCT t.name) as total_tenants
                 FROM beckett.tenants t
             )
             SELECT 

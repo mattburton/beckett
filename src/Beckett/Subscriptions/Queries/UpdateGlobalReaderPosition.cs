@@ -12,10 +12,9 @@ public class UpdateGlobalReaderPosition(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.global_reader_checkpoint
+            UPDATE beckett.global_reader_position
             SET position = $1,
-                updated_at = now()
-            WHERE id = 1;
+                updated_at = now();
         """;
 
         command.CommandText = Query.Build(nameof(UpdateGlobalReaderPosition), sql, out var prepare);

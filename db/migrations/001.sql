@@ -288,13 +288,14 @@ GRANT UPDATE, DELETE ON __schema__.stream_categories TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.tenants
 (
-  tenant text NOT NULL PRIMARY KEY
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL UNIQUE
 );
 
 GRANT UPDATE, DELETE ON __schema__.tenants TO beckett;
 
 -- insert default record
-INSERT INTO __schema__.tenants (tenant) VALUES ('default');
+INSERT INTO __schema__.tenants (name) VALUES ('default');
 
 -------------------------------------------------
 -- SUBSCRIPTION UTILITY FUNCTIONS
@@ -563,17 +564,16 @@ $$;
 -- GLOBAL READER ARCHITECTURE
 -------------------------------------------------
 
--- Global reader checkpoint table
-CREATE TABLE IF NOT EXISTS __schema__.global_reader_checkpoint (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+-- Global reader position table
+CREATE TABLE IF NOT EXISTS __schema__.global_reader_position (
     position bigint NOT NULL DEFAULT 0,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
-GRANT UPDATE ON __schema__.global_reader_checkpoint TO beckett;
+GRANT UPDATE ON __schema__.global_reader_position TO beckett;
 
 -- Insert initial record
-INSERT INTO __schema__.global_reader_checkpoint (position) VALUES (0);
+INSERT INTO __schema__.global_reader_position (position) VALUES (0);
 
 -- Stream index table
 CREATE TABLE IF NOT EXISTS __schema__.stream_index (
@@ -608,8 +608,8 @@ CREATE TABLE IF NOT EXISTS __schema__.message_index (
     global_position bigint NOT NULL,
     stream_position bigint NOT NULL,
     message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id),
+    tenant_id bigint NULL REFERENCES __schema__.tenants(id),
     correlation_id text NULL,
-    tenant text NULL,
     timestamp timestamp with time zone NOT NULL,
     PRIMARY KEY (global_position, id)
 ) PARTITION BY RANGE (global_position);
@@ -624,8 +624,8 @@ CREATE INDEX IF NOT EXISTS ix_message_index_stream_index_id ON __schema__.messag
 CREATE INDEX IF NOT EXISTS ix_message_index_message_type_id ON __schema__.message_index (message_type_id);
 CREATE INDEX IF NOT EXISTS ix_message_index_active_correlation_id ON __schema__.message_index_active (correlation_id)
     WHERE correlation_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_message_index_active_tenant ON __schema__.message_index_active (tenant)
-    WHERE tenant IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ix_message_index_active_tenant_id ON __schema__.message_index_active (tenant_id)
+    WHERE tenant_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_message_index_active_timestamp ON __schema__.message_index_active (timestamp DESC);
 
 GRANT UPDATE, DELETE ON __schema__.message_index TO beckett;

@@ -22,12 +22,13 @@ public class EnhancedStreamsQuery(
                       si.message_count,
                       si.latest_position,
                       array_agg(DISTINCT mt.name ORDER BY mt.name) as message_types,
-                      array_agg(DISTINCT mi.tenant ORDER BY mi.tenant) FILTER (WHERE mi.tenant IS NOT NULL) as tenants,
+                      array_agg(DISTINCT t.name ORDER BY t.name) FILTER (WHERE t.name IS NOT NULL) as tenants,
                       count(*) over() AS total_results
                FROM beckett.stream_index si
                LEFT JOIN beckett.stream_message_types smt ON si.id = smt.stream_index_id
                LEFT JOIN beckett.message_types mt ON smt.message_type_id = mt.id
                LEFT JOIN beckett.message_index mi ON si.id = mi.stream_index_id
+               LEFT JOIN beckett.tenants t ON mi.tenant_id = t.id
                INNER JOIN beckett.stream_categories sc ON si.stream_category_id = sc.id
                WHERE sc.name = $2
                AND ($3 IS NULL OR si.stream_name ILIKE '%' || $3 || '%')

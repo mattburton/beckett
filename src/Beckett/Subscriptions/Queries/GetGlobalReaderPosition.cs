@@ -10,8 +10,7 @@ public class GetGlobalReaderPosition : IPostgresDatabaseQuery<long>
         //language=sql
         const string sql = """
             SELECT position
-            FROM beckett.global_reader_checkpoint
-            WHERE id = 1;
+            FROM beckett.global_reader_position;
         """;
 
         command.CommandText = Query.Build(nameof(GetGlobalReaderPosition), sql, out var prepare);
