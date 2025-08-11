@@ -314,7 +314,7 @@ AS
 $$
 DECLARE
   _subscription_id bigint;
-  _rows_deleted integer;
+  _rows integer;
 BEGIN
   SELECT s.id INTO _subscription_id
   FROM __schema__.subscriptions s
@@ -332,8 +332,8 @@ BEGIN
         LIMIT 500
       );
 
-      GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
-      EXIT WHEN _rows_deleted = 0;
+      GET DIAGNOSTICS _rows = ROW_COUNT;
+      EXIT WHEN _rows = 0;
     END LOOP;
 
     DELETE FROM __schema__.subscriptions WHERE id = _subscription_id;
@@ -409,7 +409,7 @@ $$
 DECLARE
   _subscription_id bigint;
   _replay_target_position bigint;
-  _rows_updated integer;
+  _rows integer;
 BEGIN
   SELECT s.id INTO _subscription_id
   FROM __schema__.subscriptions s
@@ -423,9 +423,18 @@ BEGIN
     FROM __schema__.checkpoints c
     LEFT JOIN __schema__.checkpoints_ready cr ON c.id = cr.id
     LEFT JOIN __schema__.checkpoints_reserved cres ON c.id = cres.id
-    INNER JOIN __schema__.messages_active m ON c.stream_name = m.stream_name 
+    INNER JOIN __schema__.messages_active m ON c.stream_name = m.stream_name
         AND COALESCE(cr.target_stream_version, cres.target_stream_version, c.stream_position) = m.stream_position
     WHERE c.subscription_id = _subscription_id;
+
+    -- Store original stream positions for replay ready queue, then reset positions
+    CREATE TEMP TABLE IF NOT EXISTS replay_checkpoints AS
+    SELECT c.id, c.stream_position as target_stream_version, sg.name as subscription_group_name
+    FROM __schema__.checkpoints c
+    INNER JOIN __schema__.subscriptions s ON c.subscription_id = s.id
+    INNER JOIN __schema__.subscription_groups sg ON s.subscription_group_id = sg.id
+    WHERE c.subscription_id = _subscription_id
+    AND c.stream_name != '$initializing';
 
     LOOP
       UPDATE __schema__.checkpoints
@@ -438,14 +447,37 @@ BEGIN
         LIMIT 500
       );
 
-      GET DIAGNOSTICS _rows_updated = ROW_COUNT;
-      EXIT WHEN _rows_updated = 0;
+      GET DIAGNOSTICS _rows = ROW_COUNT;
+      EXIT WHEN _rows = 0;
     END LOOP;
 
     UPDATE __schema__.subscriptions
     SET status = 'replay',
         replay_target_position = _replay_target_position
     WHERE id = _subscription_id;
+
+    -- Add checkpoints to ready queue for processing in batches using original positions
+    LOOP
+      INSERT INTO __schema__.checkpoints_ready (id, process_at, subscription_group_name, target_stream_version)
+      SELECT rc.id, now(), rc.subscription_group_name, rc.target_stream_version
+      FROM replay_checkpoints rc
+      WHERE rc.id IN (
+        SELECT id
+        FROM replay_checkpoints
+        WHERE id NOT IN (SELECT id FROM __schema__.checkpoints_ready WHERE id IN (SELECT id FROM replay_checkpoints))
+        LIMIT 500
+      )
+      ON CONFLICT (id) DO UPDATE
+          SET process_at = EXCLUDED.process_at,
+              target_stream_version = EXCLUDED.target_stream_version;
+
+      GET DIAGNOSTICS _rows = ROW_COUNT;
+      EXIT WHEN _rows = 0;
+    END LOOP;
+
+    DROP TABLE IF EXISTS replay_checkpoints;
+
+    PERFORM pg_notify('beckett:checkpoints', _subscription_id::text);
   END IF;
 END;
 $$;
@@ -460,7 +492,7 @@ AS
 $$
 DECLARE
   _subscription_id bigint;
-  _rows_deleted integer;
+  _rows integer;
 BEGIN
   SELECT s.id INTO _subscription_id
   FROM __schema__.subscriptions s
@@ -469,6 +501,15 @@ BEGIN
   AND s.name = _name;
 
   IF _subscription_id IS NOT NULL THEN
+    -- Store original stream positions for reset ready queue, then delete checkpoints
+    CREATE TEMP TABLE IF NOT EXISTS reset_checkpoints AS
+    SELECT c.stream_name, c.stream_position as target_stream_version, sg.name as subscription_group_name
+    FROM __schema__.checkpoints c
+    INNER JOIN __schema__.subscriptions s ON c.subscription_id = s.id
+    INNER JOIN __schema__.subscription_groups sg ON s.subscription_group_id = sg.id
+    WHERE c.subscription_id = _subscription_id
+    AND c.stream_name != '$initializing';
+
     LOOP
       DELETE FROM __schema__.checkpoints
       WHERE subscription_id = _subscription_id
@@ -478,8 +519,8 @@ BEGIN
         LIMIT 500
       );
 
-      GET DIAGNOSTICS _rows_deleted = ROW_COUNT;
-      EXIT WHEN _rows_deleted = 0;
+      GET DIAGNOSTICS _rows = ROW_COUNT;
+      EXIT WHEN _rows = 0;
     END LOOP;
 
     UPDATE __schema__.subscriptions
@@ -491,6 +532,34 @@ BEGIN
     VALUES (_subscription_id, '$initializing')
     ON CONFLICT (subscription_id, stream_name) DO UPDATE
       SET stream_position = 0;
+
+    -- Recreate checkpoints from stored data and add to ready queue
+    LOOP
+      WITH new_checkpoints AS (
+        INSERT INTO __schema__.checkpoints (subscription_id, stream_name)
+        SELECT _subscription_id, rc.stream_name
+        FROM reset_checkpoints rc
+        WHERE rc.stream_name NOT IN (
+          SELECT stream_name FROM __schema__.checkpoints WHERE subscription_id = _subscription_id
+        )
+        LIMIT 500
+        RETURNING id, stream_name
+      )
+      INSERT INTO __schema__.checkpoints_ready (id, process_at, subscription_group_name, target_stream_version)
+      SELECT nc.id, now(), rc.subscription_group_name, rc.target_stream_version
+      FROM new_checkpoints nc
+      INNER JOIN reset_checkpoints rc ON nc.stream_name = rc.stream_name
+      ON CONFLICT (id) DO UPDATE
+          SET process_at = EXCLUDED.process_at,
+              target_stream_version = EXCLUDED.target_stream_version;
+
+      GET DIAGNOSTICS _rows = ROW_COUNT;
+      EXIT WHEN _rows = 0;
+    END LOOP;
+
+    DROP TABLE IF EXISTS reset_checkpoints;
+
+    PERFORM pg_notify('beckett:subscriptions:reset', _group_name);
   END IF;
 END;
 $$;
