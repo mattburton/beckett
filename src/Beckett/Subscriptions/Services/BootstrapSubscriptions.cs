@@ -13,6 +13,7 @@ public class BootstrapSubscriptions(
     BeckettOptions options,
     ISubscriptionInitializerChannel subscriptionInitializerChannel,
     ISubscriptionRegistry registry,
+    SubscriptionConfigurationSynchronizer configurationSynchronizer,
     ILogger<BootstrapSubscriptions> logger
 ) : IHostedService
 {
@@ -23,6 +24,12 @@ public class BootstrapSubscriptions(
         var tasks = options.Subscriptions.Groups.Select(x => BootstrapGroup(x, stoppingToken)).ToArray();
 
         await Task.WhenAll(tasks);
+
+        // Synchronize subscription configurations to database
+        await configurationSynchronizer.SynchronizeSubscriptionConfigurations(
+            options.Subscriptions.Groups,
+            stoppingToken
+        );
 
         await registry.Initialize(stoppingToken);
     }

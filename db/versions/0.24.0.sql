@@ -94,3 +94,14 @@ CREATE TABLE IF NOT EXISTS beckett.stream_types (
 CREATE INDEX IF NOT EXISTS ix_stream_types_message_type ON beckett.stream_types (message_type);
 
 GRANT UPDATE, DELETE ON beckett.stream_types TO beckett;
+
+-- Step 5: Add subscription configuration columns to existing subscriptions table
+ALTER TABLE beckett.subscriptions 
+ADD COLUMN IF NOT EXISTS category text NULL,
+ADD COLUMN IF NOT EXISTS stream_name text NULL,
+ADD COLUMN IF NOT EXISTS message_types text[] NULL,
+ADD COLUMN IF NOT EXISTS priority integer NOT NULL DEFAULT 2147483647,
+ADD COLUMN IF NOT EXISTS skip_during_replay boolean NOT NULL DEFAULT false;
+
+-- Add indexes for the new columns
+CREATE INDEX IF NOT EXISTS ix_subscriptions_category ON beckett.subscriptions (category) WHERE category IS NOT NULL;

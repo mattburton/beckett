@@ -565,3 +565,14 @@ CREATE TABLE IF NOT EXISTS __schema__.stream_types (
 CREATE INDEX IF NOT EXISTS ix_stream_types_message_type ON __schema__.stream_types (message_type);
 
 GRANT UPDATE, DELETE ON __schema__.stream_types TO beckett;
+
+-- Add subscription configuration columns for global reader support
+ALTER TABLE __schema__.subscriptions 
+ADD COLUMN IF NOT EXISTS category text NULL,
+ADD COLUMN IF NOT EXISTS stream_name text NULL,
+ADD COLUMN IF NOT EXISTS message_types text[] NULL,
+ADD COLUMN IF NOT EXISTS priority integer NOT NULL DEFAULT 2147483647,
+ADD COLUMN IF NOT EXISTS skip_during_replay boolean NOT NULL DEFAULT false;
+
+-- Add indexes for the new columns
+CREATE INDEX IF NOT EXISTS ix_subscriptions_category ON __schema__.subscriptions (category) WHERE category IS NOT NULL;

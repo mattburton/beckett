@@ -4,6 +4,7 @@ using Beckett.Database.Types;
 using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Beckett.Subscriptions.Services;
 
@@ -13,7 +14,6 @@ public class GlobalMessageReader(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
-    ISubscriptionRegistry registry,
     ILogger<GlobalMessageReader> logger
 )
 {
@@ -60,7 +60,7 @@ public class GlobalMessageReader(
                     logger.NewGlobalMessagesToProcess(batch.StreamMessages.Count, currentPosition);
 
                     // Build checkpoints for all subscription groups
-                    var allCheckpoints = BuildCheckpointsForAllGroups(batch);
+                    var allCheckpoints = await BuildCheckpointsForAllGroups(batch, connection, transaction, stoppingToken);
 
                     // Build metadata
                     var streamMetadata = BuildStreamMetadata(batch);
@@ -114,48 +114,83 @@ public class GlobalMessageReader(
         }
     }
 
-    private HashSet<CheckpointType> BuildCheckpointsForAllGroups(ReadGlobalStreamResult batch)
+    private async Task<HashSet<CheckpointType>> BuildCheckpointsForAllGroups(
+        ReadGlobalStreamResult batch, 
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        CancellationToken cancellationToken)
     {
         var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
 
-        // Process each subscription group
-        foreach (var group in options.Subscriptions.Groups)
+        // Get all active subscription configurations from database
+        var subscriptionConfigs = await database.Execute(
+            new GetAllSubscriptionConfigurations(),
+            connection,
+            transaction,
+            cancellationToken
+        );
+
+        foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
         {
-            var registeredSubscriptions = group.GetSubscriptions().ToArray();
+            var matchingSubscriptions = subscriptionConfigs
+                .Where(config => DoesSubscriptionApplyToStream(config, stream.Key, stream.Select(m => m.MessageType).ToHashSet()))
+                .OrderBy(config => config.Priority)
+                .ToArray();
 
-            foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
+            foreach (var subscription in matchingSubscriptions)
             {
-                var subscriptions = registeredSubscriptions
-                    .Where(subscription => stream.Any(m => m.AppliesTo(subscription)))
-                    .OrderBy(subscription => subscription.Priority)
-                    .ToArray();
+                logger.NewMessagesFoundForSubscription(
+                    subscription.SubscriptionName,
+                    subscription.GroupName,
+                    stream.Key
+                );
 
-                foreach (var subscription in subscriptions)
-                {
-                    logger.NewMessagesFoundForSubscription(
-                        subscription.Name,
-                        group.Name,
-                        stream.Key
-                    );
-
-                    var subscriptionId = registry.GetSubscriptionId(group.Name, subscription.Name);
-                    if (subscriptionId.HasValue)
+                checkpoints.Add(
+                    new CheckpointType
                     {
-                        checkpoints.Add(
-                            new CheckpointType
-                            {
-                                SubscriptionId = subscriptionId.Value,
-                                StreamName = stream.Key,
-                                StreamVersion = stream.Max(x => x.StreamPosition)
-                            }
-                        );
+                        SubscriptionId = subscription.SubscriptionId,
+                        StreamName = stream.Key,
+                        StreamVersion = stream.Max(x => x.StreamPosition)
                     }
-                }
+                );
             }
         }
 
         return checkpoints;
     }
+
+    private static bool DoesSubscriptionApplyToStream(GetAllSubscriptionConfigurations.Result config, string streamName, HashSet<string> messageTypes)
+    {
+        var isCategoryOnly = config.Category != null && (config.MessageTypes == null || config.MessageTypes.Length == 0);
+        var isStreamNameOnly = !string.IsNullOrWhiteSpace(config.StreamName) && (config.MessageTypes == null || config.MessageTypes.Length == 0);
+        var isMessageTypesOnly = config.Category == null && config.MessageTypes != null && config.MessageTypes.Length > 0;
+        var isStreamNameAndMessageTypes = !string.IsNullOrWhiteSpace(config.StreamName) && config.MessageTypes != null && config.MessageTypes.Length > 0;
+
+        if (isCategoryOnly)
+        {
+            return CategoryMatches(streamName, config.Category!);
+        }
+
+        if (isStreamNameOnly)
+        {
+            return config.StreamName == streamName;
+        }
+
+        if (isMessageTypesOnly)
+        {
+            return config.MessageTypes!.Any(messageTypes.Contains);
+        }
+
+        if (isStreamNameAndMessageTypes)
+        {
+            return config.StreamName == streamName && config.MessageTypes!.Any(messageTypes.Contains);
+        }
+
+        // Category with message types
+        return CategoryMatches(streamName, config.Category!) && config.MessageTypes!.Any(messageTypes.Contains);
+    }
+
+    private static bool CategoryMatches(string streamName, string category) => streamName.StartsWith(category);
 
     private static StreamMetadataType[] BuildStreamMetadata(ReadGlobalStreamResult globalStream)
     {
