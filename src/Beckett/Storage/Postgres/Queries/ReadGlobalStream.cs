@@ -21,11 +21,13 @@ public class ReadGlobalStream(
                 SELECT '0'::xid8
                 LIMIT 1
             )
-            SELECT m.stream_name,
+            SELECT m.id,
+                   m.stream_name,
                    m.stream_position,
                    m.global_position,
                    m.type,
                    m.metadata ->> '$tenant',
+                   m.metadata ->> '$correlation_id',
                    m.timestamp
             FROM beckett.messages m
             WHERE (m.transaction_id, m.global_position) > ((SELECT transaction_id FROM transaction_id), $1)
@@ -56,12 +58,14 @@ public class ReadGlobalStream(
         {
             results.Add(
                 new Result(
-                    reader.GetFieldValue<string>(0),
-                    reader.GetFieldValue<long>(1),
+                    reader.GetFieldValue<Guid>(0),
+                    reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<long>(2),
-                    reader.GetFieldValue<string>(3),
-                    reader.IsDBNull(4) ? null : reader.GetFieldValue<string>(4),
-                    reader.GetFieldValue<DateTimeOffset>(5)
+                    reader.GetFieldValue<long>(3),
+                    reader.GetFieldValue<string>(4),
+                    reader.IsDBNull(5) ? null : reader.GetFieldValue<string>(5),
+                    reader.IsDBNull(6) ? null : reader.GetFieldValue<string>(6),
+                    reader.GetFieldValue<DateTimeOffset>(7)
                 )
             );
         }
@@ -70,11 +74,13 @@ public class ReadGlobalStream(
     }
 
     public readonly record struct Result(
+        Guid Id,
         string StreamName,
         long StreamPosition,
         long GlobalPosition,
         string MessageType,
         string? Tenant,
+        string? CorrelationId,
         DateTimeOffset Timestamp
     );
 }

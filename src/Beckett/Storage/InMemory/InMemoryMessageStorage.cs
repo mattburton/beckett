@@ -61,18 +61,26 @@ public class InMemoryMessageStorage : IMessageStorage
         var items = messages.Select(x =>
             {
                 string? tenant = null;
+                string? correlationId = null;
 
                 if (x.Metadata.TryGetProperty("$tenant", out var tenantProperty))
                 {
                     tenant = tenantProperty.GetString();
                 }
 
+                if (x.Metadata.TryGetProperty("$correlation_id", out var correlationProperty))
+                {
+                    correlationId = correlationProperty.GetString();
+                }
+
                 return new GlobalStreamMessage(
+                    Guid.Parse(x.Id),
                     x.StreamName,
                     x.StreamPosition,
                     x.GlobalPosition,
                     x.Type,
                     tenant,
+                    correlationId,
                     x.Timestamp
                 );
             }

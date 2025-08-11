@@ -115,16 +115,27 @@ public class GlobalStreamConsumer(
 
                     stoppingToken.ThrowIfCancellationRequested();
 
-                    if (checkpoints.Count > 0)
+                    // Build metadata from the batch
+                    var streamMetadata = BuildStreamMetadata(batch);
+                    var messageMetadata = BuildMessageMetadata(batch);
+
+                    if (checkpoints.Count > 0 || streamMetadata.Length > 0)
                     {
                         await database.Execute(
-                            new RecordCheckpoints(checkpoints.ToArray()),
+                            new RecordCheckpointsAndMetadata(
+                                checkpoints.ToArray(),
+                                streamMetadata,
+                                messageMetadata
+                            ),
                             connection,
                             transaction,
                             stoppingToken
                         );
 
-                        logger.RecordingUpdatedStreamVersionsForCheckpoints(checkpoints.Count);
+                        if (checkpoints.Count > 0)
+                        {
+                            logger.RecordingUpdatedStreamVersionsForCheckpoints(checkpoints.Count);
+                        }
                     }
                     else
                     {
@@ -139,8 +150,6 @@ public class GlobalStreamConsumer(
                         transaction,
                         stoppingToken
                     );
-
-                    RecordStreamData(batch);
 
                     await transaction.CommitAsync(stoppingToken);
 
@@ -162,27 +171,52 @@ public class GlobalStreamConsumer(
         }
     }
 
-    private static void RecordStreamData(ReadGlobalStreamResult globalStream)
+    private static StreamMetadataType[] BuildStreamMetadata(ReadGlobalStreamResult globalStream)
     {
-        var categories = new Dictionary<string, DateTimeOffset>();
-        var tenants = new HashSet<string>();
+        var streamData = new Dictionary<string, StreamMetadataType>();
 
         foreach (var message in globalStream.StreamMessages)
         {
-            categories[StreamCategoryParser.Parse(message.StreamName)] = message.Timestamp;
-
-            if (string.IsNullOrWhiteSpace(message.Tenant))
+            var category = StreamCategoryParser.Parse(message.StreamName);
+            
+            if (streamData.TryGetValue(message.StreamName, out var existing))
             {
-                continue;
+                existing.LatestPosition = Math.Max(existing.LatestPosition, message.StreamPosition);
+                existing.LatestGlobalPosition = Math.Max(existing.LatestGlobalPosition, message.GlobalPosition);
+                existing.MessageCount++;
             }
-
-            tenants.Add(message.Tenant);
+            else
+            {
+                streamData[message.StreamName] = new StreamMetadataType
+                {
+                    StreamName = message.StreamName,
+                    Category = category,
+                    LatestPosition = message.StreamPosition,
+                    LatestGlobalPosition = message.GlobalPosition,
+                    MessageCount = 1
+                };
+            }
         }
 
-        var categoryNames = categories.Keys.ToArray();
-        var categoryTimestamps = categories.Values.ToArray();
+        return streamData.Values.ToArray();
+    }
 
-        StreamDataQueue.Enqueue(categoryNames, categoryTimestamps, tenants.ToArray());
+    private static MessageMetadataType[] BuildMessageMetadata(ReadGlobalStreamResult globalStream)
+    {
+        return globalStream.StreamMessages
+            .Select(message => new MessageMetadataType
+            {
+                Id = message.Id,
+                GlobalPosition = message.GlobalPosition,
+                StreamName = message.StreamName,
+                StreamPosition = message.StreamPosition,
+                Type = message.MessageType,
+                Category = StreamCategoryParser.Parse(message.StreamName),
+                CorrelationId = message.CorrelationId,
+                Tenant = message.Tenant,
+                Timestamp = message.Timestamp
+            })
+            .ToArray();
     }
 }
 

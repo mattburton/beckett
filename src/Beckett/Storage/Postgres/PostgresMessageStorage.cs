@@ -49,11 +49,13 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
 
         items.AddRange(
             results.Select(result => new GlobalStreamMessage(
+                    result.Id,
                     result.StreamName,
                     result.StreamPosition,
                     result.GlobalPosition,
                     result.MessageType,
                     result.Tenant,
+                    result.CorrelationId,
                     result.Timestamp
                 )
             )
