@@ -1,24 +1,36 @@
 using System.Collections.Concurrent;
 using Beckett.Database;
 using Beckett.Subscriptions.Queries;
-using Microsoft.Extensions.Logging;
 
 namespace Beckett.Subscriptions.Services;
 
-public class SubscriptionConfigurationCache(
-    IPostgresDatabase database,
-    ILogger<SubscriptionConfigurationCache> logger)
-    : ISubscriptionConfigurationCache
+public class SubscriptionConfigurationCache(IPostgresDatabase database) : ISubscriptionConfigurationCache
 {
-    private readonly ConcurrentDictionary<string, GetAllSubscriptionConfigurationsNormalized.Result> _configurations = new();
-    private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
-    private volatile bool _isInitialized = false;
+    private readonly ConcurrentDictionary<string, SubscriptionConfiguration> _configurations = new();
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private volatile bool _initialized;
 
-    public async Task<IReadOnlyList<GetAllSubscriptionConfigurationsNormalized.Result>> GetConfigurations(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SubscriptionConfiguration>> GetConfigurations(
+        CancellationToken cancellationToken = default
+    )
     {
-        if (!_isInitialized)
+        if (_initialized)
         {
-            await RefreshCache(cancellationToken);
+            return _configurations.Values.ToArray();
+        }
+
+        await _semaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            if (!_initialized)
+            {
+                await RefreshCacheInternal(cancellationToken);
+            }
+        }
+        finally
+        {
+            _semaphore.Release();
         }
 
         return _configurations.Values.ToArray();
@@ -26,38 +38,39 @@ public class SubscriptionConfigurationCache(
 
     public void InvalidateCache()
     {
-        logger.LogDebug("Invalidating subscription configuration cache");
         _configurations.Clear();
-        _isInitialized = false;
+        _initialized = false;
     }
 
     public async Task RefreshCache(CancellationToken cancellationToken = default)
     {
-        await _refreshSemaphore.WaitAsync(cancellationToken);
+        await _semaphore.WaitAsync(cancellationToken);
+
         try
         {
-            logger.LogDebug("Refreshing subscription configuration cache");
-
-            var configurations = await database.Execute(
-                new GetAllSubscriptionConfigurationsNormalized(),
-                cancellationToken
-            );
-
-            _configurations.Clear();
-
-            foreach (var config in configurations)
-            {
-                var key = $"{config.GroupName}:{config.SubscriptionName}";
-                _configurations[key] = config;
-            }
-
-            _isInitialized = true;
-
-            logger.LogDebug("Loaded {Count} subscription configurations into cache", configurations.Count);
+            await RefreshCacheInternal(cancellationToken);
         }
         finally
         {
-            _refreshSemaphore.Release();
+            _semaphore.Release();
         }
+    }
+
+    private async Task RefreshCacheInternal(CancellationToken cancellationToken)
+    {
+        var configurations = await database.Execute(
+            new GetSubscriptionConfigurations(),
+            cancellationToken
+        );
+
+        _configurations.Clear();
+
+        foreach (var config in configurations)
+        {
+            var key = $"{config.GroupName}:{config.SubscriptionName}";
+            _configurations[key] = config;
+        }
+
+        _initialized = true;
     }
 }

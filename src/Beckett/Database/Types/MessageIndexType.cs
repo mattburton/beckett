@@ -1,6 +1,6 @@
 namespace Beckett.Database.Types;
 
-public class MessageMetadataType
+public class MessageIndexType
 {
     public Guid Id { get; set; }
     public long GlobalPosition { get; set; }
@@ -12,9 +12,9 @@ public class MessageMetadataType
     public string? Tenant { get; set; }
     public DateTimeOffset Timestamp { get; set; }
 
-    private sealed class MessageMetadataTypeEqualityComparer : IEqualityComparer<MessageMetadataType>
+    private sealed class MessageMetadataTypeEqualityComparer : IEqualityComparer<MessageIndexType>
     {
-        public bool Equals(MessageMetadataType? x, MessageMetadataType? y)
+        public bool Equals(MessageIndexType? x, MessageIndexType? y)
         {
             if (ReferenceEquals(x, y))
             {
@@ -39,11 +39,11 @@ public class MessageMetadataType
             return x.GlobalPosition == y.GlobalPosition && x.Id == y.Id;
         }
 
-        public int GetHashCode(MessageMetadataType obj)
+        public int GetHashCode(MessageIndexType obj)
         {
             return HashCode.Combine(obj.GlobalPosition, obj.Id);
         }
     }
 
-    public static IEqualityComparer<MessageMetadataType> Comparer { get; } = new MessageMetadataTypeEqualityComparer();
+    public static IEqualityComparer<MessageIndexType> Comparer { get; } = new MessageMetadataTypeEqualityComparer();
 }

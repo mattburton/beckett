@@ -11,14 +11,11 @@ public class SubscriptionConfigurationSynchronizer(
     ILogger<SubscriptionConfigurationSynchronizer> logger
 )
 {
-    public async Task SynchronizeSubscriptionConfigurations(
-        IEnumerable<SubscriptionGroup> groups,
-        CancellationToken cancellationToken = default)
+    public async Task Synchronize(IEnumerable<SubscriptionGroup> groups, CancellationToken cancellationToken)
     {
         await using var connection = dataSource.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
 
-        var hasChanges = false;
+        await connection.OpenAsync(cancellationToken);
 
         foreach (var group in groups)
         {
@@ -27,7 +24,7 @@ public class SubscriptionConfigurationSynchronizer(
                 try
                 {
                     await database.Execute(
-                        new UpsertSubscriptionConfigurationNormalized(
+                        new UpsertSubscriptionConfiguration(
                             group.Name,
                             subscription.Name,
                             subscription.Category,
@@ -39,30 +36,19 @@ public class SubscriptionConfigurationSynchronizer(
                         connection,
                         cancellationToken
                     );
-
-                    logger.SynchronizedSubscriptionConfiguration(subscription.Name, group.Name);
-                    hasChanges = true;
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, 
+                    logger.LogError(
+                        ex,
                         "Failed to synchronize subscription configuration for {SubscriptionName} in group {GroupName}",
-                        subscription.Name, group.Name);
+                        subscription.Name,
+                        group.Name
+                    );
                 }
             }
         }
 
-        // Invalidate cache if any configurations were changed
-        if (hasChanges)
-        {
-            configurationCache.InvalidateCache();
-            logger.LogDebug("Invalidated subscription configuration cache due to synchronization changes");
-        }
+        await configurationCache.RefreshCache(cancellationToken);
     }
-}
-
-public static partial class SubscriptionConfigurationLog
-{
-    [LoggerMessage(0, LogLevel.Debug, "Synchronized subscription configuration for {SubscriptionName} in group {GroupName}")]
-    public static partial void SynchronizedSubscriptionConfiguration(this ILogger logger, string subscriptionName, string groupName);
 }

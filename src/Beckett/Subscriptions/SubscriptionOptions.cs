@@ -37,6 +37,11 @@ public class SubscriptionOptions
     /// </summary>
     public int GlobalStreamBatchSize { get; set; } = 500;
 
+    /// <summary>
+    /// Configure the advisory lock ID used by the global message reader to ensure only one instance reads global messages at a time. Defaults to 1.
+    /// </summary>
+    public long GlobalMessageReaderAdvisoryLockId { get; set; } = 1;
+
     public IReadOnlyList<SubscriptionGroup> Groups => _groups.Values.ToArray();
 
     public SubscriptionGroup WithSubscriptionGroup(string name, Action<SubscriptionGroup>? configure)

@@ -3,20 +3,24 @@ using Npgsql;
 
 namespace Beckett.Subscriptions.Queries;
 
-public class GetAllSubscriptionConfigurationsNormalized : IPostgresDatabaseQuery<IReadOnlyList<GetAllSubscriptionConfigurationsNormalized.Result>>
+public class GetSubscriptionConfigurations : IPostgresDatabaseQuery<IReadOnlyList<SubscriptionConfiguration>>
 {
-    public async Task<IReadOnlyList<Result>> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SubscriptionConfiguration>> Execute(
+        NpgsqlCommand command,
+        CancellationToken cancellationToken
+    )
     {
         //language=sql
         const string sql = """
-            SELECT s.id,
-                   sg.name as group_name,
-                   s.name as subscription_name,
-                   s.category,
-                   s.stream_name,
-                   array_agg(mt.name ORDER BY mt.name) FILTER (WHERE mt.name IS NOT NULL) as message_types,
-                   s.priority,
-                   s.skip_during_replay
+            SELECT
+                s.id,
+                sg.name as group_name,
+                s.name as subscription_name,
+                s.category,
+                s.stream_name,
+                array_agg(mt.name ORDER BY mt.name) FILTER (WHERE mt.name IS NOT NULL) as message_types,
+                s.priority,
+                s.skip_during_replay
             FROM beckett.subscriptions s
             INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
             LEFT JOIN beckett.subscription_message_types smt ON s.id = smt.subscription_id
@@ -24,9 +28,9 @@ public class GetAllSubscriptionConfigurationsNormalized : IPostgresDatabaseQuery
             WHERE s.status IN ('active', 'replay')
             GROUP BY s.id, sg.name, s.name, s.category, s.stream_name, s.priority, s.skip_during_replay
             ORDER BY sg.name, s.priority, s.name;
-        """;
+            """;
 
-        command.CommandText = Query.Build(nameof(GetAllSubscriptionConfigurationsNormalized), sql, out var prepare);
+        command.CommandText = Query.Build(nameof(GetSubscriptionConfigurations), sql, out var prepare);
 
         if (prepare)
         {
@@ -35,14 +39,14 @@ public class GetAllSubscriptionConfigurationsNormalized : IPostgresDatabaseQuery
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var results = new List<Result>();
+        var results = new List<SubscriptionConfiguration>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            var messageTypes = reader.IsDBNull(5) ? new string[0] : reader.GetFieldValue<string[]>(5);
+            var messageTypes = reader.IsDBNull(5) ? [] : reader.GetFieldValue<string[]>(5);
 
             results.Add(
-                new Result(
+                new SubscriptionConfiguration(
                     reader.GetFieldValue<long>(0),
                     reader.GetFieldValue<string>(1),
                     reader.GetFieldValue<string>(2),
@@ -57,15 +61,4 @@ public class GetAllSubscriptionConfigurationsNormalized : IPostgresDatabaseQuery
 
         return results;
     }
-
-    public record Result(
-        long SubscriptionId,
-        string GroupName,
-        string SubscriptionName,
-        string? Category,
-        string? StreamName,
-        string[] MessageTypes,
-        int Priority,
-        bool SkipDuringReplay
-    );
 }

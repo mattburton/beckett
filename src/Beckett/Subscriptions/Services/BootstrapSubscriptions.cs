@@ -25,8 +25,7 @@ public class BootstrapSubscriptions(
 
         await Task.WhenAll(tasks);
 
-        // Synchronize subscription configurations to database
-        await configurationSynchronizer.SynchronizeSubscriptionConfigurations(
+        await configurationSynchronizer.Synchronize(
             options.Subscriptions.Groups,
             stoppingToken
         );

@@ -1,6 +1,6 @@
 namespace Beckett.Database.Types;
 
-public class StreamMetadataType
+public class StreamIndexType
 {
     public string StreamName { get; set; } = null!;
     public string Category { get; set; } = null!;
@@ -8,9 +8,9 @@ public class StreamMetadataType
     public long LatestGlobalPosition { get; set; }
     public long MessageCount { get; set; }
 
-    private sealed class StreamMetadataTypeEqualityComparer : IEqualityComparer<StreamMetadataType>
+    private sealed class StreamMetadataTypeEqualityComparer : IEqualityComparer<StreamIndexType>
     {
-        public bool Equals(StreamMetadataType? x, StreamMetadataType? y)
+        public bool Equals(StreamIndexType? x, StreamIndexType? y)
         {
             if (ReferenceEquals(x, y))
             {
@@ -35,11 +35,11 @@ public class StreamMetadataType
             return x.StreamName == y.StreamName;
         }
 
-        public int GetHashCode(StreamMetadataType obj)
+        public int GetHashCode(StreamIndexType obj)
         {
             return HashCode.Combine(obj.StreamName);
         }
     }
 
-    public static IEqualityComparer<StreamMetadataType> Comparer { get; } = new StreamMetadataTypeEqualityComparer();
+    public static IEqualityComparer<StreamIndexType> Comparer { get; } = new StreamMetadataTypeEqualityComparer();
 }
