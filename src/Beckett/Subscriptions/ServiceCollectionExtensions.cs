@@ -45,8 +45,6 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<CheckpointPollingService>();
 
-        services.AddHostedService<StreamDataRecordingService>();
-
         services.AddHostedService<RecoverExpiredCheckpointReservationsService>();
     }
 }
