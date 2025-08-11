@@ -421,7 +421,10 @@ BEGIN
     SELECT coalesce(max(m.global_position), 0)
     INTO _replay_target_position
     FROM __schema__.checkpoints c
-    INNER JOIN __schema__.messages_active m ON c.stream_name = m.stream_name AND c.stream_version = m.stream_position
+    LEFT JOIN __schema__.checkpoints_ready cr ON c.id = cr.id
+    LEFT JOIN __schema__.checkpoints_reserved cres ON c.id = cres.id
+    INNER JOIN __schema__.messages_active m ON c.stream_name = m.stream_name 
+        AND COALESCE(cr.target_stream_version, cres.target_stream_version, c.stream_position) = m.stream_position
     WHERE c.subscription_id = _subscription_id;
 
     LOOP
@@ -487,8 +490,7 @@ BEGIN
     INSERT INTO __schema__.checkpoints (subscription_id, stream_name)
     VALUES (_subscription_id, '$initializing')
     ON CONFLICT (subscription_id, stream_name) DO UPDATE
-      SET stream_version = 0,
-          stream_position = 0;
+      SET stream_position = 0;
   END IF;
 END;
 $$;

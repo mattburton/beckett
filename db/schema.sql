@@ -219,7 +219,10 @@ BEGIN
     SELECT coalesce(max(m.global_position), 0)
     INTO _replay_target_position
     FROM beckett.checkpoints c
-    INNER JOIN beckett.messages_active m ON c.stream_name = m.stream_name AND c.stream_version = m.stream_position
+    LEFT JOIN beckett.checkpoints_ready cr ON c.id = cr.id
+    LEFT JOIN beckett.checkpoints_reserved cres ON c.id = cres.id
+    INNER JOIN beckett.messages_active m ON c.stream_name = m.stream_name 
+        AND COALESCE(cr.target_stream_version, cres.target_stream_version, c.stream_position) = m.stream_position
     WHERE c.subscription_id = _subscription_id;
 
     LOOP
