@@ -579,12 +579,12 @@ INSERT INTO __schema__.global_reader_position (position) VALUES (0);
 CREATE TABLE IF NOT EXISTS __schema__.stream_index (
     id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     stream_category_id bigint NOT NULL REFERENCES __schema__.stream_categories(id),
-    stream_name text NOT NULL UNIQUE,
     latest_position bigint NOT NULL,
     latest_global_position bigint NOT NULL,
     message_count bigint NOT NULL DEFAULT 1,
     first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
-    last_updated_at timestamp with time zone DEFAULT now() NOT NULL
+    last_updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    stream_name text NOT NULL UNIQUE
 );
 
 CREATE INDEX IF NOT EXISTS ix_stream_index_category ON __schema__.stream_index (stream_category_id);
@@ -609,9 +609,9 @@ CREATE TABLE IF NOT EXISTS __schema__.message_index (
     stream_position bigint NOT NULL,
     message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id),
     tenant_id bigint NULL REFERENCES __schema__.tenants(id),
-    correlation_id text NULL,
     timestamp timestamp with time zone NOT NULL,
     archived boolean NOT NULL DEFAULT false,
+    correlation_id text NULL,
     PRIMARY KEY (global_position, id, archived),
     UNIQUE (id, archived)
 ) PARTITION BY LIST (archived);
