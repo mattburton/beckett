@@ -15,12 +15,14 @@ public class MessagesQuery(
     {
         //language=sql
         const string sql = """
-            SELECT id, stream_position, type, timestamp, count(*) over() AS total_results
-            FROM beckett.messages
-            WHERE stream_name = $1
-            AND ($2 IS NULL OR (id::text ILIKE '%' || $2 || '%' OR type ILIKE '%' || $2 || '%'))
-            AND archived = false
-            ORDER BY stream_position
+            SELECT mi.id, mi.stream_position, mt.name as type, mi.timestamp, count(*) over() AS total_results
+            FROM beckett.message_index mi
+            INNER JOIN beckett.stream_index si ON mi.stream_index_id = si.id
+            INNER JOIN beckett.message_types mt ON mi.message_type_id = mt.id
+            WHERE si.stream_name = $1
+            AND ($2 IS NULL OR (mi.id::text ILIKE '%' || $2 || '%' OR mt.name ILIKE '%' || $2 || '%'))
+            AND mi.archived = false
+            ORDER BY mi.stream_position
             OFFSET $3
             LIMIT $4;
         """;

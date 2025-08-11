@@ -15,14 +15,22 @@ public class CorrelatedMessagesQuery(
     {
         //language=sql
         const string sql = """
-           SELECT id, stream_name, stream_position, type, timestamp, count(*) over() AS total_results
-           FROM beckett.messages
-           WHERE metadata->>'$correlation_id' = $1
-           AND ($2 IS NULL OR (id::text ILIKE '%' || $2 || '%' OR stream_name ILIKE '%' || $2 || '%' OR type ILIKE '%' || $2 || '%'))
-           AND archived = false
-           ORDER BY global_position
-           OFFSET $3
-           LIMIT $4;
+            SELECT
+                mi.id,
+                si.stream_name,
+                mi.stream_position,
+                mt.name as type,
+                mi.timestamp,
+                count(*) over() AS total_results
+            FROM beckett.message_index mi
+            INNER JOIN beckett.stream_index si ON mi.stream_index_id = si.id
+            INNER JOIN beckett.message_types mt ON mi.message_type_id = mt.id
+            WHERE mi.correlation_id = $1
+            AND ($2 IS NULL OR (mi.id::text ILIKE '%' || $2 || '%' OR si.stream_name ILIKE '%' || $2 || '%' OR mt.name ILIKE '%' || $2 || '%'))
+            AND mi.archived = false
+            ORDER BY mi.global_position
+            OFFSET $3
+            LIMIT $4;
         """;
 
         command.CommandText = Query.Build(nameof(CorrelatedMessagesQuery), sql, out var prepare);

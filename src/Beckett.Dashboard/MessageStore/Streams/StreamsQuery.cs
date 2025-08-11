@@ -16,15 +16,19 @@ public class StreamsQuery(
     {
         //language=sql
         const string sql = """
-           SELECT stream_name,
-                  max(timestamp) AS last_updated,
+           SELECT si.stream_name,
+                  max(mi.timestamp) AS last_updated,
                   count(*) over() AS total_results
-           FROM beckett.messages_active
-           WHERE metadata ->> '$tenant' = $1
-           AND beckett.stream_category(stream_name) = $2
-           AND ($3 IS NULL OR stream_name ILIKE '%' || $3 || '%')
-           GROUP BY stream_name
-           ORDER BY max(timestamp) DESC
+           FROM beckett.message_index mi
+           INNER JOIN beckett.stream_index si ON mi.stream_index_id = si.id
+           INNER JOIN beckett.stream_categories sc ON si.stream_category_id = sc.id
+           LEFT JOIN beckett.tenants t ON mi.tenant_id = t.id
+           WHERE (t.name = $1 OR ($1 = 'default' AND mi.tenant_id IS NULL))
+           AND sc.name = $2
+           AND ($3 IS NULL OR si.stream_name ILIKE '%' || $3 || '%')
+           AND mi.archived = false
+           GROUP BY si.stream_name
+           ORDER BY max(mi.timestamp) DESC
            OFFSET $4
            LIMIT $5;
         """;
