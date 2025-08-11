@@ -7,6 +7,7 @@ namespace Beckett.Subscriptions.Services;
 public class SubscriptionConfigurationSynchronizer(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
+    ISubscriptionConfigurationCache configurationCache,
     ILogger<SubscriptionConfigurationSynchronizer> logger
 )
 {
@@ -16,6 +17,8 @@ public class SubscriptionConfigurationSynchronizer(
     {
         await using var connection = dataSource.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+
+        var hasChanges = false;
 
         foreach (var group in groups)
         {
@@ -38,6 +41,7 @@ public class SubscriptionConfigurationSynchronizer(
                     );
 
                     logger.SynchronizedSubscriptionConfiguration(subscription.Name, group.Name);
+                    hasChanges = true;
                 }
                 catch (Exception ex)
                 {
@@ -46,6 +50,13 @@ public class SubscriptionConfigurationSynchronizer(
                         subscription.Name, group.Name);
                 }
             }
+        }
+
+        // Invalidate cache if any configurations were changed
+        if (hasChanges)
+        {
+            configurationCache.InvalidateCache();
+            logger.LogDebug("Invalidated subscription configuration cache due to synchronization changes");
         }
     }
 }

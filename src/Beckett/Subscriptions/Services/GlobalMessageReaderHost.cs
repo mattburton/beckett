@@ -11,6 +11,7 @@ public class GlobalMessageReaderHost(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
+    ISubscriptionConfigurationCache configurationCache,
     ILoggerFactory loggerFactory
 ) : BackgroundService
 {
@@ -23,6 +24,7 @@ public class GlobalMessageReaderHost(
             dataSource,
             database,
             messageStorage,
+            configurationCache,
             loggerFactory.CreateLogger<GlobalMessageReader>()
         );
 

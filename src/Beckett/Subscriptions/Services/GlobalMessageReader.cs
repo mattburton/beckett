@@ -4,7 +4,6 @@ using Beckett.Database.Types;
 using Beckett.Storage;
 using Beckett.Subscriptions.Queries;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Beckett.Subscriptions.Services;
 
@@ -14,6 +13,7 @@ public class GlobalMessageReader(
     IPostgresDataSource dataSource,
     IPostgresDatabase database,
     IMessageStorage messageStorage,
+    ISubscriptionConfigurationCache configurationCache,
     ILogger<GlobalMessageReader> logger
 )
 {
@@ -60,7 +60,7 @@ public class GlobalMessageReader(
                     logger.NewGlobalMessagesToProcess(batch.StreamMessages.Count, currentPosition);
 
                     // Build checkpoints for all subscription groups
-                    var allCheckpoints = await BuildCheckpointsForAllGroups(batch, connection, transaction, stoppingToken);
+                    var allCheckpoints = await BuildCheckpointsForAllGroups(batch, stoppingToken);
 
                     // Build metadata
                     var streamMetadata = BuildStreamMetadata(batch);
@@ -115,26 +115,25 @@ public class GlobalMessageReader(
     }
 
     private async Task<HashSet<CheckpointType>> BuildCheckpointsForAllGroups(
-        ReadGlobalStreamResult batch, 
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        CancellationToken cancellationToken)
+        ReadGlobalStreamResult batch,
+        CancellationToken cancellationToken
+    )
     {
         var checkpoints = new HashSet<CheckpointType>(CheckpointType.Comparer);
 
-        // Get all active subscription configurations from database
-        var subscriptionConfigs = await database.Execute(
-            new GetAllSubscriptionConfigurationsNormalized(),
-            connection,
-            transaction,
-            cancellationToken
-        );
+        // Get all active subscription configurations from cache
+        var subscriptions = await configurationCache.GetConfigurations(cancellationToken);
 
         foreach (var stream in batch.StreamMessages.GroupBy(x => x.StreamName))
         {
-            var matchingSubscriptions = subscriptionConfigs
-                .Where(config => DoesSubscriptionApplyToStream(config, stream.Key, stream.Select(m => m.MessageType).ToHashSet()))
-                .OrderBy(config => config.Priority)
+            var matchingSubscriptions = subscriptions
+                .Where(subscription => DoesSubscriptionApplyToStream(
+                        subscription,
+                        stream.Key,
+                        stream.Select(m => m.MessageType).ToHashSet()
+                    )
+                )
+                .OrderBy(subscription => subscription.Priority)
                 .ToArray();
 
             foreach (var subscription in matchingSubscriptions)
@@ -159,35 +158,43 @@ public class GlobalMessageReader(
         return checkpoints;
     }
 
-    private static bool DoesSubscriptionApplyToStream(GetAllSubscriptionConfigurationsNormalized.Result config, string streamName, HashSet<string> messageTypes)
+    private static bool DoesSubscriptionApplyToStream(
+        GetAllSubscriptionConfigurationsNormalized.Result subscription,
+        string streamName,
+        HashSet<string> messageTypes
+    )
     {
-        var isCategoryOnly = config.Category != null && (config.MessageTypes == null || config.MessageTypes.Length == 0);
-        var isStreamNameOnly = !string.IsNullOrWhiteSpace(config.StreamName) && (config.MessageTypes == null || config.MessageTypes.Length == 0);
-        var isMessageTypesOnly = config.Category == null && config.MessageTypes != null && config.MessageTypes.Length > 0;
-        var isStreamNameAndMessageTypes = !string.IsNullOrWhiteSpace(config.StreamName) && config.MessageTypes != null && config.MessageTypes.Length > 0;
+        var isCategoryOnly = subscription is { Category: not null, MessageTypes.Length: 0 };
+        var isStreamNameOnly =
+            !string.IsNullOrWhiteSpace(subscription.StreamName) && subscription.MessageTypes.Length == 0;
+        var isMessageTypesOnly =
+            subscription.Category == null && subscription.MessageTypes.Length > 0;
+        var isStreamNameAndMessageTypes =
+            !string.IsNullOrWhiteSpace(subscription.StreamName) && subscription.MessageTypes.Length > 0;
 
         if (isCategoryOnly)
         {
-            return CategoryMatches(streamName, config.Category!);
+            return CategoryMatches(streamName, subscription.Category!);
         }
 
         if (isStreamNameOnly)
         {
-            return config.StreamName == streamName;
+            return subscription.StreamName == streamName;
         }
 
         if (isMessageTypesOnly)
         {
-            return config.MessageTypes!.Any(messageTypes.Contains);
+            return subscription.MessageTypes.Any(messageTypes.Contains);
         }
 
         if (isStreamNameAndMessageTypes)
         {
-            return config.StreamName == streamName && config.MessageTypes!.Any(messageTypes.Contains);
+            return subscription.StreamName == streamName && subscription.MessageTypes.Any(messageTypes.Contains);
         }
 
         // Category with message types
-        return CategoryMatches(streamName, config.Category!) && config.MessageTypes!.Any(messageTypes.Contains);
+        return CategoryMatches(streamName, subscription.Category!) &&
+               subscription.MessageTypes.Any(messageTypes.Contains);
     }
 
     private static bool CategoryMatches(string streamName, string category) => streamName.StartsWith(category);
@@ -199,7 +206,7 @@ public class GlobalMessageReader(
         foreach (var message in globalStream.StreamMessages)
         {
             var category = StreamCategoryParser.Parse(message.StreamName);
-            
+
             if (streamData.TryGetValue(message.StreamName, out var existing))
             {
                 existing.LatestPosition = Math.Max(existing.LatestPosition, message.StreamPosition);
@@ -226,17 +233,18 @@ public class GlobalMessageReader(
     {
         return globalStream.StreamMessages
             .Select(message => new MessageMetadataType
-            {
-                Id = message.Id,
-                GlobalPosition = message.GlobalPosition,
-                StreamName = message.StreamName,
-                StreamPosition = message.StreamPosition,
-                MessageTypeName = message.MessageType,
-                Category = StreamCategoryParser.Parse(message.StreamName),
-                CorrelationId = message.CorrelationId,
-                Tenant = message.Tenant,
-                Timestamp = message.Timestamp
-            })
+                {
+                    Id = message.Id,
+                    GlobalPosition = message.GlobalPosition,
+                    StreamName = message.StreamName,
+                    StreamPosition = message.StreamPosition,
+                    MessageTypeName = message.MessageType,
+                    Category = StreamCategoryParser.Parse(message.StreamName),
+                    CorrelationId = message.CorrelationId,
+                    Tenant = message.Tenant,
+                    Timestamp = message.Timestamp
+                }
+            )
             .ToArray();
     }
 }
