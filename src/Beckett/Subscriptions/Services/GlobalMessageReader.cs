@@ -69,7 +69,7 @@ public class GlobalMessageReader(
                     if (allCheckpoints.Count > 0 || streamMetadata.Length > 0)
                     {
                         await database.Execute(
-                            new RecordCheckpointsAndMetadataNormalized(
+                            new RecordCheckpointsAndMetadata(
                                 allCheckpoints.ToArray(),
                                 streamMetadata,
                                 messageMetadata

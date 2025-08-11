@@ -17,19 +17,21 @@ public class EnhancedStreamsQuery(
         //language=sql
         const string sql = """
            WITH stream_data AS (
-               SELECT sm.stream_name,
-                      sm.last_updated_at,
-                      sm.message_count,
-                      sm.latest_position,
-                      array_agg(DISTINCT st.message_type ORDER BY st.message_type) as message_types,
-                      array_agg(DISTINCT mm.tenant ORDER BY mm.tenant) FILTER (WHERE mm.tenant IS NOT NULL) as tenants,
+               SELECT si.stream_name,
+                      si.last_updated_at,
+                      si.message_count,
+                      si.latest_position,
+                      array_agg(DISTINCT mt.name ORDER BY mt.name) as message_types,
+                      array_agg(DISTINCT mi.tenant ORDER BY mi.tenant) FILTER (WHERE mi.tenant IS NOT NULL) as tenants,
                       count(*) over() AS total_results
-               FROM beckett.stream_metadata sm
-               LEFT JOIN beckett.stream_types st ON sm.stream_name = st.stream_name
-               LEFT JOIN beckett.message_metadata mm ON sm.stream_name = mm.stream_name
-               WHERE sm.category = $2
-               AND ($3 IS NULL OR sm.stream_name ILIKE '%' || $3 || '%')
-               GROUP BY sm.stream_name, sm.last_updated_at, sm.message_count, sm.latest_position
+               FROM beckett.stream_index si
+               LEFT JOIN beckett.stream_message_types smt ON si.id = smt.stream_index_id
+               LEFT JOIN beckett.message_types mt ON smt.message_type_id = mt.id
+               LEFT JOIN beckett.message_index mi ON si.id = mi.stream_index_id
+               INNER JOIN beckett.stream_categories sc ON si.stream_category_id = sc.id
+               WHERE sc.name = $2
+               AND ($3 IS NULL OR si.stream_name ILIKE '%' || $3 || '%')
+               GROUP BY si.stream_name, si.last_updated_at, si.message_count, si.latest_position
            )
            SELECT stream_name,
                   last_updated_at,

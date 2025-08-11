@@ -13,10 +13,32 @@ public class RecordCheckpointsAndMetadata(
 {
     public async Task<int> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
-        using var batch = new NpgsqlBatch(command.Connection, command.Transaction);
+        await using var batch = new NpgsqlBatch(command.Connection, command.Transaction);
 
-        // Step 1: Record checkpoints (existing logic)
-        var checkpointCommand = new NpgsqlBatchCommand("""
+        // Step 1: Ensure all message types exist and get their IDs
+        var uniqueMessageTypes = messageMetadata
+            .Select(m => m.MessageTypeName)
+            .Distinct()
+            .ToArray();
+
+        if (uniqueMessageTypes.Length > 0)
+        {
+            var ensureTypesCommand = new NpgsqlBatchCommand(
+                """
+                INSERT INTO beckett.message_types (name)
+                SELECT DISTINCT unnest($1)
+                ON CONFLICT (name) DO NOTHING;
+                """
+            );
+            ensureTypesCommand.Parameters.Add(
+                new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text }
+            );
+            batch.BatchCommands.Add(ensureTypesCommand);
+        }
+
+        // Step 2: Record checkpoints (existing logic)
+        var checkpointCommand = new NpgsqlBatchCommand(
+            """
             WITH checkpoint_data AS (
                 SELECT c.stream_position, c.subscription_id, c.stream_name, c.stream_version
                 FROM unnest($1) c
@@ -35,7 +57,7 @@ public class RecordCheckpointsAndMetadata(
             ),
             inserted_ready AS (
                 INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name, target_stream_version)
-                SELECT ac.id, now(), sg.name, ac.stream_version
+                SELECT DISTINCT ac.id, now(), sg.name, ac.stream_version
                 FROM all_checkpoints ac
                 INNER JOIN beckett.subscriptions s ON ac.subscription_id = s.id
                 INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
@@ -49,94 +71,171 @@ public class RecordCheckpointsAndMetadata(
             SELECT pg_notify('beckett:checkpoints', ac.subscription_id::text)
             FROM all_checkpoints ac
             WHERE ac.status = 'active' AND ac.stream_version > ac.stream_position;
-            """);
+            """
+        );
         checkpointCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.CheckpointArray() });
         batch.BatchCommands.Add(checkpointCommand);
 
-        // Step 2: Record stream metadata
+        // Step 3: Ensure all stream categories exist
+        var uniqueCategories = streamMetadata
+            .Select(sm => sm.Category)
+            .Distinct()
+            .ToArray();
+
+        if (uniqueCategories.Length > 0)
+        {
+            var ensureCategoriesCommand = new NpgsqlBatchCommand(
+                """
+                INSERT INTO beckett.stream_categories (name)
+                SELECT DISTINCT unnest($1)
+                ON CONFLICT (name) DO NOTHING;
+                """
+            );
+            ensureCategoriesCommand.Parameters.Add(
+                new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text }
+            );
+            batch.BatchCommands.Add(ensureCategoriesCommand);
+        }
+
+        // Step 4: Record stream metadata
         if (streamMetadata.Length > 0)
         {
-            var streamMetadataCommand = new NpgsqlBatchCommand("""
-                INSERT INTO beckett.stream_metadata 
-                    (stream_name, category, latest_position, latest_global_position, message_count, last_updated_at)
-                SELECT sm.stream_name, sm.category, sm.latest_position, sm.latest_global_position, sm.message_count, now()
-                FROM unnest($1) sm
+            var streamMetadataCommand = new NpgsqlBatchCommand(
+                """
+                WITH stream_data AS (
+                    SELECT sm.stream_name, sm.category,
+                           MAX(sm.latest_position) as latest_position,
+                           MAX(sm.latest_global_position) as latest_global_position,
+                           SUM(sm.message_count) as message_count
+                    FROM unnest($1) sm
+                    GROUP BY sm.stream_name, sm.category
+                ),
+                stream_data_with_category_id AS (
+                    SELECT sd.stream_name, sc.id as stream_category_id, sd.latest_position, sd.latest_global_position, sd.message_count
+                    FROM stream_data sd
+                    INNER JOIN beckett.stream_categories sc ON sd.category = sc.name
+                )
+                INSERT INTO beckett.stream_index
+                    (stream_name, stream_category_id, latest_position, latest_global_position, message_count, last_updated_at)
+                SELECT sd.stream_name, sd.stream_category_id, sd.latest_position, sd.latest_global_position, sd.message_count, now()
+                FROM stream_data_with_category_id sd
                 ON CONFLICT (stream_name) DO UPDATE SET
-                    latest_position = GREATEST(beckett.stream_metadata.latest_position, EXCLUDED.latest_position),
-                    latest_global_position = GREATEST(beckett.stream_metadata.latest_global_position, EXCLUDED.latest_global_position),
-                    message_count = beckett.stream_metadata.message_count + EXCLUDED.message_count,
+                    latest_position = GREATEST(beckett.stream_index.latest_position, EXCLUDED.latest_position),
+                    latest_global_position = GREATEST(beckett.stream_index.latest_global_position, EXCLUDED.latest_global_position),
+                    message_count = beckett.stream_index.message_count + EXCLUDED.message_count,
                     last_updated_at = now()
-                WHERE EXCLUDED.latest_global_position > beckett.stream_metadata.latest_global_position;
-                """);
-            streamMetadataCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.StreamMetadataArray() });
+                WHERE EXCLUDED.latest_global_position > beckett.stream_index.latest_global_position;
+                """
+            );
+            streamMetadataCommand.Parameters.Add(
+                new NpgsqlParameter { DataTypeName = DataTypeNames.StreamIndexArray() }
+            );
             batch.BatchCommands.Add(streamMetadataCommand);
         }
 
-        // Step 3: Record message metadata
+        // Step 5: Record message metadata with normalized message types
         if (messageMetadata.Length > 0)
         {
-            var messageMetadataCommand = new NpgsqlBatchCommand("""
-                INSERT INTO beckett.message_metadata 
-                    (id, global_position, stream_name, stream_position, type, category, correlation_id, tenant, timestamp)
-                SELECT mm.id, mm.global_position, mm.stream_name, mm.stream_position, mm.type, mm.category, mm.correlation_id, mm.tenant, mm.timestamp
-                FROM unnest($1) mm
+            var messageMetadataCommand = new NpgsqlBatchCommand(
+                """
+                WITH message_data AS (
+                    SELECT mm.id, mm.global_position, mm.stream_name, mm.stream_position,
+                           mm.message_type_name, mm.correlation_id, mm.tenant, mm.timestamp
+                    FROM unnest($1) mm
+                ),
+                message_with_type_and_stream_ids AS (
+                    SELECT md.id, md.global_position, md.stream_name, md.stream_position,
+                           mt.id as message_type_id, si.id as stream_index_id,
+                           md.correlation_id, md.tenant, md.timestamp
+                    FROM message_data md
+                    INNER JOIN beckett.message_types mt ON md.message_type_name = mt.name
+                    INNER JOIN beckett.stream_index si ON md.stream_name = si.stream_name
+                )
+                INSERT INTO beckett.message_index
+                    (id, global_position, stream_position, stream_index_id, message_type_id, correlation_id, tenant, timestamp)
+                SELECT mwts.id, mwts.global_position, mwts.stream_position,
+                       mwts.stream_index_id, mwts.message_type_id, mwts.correlation_id, mwts.tenant, mwts.timestamp
+                FROM message_with_type_and_stream_ids mwts
                 ON CONFLICT (global_position, id) DO NOTHING;
-                """);
-            messageMetadataCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageMetadataArray() });
+                """
+            );
+            messageMetadataCommand.Parameters.Add(
+                new NpgsqlParameter { DataTypeName = DataTypeNames.MessageIndexArray() }
+            );
             batch.BatchCommands.Add(messageMetadataCommand);
         }
 
-        // Step 4: Update stream types
+        // Step 6: Update stream types with normalized message types
         if (messageMetadata.Length > 0)
         {
-            var streamTypesCommand = new NpgsqlBatchCommand("""
-                INSERT INTO beckett.stream_types (stream_name, message_type, last_seen_at, message_count)
-                SELECT mm.stream_name, mm.type, mm.timestamp, 1
-                FROM unnest($1) mm
-                ON CONFLICT (stream_name, message_type) DO UPDATE SET
-                    last_seen_at = GREATEST(beckett.stream_types.last_seen_at, EXCLUDED.last_seen_at),
-                    message_count = beckett.stream_types.message_count + 1;
-                """);
-            streamTypesCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageMetadataArray() });
+            var streamTypesCommand = new NpgsqlBatchCommand(
+                """
+                WITH message_data AS (
+                    SELECT mm.stream_name, mm.message_type_name, mm.timestamp
+                    FROM unnest($1) mm
+                ),
+                stream_type_data AS (
+                    SELECT md.stream_name, mt.id as message_type_id, si.id as stream_index_id,
+                           MAX(md.timestamp) as timestamp,
+                           COUNT(*) as message_count
+                    FROM message_data md
+                    INNER JOIN beckett.message_types mt ON md.message_type_name = mt.name
+                    INNER JOIN beckett.stream_index si ON md.stream_name = si.stream_name
+                    GROUP BY md.stream_name, mt.id, si.id
+                )
+                INSERT INTO beckett.stream_message_types (stream_index_id, message_type_id, last_seen_at, message_count)
+                SELECT std.stream_index_id, std.message_type_id, std.timestamp, std.message_count
+                FROM stream_type_data std
+                ON CONFLICT (stream_index_id, message_type_id) DO UPDATE SET
+                    last_seen_at = GREATEST(beckett.stream_message_types.last_seen_at, EXCLUDED.last_seen_at),
+                    message_count = beckett.stream_message_types.message_count + EXCLUDED.message_count;
+                """
+            );
+            streamTypesCommand.Parameters.Add(
+                new NpgsqlParameter { DataTypeName = DataTypeNames.MessageIndexArray() }
+            );
             batch.BatchCommands.Add(streamTypesCommand);
         }
 
-        // Step 5: Update categories and tenants (existing logic)
-        if (streamMetadata.Length > 0)
+        // Step 7: Update tenants (categories are now handled in step 3)
+        if (messageMetadata.Length > 0)
         {
-            var categoriesTenantsCommand = new NpgsqlBatchCommand("""
-                WITH categories_data AS (
-                    SELECT sm.category, now() as updated_at
-                    FROM unnest($1) sm
-                    GROUP BY sm.category
-                ),
-                tenants_data AS (
+            var tenantsCommand = new NpgsqlBatchCommand(
+                """
+                WITH tenants_data AS (
                     SELECT mm.tenant
-                    FROM unnest($2) mm
+                    FROM unnest($1) mm
                     WHERE mm.tenant IS NOT NULL
                     GROUP BY mm.tenant
-                ),
-                insert_categories AS (
-                    INSERT INTO beckett.categories (name, updated_at)
-                    SELECT cd.category, cd.updated_at
-                    FROM categories_data cd
-                    ON CONFLICT (name) DO UPDATE
-                    SET updated_at = EXCLUDED.updated_at
                 )
                 INSERT INTO beckett.tenants (tenant)
                 SELECT td.tenant
                 FROM tenants_data td
                 ON CONFLICT (tenant) DO NOTHING;
-                """);
-            categoriesTenantsCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.StreamMetadataArray() });
-            categoriesTenantsCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageMetadataArray() });
-            batch.BatchCommands.Add(categoriesTenantsCommand);
+                """
+            );
+            tenantsCommand.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.MessageIndexArray() });
+            batch.BatchCommands.Add(tenantsCommand);
         }
 
         // Set parameter values
-        batch.BatchCommands[0].Parameters[0].Value = checkpoints;
+        var commandIndex = 0;
 
-        var commandIndex = 1;
+        if (uniqueMessageTypes.Length > 0)
+        {
+            batch.BatchCommands[commandIndex].Parameters[0].Value = uniqueMessageTypes;
+            commandIndex++;
+        }
+
+        batch.BatchCommands[commandIndex].Parameters[0].Value = checkpoints;
+        commandIndex++;
+
+        if (uniqueCategories.Length > 0)
+        {
+            batch.BatchCommands[commandIndex].Parameters[0].Value = uniqueCategories;
+            commandIndex++;
+        }
+
         if (streamMetadata.Length > 0)
         {
             batch.BatchCommands[commandIndex].Parameters[0].Value = streamMetadata;
@@ -151,10 +250,9 @@ public class RecordCheckpointsAndMetadata(
             commandIndex++;
         }
 
-        if (streamMetadata.Length > 0)
+        if (messageMetadata.Length > 0)
         {
-            batch.BatchCommands[commandIndex].Parameters[0].Value = streamMetadata;
-            batch.BatchCommands[commandIndex].Parameters[1].Value = messageMetadata;
+            batch.BatchCommands[commandIndex].Parameters[0].Value = messageMetadata;
         }
 
         await batch.ExecuteNonQueryAsync(cancellationToken);

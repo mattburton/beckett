@@ -12,11 +12,12 @@ public class GetStreamsByMessageType(
     {
         //language=sql
         const string sql = """
-            SELECT DISTINCT st.stream_name, sm.latest_position
-            FROM beckett.stream_types st
-            INNER JOIN beckett.stream_metadata sm ON st.stream_name = sm.stream_name
-            WHERE st.message_type = $1
-            ORDER BY st.stream_name;
+            SELECT DISTINCT si.stream_name, si.latest_position
+            FROM beckett.stream_message_types smt
+            INNER JOIN beckett.stream_index si ON smt.stream_index_id = si.id
+            INNER JOIN beckett.message_types mt ON smt.message_type_id = mt.id
+            WHERE mt.name = $1
+            ORDER BY si.stream_name;
         """;
 
         command.CommandText = Query.Build(nameof(GetStreamsByMessageType), sql, out var prepare);

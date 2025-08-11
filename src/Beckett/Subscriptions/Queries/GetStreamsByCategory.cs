@@ -12,10 +12,11 @@ public class GetStreamsByCategory(
     {
         //language=sql
         const string sql = """
-            SELECT stream_name, latest_position
-            FROM beckett.stream_metadata
-            WHERE category = $1
-            ORDER BY stream_name;
+            SELECT si.stream_name, si.latest_position
+            FROM beckett.stream_index si
+            INNER JOIN beckett.stream_categories sc ON si.stream_category_id = sc.id
+            WHERE sc.name = $1
+            ORDER BY si.stream_name;
         """;
 
         command.CommandText = Query.Build(nameof(GetStreamsByCategory), sql, out var prepare);

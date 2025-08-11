@@ -17,7 +17,7 @@ public class CategoriesQuery(
            SELECT name,
                   updated_at,
                   count(*) over() AS total_results
-           FROM beckett.categories
+           FROM beckett.stream_categories
            WHERE ($1 IS NULL OR name ILIKE '%' || $1 || '%')
            ORDER BY name
            OFFSET $2

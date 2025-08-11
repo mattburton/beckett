@@ -11,15 +11,17 @@ public class StreamStatsQuery : IPostgresDatabaseQuery<StreamStatsQuery.Result>
         const string sql = """
             WITH stats AS (
                 SELECT 
-                    count(DISTINCT sm.stream_name) as total_streams,
-                    count(DISTINCT sm.category) as total_categories,
-                    sum(sm.message_count) as total_messages,
-                    max(sm.last_updated_at) as last_activity
-                FROM beckett.stream_metadata sm
+                    count(DISTINCT si.stream_name) as total_streams,
+                    count(DISTINCT sc.name) as total_categories,
+                    sum(si.message_count) as total_messages,
+                    max(si.last_updated_at) as last_activity
+                FROM beckett.stream_index si
+                INNER JOIN beckett.stream_categories sc ON si.stream_category_id = sc.id
             ),
             type_stats AS (
-                SELECT count(DISTINCT st.message_type) as total_message_types
-                FROM beckett.stream_types st
+                SELECT count(DISTINCT mt.name) as total_message_types
+                FROM beckett.stream_message_types smt
+                INNER JOIN beckett.message_types mt ON smt.message_type_id = mt.id
             ),
             tenant_stats AS (
                 SELECT count(DISTINCT t.tenant) as total_tenants

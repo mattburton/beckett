@@ -165,7 +165,7 @@ CREATE TYPE __schema__.retry AS
   timestamp timestamp with time zone
 );
 
-CREATE TYPE __schema__.stream_metadata_type AS
+CREATE TYPE __schema__.stream_index_type AS
 (
   stream_name text,
   category text,
@@ -174,7 +174,7 @@ CREATE TYPE __schema__.stream_metadata_type AS
   message_count bigint
 );
 
-CREATE TYPE __schema__.message_metadata_type AS
+CREATE TYPE __schema__.message_index_type AS
 (
   id uuid,
   global_position bigint,
@@ -277,13 +277,14 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON __schema__.checkpoints_reserved TO becke
 -------------------------------------------------
 -- DASHBOARD SUPPORT
 -------------------------------------------------
-CREATE TABLE IF NOT EXISTS __schema__.categories
+CREATE TABLE IF NOT EXISTS __schema__.stream_categories
 (
-  name text NOT NULL PRIMARY KEY,
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL UNIQUE,
   updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
-GRANT UPDATE, DELETE ON __schema__.categories TO beckett;
+GRANT UPDATE, DELETE ON __schema__.stream_categories TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.tenants
 (
@@ -574,10 +575,11 @@ GRANT UPDATE ON __schema__.global_reader_checkpoint TO beckett;
 -- Insert initial record
 INSERT INTO __schema__.global_reader_checkpoint (position) VALUES (0);
 
--- Stream metadata table
-CREATE TABLE IF NOT EXISTS __schema__.stream_metadata (
-    stream_name text NOT NULL PRIMARY KEY,
-    category text NOT NULL,
+-- Stream index table
+CREATE TABLE IF NOT EXISTS __schema__.stream_index (
+    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    stream_category_id bigint NOT NULL REFERENCES __schema__.stream_categories(id),
+    stream_name text NOT NULL UNIQUE,
     latest_position bigint NOT NULL,
     latest_global_position bigint NOT NULL,
     message_count bigint NOT NULL DEFAULT 1,
@@ -585,10 +587,10 @@ CREATE TABLE IF NOT EXISTS __schema__.stream_metadata (
     last_updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS ix_stream_metadata_category ON __schema__.stream_metadata (category);
-CREATE INDEX IF NOT EXISTS ix_stream_metadata_last_updated ON __schema__.stream_metadata (last_updated_at DESC);
+CREATE INDEX IF NOT EXISTS ix_stream_index_category ON __schema__.stream_index (stream_category_id);
+CREATE INDEX IF NOT EXISTS ix_stream_index_last_updated ON __schema__.stream_index (last_updated_at DESC);
 
-GRANT UPDATE, DELETE ON __schema__.stream_metadata TO beckett;
+GRANT UPDATE, DELETE ON __schema__.stream_index TO beckett;
 
 -- Normalized message_types table
 CREATE TABLE IF NOT EXISTS __schema__.message_types (
@@ -599,14 +601,13 @@ CREATE TABLE IF NOT EXISTS __schema__.message_types (
 
 GRANT UPDATE, DELETE ON __schema__.message_types TO beckett;
 
--- Message metadata table (without data)
-CREATE TABLE IF NOT EXISTS __schema__.message_metadata (
+-- Message index table (without data)
+CREATE TABLE IF NOT EXISTS __schema__.message_index (
     id uuid NOT NULL,
+    stream_index_id bigint NOT NULL REFERENCES __schema__.stream_index(id),
     global_position bigint NOT NULL,
-    stream_name text NOT NULL,
     stream_position bigint NOT NULL,
     message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id),
-    category text NOT NULL,
     correlation_id text NULL,
     tenant text NULL,
     timestamp timestamp with time zone NOT NULL,
@@ -614,35 +615,36 @@ CREATE TABLE IF NOT EXISTS __schema__.message_metadata (
 ) PARTITION BY RANGE (global_position);
 
 -- Create initial partition for active messages
-CREATE TABLE IF NOT EXISTS __schema__.message_metadata_active PARTITION OF __schema__.message_metadata
+CREATE TABLE IF NOT EXISTS __schema__.message_index_active PARTITION OF __schema__.message_index
     FOR VALUES FROM (0) TO (MAXVALUE);
 
 -- Create indexes on the partition
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_stream_type ON __schema__.message_metadata_active (stream_name, message_type_id);
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_category_type ON __schema__.message_metadata_active (category, message_type_id);
-CREATE INDEX IF NOT EXISTS ix_message_metadata_message_type_id ON __schema__.message_metadata (message_type_id);
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_correlation_id ON __schema__.message_metadata_active (correlation_id)
+CREATE INDEX IF NOT EXISTS ix_message_index_active_stream_type ON __schema__.message_index_active (stream_index_id, message_type_id);
+CREATE INDEX IF NOT EXISTS ix_message_index_stream_index_id ON __schema__.message_index (stream_index_id);
+CREATE INDEX IF NOT EXISTS ix_message_index_message_type_id ON __schema__.message_index (message_type_id);
+CREATE INDEX IF NOT EXISTS ix_message_index_active_correlation_id ON __schema__.message_index_active (correlation_id)
     WHERE correlation_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_tenant ON __schema__.message_metadata_active (tenant)
+CREATE INDEX IF NOT EXISTS ix_message_index_active_tenant ON __schema__.message_index_active (tenant)
     WHERE tenant IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_message_metadata_active_timestamp ON __schema__.message_metadata_active (timestamp DESC);
+CREATE INDEX IF NOT EXISTS ix_message_index_active_timestamp ON __schema__.message_index_active (timestamp DESC);
 
-GRANT UPDATE, DELETE ON __schema__.message_metadata TO beckett;
-GRANT UPDATE, DELETE ON __schema__.message_metadata_active TO beckett;
+GRANT UPDATE, DELETE ON __schema__.message_index TO beckett;
+GRANT UPDATE, DELETE ON __schema__.message_index_active TO beckett;
 
--- Stream types lookup table for fast initialization
-CREATE TABLE IF NOT EXISTS __schema__.stream_types (
-    stream_name text NOT NULL,
+-- Stream message types lookup table for fast initialization
+CREATE TABLE IF NOT EXISTS __schema__.stream_message_types (
+    stream_index_id bigint NOT NULL REFERENCES __schema__.stream_index(id),
     message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id),
     first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
     last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
     message_count bigint NOT NULL DEFAULT 1,
-    PRIMARY KEY (stream_name, message_type_id)
+    PRIMARY KEY (stream_index_id, message_type_id)
 );
 
-CREATE INDEX IF NOT EXISTS ix_stream_types_message_type_id ON __schema__.stream_types (message_type_id);
+CREATE INDEX IF NOT EXISTS ix_stream_message_types_message_type_id ON __schema__.stream_message_types (message_type_id);
+CREATE INDEX IF NOT EXISTS ix_stream_message_types_stream_index_id ON __schema__.stream_message_types (stream_index_id);
 
-GRANT UPDATE, DELETE ON __schema__.stream_types TO beckett;
+GRANT UPDATE, DELETE ON __schema__.stream_message_types TO beckett;
 
 -- Subscription message types junction table
 CREATE TABLE IF NOT EXISTS __schema__.subscription_message_types (

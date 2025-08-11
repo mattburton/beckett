@@ -20,11 +20,11 @@ public static class DataTypeNames
 
     public static string SubscriptionStatus(string? schema = null) => $"{schema ?? Schema}.subscription_status";
 
-    public static string StreamMetadata(string? schema = null) => $"{schema ?? Schema}.stream_metadata_type";
+    public static string StreamIndex(string? schema = null) => $"{schema ?? Schema}.stream_index_type";
 
-    public static string StreamMetadataArray(string? schema = null) => $"{schema ?? Schema}.stream_metadata_type[]";
+    public static string StreamIndexArray(string? schema = null) => $"{schema ?? Schema}.stream_index_type[]";
 
-    public static string MessageMetadata(string? schema = null) => $"{schema ?? Schema}.message_metadata_type";
+    public static string MessageIndex(string? schema = null) => $"{schema ?? Schema}.message_index_type";
 
-    public static string MessageMetadataArray(string? schema = null) => $"{schema ?? Schema}.message_metadata_type[]";
+    public static string MessageIndexArray(string? schema = null) => $"{schema ?? Schema}.message_index_type[]";
 }
