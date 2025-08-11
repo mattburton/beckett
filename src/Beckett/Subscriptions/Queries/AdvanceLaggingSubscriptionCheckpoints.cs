@@ -11,14 +11,17 @@ public class AdvanceLaggingSubscriptionCheckpoints(long subscriptionId) : IPostg
         //language=sql
         const string sql = """
             WITH updated_checkpoints AS (
-                UPDATE beckett.checkpoints
-                SET stream_position = stream_version,
+                UPDATE beckett.checkpoints c
+                SET stream_position = cr.target_stream_version,
                     updated_at = now()
-                WHERE id IN (
-                    SELECT id
-                    FROM beckett.checkpoints
-                    WHERE subscription_id = $1
-                    AND stream_version > stream_position
+                FROM beckett.checkpoints_ready cr
+                WHERE c.id = cr.id
+                AND c.subscription_id = $1
+                AND c.id IN (
+                    SELECT c2.id
+                    FROM beckett.checkpoints c2
+                    INNER JOIN beckett.checkpoints_ready cr2 ON c2.id = cr2.id
+                    WHERE c2.subscription_id = $1
                     LIMIT 500
                 )
                 RETURNING id

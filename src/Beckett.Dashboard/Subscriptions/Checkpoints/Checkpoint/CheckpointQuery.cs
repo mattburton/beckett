@@ -16,7 +16,7 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
                    sg.name as group_name,
                    s.name,
                    c.stream_name,
-                   c.stream_version,
+                   COALESCE(cr.target_stream_version, cres.target_stream_version, c.stream_position) as target_stream_version,
                    c.stream_position,
                    c.status,
                    cr.process_at,
@@ -58,7 +58,7 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
             GroupName = reader.GetFieldValue<string>(1),
             Name = reader.GetFieldValue<string>(2),
             StreamName = reader.GetFieldValue<string>(3),
-            StreamVersion = reader.GetFieldValue<long>(4),
+            TargetStreamVersion = reader.GetFieldValue<long>(4),
             StreamPosition = reader.GetFieldValue<long>(5),
             Status = reader.GetFieldValue<CheckpointStatus>(6),
             ProcessAt = reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
@@ -75,7 +75,7 @@ public class CheckpointQuery(long id) : IPostgresDatabaseQuery<CheckpointQuery.R
         public required string GroupName { get; init; }
         public required string Name { get; init; }
         public required string StreamName { get; init; }
-        public required long StreamVersion { get; init; }
+        public required long TargetStreamVersion { get; init; }
         public required long StreamPosition { get; init; }
         public required CheckpointStatus Status { get; init; }
         public DateTimeOffset? ProcessAt { get; init; }

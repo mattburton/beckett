@@ -335,7 +335,6 @@ CREATE TABLE beckett.categories (
 CREATE TABLE beckett.checkpoints (
     id bigint NOT NULL,
     subscription_id bigint NOT NULL,
-    stream_version bigint DEFAULT 0 NOT NULL,
     stream_position bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
@@ -353,7 +352,8 @@ CREATE TABLE beckett.checkpoints (
 CREATE TABLE beckett.checkpoints_ready (
     id bigint NOT NULL,
     process_at timestamp with time zone DEFAULT now() NOT NULL,
-    subscription_group_name text NOT NULL
+    subscription_group_name text NOT NULL,
+    target_stream_version bigint NOT NULL
 );
 
 
@@ -363,7 +363,8 @@ CREATE TABLE beckett.checkpoints_ready (
 
 CREATE TABLE beckett.checkpoints_reserved (
     id bigint NOT NULL,
-    reserved_until timestamp with time zone NOT NULL
+    reserved_until timestamp with time zone NOT NULL,
+    target_stream_version bigint NOT NULL
 );
 
 

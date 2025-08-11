@@ -7,7 +7,7 @@ public record Checkpoint(
     long SubscriptionId,
     string StreamName,
     long StreamPosition,
-    long StreamVersion,
+    long StreamVersion, // This is now the target_stream_version from ready table
     int RetryAttempts,
     CheckpointStatus Status,
     long? ReplayTargetPosition = null

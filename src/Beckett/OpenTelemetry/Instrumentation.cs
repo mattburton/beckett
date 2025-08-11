@@ -17,7 +17,6 @@ public class Instrumentation : IInstrumentation, IDisposable
     private readonly IPostgresDataSource _dataSource;
     private readonly ILogger<Instrumentation> _logger;
     private readonly Meter? _meter;
-    private readonly BeckettOptions _options;
     private readonly TextMapPropagator _propagator;
 
     public Instrumentation(
@@ -28,7 +27,6 @@ public class Instrumentation : IInstrumentation, IDisposable
     )
     {
         _dataSource = dataSource;
-        _options = options;
         _logger = logger;
 
         var version = typeof(Instrumentation).Assembly.GetName().Version?.ToString();
@@ -223,21 +221,26 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"""
+        const string sql = """
             WITH metric AS (
                 SELECT s.id
-                FROM {_options.Postgres.Schema}.subscriptions s
-                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.id = c.subscription_id
+                FROM beckett.subscriptions s
+                INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
+                INNER JOIN beckett.checkpoints_ready cr ON c.id = cr.id
                 WHERE s.status in ('active', 'replay')
                 AND c.status = 'active'
-                AND c.stream_version > c.stream_position
                 GROUP BY s.id
             )
             SELECT count(*)
             FROM metric;
         """;
 
-        command.Prepare();
+        command.CommandText = Query.Build(nameof(GetSubscriptionLag), sql, out var prepare);
+
+        if (prepare)
+        {
+            command.Prepare();
+        }
 
         return (long)command.ExecuteScalar()!;
     }
@@ -250,11 +253,11 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"""
+        const string sql = """
             WITH metric AS (
                 SELECT count(*) as value
-                FROM {_options.Postgres.Schema}.subscriptions s
-                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.id = c.subscription_id
+                FROM beckett.subscriptions s
+                INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status != 'uninitialized'
                 AND c.status = 'retry'
                 UNION ALL
@@ -265,7 +268,12 @@ public class Instrumentation : IInstrumentation, IDisposable
             LIMIT 1;
         """;
 
-        command.Prepare();
+        command.CommandText = Query.Build(nameof(GetSubscriptionRetryCount), sql, out var prepare);
+
+        if (prepare)
+        {
+            command.Prepare();
+        }
 
         return (long)command.ExecuteScalar()!;
     }
@@ -278,11 +286,11 @@ public class Instrumentation : IInstrumentation, IDisposable
 
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"""
+        const string sql = """
             WITH metric AS (
                 SELECT count(*) as value
-                FROM {_options.Postgres.Schema}.subscriptions s
-                INNER JOIN {_options.Postgres.Schema}.checkpoints c ON s.id = c.subscription_id
+                FROM beckett.subscriptions s
+                INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
                 WHERE s.status != 'uninitialized'
                 AND c.status = 'failed'
                 UNION ALL
@@ -293,7 +301,12 @@ public class Instrumentation : IInstrumentation, IDisposable
             LIMIT 1;
         """;
 
-        command.Prepare();
+        command.CommandText = Query.Build(nameof(GetSubscriptionFailedCount), sql, out var prepare);
+
+        if (prepare)
+        {
+            command.Prepare();
+        }
 
         return (long)command.ExecuteScalar()!;
     }

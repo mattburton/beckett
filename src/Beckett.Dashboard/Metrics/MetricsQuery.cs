@@ -15,9 +15,9 @@ public class MetricsQuery : IPostgresDatabaseQuery<MetricsQuery.Result>
                     SELECT COUNT(*) AS lagging
                     FROM beckett.subscriptions s
                     INNER JOIN beckett.checkpoints c ON s.id = c.subscription_id
+                    INNER JOIN beckett.checkpoints_ready cr ON c.id = cr.id
                     WHERE s.status in ('active', 'replay')
                     AND c.status = 'active'
-                    AND c.stream_version > c.stream_position
                     GROUP BY s.id
                 )
                 SELECT count(1) as lagging FROM lagging_subscriptions

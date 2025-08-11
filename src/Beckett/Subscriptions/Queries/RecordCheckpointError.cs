@@ -30,22 +30,23 @@ public record RecordCheckpointError(
                         row($4, $5, now())::beckett.retry
                     )
                 WHERE id = $1
-                RETURNING id, stream_version, stream_position, status, subscription_id
+                RETURNING id, stream_position, status, subscription_id
             ),
             deleted_reservation AS (
                 DELETE FROM beckett.checkpoints_reserved WHERE id = $1
                 RETURNING id
             ),
             inserted_ready AS (
-                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name)
-                SELECT uc.id, $6, sg.name
+                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name, target_stream_version)
+                SELECT uc.id, $6, sg.name, uc.stream_position + 1
                 FROM updated_checkpoint uc
                 INNER JOIN beckett.subscriptions s ON uc.subscription_id = s.id
                 INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
                 WHERE $6 IS NOT NULL
                 AND uc.status = 'retry'
                 ON CONFLICT (id) DO UPDATE
-                    SET process_at = EXCLUDED.process_at
+                    SET process_at = EXCLUDED.process_at,
+                        target_stream_version = EXCLUDED.target_stream_version
                 RETURNING id
             )
             SELECT pg_notify('beckett:checkpoints', uc.subscription_id::text)

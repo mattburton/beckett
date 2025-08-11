@@ -13,7 +13,7 @@ public class RecoverExpiredCheckpointReservations(
         //language=sql
         const string sql = """
             WITH expired_reservations AS (
-                SELECT cr.id, c.stream_version, c.stream_position, c.status
+                SELECT cr.id, c.stream_position, c.status, cr.target_stream_version
                 FROM beckett.checkpoints_reserved cr
                 INNER JOIN beckett.checkpoints c ON cr.id = c.id
                 WHERE cr.reserved_until <= now()
@@ -33,15 +33,16 @@ public class RecoverExpiredCheckpointReservations(
                 RETURNING c.id
             ),
             inserted_ready AS (
-                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name)
-                SELECT er.id, now(), sg.name
+                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name, target_stream_version)
+                SELECT er.id, now(), sg.name, er.target_stream_version
                 FROM expired_reservations er
                 INNER JOIN beckett.checkpoints c ON er.id = c.id
                 INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
                 INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-                WHERE er.status = 'active' AND er.stream_version > er.stream_position
+                WHERE er.status = 'active'
                 ON CONFLICT (id) DO UPDATE
-                    SET process_at = now()
+                    SET process_at = now(),
+                        target_stream_version = EXCLUDED.target_stream_version
                 RETURNING id
             )
             SELECT count(*) FROM inserted_ready;

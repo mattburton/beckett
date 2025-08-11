@@ -16,7 +16,7 @@ public class BulkSkipQuery(
             DELETE FROM beckett.checkpoints_ready WHERE id = ANY($1);
             
             UPDATE beckett.checkpoints
-            SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
+            SET stream_position = stream_position + 1,
                 status = 'active',
                 retry_attempts = 0,
                 retries = NULL,

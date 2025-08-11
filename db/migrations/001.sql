@@ -206,7 +206,6 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
 (
   id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   subscription_id bigint NOT NULL REFERENCES __schema__.subscriptions(id) ON DELETE CASCADE,
-  stream_version bigint NOT NULL DEFAULT 0,
   stream_position bigint NOT NULL DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
@@ -234,6 +233,7 @@ GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
 CREATE TABLE IF NOT EXISTS __schema__.checkpoints_ready
 (
     id bigint NOT NULL REFERENCES __schema__.checkpoints(id) ON DELETE CASCADE,
+    target_stream_version bigint NOT NULL,
     process_at timestamp with time zone NOT NULL DEFAULT now(),
     subscription_group_name text NOT NULL,
     PRIMARY KEY (id)
@@ -246,6 +246,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON __schema__.checkpoints_ready TO beckett;
 CREATE TABLE IF NOT EXISTS __schema__.checkpoints_reserved
 (
     id bigint NOT NULL REFERENCES __schema__.checkpoints(id) ON DELETE CASCADE,
+    target_stream_version bigint NOT NULL,
     reserved_until timestamp with time zone NOT NULL,
     PRIMARY KEY (id)
 );

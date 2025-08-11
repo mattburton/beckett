@@ -32,7 +32,7 @@ public class ReserveNextAvailableCheckpoint(
                     FOR UPDATE
                     SKIP LOCKED
                 )
-                RETURNING id
+                RETURNING id, target_stream_version
             ),
             updated_checkpoint AS (
                 UPDATE beckett.checkpoints c
@@ -40,12 +40,13 @@ public class ReserveNextAvailableCheckpoint(
                 FROM reserved_checkpoint rc
                 WHERE c.id = rc.id
                 RETURNING c.id, c.subscription_id, c.stream_name, c.stream_position, 
-                         c.stream_version, c.retry_attempts, c.status
+                         c.retry_attempts, c.status
             ),
             inserted_reservation AS (
-                INSERT INTO beckett.checkpoints_reserved (id, reserved_until)
-                SELECT uc.id, now() + $2
+                INSERT INTO beckett.checkpoints_reserved (id, reserved_until, target_stream_version)
+                SELECT uc.id, now() + $2, rc.target_stream_version
                 FROM updated_checkpoint uc
+                INNER JOIN reserved_checkpoint rc ON uc.id = rc.id
                 RETURNING id
             )
             SELECT 
@@ -53,11 +54,12 @@ public class ReserveNextAvailableCheckpoint(
                 uc.subscription_id,
                 uc.stream_name,
                 uc.stream_position,
-                uc.stream_version,
+                rc.target_stream_version,
                 uc.retry_attempts,
                 uc.status,
                 s.replay_target_position
             FROM updated_checkpoint uc
+            INNER JOIN reserved_checkpoint rc ON uc.id = rc.id
             INNER JOIN beckett.subscriptions s ON uc.subscription_id = s.id
             INNER JOIN inserted_reservation ir ON uc.id = ir.id;
         """;

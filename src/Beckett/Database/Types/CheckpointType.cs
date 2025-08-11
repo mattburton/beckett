@@ -4,7 +4,7 @@ public class CheckpointType
 {
     public long SubscriptionId { get; init; }
     public string StreamName { get; set; } = null!;
-    public long StreamVersion { get; set; }
+    public long StreamVersion { get; set; } // This will be used as target_stream_version in ready table
     public long StreamPosition { get; set; }
 
     private sealed class CheckpointTypeEqualityComparer : IEqualityComparer<CheckpointType>

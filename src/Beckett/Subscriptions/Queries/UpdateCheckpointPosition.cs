@@ -22,27 +22,18 @@ public class UpdateCheckpointPosition(
                     retries = NULL,
                     updated_at = now()
                 WHERE id = $1
-                RETURNING id, stream_version, stream_position, subscription_id
+                RETURNING id, stream_position, subscription_id
             ),
             deleted_reservation AS (
                 DELETE FROM beckett.checkpoints_reserved WHERE id = $1
                 RETURNING id
             ),
-            inserted_ready AS (
-                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name)
-                SELECT uc.id, $3, sg.name
-                FROM updated_checkpoint uc
-                INNER JOIN beckett.subscriptions s ON uc.subscription_id = s.id
-                INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-                WHERE $3 IS NOT NULL
-                AND uc.stream_version > uc.stream_position
-                ON CONFLICT (id) DO UPDATE
-                    SET process_at = EXCLUDED.process_at
-                RETURNING id, process_at
+            removed_ready AS (
+                DELETE FROM beckett.checkpoints_ready 
+                WHERE id = $1
+                RETURNING id
             )
-            SELECT pg_notify('beckett:checkpoints', uc.subscription_id::text)
-            FROM updated_checkpoint uc
-            WHERE $3 IS NOT NULL;
+            SELECT count(*) FROM removed_ready;
         """;
 
         command.CommandText = Query.Build(nameof(UpdateCheckpointPosition), sql, out var prepare);
