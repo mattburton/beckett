@@ -1,5 +1,4 @@
 using Beckett.Database;
-using Beckett.Subscriptions;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -7,17 +6,60 @@ namespace Beckett.Dashboard.Subscriptions.Subscription;
 
 public class SubscriptionQuery(
     string groupName,
-    string name) : IPostgresDatabaseQuery<SubscriptionQuery.Result?>
+    string subscriptionName
+) : IPostgresDatabaseQuery<SubscriptionQuery.Result?>
 {
     public async Task<Result?> Execute(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         //language=sql
         const string sql = """
-            SELECT sg.name, s.name, s.status
+            SELECT s.id,
+                   sg.name as group_name,
+                   s.name as subscription_name,
+                   s.status,
+                   s.category,
+                   s.stream_name,
+                   array_agg(mt.name ORDER BY mt.name) FILTER (WHERE mt.name IS NOT NULL) as message_types,
+                   s.priority,
+                   s.skip_during_replay,
+                   s.replay_target_position,
+                   coalesce(active.active_count, 0) as active_checkpoints,
+                   coalesce(lagging.lagging_count, 0) as lagging_checkpoints,
+                   coalesce(failed.failed_count, 0) as failed_checkpoints,
+                   coalesce(retry.retry_count, 0) as retry_checkpoints
             FROM beckett.subscriptions s
             INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-            WHERE sg.name = $1
-            AND s.name = $2;
+            LEFT JOIN beckett.subscription_message_types smt ON s.id = smt.subscription_id
+            LEFT JOIN beckett.message_types mt ON smt.message_type_id = mt.id
+            LEFT JOIN (
+                SELECT subscription_id, count(*) as active_count
+                FROM beckett.checkpoints
+                WHERE status = 'active'
+                GROUP BY subscription_id
+            ) active ON s.id = active.subscription_id
+            LEFT JOIN (
+                SELECT c.subscription_id, count(*) as lagging_count
+                FROM beckett.checkpoints c
+                INNER JOIN beckett.checkpoints_ready cr ON c.id = cr.id
+                WHERE c.status = 'active'
+                AND cr.target_stream_version > c.stream_position
+                GROUP BY c.subscription_id
+            ) lagging ON s.id = lagging.subscription_id
+            LEFT JOIN (
+                SELECT subscription_id, count(*) as failed_count
+                FROM beckett.checkpoints
+                WHERE status = 'failed'
+                GROUP BY subscription_id
+            ) failed ON s.id = failed.subscription_id
+            LEFT JOIN (
+                SELECT subscription_id, count(*) as retry_count
+                FROM beckett.checkpoints
+                WHERE status = 'retry'
+                GROUP BY subscription_id
+            ) retry ON s.id = retry.subscription_id
+            WHERE sg.name = $1 AND s.name = $2
+            GROUP BY s.id, sg.name, s.name, s.status, s.category, s.stream_name, s.priority, s.skip_during_replay, s.replay_target_position,
+                     active.active_count, lagging.lagging_count, failed.failed_count, retry.retry_count;
         """;
 
         command.CommandText = Query.Build(nameof(SubscriptionQuery), sql, out var prepare);
@@ -31,23 +73,49 @@ public class SubscriptionQuery(
         }
 
         command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = name;
+        command.Parameters[1].Value = subscriptionName;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        await reader.ReadAsync(cancellationToken);
-
-        if (!reader.HasRows)
+        if (await reader.ReadAsync(cancellationToken))
         {
-            return null;
+            var messageTypes = reader.IsDBNull(6) ? new string[0] : reader.GetFieldValue<string[]>(6);
+
+            return new Result(
+                reader.GetFieldValue<long>(0),
+                reader.GetFieldValue<string>(1),
+                reader.GetFieldValue<string>(2),
+                reader.GetFieldValue<string>(3),
+                reader.IsDBNull(4) ? null : reader.GetFieldValue<string>(4),
+                reader.IsDBNull(5) ? null : reader.GetFieldValue<string>(5),
+                messageTypes,
+                reader.GetFieldValue<int>(7),
+                reader.GetFieldValue<bool>(8),
+                reader.IsDBNull(9) ? null : reader.GetFieldValue<long>(9),
+                reader.GetFieldValue<long>(10),
+                reader.GetFieldValue<long>(11),
+                reader.GetFieldValue<long>(12),
+                reader.GetFieldValue<long>(13)
+            );
         }
 
-        return new Result(
-            reader.GetFieldValue<string>(0),
-            reader.GetFieldValue<string>(1),
-            reader.GetFieldValue<SubscriptionStatus>(2)
-        );
+        return null;
     }
 
-    public record Result(string GroupName, string Name, SubscriptionStatus Status);
+    public record Result(
+        long SubscriptionId,
+        string GroupName,
+        string SubscriptionName,
+        string Status,
+        string? Category,
+        string? StreamName,
+        string[] MessageTypes,
+        int Priority,
+        bool SkipDuringReplay,
+        long? ReplayTargetPosition,
+        long ActiveCheckpoints,
+        long LaggingCheckpoints,
+        long FailedCheckpoints,
+        long RetryCheckpoints
+    );
 }

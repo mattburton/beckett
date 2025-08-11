@@ -46,7 +46,7 @@
             var statusIndicator = Model.Details.Status switch
             {
               "active" => "text-bg-success",
-              "paused" => "text-bg-secondary", 
+              "paused" => "text-bg-secondary",
               "replay" => "text-bg-danger",
               "uninitialized" => "text-bg-warning",
               _ => "text-bg-warning"
@@ -105,17 +105,17 @@
       <li class="list-group-item"><span class="fw-bolder">Status:</span> @Model.Details.Status</li>
       <li class="list-group-item"><span class="fw-bolder">Priority:</span> @Model.Details.Priority</li>
       <li class="list-group-item"><span class="fw-bolder">Skip During Replay:</span> @(Model.Details.SkipDuringReplay ? "Yes" : "No")</li>
-      
+
       @if (!string.IsNullOrEmpty(Model.Details.Category))
       {
         <li class="list-group-item"><span class="fw-bolder">Category:</span> @Model.Details.Category</li>
       }
-      
+
       @if (!string.IsNullOrEmpty(Model.Details.StreamName))
       {
         <li class="list-group-item"><span class="fw-bolder">Stream Name:</span> @Model.Details.StreamName</li>
       }
-      
+
       @if (Model.Details.MessageTypes.Length > 0)
       {
         <li class="list-group-item">
@@ -128,20 +128,28 @@
           </ul>
         </li>
       }
-      
+
       @if (Model.Details.ReplayTargetPosition.HasValue)
       {
         <li class="list-group-item"><span class="fw-bolder">Replay Target Position:</span> @Model.Details.ReplayTargetPosition.Value</li>
       }
-      
+
       <li class="list-group-item">
-        <span class="fw-bolder">Checkpoints:</span>
-        <ul class="list-unstyled ms-3 mt-1 mb-0">
-          <li><span class="badge text-bg-success">@Model.Details.ActiveCheckpoints</span> Active</li>
-          <li><span class="badge text-bg-warning">@Model.Details.LaggingCheckpoints</span> Lagging</li>
-          <li><span class="badge text-bg-danger">@Model.Details.FailedCheckpoints</span> Failed</li>
-          <li><span class="badge text-bg-info">@Model.Details.RetryCheckpoints</span> Retry</li>
-        </ul>
+        <span class="fw-bolder mb-2 d-block">Checkpoints:</span>
+        <div class="d-flex flex-wrap gap-3">
+          <div class="p-2 bg-success-subtle border border-success rounded">
+            <span class="badge text-bg-success">@Model.Details.ActiveCheckpoints</span> Active
+          </div>
+          <div class="p-2 bg-warning-subtle border border-info rounded">
+            <span class="badge text-bg-info">@Model.Details.LaggingCheckpoints</span> Lagging
+          </div>
+          <div class="p-2 bg-info-subtle border border-warning rounded">
+            <span class="badge text-bg-warning">@Model.Details.RetryCheckpoints</span> Retry
+          </div>
+          <div class="p-2 bg-danger-subtle border border-danger rounded">
+            <span class="badge text-bg-danger">@Model.Details.FailedCheckpoints</span> Failed
+          </div>
+        </div>
       </li>
     </ul>
   </div>
@@ -149,6 +157,6 @@
 
 @code {
 
-  public record ViewModel(EnhancedSubscriptionQuery.Result Details);
+  public record ViewModel(SubscriptionQuery.Result Details);
 
 }
