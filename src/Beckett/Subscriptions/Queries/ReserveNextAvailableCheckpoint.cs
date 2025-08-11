@@ -21,14 +21,13 @@ public class ReserveNextAvailableCheckpoint(
                     FROM beckett.checkpoints_ready cr2
                     INNER JOIN beckett.checkpoints c ON cr2.id = c.id
                     INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
-                    INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-                    WHERE sg.name = $1
+                    WHERE cr2.subscription_group_name = $1
                     AND cr2.process_at <= now()
                     AND ($3 = false OR (s.status = 'active' OR s.status = 'replay'))
                     AND ($4 = false OR s.status = 'active')
                     AND ($5 = false OR s.status = 'replay')
                     AND NOT EXISTS (SELECT 1 FROM beckett.checkpoints_reserved cres WHERE cres.id = c.id)
-                    ORDER BY cr2.process_at
+                    ORDER BY cr2.process_at, cr2.id
                     LIMIT 1
                     FOR UPDATE
                     SKIP LOCKED

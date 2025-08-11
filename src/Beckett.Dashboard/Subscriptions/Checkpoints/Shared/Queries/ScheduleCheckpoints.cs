@@ -19,11 +19,15 @@ public class ScheduleCheckpoints(
                 WHERE id = ANY($1)
                 RETURNING id, stream_version, stream_position, status
             )
-            INSERT INTO beckett.checkpoints_ready (id, process_at)
-            SELECT uc.id, $2
+            INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name)
+            SELECT uc.id, $2, sg.name
             FROM updated_checkpoints uc
+            INNER JOIN beckett.checkpoints c ON uc.id = c.id
+            INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
+            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
             WHERE uc.status = 'active' AND uc.stream_version > uc.stream_position
-            ON CONFLICT (id) DO UPDATE SET process_at = EXCLUDED.process_at;
+            ON CONFLICT (id) DO UPDATE
+                SET process_at = EXCLUDED.process_at;
         """;
 
         command.CommandText = Query.Build(nameof(ScheduleCheckpoints), sql, out var prepare);

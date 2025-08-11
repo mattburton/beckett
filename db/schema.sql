@@ -355,7 +355,8 @@ CREATE TABLE beckett.checkpoints (
 
 CREATE TABLE beckett.checkpoints_ready (
     id bigint NOT NULL,
-    process_at timestamp with time zone DEFAULT now() NOT NULL
+    process_at timestamp with time zone DEFAULT now() NOT NULL,
+    subscription_group_name text NOT NULL
 );
 
 
@@ -773,10 +774,10 @@ CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints USING btree (subsc
 
 
 --
--- Name: ix_checkpoints_ready_process_at; Type: INDEX; Schema: beckett; Owner: -
+-- Name: ix_checkpoints_ready_group_process_at; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_checkpoints_ready_process_at ON beckett.checkpoints_ready USING btree (process_at);
+CREATE INDEX ix_checkpoints_ready_group_process_at ON beckett.checkpoints_ready USING btree (subscription_group_name, process_at);
 
 
 --

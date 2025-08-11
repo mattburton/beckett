@@ -241,10 +241,11 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints_ready
 (
     id bigint NOT NULL REFERENCES __schema__.checkpoints(id) ON DELETE CASCADE,
     process_at timestamp with time zone NOT NULL DEFAULT now(),
+    subscription_group_name text NOT NULL,
     PRIMARY KEY (id)
 );
 
-CREATE INDEX ix_checkpoints_ready_process_at ON __schema__.checkpoints_ready (process_at);
+CREATE INDEX ix_checkpoints_ready_group_process_at ON __schema__.checkpoints_ready (subscription_group_name, process_at, id);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON __schema__.checkpoints_ready TO beckett;
 

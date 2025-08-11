@@ -39,16 +39,19 @@ public record RecordCheckpointError(
                 RETURNING id
             ),
             inserted_ready AS (
-                INSERT INTO beckett.checkpoints_ready (id, process_at)
-                SELECT uc.id, $6
+                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name)
+                SELECT uc.id, $6, sg.name
                 FROM updated_checkpoint uc
+                INNER JOIN beckett.subscriptions s ON uc.subscription_id = s.id
+                INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
                 WHERE $6 IS NOT NULL AND uc.status = 'retry'
-                ON CONFLICT (id) DO UPDATE SET process_at = EXCLUDED.process_at
+                ON CONFLICT (id) DO UPDATE
+                    SET process_at = EXCLUDED.process_at
                 RETURNING id
             )
             SELECT pg_notify('beckett:checkpoints', uc.subscription_id::text)
             FROM updated_checkpoint uc
-            WHERE EXISTS (SELECT 1 FROM inserted_ready ir WHERE ir.id = uc.id);
+            WHERE $6 IS NOT NULL;
         """;
 
         command.CommandText = Query.Build(nameof(RecordCheckpointError), sql, out var prepare);

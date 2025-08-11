@@ -25,9 +25,11 @@ public class ReleaseCheckpointReservation(
                 RETURNING id
             ),
             inserted_ready AS (
-                INSERT INTO beckett.checkpoints_ready (id, process_at)
-                SELECT uc.id, now()
+                INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name)
+                SELECT uc.id, now(), sg.name
                 FROM updated_checkpoint uc
+                INNER JOIN beckett.subscriptions s ON uc.subscription_id = s.id
+                INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
                 WHERE uc.status = 'active'
                 AND uc.stream_version > uc.stream_position
                 ON CONFLICT (id) DO UPDATE
@@ -36,7 +38,7 @@ public class ReleaseCheckpointReservation(
             )
             SELECT pg_notify('beckett:checkpoints', uc.subscription_id::text)
             FROM updated_checkpoint uc
-            WHERE EXISTS (SELECT 1 FROM inserted_ready ir WHERE ir.id = uc.id);
+            WHERE uc.status = 'active' AND uc.stream_version > uc.stream_position;
         """;
 
         command.CommandText = Query.Build(nameof(ReleaseCheckpointReservation), sql, out var prepare);
