@@ -25,13 +25,6 @@ public class RecoverExpiredCheckpointReservations(
                 WHERE cr.id IN (SELECT id FROM expired_reservations)
                 RETURNING id
             ),
-            updated_checkpoints AS (
-                UPDATE beckett.checkpoints c
-                SET updated_at = now()
-                FROM expired_reservations er
-                WHERE c.id = er.id
-                RETURNING c.id
-            ),
             inserted_ready AS (
                 INSERT INTO beckett.checkpoints_ready (id, process_at, subscription_group_name, target_stream_version)
                 SELECT er.id, now(), sg.name, er.target_stream_version
