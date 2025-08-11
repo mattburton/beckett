@@ -611,14 +611,17 @@ CREATE TABLE IF NOT EXISTS __schema__.message_index (
     tenant_id bigint NULL REFERENCES __schema__.tenants(id),
     correlation_id text NULL,
     timestamp timestamp with time zone NOT NULL,
-    PRIMARY KEY (global_position, id)
-) PARTITION BY RANGE (global_position);
+    archived boolean NOT NULL DEFAULT false,
+    PRIMARY KEY (global_position, id, archived),
+    UNIQUE (id, archived)
+) PARTITION BY LIST (archived);
 
--- Create initial partition for active messages
-CREATE TABLE IF NOT EXISTS __schema__.message_index_active PARTITION OF __schema__.message_index
-    FOR VALUES FROM (0) TO (MAXVALUE);
+-- Create active and archived partitions
+CREATE TABLE IF NOT EXISTS __schema__.message_index_active PARTITION OF __schema__.message_index FOR VALUES IN (false);
 
--- Create indexes on the partition
+CREATE TABLE IF NOT EXISTS __schema__.message_index_archived PARTITION OF __schema__.message_index FOR VALUES IN (true);
+
+-- Create indexes on the partitions
 CREATE INDEX IF NOT EXISTS ix_message_index_active_stream_type ON __schema__.message_index_active (stream_index_id, message_type_id);
 CREATE INDEX IF NOT EXISTS ix_message_index_stream_index_id ON __schema__.message_index (stream_index_id);
 CREATE INDEX IF NOT EXISTS ix_message_index_message_type_id ON __schema__.message_index (message_type_id);
@@ -630,6 +633,7 @@ CREATE INDEX IF NOT EXISTS ix_message_index_active_timestamp ON __schema__.messa
 
 GRANT UPDATE, DELETE ON __schema__.message_index TO beckett;
 GRANT UPDATE, DELETE ON __schema__.message_index_active TO beckett;
+GRANT UPDATE, DELETE ON __schema__.message_index_archived TO beckett;
 
 -- Stream message types lookup table for fast initialization
 CREATE TABLE IF NOT EXISTS __schema__.stream_message_types (

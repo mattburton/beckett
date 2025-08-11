@@ -153,11 +153,11 @@ public class RecordCheckpointsAndMetadata(
                     LEFT JOIN beckett.tenants t ON md.tenant = t.name
                 )
                 INSERT INTO beckett.message_index
-                    (id, global_position, stream_position, stream_index_id, message_type_id, tenant_id, correlation_id, timestamp)
+                    (id, global_position, stream_position, stream_index_id, message_type_id, tenant_id, correlation_id, timestamp, archived)
                 SELECT mwts.id, mwts.global_position, mwts.stream_position,
-                       mwts.stream_index_id, mwts.message_type_id, mwts.tenant_id, mwts.correlation_id, mwts.timestamp
+                       mwts.stream_index_id, mwts.message_type_id, mwts.tenant_id, mwts.correlation_id, mwts.timestamp, false
                 FROM message_with_type_and_stream_ids mwts
-                ON CONFLICT (global_position, id) DO NOTHING;
+                ON CONFLICT (global_position, id, archived) DO NOTHING;
                 """
             );
             messageMetadataCommand.Parameters.Add(

@@ -27,7 +27,7 @@ public class EnhancedStreamsQuery(
                FROM beckett.stream_index si
                LEFT JOIN beckett.stream_message_types smt ON si.id = smt.stream_index_id
                LEFT JOIN beckett.message_types mt ON smt.message_type_id = mt.id
-               LEFT JOIN beckett.message_index mi ON si.id = mi.stream_index_id
+               LEFT JOIN beckett.message_index mi ON si.id = mi.stream_index_id AND mi.archived = false
                LEFT JOIN beckett.tenants t ON mi.tenant_id = t.id
                INNER JOIN beckett.stream_categories sc ON si.stream_category_id = sc.id
                WHERE sc.name = $2
