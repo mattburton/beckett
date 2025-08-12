@@ -1,35 +1,15 @@
--------------------------------------------------
--- MIGRATION FROM 0.21.2 TO NEW SCHEMA
--------------------------------------------------
--- This migration safely transforms the old 0.21.2 schema to the new normalized schema
--- Uses batch operations for efficiency and recreates tables with correct column order
-
-BEGIN;
-
--------------------------------------------------
--- BACKUP EXISTING DATA
--------------------------------------------------
+-- Beckett 0.22.0 - normalized subscription data, checkpoint optimizations, message index enhancements
 
 -- Create temporary tables to hold existing data during migration
 CREATE TEMP TABLE temp_subscriptions AS
 SELECT group_name, name, status, replay_target_position
 FROM beckett.subscriptions;
 
-CREATE TEMP TABLE temp_checkpoints AS
-SELECT group_name, name, stream_name, stream_version, stream_position,
-       created_at, updated_at, process_at, reserved_until, retry_attempts,
-       status, retries
-FROM beckett.checkpoints;
-
 CREATE TEMP TABLE temp_categories AS
 SELECT name, updated_at FROM beckett.categories;
 
 CREATE TEMP TABLE temp_tenants AS
 SELECT tenant FROM beckett.tenants;
-
--------------------------------------------------
--- DROP OLD SCHEMA OBJECTS
--------------------------------------------------
 
 -- Drop triggers first
 DROP TRIGGER IF EXISTS checkpoint_preprocessor ON beckett.checkpoints;
@@ -43,17 +23,12 @@ DROP FUNCTION IF EXISTS beckett.reset_subscription(text, text);
 DROP FUNCTION IF EXISTS beckett.checkpoint_preprocessor();
 
 -- Drop tables in dependency order
-DROP TABLE IF EXISTS beckett.checkpoints;
 DROP TABLE IF EXISTS beckett.subscriptions;
 DROP TABLE IF EXISTS beckett.categories;
 DROP TABLE IF EXISTS beckett.tenants;
-DROP TABLE IF EXISTS beckett.migrations;
 
 -- Drop old types
 DROP TYPE IF EXISTS beckett.checkpoint;
-
--- Drop sequences
-DROP SEQUENCE IF EXISTS beckett.checkpoints_id_seq;
 
 -- Create new types
 CREATE TYPE beckett.checkpoint AS
@@ -154,50 +129,6 @@ CREATE INDEX ix_subscriptions_reservation_candidates ON beckett.subscriptions (s
 CREATE INDEX ix_subscriptions_category ON beckett.subscriptions (category) WHERE category IS NOT NULL;
 
 GRANT UPDATE, DELETE ON beckett.subscriptions TO beckett;
-
-CREATE TABLE beckett.checkpoints
-(
-  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  subscription_id bigint NOT NULL REFERENCES beckett.subscriptions(id) ON DELETE CASCADE,
-  stream_position bigint NOT NULL DEFAULT 0,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  retry_attempts int NOT NULL DEFAULT 0,
-  status beckett.checkpoint_status NOT NULL DEFAULT 'active',
-  stream_name text NOT NULL,
-  retries beckett.retry[] NULL,
-  UNIQUE (subscription_id, stream_name)
-);
-
-CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints (status, subscription_id);
-CREATE INDEX ix_checkpoints_subscription_id ON beckett.checkpoints (subscription_id);
-
-GRANT UPDATE, DELETE ON beckett.checkpoints TO beckett;
-
-CREATE TABLE beckett.checkpoints_ready
-(
-    id bigint NOT NULL REFERENCES beckett.checkpoints(id) ON DELETE CASCADE,
-    target_stream_version bigint NOT NULL,
-    process_at timestamp with time zone NOT NULL DEFAULT now(),
-    subscription_group_name text NOT NULL,
-    PRIMARY KEY (id)
-);
-
-CREATE INDEX ix_checkpoints_ready_group_process_at ON beckett.checkpoints_ready (subscription_group_name, process_at, id);
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON beckett.checkpoints_ready TO beckett;
-
-CREATE TABLE beckett.checkpoints_reserved
-(
-    id bigint NOT NULL REFERENCES beckett.checkpoints(id) ON DELETE CASCADE,
-    target_stream_version bigint NOT NULL,
-    reserved_until timestamp with time zone NOT NULL,
-    PRIMARY KEY (id)
-);
-
-CREATE INDEX ix_checkpoints_reserved_reserved_until ON beckett.checkpoints_reserved (reserved_until);
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON beckett.checkpoints_reserved TO beckett;
 
 CREATE TABLE beckett.stream_categories
 (
@@ -384,7 +315,27 @@ BEGIN
     END LOOP;
 END $$;
 
--- Migrate checkpoints
+-- Create new checkpoints table and migrate data
+CREATE TABLE beckett.checkpoints_new
+(
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  subscription_id bigint NOT NULL REFERENCES beckett.subscriptions(id) ON DELETE CASCADE,
+  stream_position bigint NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  retry_attempts int NOT NULL DEFAULT 0,
+  status beckett.checkpoint_status NOT NULL DEFAULT 'active',
+  stream_name text NOT NULL,
+  retries beckett.retry[] NULL,
+  UNIQUE (subscription_id, stream_name)
+);
+
+CREATE INDEX ix_checkpoints_new_metrics ON beckett.checkpoints_new (status, subscription_id);
+CREATE INDEX ix_checkpoints_new_subscription_id ON beckett.checkpoints_new (subscription_id);
+
+GRANT UPDATE, DELETE ON beckett.checkpoints_new TO beckett;
+
+-- Migrate checkpoints from old table to new table
 DO $$
 DECLARE
     _batch_size CONSTANT int := 500;
@@ -392,30 +343,16 @@ DECLARE
     _total_rows int := 0;
 BEGIN
     LOOP
-        WITH checkpoint_batch AS (
-            INSERT INTO beckett.checkpoints (subscription_id, stream_position, created_at, updated_at, retry_attempts, status, stream_name, retries)
-            SELECT s.id, tc.stream_position, tc.created_at, tc.updated_at, tc.retry_attempts, tc.status, tc.stream_name, tc.retries
-            FROM temp_checkpoints tc
-            INNER JOIN beckett.subscriptions s ON s.name = tc.name
-            INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id AND sg.name = tc.group_name
-            WHERE NOT EXISTS (
-                SELECT 1 FROM beckett.checkpoints c
-                WHERE c.subscription_id = s.id AND c.stream_name = tc.stream_name
-            )
-            LIMIT _batch_size
-            RETURNING id, subscription_id, stream_name, stream_position
+        INSERT INTO beckett.checkpoints_new (subscription_id, stream_position, created_at, updated_at, retry_attempts, status, stream_name, retries)
+        SELECT s.id, c.stream_position, c.created_at, c.updated_at, c.retry_attempts, c.status, c.stream_name, c.retries
+        FROM beckett.checkpoints c
+        INNER JOIN beckett.subscriptions s ON s.name = c.name
+        INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id AND sg.name = c.group_name
+        WHERE NOT EXISTS (
+            SELECT 1 FROM beckett.checkpoints_new cn
+            WHERE cn.subscription_id = s.id AND cn.stream_name = c.stream_name
         )
-        -- Add to ready queue if needed (for checkpoints that were ready to process)
-        INSERT INTO beckett.checkpoints_ready (id, target_stream_version, process_at, subscription_group_name)
-        SELECT cb.id,
-               GREATEST(tc.stream_version, cb.stream_position) as target_stream_version,
-               COALESCE(tc.process_at, now()) as process_at,
-               sg.name as subscription_group_name
-        FROM checkpoint_batch cb
-        INNER JOIN beckett.subscriptions s ON cb.subscription_id = s.id
-        INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-        INNER JOIN temp_checkpoints tc ON tc.name = s.name AND sg.name = tc.group_name AND tc.stream_name = cb.stream_name
-        WHERE tc.process_at IS NOT NULL AND tc.reserved_until IS NULL;
+        LIMIT _batch_size;
 
         GET DIAGNOSTICS _rows_processed = ROW_COUNT;
         _total_rows := _total_rows + _rows_processed;
@@ -424,19 +361,42 @@ BEGIN
         RAISE NOTICE 'Migrated % checkpoints (total: %)', _rows_processed, _total_rows;
     END LOOP;
 
-    -- Handle reserved checkpoints
-    INSERT INTO beckett.checkpoints_reserved (id, target_stream_version, reserved_until)
-    SELECT c.id,
-           GREATEST(tc.stream_version, c.stream_position) as target_stream_version,
-           tc.reserved_until
-    FROM beckett.checkpoints c
-    INNER JOIN beckett.subscriptions s ON c.subscription_id = s.id
-    INNER JOIN beckett.subscription_groups sg ON s.subscription_group_id = sg.id
-    INNER JOIN temp_checkpoints tc ON tc.name = s.name AND sg.name = tc.group_name AND tc.stream_name = c.stream_name
-    WHERE tc.reserved_until IS NOT NULL;
-
     RAISE NOTICE 'Total checkpoints migrated: %', _total_rows;
 END $$;
+
+-- Drop old checkpoints table and rename new one
+DROP TABLE IF EXISTS beckett.checkpoints;
+ALTER TABLE beckett.checkpoints_new RENAME TO checkpoints;
+
+-- Rename indexes to remove _new suffix
+ALTER INDEX beckett.ix_checkpoints_new_metrics RENAME TO ix_checkpoints_metrics;
+ALTER INDEX beckett.ix_checkpoints_new_subscription_id RENAME TO ix_checkpoints_subscription_id;
+
+-- Create checkpoint queue tables now that checkpoints table exists
+CREATE TABLE beckett.checkpoints_ready
+(
+    id bigint NOT NULL REFERENCES beckett.checkpoints(id) ON DELETE CASCADE,
+    target_stream_version bigint NOT NULL,
+    process_at timestamp with time zone NOT NULL DEFAULT now(),
+    subscription_group_name text NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX ix_checkpoints_ready_group_process_at ON beckett.checkpoints_ready (subscription_group_name, process_at, id);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON beckett.checkpoints_ready TO beckett;
+
+CREATE TABLE beckett.checkpoints_reserved
+(
+    id bigint NOT NULL REFERENCES beckett.checkpoints(id) ON DELETE CASCADE,
+    target_stream_version bigint NOT NULL,
+    reserved_until timestamp with time zone NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX ix_checkpoints_reserved_reserved_until ON beckett.checkpoints_reserved (reserved_until);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON beckett.checkpoints_reserved TO beckett;
 
 -- Replace utility functions
 CREATE OR REPLACE FUNCTION beckett.delete_subscription(
@@ -699,45 +659,7 @@ BEGIN
 END;
 $$;
 
--------------------------------------------------
--- CREATE MIGRATIONS TABLE AND RECORD MIGRATION
--------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS beckett.migrations (
-    name text NOT NULL PRIMARY KEY,
-    timestamp timestamp with time zone DEFAULT now() NOT NULL
-);
-
-INSERT INTO beckett.migrations (name) VALUES ('001_schema_migration_from_0.21.2');
-
--------------------------------------------------
--- CLEANUP TEMP TABLES
--------------------------------------------------
-
+-- Cleanup
 DROP TABLE IF EXISTS temp_subscriptions;
-DROP TABLE IF EXISTS temp_checkpoints;
 DROP TABLE IF EXISTS temp_categories;
 DROP TABLE IF EXISTS temp_tenants;
-
-COMMIT;
-
--------------------------------------------------
--- POST-MIGRATION NOTES
--------------------------------------------------
-
--- This migration has successfully:
--- 1. Backed up all existing data to temporary tables
--- 2. Dropped the old schema completely
--- 3. Created new tables with correct column order and structure
--- 4. Migrated all data using efficient batch operations
--- 5. Created new normalized subscription system with proper foreign keys
--- 6. Added new indexing infrastructure for dashboard queries
--- 7. Updated all utility functions to work with new schema
--- 8. Preserved all existing data and functionality
-
--- The new schema includes:
--- - Normalized subscription groups and subscriptions
--- - Separate ready/reserved checkpoint queues
--- - Stream and message indexing for dashboard queries
--- - Proper foreign key relationships
--- - Efficient batch processing functions
