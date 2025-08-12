@@ -28,6 +28,7 @@ public class ReadGlobalStream(
                    m.type,
                    m.metadata ->> '$tenant',
                    m.metadata ->> '$correlation_id',
+                   m.metadata,
                    m.timestamp
             FROM beckett.messages m
             WHERE (m.transaction_id, m.global_position) > ((SELECT transaction_id FROM transaction_id), $1)
@@ -65,7 +66,8 @@ public class ReadGlobalStream(
                     reader.GetFieldValue<string>(4),
                     reader.IsDBNull(5) ? null : reader.GetFieldValue<string>(5),
                     reader.IsDBNull(6) ? null : reader.GetFieldValue<string>(6),
-                    reader.GetFieldValue<DateTimeOffset>(7)
+                    reader.GetFieldValue<byte[]>(7),
+                    reader.GetFieldValue<DateTimeOffset>(8)
                 )
             );
         }
@@ -81,6 +83,7 @@ public class ReadGlobalStream(
         string MessageType,
         string? Tenant,
         string? CorrelationId,
+        byte[] Metadata,
         DateTimeOffset Timestamp
     );
 }

@@ -74,16 +74,16 @@ public class GlobalMessageReader(
                         logger.NewGlobalMessagesToProcess(batch.StreamMessages.Count, currentPosition);
 
                         var checkpoints = await BuildCheckpointsForAllGroups(batch, stoppingToken);
-                        var streamMetadata = BuildStreamIndexData(batch);
-                        var messageMetadata = BuildMessageIndexData(batch);
+                        var streamIndexData = BuildStreamIndexData(batch);
+                        var messageIndexData = BuildMessageIndexData(batch);
 
-                        if (checkpoints.Count > 0 || streamMetadata.Length > 0)
+                        if (checkpoints.Count > 0 || streamIndexData.Length > 0)
                         {
                             await database.Execute(
                                 new RecordCheckpointsAndMetadata(
                                     checkpoints.ToArray(),
-                                    streamMetadata,
-                                    messageMetadata
+                                    streamIndexData,
+                                    messageIndexData
                                 ),
                                 connection,
                                 transaction,
@@ -266,6 +266,7 @@ public class GlobalMessageReader(
                     Category = StreamCategoryParser.Parse(message.StreamName),
                     CorrelationId = message.CorrelationId,
                     Tenant = message.Tenant,
+                    Metadata = message.Metadata,
                     Timestamp = message.Timestamp
                 }
             )

@@ -10,6 +10,7 @@ public class MessageIndexType
     public string Category { get; set; } = null!;
     public string? CorrelationId { get; set; }
     public string? Tenant { get; set; }
+    public byte[] Metadata { get; set; } = null!;
     public DateTimeOffset Timestamp { get; set; }
 
     private sealed class MessageMetadataTypeEqualityComparer : IEqualityComparer<MessageIndexType>

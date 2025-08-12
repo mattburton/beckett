@@ -81,6 +81,7 @@ public class InMemoryMessageStorage : IMessageStorage
                     x.Type,
                     tenant,
                     correlationId,
+                    x.Metadata.GetBytesFromBase64(),
                     x.Timestamp
                 );
             }

@@ -187,13 +187,13 @@ public class RecordCheckpointsAndMetadata(
             const string recordMessagesQuery = """
                 WITH message_data AS (
                     SELECT mm.id, mm.global_position, mm.stream_name, mm.stream_position,
-                           mm.message_type_name, mm.correlation_id, mm.tenant, mm.timestamp
+                           mm.message_type_name, mm.correlation_id, mm.tenant, mm.metadata, mm.timestamp
                     FROM unnest($1) mm
                 ),
                 message_with_type_and_stream_ids AS (
                     SELECT md.id, md.global_position, md.stream_name, md.stream_position,
                            mt.id as message_type_id, si.id as stream_index_id,
-                           md.correlation_id, t.id as tenant_id, md.timestamp
+                           md.correlation_id, t.id as tenant_id, md.metadata, md.timestamp
                     FROM message_data md
                     INNER JOIN beckett.message_types mt ON md.message_type_name = mt.name
                     INNER JOIN beckett.stream_index si ON md.stream_name = si.stream_name
@@ -231,9 +231,18 @@ public class RecordCheckpointsAndMetadata(
                     RETURNING stream_index_id
                 )
                 INSERT INTO beckett.message_index
-                (id, global_position, stream_position, stream_index_id, message_type_id, tenant_id, correlation_id, timestamp, archived)
-                SELECT mwts.id, mwts.global_position, mwts.stream_position,
-                       mwts.stream_index_id, mwts.message_type_id, mwts.tenant_id, mwts.correlation_id, mwts.timestamp, false
+                (id, global_position, stream_position, stream_index_id, message_type_id, tenant_id, correlation_id, metadata, timestamp, archived)
+                SELECT
+                    mwts.id,
+                    mwts.global_position,
+                    mwts.stream_position,
+                    mwts.stream_index_id,
+                    mwts.message_type_id,
+                    mwts.tenant_id,
+                    mwts.correlation_id,
+                    mwts.metadata,
+                    mwts.timestamp,
+                    false
                 FROM message_with_type_and_stream_ids mwts
                 ON CONFLICT (global_position, id, archived) DO NOTHING
                 RETURNING id;

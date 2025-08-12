@@ -56,6 +56,7 @@ public class PostgresMessageStorage(IPostgresDataSource dataSource, IPostgresDat
                     result.MessageType,
                     result.Tenant,
                     result.CorrelationId,
+                    result.Metadata,
                     result.Timestamp
                 )
             )

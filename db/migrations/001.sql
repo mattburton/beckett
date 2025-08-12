@@ -184,6 +184,7 @@ CREATE TYPE __schema__.message_index_type AS
   category text,
   correlation_id text,
   tenant text,
+  metadata jsonb,
   timestamp timestamp with time zone
 );
 
@@ -564,7 +565,6 @@ $$;
 -- GLOBAL READER ARCHITECTURE
 -------------------------------------------------
 
--- Global reader position table
 CREATE TABLE IF NOT EXISTS __schema__.global_reader_position (
     position bigint NOT NULL DEFAULT 0,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
@@ -572,10 +572,8 @@ CREATE TABLE IF NOT EXISTS __schema__.global_reader_position (
 
 GRANT UPDATE ON __schema__.global_reader_position TO beckett;
 
--- Insert initial record
 INSERT INTO __schema__.global_reader_position (position) VALUES (0);
 
--- Stream index table
 CREATE TABLE IF NOT EXISTS __schema__.stream_index (
     id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     stream_category_id bigint NOT NULL REFERENCES __schema__.stream_categories(id),
@@ -592,7 +590,6 @@ CREATE INDEX IF NOT EXISTS ix_stream_index_last_updated ON __schema__.stream_ind
 
 GRANT UPDATE, DELETE ON __schema__.stream_index TO beckett;
 
--- Normalized message_types table
 CREATE TABLE IF NOT EXISTS __schema__.message_types (
     id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name text NOT NULL UNIQUE,
@@ -601,7 +598,6 @@ CREATE TABLE IF NOT EXISTS __schema__.message_types (
 
 GRANT UPDATE, DELETE ON __schema__.message_types TO beckett;
 
--- Message index table (without data)
 CREATE TABLE IF NOT EXISTS __schema__.message_index (
     id uuid NOT NULL,
     stream_index_id bigint NOT NULL REFERENCES __schema__.stream_index(id),
@@ -612,16 +608,14 @@ CREATE TABLE IF NOT EXISTS __schema__.message_index (
     timestamp timestamp with time zone NOT NULL,
     archived boolean NOT NULL DEFAULT false,
     correlation_id text NULL,
+    metadata jsonb NOT NULL,
     PRIMARY KEY (global_position, id, archived),
     UNIQUE (id, archived)
 ) PARTITION BY LIST (archived);
 
--- Create active and archived partitions
 CREATE TABLE IF NOT EXISTS __schema__.message_index_active PARTITION OF __schema__.message_index FOR VALUES IN (false);
-
 CREATE TABLE IF NOT EXISTS __schema__.message_index_archived PARTITION OF __schema__.message_index FOR VALUES IN (true);
 
--- Create indexes on the partitions
 CREATE INDEX IF NOT EXISTS ix_message_index_active_stream_type ON __schema__.message_index_active (stream_index_id, message_type_id);
 CREATE INDEX IF NOT EXISTS ix_message_index_stream_index_id ON __schema__.message_index (stream_index_id);
 CREATE INDEX IF NOT EXISTS ix_message_index_message_type_id ON __schema__.message_index (message_type_id);
@@ -630,12 +624,12 @@ CREATE INDEX IF NOT EXISTS ix_message_index_active_correlation_id ON __schema__.
 CREATE INDEX IF NOT EXISTS ix_message_index_active_tenant_id ON __schema__.message_index_active (tenant_id)
     WHERE tenant_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_message_index_active_timestamp ON __schema__.message_index_active (timestamp DESC);
+CREATE INDEX IF NOT EXISTS ix_message_index_active_metadata ON __schema__.message_index_active USING GIN (metadata);
 
 GRANT UPDATE, DELETE ON __schema__.message_index TO beckett;
 GRANT UPDATE, DELETE ON __schema__.message_index_active TO beckett;
 GRANT UPDATE, DELETE ON __schema__.message_index_archived TO beckett;
 
--- Stream message types lookup table for fast initialization
 CREATE TABLE IF NOT EXISTS __schema__.stream_message_types (
     stream_index_id bigint NOT NULL REFERENCES __schema__.stream_index(id),
     message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id),
@@ -650,7 +644,6 @@ CREATE INDEX IF NOT EXISTS ix_stream_message_types_stream_index_id ON __schema__
 
 GRANT UPDATE, DELETE ON __schema__.stream_message_types TO beckett;
 
--- Subscription message types junction table
 CREATE TABLE IF NOT EXISTS __schema__.subscription_message_types (
     subscription_id bigint NOT NULL REFERENCES __schema__.subscriptions(id) ON DELETE CASCADE,
     message_type_id bigint NOT NULL REFERENCES __schema__.message_types(id) ON DELETE CASCADE,
