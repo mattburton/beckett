@@ -131,25 +131,30 @@
 
       @if (Model.Details.ReplayTargetPosition.HasValue)
       {
-        <li class="list-group-item"><span class="fw-bolder">Replay Target Position:</span> @Model.Details.ReplayTargetPosition.Value</li>
+        <li class="list-group-item">
+          <span class="fw-bolder">Replay Target Position:</span>
+          @Model.Details.ReplayTargetPosition.Value
+        </li>
       }
 
       <li class="list-group-item">
-        <span class="fw-bolder mb-2 d-block">Checkpoints:</span>
-        <div class="d-flex flex-wrap gap-3">
-          <div class="p-2 bg-success-subtle border border-success rounded">
-            <span class="badge text-bg-success">@Model.Details.ActiveCheckpoints</span> Active
-          </div>
-          <div class="p-2 bg-warning-subtle border border-info rounded">
-            <span class="badge text-bg-info">@Model.Details.LaggingCheckpoints</span> Lagging
-          </div>
-          <div class="p-2 bg-info-subtle border border-warning rounded">
-            <span class="badge text-bg-warning">@Model.Details.RetryCheckpoints</span> Retry
-          </div>
-          <div class="p-2 bg-danger-subtle border border-danger rounded">
-            <span class="badge text-bg-danger">@Model.Details.FailedCheckpoints</span> Failed
-          </div>
-        </div>
+        <span class="fw-bolder">Checkpoints:</span>
+      </li>
+      <li class="list-group-item ps-5">
+        <span class="fw-bolder">Active:</span>
+        @Model.Details.ActiveCheckpoints
+      </li>
+      <li class="list-group-item ps-5">
+        <span class="fw-bolder">Lagging:</span>
+        @Model.Details.LaggingCheckpoints
+      </li>
+      <li class="list-group-item ps-5">
+        <span class="fw-bolder">Retry:</span>
+        @Model.Details.RetryCheckpoints
+      </li>
+      <li class="list-group-item ps-5">
+        <span class="fw-bolder">Failed:</span>
+        @Model.Details.FailedCheckpoints
       </li>
     </ul>
   </div>
