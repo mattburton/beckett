@@ -22,7 +22,7 @@ public class MessagesQuery(
             LIMIT $3;
         """;
 
-        const string key = "Scheduled.Message.Query";
+        const string key = "Scheduled.Messages.Query";
 
         command.CommandText = Query.Build(key, sql, out var prepare);
 
