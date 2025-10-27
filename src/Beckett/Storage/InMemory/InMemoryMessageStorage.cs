@@ -92,7 +92,7 @@ public class InMemoryMessageStorage : IMessageStorage
 
         if (options.StartingGlobalPosition.HasValue)
         {
-            stream = stream.Where(x => x.GlobalPosition > options.StartingGlobalPosition.Value).ToList();
+            stream = stream.Where(x => x.GlobalPosition >= options.StartingGlobalPosition.Value).ToList();
         }
 
         if (options.EndingGlobalPosition.HasValue)
@@ -102,7 +102,7 @@ public class InMemoryMessageStorage : IMessageStorage
 
         if (options.StartingStreamPosition.HasValue)
         {
-            stream = stream.Where(x => x.StreamPosition > options.StartingStreamPosition.Value).ToList();
+            stream = stream.Where(x => x.StreamPosition >= options.StartingStreamPosition.Value).ToList();
         }
 
         if (options.EndingStreamPosition.HasValue)
