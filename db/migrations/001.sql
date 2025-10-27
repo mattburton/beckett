@@ -87,20 +87,72 @@ $$
 SELECT abs(hashtextextended(_stream_name, 0));
 $$;
 
-CREATE OR REPLACE FUNCTION __schema__.assert_condition(
-  _condition boolean,
-  _message text
+CREATE OR REPLACE FUNCTION __schema__.append_to_stream(
+  _stream_name text,
+  _expected_version bigint,
+  _messages __schema__.message[]
 )
-  RETURNS boolean
-  IMMUTABLE
+  RETURNS bigint
   LANGUAGE plpgsql
 AS
 $$
+DECLARE
+  _current_version bigint;
+  _stream_version bigint;
 BEGIN
-  IF NOT _condition THEN
-    RAISE EXCEPTION '%', _message;
+  IF (_expected_version < 0) THEN
+    PERFORM pg_advisory_xact_lock(__schema__.stream_hash(_stream_name));
   END IF;
-  RETURN TRUE;
+
+  SELECT coalesce(max(m.stream_position), 0)
+  INTO _current_version
+  FROM __schema__.messages m
+  WHERE m.stream_name = _stream_name
+  AND m.archived = false;
+
+  IF (_expected_version < -2) THEN
+    RAISE EXCEPTION 'Invalid value for expected version: %', _expected_version;
+  END IF;
+
+  IF (_expected_version = -1 AND _current_version = 0) THEN
+    RAISE EXCEPTION 'Attempted to append to a non-existing stream: %', _stream_name;
+  END IF;
+
+  IF (_expected_version = 0 AND _current_version > 0) THEN
+    RAISE EXCEPTION 'Attempted to start a stream that already exists: %', _stream_name;
+  END IF;
+
+  IF (_expected_version > 0 AND _expected_version != _current_version) THEN
+    RAISE EXCEPTION 'Stream % version % does not match expected version %',
+      _stream_name,
+      _current_version,
+      _expected_version;
+  END IF;
+
+  WITH append_messages AS (
+    INSERT INTO __schema__.messages (
+      id,
+      stream_position,
+      stream_name,
+      type,
+      data,
+      metadata
+    )
+    SELECT m.id,
+           _current_version + (row_number() over())::bigint,
+           _stream_name,
+           m.type,
+           m.data,
+           m.metadata
+    FROM unnest(_messages) AS m
+    RETURNING stream_position, type
+  )
+  SELECT max(stream_position) INTO _stream_version
+  FROM append_messages;
+
+  PERFORM pg_notify('beckett:messages', NULL);
+
+  RETURN _stream_version;
 END;
 $$;
 
