@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.2
--- Dumped by pg_dump version 16.2
+-- Dumped from database version 16.10
+-- Dumped by pg_dump version 16.10
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -87,17 +87,67 @@ CREATE TYPE beckett.subscription_status AS ENUM (
 
 
 --
--- Name: assert_condition(boolean, text); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: append_to_stream(text, bigint, beckett.message[]); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.assert_condition(_condition boolean, _message text) RETURNS boolean
-    LANGUAGE plpgsql IMMUTABLE
+CREATE FUNCTION beckett.append_to_stream(_stream_name text, _expected_version bigint, _messages beckett.message[]) RETURNS bigint
+    LANGUAGE plpgsql
     AS $$
+DECLARE
+  _current_version bigint;
+  _stream_version bigint;
 BEGIN
-  IF NOT _condition THEN
-    RAISE EXCEPTION '%', _message;
+  PERFORM pg_advisory_xact_lock(beckett.stream_hash(_stream_name));
+
+  SELECT coalesce(max(m.stream_position), 0)
+  INTO _current_version
+  FROM beckett.messages m
+  WHERE m.stream_name = _stream_name
+  AND m.archived = false;
+
+  IF (_expected_version < -2) THEN
+    RAISE EXCEPTION 'Invalid value for expected version: %', _expected_version;
   END IF;
-  RETURN TRUE;
+
+  IF (_expected_version = -1 AND _current_version = 0) THEN
+    RAISE EXCEPTION 'Attempted to append to a non-existing stream: %', _stream_name;
+  END IF;
+
+  IF (_expected_version = 0 AND _current_version > 0) THEN
+    RAISE EXCEPTION 'Attempted to start a stream that already exists: %', _stream_name;
+  END IF;
+
+  IF (_expected_version > 0 AND _expected_version != _current_version) THEN
+    RAISE EXCEPTION 'Stream % version % does not match expected version %',
+      _stream_name,
+      _current_version,
+      _expected_version;
+  END IF;
+
+  WITH append_messages AS (
+    INSERT INTO beckett.messages (
+      id,
+      stream_position,
+      stream_name,
+      type,
+      data,
+      metadata
+    )
+    SELECT m.id,
+           _current_version + (row_number() over())::bigint,
+           _stream_name,
+           m.type,
+           m.data,
+           m.metadata
+    FROM unnest(_messages) AS m
+    RETURNING stream_position, type
+  )
+  SELECT max(stream_position) INTO _stream_version
+  FROM append_messages;
+
+  PERFORM pg_notify('beckett:messages', NULL);
+
+  RETURN _stream_version;
 END;
 $$;
 
@@ -774,4 +824,3 @@ CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkp
 --
 -- PostgreSQL database dump complete
 --
-
