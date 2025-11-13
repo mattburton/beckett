@@ -242,7 +242,9 @@ CREATE TABLE IF NOT EXISTS __schema__.subscriptions
   PRIMARY KEY (group_name, name)
 );
 
-CREATE INDEX ix_subscriptions_reservation_candidates ON __schema__.subscriptions (group_name, name, status) WHERE status = 'active' OR status = 'replay';
+CREATE INDEX IF NOT EXISTS idx_subscriptions_checkpoint_reservations
+  ON __schema__.subscriptions (group_name, name, status, replay_target_position)
+  WHERE status IN ('active', 'replay');
 
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
@@ -265,15 +267,23 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   UNIQUE (group_name, name, stream_name)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (group_name, process_at, reserved_until)
-  WHERE process_at IS NOT NULL AND reserved_until IS NULL;
+CREATE TABLE IF NOT EXISTS __schema__.checkpoints_ready
+(
+  checkpoint_id bigint PRIMARY KEY NOT NULL,
+  process_at timestamp with time zone NOT NULL,
+  group_name text NOT NULL,
+  name text NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_checkpoints_ready ON __schema__.checkpoints_ready (group_name, process_at)
+  INCLUDE (checkpoint_id);
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (group_name, reserved_until)
   WHERE reserved_until IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, lagging, group_name, name);
 
-CREATE FUNCTION __schema__.checkpoint_preprocessor()
+CREATE OR REPLACE FUNCTION __schema__.checkpoint_before_trigger()
   RETURNS trigger
   LANGUAGE plpgsql
 AS
@@ -283,22 +293,54 @@ BEGIN
     NEW.updated_at = now();
   END IF;
 
-  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
+  IF (NEW.status = 'active'
+      AND NEW.process_at IS NULL
+      AND NEW.stream_version > NEW.stream_position) THEN
     NEW.process_at = now();
-  END IF;
-
-  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
-    PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
   END IF;
 
   RETURN NEW;
 END;
 $$;
 
-CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON __schema__.checkpoints
-  FOR EACH ROW EXECUTE FUNCTION __schema__.checkpoint_preprocessor();
+CREATE OR REPLACE FUNCTION __schema__.checkpoint_after_trigger()
+  RETURNS trigger
+  LANGUAGE plpgsql
+AS
+$$
+BEGIN
+  -- Insert into ready table only when process_at changes to a non-null value
+  -- or reserved_until transitions from set to null (becoming unreserved)
+  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+    IF (TG_OP = 'INSERT') OR
+       (TG_OP = 'UPDATE' AND (
+         NEW.process_at IS DISTINCT FROM OLD.process_at OR
+         (OLD.reserved_until IS NOT NULL AND NEW.reserved_until IS NULL)
+       )) THEN
+
+      INSERT INTO __schema__.checkpoints_ready (checkpoint_id, process_at, group_name, name)
+      VALUES (NEW.id, NEW.process_at, NEW.group_name, NEW.name)
+      ON CONFLICT (checkpoint_id) DO UPDATE
+      SET process_at = EXCLUDED.process_at;
+
+      PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER checkpoint_preprocessor_before
+  BEFORE INSERT OR UPDATE ON __schema__.checkpoints
+  FOR EACH ROW EXECUTE FUNCTION __schema__.checkpoint_before_trigger();
+
+CREATE TRIGGER checkpoint_preprocessor_after
+  AFTER INSERT OR UPDATE ON __schema__.checkpoints
+  FOR EACH ROW EXECUTE FUNCTION __schema__.checkpoint_after_trigger();
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
+GRANT UPDATE, DELETE ON __schema__.checkpoints_ready TO beckett;
 
 -------------------------------------------------
 -- DASHBOARD SUPPORT

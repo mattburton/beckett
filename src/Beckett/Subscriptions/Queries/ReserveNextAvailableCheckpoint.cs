@@ -14,24 +14,31 @@ public class ReserveNextAvailableCheckpoint(
     {
         //language=sql
         const string sql = """
+            WITH reserved AS (
+                DELETE FROM beckett.checkpoints_ready cr
+                WHERE cr.checkpoint_id = (
+                    SELECT cr.checkpoint_id
+                    FROM beckett.checkpoints_ready cr
+                    INNER JOIN beckett.checkpoints c ON cr.checkpoint_id = c.id
+                    INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
+                    WHERE cr.group_name = $1
+                    AND cr.process_at <= now()
+                    AND ($3 = false OR s.status IN ('active', 'replay'))
+                    AND ($4 = false OR s.status = 'active')
+                    AND ($5 = false OR s.status = 'replay')
+                    ORDER BY cr.process_at
+                    LIMIT 1
+                    FOR UPDATE OF cr
+                    SKIP LOCKED
+                )
+                RETURNING cr.checkpoint_id
+            )
             UPDATE beckett.checkpoints c
             SET reserved_until = now() + $2
-            FROM (
-                SELECT c.id, s.replay_target_position
-                FROM beckett.checkpoints c
-                INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-                WHERE c.group_name = $1
-                AND c.process_at <= now()
-                AND c.reserved_until IS NULL
-                AND ($3 = false OR (s.status = 'active' OR s.status = 'replay'))
-                AND ($4 = false OR s.status = 'active')
-                AND ($5 = false OR s.status = 'replay')
-                ORDER BY c.process_at
-                LIMIT 1
-                FOR UPDATE
-                SKIP LOCKED
-            ) as d
-            WHERE c.id = d.id
+            FROM reserved r
+            INNER JOIN beckett.checkpoints c2 ON r.checkpoint_id = c2.id
+            INNER JOIN beckett.subscriptions s ON c2.group_name = s.group_name AND c2.name = s.name
+            WHERE c.id = r.checkpoint_id
             RETURNING
                 c.id,
                 c.group_name,
@@ -41,7 +48,7 @@ public class ReserveNextAvailableCheckpoint(
                 c.stream_version,
                 c.retry_attempts,
                 c.status,
-                d.replay_target_position;
+                s.replay_target_position;
         """;
 
         command.CommandText = Query.Build(nameof(ReserveNextAvailableCheckpoint), sql, out var prepare);
