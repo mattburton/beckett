@@ -13,17 +13,18 @@ public class RecoverExpiredCheckpointReservations(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.checkpoints c
-            SET reserved_until = NULL
-            FROM (
-                SELECT id
-                FROM beckett.checkpoints
+            WITH expired_reservations AS (
+                DELETE FROM beckett.checkpoints_reserved
                 WHERE group_name = $1
                 AND reserved_until <= now()
-                FOR UPDATE SKIP LOCKED
-                LIMIT $2
-            ) as d
-            WHERE c.id = d.id;
+                RETURNING checkpoint_id, group_name
+            )
+            INSERT INTO beckett.checkpoints_ready (checkpoint_id, group_name, name, process_at)
+            SELECT c.id, c.group_name, c.name, now()
+            FROM expired_reservations er
+            INNER JOIN beckett.checkpoints c ON er.checkpoint_id = c.id
+            ON CONFLICT (checkpoint_id) DO UPDATE
+                SET process_at = EXCLUDED.process_at;
         """;
 
         command.CommandText = Query.Build(nameof(RecoverExpiredCheckpointReservations), sql, out var prepare);

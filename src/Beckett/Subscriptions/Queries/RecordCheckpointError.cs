@@ -19,17 +19,25 @@ public record RecordCheckpointError(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.checkpoints
-            SET stream_position = $2,
-                process_at = $6,
-                reserved_until = NULL,
-                status = $3,
-                retry_attempts = $4,
-                retries = array_append(
-                    coalesce(retries, array[]::beckett.retry[]),
-                    row($4, $5, now())::beckett.retry
-                )
-            WHERE id = $1;
+            WITH update_checkpoint AS (
+                UPDATE beckett.checkpoints
+                SET stream_position = $2,
+                    status = $3,
+                    retry_attempts = $4,
+                    retries = array_append(
+                        coalesce(retries, array[]::beckett.retry[]),
+                        row($4, $5, now())::beckett.retry
+                    ),
+                    updated_at = now()
+                WHERE id = $1
+                RETURNING group_name, name
+            )
+            INSERT INTO beckett.checkpoints_ready (checkpoint_id, group_name, name, process_at)
+            SELECT $1, group_name, name, $6
+            FROM update_checkpoint
+            WHERE $6 IS NOT NULL
+            ON CONFLICT (checkpoint_id) DO UPDATE
+                SET process_at = EXCLUDED.process_at;
         """;
 
         command.CommandText = Query.Build(nameof(RecordCheckpointError), sql, out var prepare);

@@ -12,14 +12,28 @@ public class SkipQuery(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.checkpoints
-            SET stream_position = CASE WHEN stream_position + 1 > stream_version THEN stream_position ELSE stream_position + 1 END,
-                process_at = NULL,
-                reserved_until = NULL,
-                status = 'active',
-                retry_attempts = 0,
-                retries = NULL
-            WHERE id = $1;
+            WITH delete_ready AS (
+                DELETE FROM beckett.checkpoints_ready
+                WHERE checkpoint_id = $1
+            ),
+            delete_reserved AS (
+                DELETE FROM beckett.checkpoints_reserved
+                WHERE checkpoint_id = $1
+            ),
+            update_checkpoint AS (
+                UPDATE beckett.checkpoints
+                SET status = 'active',
+                    retry_attempts = 0,
+                    retries = NULL,
+                    updated_at = now()
+                WHERE id = $1
+                RETURNING id, group_name, name
+            )
+            INSERT INTO beckett.checkpoints_ready (checkpoint_id, group_name, name)
+            SELECT id, group_name, name
+            FROM update_checkpoint
+            ON CONFLICT (checkpoint_id) DO UPDATE SET
+                process_at = EXCLUDED.process_at;
         """;
 
         command.CommandText = Query.Build(nameof(SkipQuery), sql, out var prepare);

@@ -14,11 +14,11 @@ public class ReservationsQuery(
     {
         //language=sql
         const string sql = """
-            SELECT id, group_name, name, stream_name, stream_position, reserved_until, count(*) over() as total_results
-            FROM beckett.checkpoints
-            WHERE reserved_until IS NOT NULL
-            AND ($1 is null or (group_name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%' OR stream_name ILIKE '%' || $1 || '%'))
-            ORDER BY reserved_until
+            SELECT c.id, c.group_name, c.name, c.stream_name, c.stream_position, cr.reserved_until, count(*) over() as total_results
+            FROM beckett.checkpoints c
+            INNER JOIN beckett.checkpoints_reserved cr on c.id = cr.checkpoint_id
+            WHERE ($1 is null or (c.group_name ILIKE '%' || $1 || '%' OR c.name ILIKE '%' || $1 || '%' OR c.stream_name ILIKE '%' || $1 || '%'))
+            ORDER BY cr.reserved_until
             OFFSET $2
             LIMIT $3;
         """;

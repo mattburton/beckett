@@ -19,4 +19,6 @@ public static class DataTypeNames
     public static string Retry(string? schema = null) => $"{schema ?? Schema}.retry";
 
     public static string SubscriptionStatus(string? schema = null) => $"{schema ?? Schema}.subscription_status";
+
+    public static string SubscriptionStatusArray(string? schema = null) => $"{schema ?? Schema}.subscription_status[]";
 }
