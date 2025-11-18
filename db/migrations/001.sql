@@ -242,8 +242,6 @@ CREATE TABLE IF NOT EXISTS __schema__.subscriptions
   PRIMARY KEY (group_name, name)
 );
 
-CREATE INDEX ix_subscriptions_reservation_candidates ON __schema__.subscriptions (group_name, name, status) WHERE status = 'active' OR status = 'replay';
-
 GRANT UPDATE, DELETE ON __schema__.subscriptions TO beckett;
 
 CREATE TABLE IF NOT EXISTS __schema__.checkpoints
@@ -253,8 +251,6 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   stream_position bigint NOT NULL DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  process_at timestamp with time zone NULL,
-  reserved_until timestamp with time zone NULL,
   retry_attempts int NOT NULL DEFAULT 0,
   lagging boolean GENERATED ALWAYS AS (stream_version > stream_position) STORED,
   status __schema__.checkpoint_status NOT NULL DEFAULT 'active',
@@ -265,40 +261,47 @@ CREATE TABLE IF NOT EXISTS __schema__.checkpoints
   UNIQUE (group_name, name, stream_name)
 );
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_to_process ON __schema__.checkpoints (group_name, process_at, reserved_until)
-  WHERE process_at IS NOT NULL AND reserved_until IS NULL;
+CREATE TABLE IF NOT EXISTS __schema__.checkpoints_ready
+(
+  checkpoint_id bigint PRIMARY KEY NOT NULL,
+  process_at timestamp with time zone NOT NULL DEFAULT now(),
+  group_name text NOT NULL,
+  name text NOT NULL
+);
 
-CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints (group_name, reserved_until)
-  WHERE reserved_until IS NOT NULL;
+CREATE TABLE IF NOT EXISTS __schema__.checkpoints_reserved
+(
+  checkpoint_id bigint PRIMARY KEY NOT NULL,
+  reserved_until timestamp with time zone NOT NULL,
+  group_name text NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_checkpoints_ready ON __schema__.checkpoints_ready (group_name, name, process_at)
+  INCLUDE (checkpoint_id);
+
+CREATE INDEX IF NOT EXISTS ix_checkpoints_reserved ON __schema__.checkpoints_reserved (group_name, reserved_until)
+  INCLUDE (checkpoint_id);
 
 CREATE INDEX IF NOT EXISTS ix_checkpoints_metrics ON __schema__.checkpoints (status, lagging, group_name, name);
 
-CREATE FUNCTION __schema__.checkpoint_preprocessor()
+CREATE OR REPLACE FUNCTION __schema__.checkpoint_ready_notification()
   RETURNS trigger
   LANGUAGE plpgsql
 AS
 $$
 BEGIN
-  IF (TG_OP = 'UPDATE') THEN
-    NEW.updated_at = now();
-  END IF;
-
-  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
-    NEW.process_at = now();
-  END IF;
-
-  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
-    PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
-  END IF;
+  PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
 
   RETURN NEW;
 END;
 $$;
 
-CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON __schema__.checkpoints
-  FOR EACH ROW EXECUTE FUNCTION __schema__.checkpoint_preprocessor();
+CREATE TRIGGER checkpoint_ready_notification BEFORE INSERT OR UPDATE ON __schema__.checkpoints_ready
+  FOR EACH ROW EXECUTE FUNCTION __schema__.checkpoint_ready_notification();
 
 GRANT UPDATE, DELETE ON __schema__.checkpoints TO beckett;
+GRANT UPDATE, DELETE ON __schema__.checkpoints_ready TO beckett;
+GRANT UPDATE, DELETE ON __schema__.checkpoints_reserved TO beckett;
 
 -------------------------------------------------
 -- DASHBOARD SUPPORT

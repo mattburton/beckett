@@ -1,4 +1,5 @@
 using Beckett.Database;
+using Beckett.Database.Types;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -14,25 +15,29 @@ public class ReserveNextAvailableCheckpoint(
     {
         //language=sql
         const string sql = """
-            UPDATE beckett.checkpoints c
-            SET reserved_until = now() + $2
-            FROM (
-                SELECT c.id, s.replay_target_position
-                FROM beckett.checkpoints c
-                INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name
-                WHERE c.group_name = $1
-                AND c.process_at <= now()
-                AND c.reserved_until IS NULL
-                AND ($3 = false OR (s.status = 'active' OR s.status = 'replay'))
-                AND ($4 = false OR s.status = 'active')
-                AND ($5 = false OR s.status = 'replay')
-                ORDER BY c.process_at
-                LIMIT 1
-                FOR UPDATE
-                SKIP LOCKED
-            ) as d
-            WHERE c.id = d.id
-            RETURNING
+            WITH ready AS (
+                DELETE FROM beckett.checkpoints_ready
+                WHERE checkpoint_id = (
+                    SELECT cr.checkpoint_id
+                    FROM beckett.checkpoints_ready cr
+                    INNER JOIN beckett.subscriptions s ON cr.group_name = s.group_name AND cr.name = s.name
+                    WHERE cr.group_name = $1
+                    AND cr.process_at <= now()
+                    AND s.status = ANY($2)
+                    ORDER BY cr.process_at
+                    FOR UPDATE OF cr
+                    SKIP LOCKED
+                    LIMIT 1
+                )
+                RETURNING checkpoint_id, group_name
+            ),
+            reserved AS (
+                INSERT INTO beckett.checkpoints_reserved (checkpoint_id, group_name, reserved_until)
+                SELECT checkpoint_id, group_name, now() + $3
+                FROM ready
+                ON CONFLICT (checkpoint_id) DO NOTHING
+            )
+            SELECT
                 c.id,
                 c.group_name,
                 c.name,
@@ -41,27 +46,38 @@ public class ReserveNextAvailableCheckpoint(
                 c.stream_version,
                 c.retry_attempts,
                 c.status,
-                d.replay_target_position;
+                s.replay_target_position
+            FROM ready r
+            INNER JOIN beckett.checkpoints c ON r.checkpoint_id = c.id
+            INNER JOIN beckett.subscriptions s ON c.group_name = s.group_name AND c.name = s.name;
         """;
 
         command.CommandText = Query.Build(nameof(ReserveNextAvailableCheckpoint), sql, out var prepare);
 
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text });
+        command.Parameters.Add(new NpgsqlParameter { DataTypeName = DataTypeNames.SubscriptionStatusArray() });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Interval });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Boolean });
 
         if (prepare)
         {
             await command.PrepareAsync(cancellationToken);
         }
 
+        var statusList = new List<SubscriptionStatus>();
+
+        if (replayMode is ReplayMode.All or ReplayMode.ActiveOnly)
+        {
+            statusList.Add(SubscriptionStatus.Active);
+        }
+
+        if (replayMode is ReplayMode.All or ReplayMode.ReplayOnly)
+        {
+            statusList.Add(SubscriptionStatus.Replay);
+        }
+
         command.Parameters[0].Value = groupName;
-        command.Parameters[1].Value = reservationTimeout;
-        command.Parameters[2].Value = replayMode == ReplayMode.All;
-        command.Parameters[3].Value = replayMode == ReplayMode.ActiveOnly;
-        command.Parameters[4].Value = replayMode == ReplayMode.ReplayOnly;
+        command.Parameters[1].Value = statusList.ToArray();
+        command.Parameters[2].Value = reservationTimeout;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
