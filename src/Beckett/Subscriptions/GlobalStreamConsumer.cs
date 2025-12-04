@@ -143,9 +143,9 @@ public class GlobalStreamConsumer(
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e, "Error reading global stream");
+                    logger.LogError(e, "Error discovering checkpoints - will retry in 2 seconds");
 
-                    throw;
+                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
                 }
             }
         }
