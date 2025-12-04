@@ -2,8 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict PbOA5AWncEKeMIxQIngIYOHL3Xmx4ihoYZxseceZNyYQsYzqlfvWNZaOfCb6bYY
-
 -- Dumped from database version 16.10
 -- Dumped by pg_dump version 16.10
 
@@ -99,9 +97,7 @@ DECLARE
   _current_version bigint;
   _stream_version bigint;
 BEGIN
-  IF (_expected_version < 0) THEN
-    PERFORM pg_advisory_xact_lock(beckett.stream_hash(_stream_name));
-  END IF;
+  PERFORM pg_advisory_xact_lock(beckett.stream_hash(_stream_name));
 
   SELECT coalesce(max(m.stream_position), 0)
   INTO _current_version
@@ -157,14 +153,24 @@ $$;
 
 
 --
--- Name: checkpoint_ready_notification(); Type: FUNCTION; Schema: beckett; Owner: -
+-- Name: checkpoint_preprocessor(); Type: FUNCTION; Schema: beckett; Owner: -
 --
 
-CREATE FUNCTION beckett.checkpoint_ready_notification() RETURNS trigger
+CREATE FUNCTION beckett.checkpoint_preprocessor() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
+  IF (TG_OP = 'UPDATE') THEN
+    NEW.updated_at = now();
+  END IF;
+
+  IF (NEW.status = 'active' AND NEW.process_at IS NULL AND NEW.stream_version > NEW.stream_position) THEN
+    NEW.process_at = now();
+  END IF;
+
+  IF (NEW.process_at IS NOT NULL AND NEW.reserved_until IS NULL) THEN
+    PERFORM pg_notify('beckett:checkpoints', NEW.group_name);
+  END IF;
 
   RETURN NEW;
 END;
@@ -395,6 +401,8 @@ CREATE TABLE beckett.checkpoints (
     stream_position bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
+    process_at timestamp with time zone,
+    reserved_until timestamp with time zone,
     retry_attempts integer DEFAULT 0 NOT NULL,
     lagging boolean GENERATED ALWAYS AS ((stream_version > stream_position)) STORED,
     status beckett.checkpoint_status DEFAULT 'active'::beckett.checkpoint_status NOT NULL,
@@ -416,29 +424,6 @@ ALTER TABLE beckett.checkpoints ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
-
-
---
--- Name: checkpoints_ready; Type: TABLE; Schema: beckett; Owner: -
---
-
-CREATE TABLE beckett.checkpoints_ready (
-    checkpoint_id bigint NOT NULL,
-    process_at timestamp with time zone DEFAULT now() NOT NULL,
-    group_name text NOT NULL,
-    name text NOT NULL
-);
-
-
---
--- Name: checkpoints_reserved; Type: TABLE; Schema: beckett; Owner: -
---
-
-CREATE TABLE beckett.checkpoints_reserved (
-    checkpoint_id bigint NOT NULL,
-    reserved_until timestamp with time zone NOT NULL,
-    group_name text NOT NULL
 );
 
 
@@ -613,22 +598,6 @@ ALTER TABLE ONLY beckett.checkpoints
 
 
 --
--- Name: checkpoints_ready checkpoints_ready_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
---
-
-ALTER TABLE ONLY beckett.checkpoints_ready
-    ADD CONSTRAINT checkpoints_ready_pkey PRIMARY KEY (checkpoint_id);
-
-
---
--- Name: checkpoints_reserved checkpoints_reserved_pkey; Type: CONSTRAINT; Schema: beckett; Owner: -
---
-
-ALTER TABLE ONLY beckett.checkpoints_reserved
-    ADD CONSTRAINT checkpoints_reserved_pkey PRIMARY KEY (checkpoint_id);
-
-
---
 -- Name: messages messages_id_archived_key; Type: CONSTRAINT; Schema: beckett; Owner: -
 --
 
@@ -748,17 +717,17 @@ CREATE INDEX ix_checkpoints_metrics ON beckett.checkpoints USING btree (status, 
 
 
 --
--- Name: ix_checkpoints_ready; Type: INDEX; Schema: beckett; Owner: -
---
-
-CREATE INDEX ix_checkpoints_ready ON beckett.checkpoints_ready USING btree (group_name, name, process_at) INCLUDE (checkpoint_id);
-
-
---
 -- Name: ix_checkpoints_reserved; Type: INDEX; Schema: beckett; Owner: -
 --
 
-CREATE INDEX ix_checkpoints_reserved ON beckett.checkpoints_reserved USING btree (group_name, reserved_until) INCLUDE (checkpoint_id);
+CREATE INDEX ix_checkpoints_reserved ON beckett.checkpoints USING btree (group_name, reserved_until) WHERE (reserved_until IS NOT NULL);
+
+
+--
+-- Name: ix_checkpoints_to_process; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE INDEX ix_checkpoints_to_process ON beckett.checkpoints USING btree (group_name, process_at, reserved_until) WHERE ((process_at IS NOT NULL) AND (reserved_until IS NULL));
 
 
 --
@@ -794,6 +763,13 @@ CREATE INDEX ix_recurring_messages_next_occurrence ON beckett.recurring_messages
 --
 
 CREATE INDEX ix_scheduled_messages_deliver_at ON beckett.scheduled_messages USING btree (deliver_at);
+
+
+--
+-- Name: ix_subscriptions_reservation_candidates; Type: INDEX; Schema: beckett; Owner: -
+--
+
+CREATE INDEX ix_subscriptions_reservation_candidates ON beckett.subscriptions USING btree (group_name, name, status) WHERE ((status = 'active'::beckett.subscription_status) OR (status = 'replay'::beckett.subscription_status));
 
 
 --
@@ -839,15 +815,12 @@ ALTER INDEX beckett.messages_stream_name_stream_position_archived_key ATTACH PAR
 
 
 --
--- Name: checkpoints_ready checkpoint_ready_notification; Type: TRIGGER; Schema: beckett; Owner: -
+-- Name: checkpoints checkpoint_preprocessor; Type: TRIGGER; Schema: beckett; Owner: -
 --
 
-CREATE TRIGGER checkpoint_ready_notification BEFORE INSERT OR UPDATE ON beckett.checkpoints_ready FOR EACH ROW EXECUTE FUNCTION beckett.checkpoint_ready_notification();
+CREATE TRIGGER checkpoint_preprocessor BEFORE INSERT OR UPDATE ON beckett.checkpoints FOR EACH ROW EXECUTE FUNCTION beckett.checkpoint_preprocessor();
 
 
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict PbOA5AWncEKeMIxQIngIYOHL3Xmx4ihoYZxseceZNyYQsYzqlfvWNZaOfCb6bYY
-

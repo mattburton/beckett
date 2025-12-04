@@ -11,7 +11,8 @@ public class AdvanceLaggingSubscriptionCheckpoints(string groupName, string name
         //language=sql
         const string sql = """
             UPDATE beckett.checkpoints
-            SET stream_position = stream_version
+            SET stream_position = stream_version,
+                process_at = null
             WHERE id IN (
                 SELECT id
                 FROM beckett.checkpoints

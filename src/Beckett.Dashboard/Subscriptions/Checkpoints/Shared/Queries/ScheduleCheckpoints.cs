@@ -13,12 +13,9 @@ public class ScheduleCheckpoints(
     {
         //language=sql
         const string sql = """
-            INSERT INTO beckett.checkpoints_ready (checkpoint_id, group_name, name, process_at)
-            SELECT id, group_name, name, $2
-            FROM beckett.checkpoints
-            WHERE id = ANY($1)
-            ON CONFLICT (checkpoint_id) DO UPDATE
-                SET process_at = EXCLUDED.process_at;
+            UPDATE beckett.checkpoints
+            SET process_at = $2
+            WHERE id = ANY($1);
         """;
 
         command.CommandText = Query.Build(nameof(ScheduleCheckpoints), sql, out var prepare);
